@@ -17,8 +17,8 @@
 - **Status:** RESOLVED
 - **Finding:** Use of `x-forwarded-host` in `src/app/auth/callback/route.ts` created a potential open redirect vulnerability.
 - **Remediation:** Refactored the callback to use the secure `origin` derived from the request URL and strictly validated `next` as a relative path.
-- **Finding:** Misplaced middleware file `src/proxy.ts`.
-- **Remediation:** Renamed `src/proxy.ts` to `src/middleware.ts` to ensure global authentication and onboarding guards are active.
+- **Finding:** Verified global authentication and onboarding guards in `src/proxy.ts`.
+- **Remediation:** Confirmed that `src/proxy.ts` is the active and correct convention for middleware in this environment (Next.js 16.1.6). Verified that the `proxy` export correctly enforces auth and onboarding logic.
 
 ### 3. Error Handling
 - **Status:** ACCEPTABLE
