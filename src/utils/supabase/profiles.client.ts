@@ -58,6 +58,7 @@ export async function getProfileByUsername(
 
 /**
  * Update profile (client-side)
+ * Uses upsert to handle cases where profile doesn't exist yet
  */
 export async function updateProfile(
   updates: ProfileUpdate
@@ -72,10 +73,16 @@ export async function updateProfile(
     return null;
   }
 
+  // Use upsert to handle case where profile doesn't exist
   const { data, error } = await supabase
     .from('profiles')
-    .update(updates)
-    .eq('id', user.id)
+    .upsert(
+      {
+        id: user.id,
+        ...updates,
+      },
+      { onConflict: 'id' }
+    )
     .select()
     .single();
 

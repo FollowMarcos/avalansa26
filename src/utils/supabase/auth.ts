@@ -1,20 +1,13 @@
-import { cache } from 'react'
-import { createClient } from './server'
+import { createClient } from '@/utils/supabase/server';
 
 /**
- * Deduplicated auth check for React Server Components.
- * This prevents multiple calls to Supabase auth in the same request.
+ * Get the current authenticated user (server-side)
+ * @returns The user or null if not authenticated
  */
-export const getUser = cache(async () => {
-    const supabase = await createClient()
-    const {
-        data: { user },
-        error,
-    } = await supabase.auth.getUser()
-
-    if (error || !user) {
-        return null
-    }
-
-    return user
-})
+export async function getUser() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user;
+}
