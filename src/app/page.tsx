@@ -43,7 +43,7 @@ export default function Home() {
           initial={{ opacity: 0, scale: 0.95, filter: "blur(10px)" }}
           animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
           transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-          className="relative group cursor-none"
+          className="relative group"
         >
           <div className="relative w-32 h-32 flex items-center justify-center">
             <Image
@@ -67,7 +67,7 @@ export default function Home() {
 
         {/* Action Section with Staggered Motion */}
         <AnimatePresence mode="wait">
-          {!loading && (
+          {!loading ? (
             <motion.div
               key={user ? 'authed' : 'anonymous'}
               initial={{ opacity: 0, y: 20 }}
@@ -79,7 +79,7 @@ export default function Home() {
               {user ? (
                 <div className="flex flex-col items-center gap-6">
                   <div className="space-y-1 flex flex-col items-center">
-                    <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/60 font-medium">Verified Identity</span>
+                    <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-medium">Verified Identity</span>
                     <p className="text-sm font-medium text-foreground/80 lowercase tracking-tight">
                       {user.email}
                     </p>
@@ -87,7 +87,7 @@ export default function Home() {
                   <form action={signOut}>
                     <button
                       type="submit"
-                      className="text-xs font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors duration-300 py-2 border-b border-transparent hover:border-foreground"
+                      className="text-xs font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-all duration-300 py-4 px-2 border-b border-transparent hover:border-foreground min-h-[44px]"
                     >
                       Disconnect session
                     </button>
@@ -97,12 +97,12 @@ export default function Home() {
                 <GoogleSignInButton />
               )}
             </motion.div>
-          )}
+          ) : null}
         </AnimatePresence>
       </main>
 
       {/* High-End Footer */}
-      <footer className="absolute bottom-12 text-[9px] uppercase tracking-[0.4em] text-muted-foreground/30 font-medium select-none">
+      <footer className="absolute bottom-12 text-xs uppercase tracking-[0.4em] text-muted-foreground/50 font-medium select-none">
         Avalansa &bull; {new Date().getFullYear()}
       </footer>
 

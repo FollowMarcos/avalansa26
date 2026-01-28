@@ -18,7 +18,7 @@ export function ModeToggle() {
     return (
         <button
             onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-            className="group relative flex items-center justify-center p-3 rounded-full hover:bg-muted/50 transition-all duration-300 active:scale-95"
+            className="group relative flex items-center justify-center p-3 rounded-full hover:bg-muted/50 transition-all duration-300 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
         >
             <AnimatePresence mode="wait" initial={false}>
                 {theme === "light" ? (

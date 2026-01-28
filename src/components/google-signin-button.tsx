@@ -23,13 +23,17 @@ export function GoogleSignInButton() {
             whileTap={{ scale: 0.98 }}
             onClick={handleSignIn}
             disabled={isLoading}
+            aria-label={isLoading ? "Signing in with Google..." : "Continue with Google"}
             className="relative group overflow-hidden flex items-center gap-3 px-8 py-4 text-sm font-semibold rounded-full bg-background border border-border/50 hover:bg-muted/50 text-foreground transition-all duration-300"
         >
             {/* Shimmer Effect */}
             <div className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-primary/5 to-transparent skew-x-[-25deg] -translate-x-full group-hover:animate-[shimmer_2s_infinite]" />
 
             {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <div role="status" className="flex items-center">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    <span className="sr-only">Loading...</span>
+                </div>
             ) : (
                 <svg
                     className="h-4 w-4"
@@ -44,7 +48,9 @@ export function GoogleSignInButton() {
                     ></path>
                 </svg>
             )}
-            <span className="relative z-10">Continue with Google</span>
+            <span className="relative z-10" aria-hidden={isLoading}>
+                {isLoading ? "Signing in..." : "Continue with Google"}
+            </span>
         </motion.button>
     );
 }

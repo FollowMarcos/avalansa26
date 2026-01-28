@@ -1,35 +1,47 @@
-import { createClient } from '@/utils/supabase/server'
-import { NextResponse } from 'next/server'
+import { createClient } from '@/utils/supabase/server';
+import { NextResponse } from 'next/server';
 
 export async function GET(request: Request) {
-    const { searchParams, origin } = new URL(request.url)
-    const code = searchParams.get('code')
-    // if "next" is in param, use it as the redirect URL
-    const next = searchParams.get('next') ?? '/'
+  const { searchParams, origin } = new URL(request.url);
+  const code = searchParams.get('code');
+  const next = searchParams.get('next') ?? '/';
 
-    if (code) {
-        const supabase = await createClient()
-        const { error } = await supabase.auth.exchangeCodeForSession(code)
+  if (code) {
+    const supabase = await createClient();
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
 
-        if (!error) {
-            const forwardedHost = request.headers.get('x-forwarded-host') // original origin before load balancer
-            const isLocalEnv = process.env.NODE_ENV === 'development'
+    if (!error) {
+      // Get user and check onboarding status
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-            if (isLocalEnv) {
-                // we can be sure that is no load balancer in between, so no need to watch for X-Forwarded-Host
-                // Validate 'next' param to ensure it starts with / and is not a protocol-relative URL (//)
-                const safeNext = (next.startsWith('/') && !next.startsWith('//')) ? next : '/'
-                return NextResponse.redirect(`${origin}${safeNext}`)
-            } else if (forwardedHost) {
-                const safeNext = (next.startsWith('/') && !next.startsWith('//')) ? next : '/'
-                return NextResponse.redirect(`https://${forwardedHost}${safeNext}`)
-            } else {
-                const safeNext = (next.startsWith('/') && !next.startsWith('//')) ? next : '/'
-                return NextResponse.redirect(`${origin}${safeNext}`)
-            }
+      let redirectPath = next;
+
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('onboarding_completed')
+          .eq('id', user.id)
+          .single();
+
+        // Redirect to onboarding if not completed
+        if (!profile?.onboarding_completed) {
+          redirectPath = '/onboarding/username';
+        } else {
+          // Validate 'next' param
+          redirectPath =
+            next.startsWith('/') && !next.startsWith('//') ? next : '/';
         }
-    }
+      }
 
-    // return the user to an error page with instructions
-    return NextResponse.redirect(`${origin}/?message=Could not exchange code for session`)
+      // Use the origin from the request URL for safe redirection within the same domain
+      return NextResponse.redirect(`${origin}${redirectPath}`);
+    }
+  }
+
+  // Fallback to error page on the same origin
+  return NextResponse.redirect(
+    `${origin}/?message=Could not exchange code for session`
+  );
 }

@@ -13,8 +13,30 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Avalansa",
+  title: {
+    default: "Avalansa",
+    template: "%s | Avalansa",
+  },
   description: "A secure, AI-curated operation system for your content.",
+  metadataBase: new URL("https://avalansa.com"), // Placeholder, update to actual domain
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://avalansa.com",
+    title: "Avalansa",
+    description: "A secure, AI-curated operation system for your content.",
+    siteName: "Avalansa",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Avalansa",
+    description: "A secure, AI-curated operation system for your content.",
+  },
+  icons: {
+    icon: "/favicon.ico",
+    shortcut: "/favicon.ico",
+    apple: "/ab.svg",
+  },
 };
 
 import { ThemeProvider } from "@/components/theme-provider";
