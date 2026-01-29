@@ -11,6 +11,8 @@ const ONBOARDING_ROUTES = [
   '/onboarding/complete',
 ];
 
+const ADMIN_ROUTES = ['/dashboard'];
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -62,14 +64,15 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
-  // Check onboarding status for authenticated users
+  // Check onboarding status and role for authenticated users
   const { data: profile } = await supabase
     .from('profiles')
-    .select('onboarding_completed')
+    .select('onboarding_completed, role')
     .eq('id', user.id)
     .single();
 
   const onboardingComplete = profile?.onboarding_completed ?? false;
+  const userRole = profile?.role ?? 'user';
 
   // If onboarding not complete and trying to access protected route
   if (!onboardingComplete && !isOnboardingRoute) {
@@ -78,6 +81,15 @@ export async function proxy(request: NextRequest) {
 
   // If onboarding complete and trying to access onboarding routes (except complete)
   if (onboardingComplete && isOnboardingRoute && pathname !== '/onboarding/complete') {
+    return NextResponse.redirect(new URL('/', request.url));
+  }
+
+  // Check admin routes - only allow admin users
+  const isAdminRoute = ADMIN_ROUTES.some(
+    (route) => pathname === route || pathname.startsWith(route + '/')
+  );
+
+  if (isAdminRoute && userRole !== 'admin') {
     return NextResponse.redirect(new URL('/', request.url));
   }
 

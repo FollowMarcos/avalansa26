@@ -9,6 +9,9 @@
 // Database Schema Types
 // ============================================
 
+/** User role enum matching database user_role type */
+export type UserRole = 'user' | 'admin';
+
 export interface Database {
   public: {
     Tables: {
@@ -25,7 +28,7 @@ export interface Database {
       [_ in never]: never;
     };
     Enums: {
-      [_ in never]: never;
+      user_role: UserRole;
     };
   };
 }
@@ -52,6 +55,8 @@ export interface Profile {
   interests: string[];
   /** Whether onboarding has been completed */
   onboarding_completed: boolean;
+  /** User role for access control */
+  role: UserRole;
   /** Timestamp when the profile was created */
   created_at: string;
   /** Timestamp when the profile was last updated */
@@ -70,6 +75,7 @@ export interface ProfileInsert {
   bio?: string | null;
   interests?: string[];
   onboarding_completed?: boolean;
+  role?: UserRole;
   created_at?: string;
   updated_at?: string;
 }
@@ -84,6 +90,7 @@ export interface ProfileUpdate {
   bio?: string | null;
   interests?: string[];
   onboarding_completed?: boolean;
+  role?: UserRole;
   updated_at?: string;
 }
 
