@@ -154,5 +154,105 @@ const variations = [
         label: "Condensed Core",
         avalansaClass: "font-[family-name:var(--font-inter)] font-extrabold text-3xl scale-x-75 origin-left",
         workflowsClass: "font-serif italic text-2xl text-foreground/80"
+    },
+    {
+        label: "The Studio (Bricolage)",
+        avalansaClass: "font-[family-name:var(--font-bricolage)] font-bold text-2xl tracking-tighter",
+        workflowsClass: "font-[family-name:var(--font-bricolage)] font-light text-2xl lowercase tracking-tight opacity-40"
+    },
+    {
+        label: "Editorial Luxe (Fraunces)",
+        avalansaClass: "font-[family-name:var(--font-fraunces)] font-black text-2xl tracking-[0.05em]",
+        workflowsClass: "font-[family-name:var(--font-fraunces)] italic font-light text-3xl -mt-3 text-foreground/60"
+    },
+    {
+        label: "Apple-Esque Minimal",
+        avalansaClass: "font-sans font-medium text-xl tracking-[-0.02em]",
+        workflowsClass: "font-sans font-light text-xl tracking-[-0.02em] opacity-30"
+    },
+    {
+        label: "Brutalist Impact",
+        avalansaClass: "font-[family-name:var(--font-archivo)] text-4xl leading-none tracking-tighter",
+        workflowsClass: "font-mono text-xs uppercase tracking-[0.3em] mt-2 opacity-50"
+    },
+    {
+        label: "Soft Tech (Outfit)",
+        avalansaClass: "font-[family-name:var(--font-outfit)] font-semibold text-2xl tracking-tight",
+        workflowsClass: "font-[family-name:var(--font-outfit)] font-light text-2xl tracking-tight text-foreground/40"
+    },
+    {
+        label: "Renaissance Modern",
+        avalansaClass: "font-sans font-thin text-sm tracking-[1em] mb-2 mr-[-1em]",
+        workflowsClass: "font-[family-name:var(--font-dm-serif)] italic text-4xl leading-none"
+    },
+    {
+        label: "The Architect V2",
+        avalansaClass: "font-mono text-lg tracking-widest uppercase",
+        workflowsClass: "font-serif italic text-3xl -mt-1 opacity-70"
+    },
+    {
+        label: "Swiss Bold",
+        avalansaClass: "font-sans font-black text-5xl tracking-[-0.08em] leading-[0.8]",
+        workflowsClass: "font-sans font-normal text-xs uppercase tracking-[0.5em] mt-4"
+    },
+    {
+        label: "Organic Script (Fraunces)",
+        avalansaClass: "font-[family-name:var(--font-fraunces)] font-light text-xl tracking-widest",
+        workflowsClass: "font-[family-name:var(--font-fraunces)] italic font-semibold text-3xl -mt-2"
+    },
+    {
+        label: "Mono-spaced Flow",
+        avalansaClass: "font-mono font-bold text-2xl tracking-tighter bg-foreground text-background px-2 py-0.5",
+        workflowsClass: "font-mono text-2xl tracking-tighter opacity-50 mt-1"
+    },
+    {
+        label: "The Gallery",
+        avalansaClass: "font-[family-name:var(--font-dm-serif)] text-3xl mb-1",
+        workflowsClass: "font-sans font-thin text-[10px] uppercase tracking-[0.8em] mr-[-0.8em] opacity-40"
+    },
+    {
+        label: "Neo-Grotesque",
+        avalansaClass: "font-[family-name:var(--font-work-sans)] font-black text-3xl tracking-tighter",
+        workflowsClass: "font-[family-name:var(--font-work-sans)] font-thin text-3xl tracking-tighter -mt-1"
+    },
+    {
+        label: "Stacked Symmetery",
+        avalansaClass: "font-sans font-semibold text-xs tracking-[1.2rem] mr-[-1.2rem] mb-4 opacity-50",
+        workflowsClass: "font-sans font-semibold text-xs tracking-[1.2rem] mr-[-1.2rem]"
+    },
+    {
+        label: "Digital Craft",
+        avalansaClass: "font-mono text-sm opacity-30",
+        workflowsClass: "font-[family-name:var(--font-syne)] font-black text-4xl -mt-2"
+    },
+    {
+        label: "High Line Luxury",
+        avalansaClass: "font-sans font-light text-3xl tracking-[0.2em] border-b border-foreground/10 pb-2 mb-2",
+        workflowsClass: "font-serif italic text-xl opacity-60"
+    },
+    {
+        label: "Kinetic Bold",
+        avalansaClass: "font-[family-name:var(--font-bricolage)] font-black text-4xl italic tracking-tighter",
+        workflowsClass: "font-sans font-bold text-xs uppercase tracking-[0.4em] mt-1"
+    },
+    {
+        label: "Mathematical",
+        avalansaClass: "font-mono text-2xl",
+        workflowsClass: "font-mono italic text-2xl border-l-[3px] border-foreground pl-4 mt-2"
+    },
+    {
+        label: "The Boutique",
+        avalansaClass: "font-[family-name:var(--font-fraunces)] font-thin text-4xl",
+        workflowsClass: "font-sans font-medium text-[8px] uppercase tracking-[1em] mt-2 opacity-50"
+    },
+    {
+        label: "Fragmented",
+        avalansaClass: "font-sans font-black text-2xl tracking-[0.5em] mb-4",
+        workflowsClass: "font-serif italic text-2xl tracking-[-0.05em] opacity-40"
+    },
+    {
+        label: "Final Prototype",
+        avalansaClass: "font-[family-name:var(--font-outfit)] font-bold text-3xl tracking-tighter",
+        workflowsClass: "font-serif italic text-3xl tracking-tight text-foreground/50 -mt-2"
     }
 ];

@@ -12,51 +12,26 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-import { Newsreader, Inter, Playfair_Display, Cormorant_Garamond, Space_Grotesk, Syne, JetBrains_Mono, Lora } from "next/font/google";
+import {
+  Newsreader, Inter, Playfair_Display, Cormorant_Garamond, Space_Grotesk, Syne, JetBrains_Mono, Lora,
+  Bricolage_Grotesque, Fraunces, Work_Sans, DM_Serif_Display, Outfit, Archivo_Black
+} from "next/font/google";
 
-const newsreader = Newsreader({
-  variable: "--font-newsreader",
-  subsets: ["latin"],
-  style: ["italic", "normal"],
-});
+const newsreader = Newsreader({ variable: "--font-newsreader", subsets: ["latin"], style: ["italic", "normal"] });
+const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
+const playfair = Playfair_Display({ variable: "--font-playfair", subsets: ["latin"], style: ["italic", "normal"] });
+const cormorant = Cormorant_Garamond({ variable: "--font-cormorant", subsets: ["latin"], style: ["italic", "normal"] });
+const spaceGrotesk = Space_Grotesk({ variable: "--font-space-grotesk", subsets: ["latin"] });
+const syne = Syne({ variable: "--font-syne", subsets: ["latin"] });
+const lora = Lora({ variable: "--font-lora", subsets: ["latin"], style: ["italic", "normal"] });
+const jetbrainsMono = JetBrains_Mono({ variable: "--font-mono", subsets: ["latin"] });
 
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
-
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
-  subsets: ["latin"],
-  style: ["italic", "normal"],
-});
-
-const cormorant = Cormorant_Garamond({
-  variable: "--font-cormorant",
-  subsets: ["latin"],
-  style: ["italic", "normal"],
-});
-
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-space-grotesk",
-  subsets: ["latin"],
-});
-
-const syne = Syne({
-  variable: "--font-syne",
-  subsets: ["latin"],
-});
-
-const lora = Lora({
-  variable: "--font-lora",
-  subsets: ["latin"],
-  style: ["italic", "normal"],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
-});
+const bricolage = Bricolage_Grotesque({ variable: "--font-bricolage", subsets: ["latin"] });
+const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"], style: ["italic", "normal"] });
+const workSans = Work_Sans({ variable: "--font-work-sans", subsets: ["latin"] });
+const dmSerif = DM_Serif_Display({ variable: "--font-dm-serif", weight: "400", subsets: ["latin"], style: ["italic", "normal"] });
+const outfit = Outfit({ variable: "--font-outfit", subsets: ["latin"] });
+const archivoBlack = Archivo_Black({ variable: "--font-archivo", weight: "400", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: {
@@ -94,7 +69,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} ${inter.variable} ${playfair.variable} ${cormorant.variable} ${spaceGrotesk.variable} ${syne.variable} ${lora.variable} ${jetbrainsMono.variable} antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} ${inter.variable} ${playfair.variable} ${cormorant.variable} ${spaceGrotesk.variable} ${syne.variable} ${lora.variable} ${jetbrainsMono.variable} ${bricolage.variable} ${fraunces.variable} ${workSans.variable} ${dmSerif.variable} ${outfit.variable} ${archivoBlack.variable} antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
