@@ -24,6 +24,7 @@
 - **Status:** ACCEPTABLE
 - **Finding:** Error logging in `actions.ts`.
 - **Note:** Standard logging of OAuth errors is acceptable for debugging, assuming provider errors do not contain sensitive secrets.
+- **Note:** The `/labs` route (`src/app/labs/page.tsx`) allows client-side input of API keys for experimental testing. This is by design for a developer tool interface, but keys are not persisted and are only used locally in the browser session.
 
 ---
 **Verification Pending:** User should verify that `.env` files are in `.gitignore` (Checked: Yes, `.env.local` is standard in Next.js gitignore).
