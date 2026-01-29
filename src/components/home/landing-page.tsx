@@ -111,15 +111,9 @@ export function LandingPage({ user }: LandingPageProps) {
                             className="flex flex-col sm:flex-row gap-4 w-full max-w-sm"
                         >
                             <Button asChild size="lg" className="rounded-full gap-2 text-base h-12 flex-1">
-                                <Link href="/labs">
-                                    <Sparkles className="w-4 h-4" />
-                                    Go to Labs
-                                </Link>
-                            </Button>
-                            <Button asChild variant="outline" size="lg" className="rounded-full gap-2 text-base h-12 flex-1">
                                 <Link href="/dashboard">
                                     <LayoutDashboard className="w-4 h-4" />
-                                    Dashboard
+                                    Enter Dashboard
                                 </Link>
                             </Button>
                         </motion.div>
