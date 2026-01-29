@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, VT323, Lato } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -12,26 +12,17 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-import {
-  Newsreader, Inter, Playfair_Display, Cormorant_Garamond, Space_Grotesk, Syne, JetBrains_Mono, Lora,
-  Bricolage_Grotesque, Fraunces, Work_Sans, DM_Serif_Display, Outfit, Archivo_Black
-} from "next/font/google";
+const vt323 = VT323({
+  weight: "400",
+  variable: "--font-vt323",
+  subsets: ["latin"],
+});
 
-const newsreader = Newsreader({ variable: "--font-newsreader", subsets: ["latin"], style: ["italic", "normal"] });
-const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
-const playfair = Playfair_Display({ variable: "--font-playfair", subsets: ["latin"], style: ["italic", "normal"] });
-const cormorant = Cormorant_Garamond({ variable: "--font-cormorant", subsets: ["latin"], style: ["italic", "normal"] });
-const spaceGrotesk = Space_Grotesk({ variable: "--font-space-grotesk", subsets: ["latin"] });
-const syne = Syne({ variable: "--font-syne", subsets: ["latin"] });
-const lora = Lora({ variable: "--font-lora", subsets: ["latin"], style: ["italic", "normal"] });
-const jetbrainsMono = JetBrains_Mono({ variable: "--font-mono", subsets: ["latin"] });
-
-const bricolage = Bricolage_Grotesque({ variable: "--font-bricolage", subsets: ["latin"] });
-const fraunces = Fraunces({ variable: "--font-fraunces", subsets: ["latin"], style: ["italic", "normal"] });
-const workSans = Work_Sans({ variable: "--font-work-sans", subsets: ["latin"] });
-const dmSerif = DM_Serif_Display({ variable: "--font-dm-serif", weight: "400", subsets: ["latin"], style: ["italic", "normal"] });
-const outfit = Outfit({ variable: "--font-outfit", subsets: ["latin"] });
-const archivoBlack = Archivo_Black({ variable: "--font-archivo", weight: "400", subsets: ["latin"] });
+const lato = Lato({
+  weight: ["100", "300", "400", "700", "900"],
+  variable: "--font-lato",
+  subsets: ["latin"],
+});
 
 export const metadata: Metadata = {
   title: {
@@ -39,19 +30,43 @@ export const metadata: Metadata = {
     template: "%s | Avalansa",
   },
   description: "A secure, AI-curated operation system for your content.",
-  metadataBase: new URL("https://avalansa.com"), // Placeholder, update to actual domain
+  metadataBase: new URL("https://avalansa.com"),
+  alternates: {
+    canonical: "/",
+  },
   openGraph: {
-    type: "website",
-    locale: "en_US",
-    url: "https://avalansa.com",
     title: "Avalansa",
-    description: "A secure, AI-curated operation system for your content.",
+    description: "A secure, AI-curated operation system for your content. Save, share, and remix prompts.",
+    url: "https://avalansa.com",
     siteName: "Avalansa",
+    locale: "en_US",
+    type: "website",
+    images: [
+      {
+        url: "/og-image.png", // Verify this exists or is generated
+        width: 1200,
+        height: 630,
+        alt: "Avalansa - AI Operation System",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Avalansa",
-    description: "A secure, AI-curated operation system for your content.",
+    description: "A secure, AI-curated operation system for your content. Save, share, and remix prompts.",
+    images: ["/og-image.png"], // Verify this exists or is generated
+    creator: "@avalansa", // Update if known
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
   icons: {
     icon: "/favicon.ico",
@@ -69,11 +84,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} ${inter.variable} ${playfair.variable} ${cormorant.variable} ${spaceGrotesk.variable} ${syne.variable} ${lora.variable} ${jetbrainsMono.variable} ${bricolage.variable} ${fraunces.variable} ${workSans.variable} ${dmSerif.variable} ${outfit.variable} ${archivoBlack.variable} antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} ${vt323.variable} ${lato.variable} antialiased`}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="light"
+          forcedTheme="light"
+          enableSystem={false}
           disableTransitionOnChange
         >
           {children}
