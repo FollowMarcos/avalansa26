@@ -95,6 +95,35 @@ export interface ProfileUpdate {
 }
 
 // ============================================
+// Admin Dashboard Types
+// ============================================
+
+/** Statistics for admin dashboard */
+export interface AdminStats {
+  totalUsers: number;
+  activeUsers: number;
+  newUsers: number;
+  adminUsers: number;
+}
+
+/** Options for fetching profiles with pagination and filters */
+export interface GetProfilesOptions {
+  page?: number;
+  limit?: number;
+  search?: string;
+  role?: UserRole | 'all';
+  status?: 'completed' | 'onboarding' | 'all';
+}
+
+/** Paginated profiles response */
+export interface PaginatedProfiles {
+  profiles: Profile[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+// ============================================
 // Re-exports for convenience
 // ============================================
 
