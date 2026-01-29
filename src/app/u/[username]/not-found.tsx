@@ -18,7 +18,6 @@ export default function ProfileNotFound() {
           transition={{ duration: 0.5 }}
           className="relative"
         >
-          <div className="absolute inset-0 bg-primary/10 blur-3xl rounded-full opacity-20"></div>
           <div className="relative w-24 h-24 rounded-full bg-muted flex items-center justify-center">
             <SearchX className="w-10 h-10 text-muted-foreground/40" />
           </div>

@@ -63,7 +63,7 @@ export function FeatureGrid() {
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, delay: i * 0.1 }}
                     className={cn(
-                        "group relative overflow-hidden rounded-[24px] border border-border/50 bg-card/50 p-8 backdrop-blur-sm transition-all hover:border-primary/20 hover:shadow-2xl hover:shadow-primary/5",
+                        "group relative overflow-hidden rounded-[24px] border border-border/50 bg-card p-8 transition-all hover:border-primary/20",
                         feature.className
                     )}
                 >
@@ -93,8 +93,7 @@ export function FeatureGrid() {
                         )}
                     </div>
 
-                    {/* Subtle background glow on hover */}
-                    <div className="absolute -right-4 -top-4 h-32 w-32 rounded-full bg-primary/5 blur-3xl transition-opacity opacity-0 group-hover:opacity-100" />
+                    {/* Removed hover blur */}
                 </motion.div>
             ))}
         </div>

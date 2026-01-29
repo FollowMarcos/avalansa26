@@ -63,12 +63,11 @@ export function LandingPage({ user }: LandingPageProps) {
                         className="flex flex-col items-center gap-8 w-full"
                     >
                         <div className="relative">
-                            <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full opacity-20"></div>
                             <motion.div
                                 initial={{ y: 20, opacity: 0 }}
                                 animate={{ y: 0, opacity: 1 }}
                                 transition={{ delay: 0.1 }}
-                                className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-background shadow-xl"
+                                className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-background ring-1 ring-primary/10"
                             >
                                 {user.user_metadata?.avatar_url ? (
                                     <Image
@@ -149,7 +148,6 @@ export function LandingPage({ user }: LandingPageProps) {
                                     src="/ab.svg"
                                     alt="Avalansa"
                                     fill
-                                    className="drop-shadow-sm"
                                     priority
                                 />
                             </motion.div>

@@ -219,7 +219,7 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.1 }}
           >
-            <Card className="relative overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm group hover:border-primary/50 transition-all duration-300">
+            <Card className="relative overflow-hidden border-border/50 bg-card group hover:border-primary/50 transition-all duration-300">
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {stat.label}
@@ -238,7 +238,7 @@ export default function DashboardPage() {
                     vs last month
                   </span>
                 </div>
-                <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-primary/5 rounded-full blur-3xl group-hover:bg-primary/10 transition-colors" />
+                <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-primary/5 rounded-full group-hover:bg-primary/10 transition-colors" />
               </CardContent>
             </Card>
           </motion.div>
@@ -246,7 +246,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Main Content: User Table */}
-      <Card className="border-border/50 bg-card/30 backdrop-blur-md overflow-hidden">
+      <Card className="border-border/50 bg-card overflow-hidden">
         <CardHeader className="px-6 py-6 border-b border-border/40">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
@@ -306,7 +306,7 @@ export default function DashboardPage() {
                     className="group border-border/40 hover:bg-muted/20 transition-colors"
                   >
                     <TableCell>
-                      <Avatar className="h-9 w-9 border-2 border-background shadow-sm">
+                      <Avatar className="h-9 w-9 border-2 border-background">
                         <AvatarImage src="" />
                         <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
                           {user.avatar}
@@ -332,11 +332,10 @@ export default function DashboardPage() {
                     <TableCell>
                       <Badge
                         variant="secondary"
-                        className={`capitalize font-semibold text-[10px] tracking-wide px-2 py-0.5 rounded-full ${
-                          user.role === "admin"
-                            ? "bg-primary/15 text-primary border border-primary/20"
-                            : "bg-muted text-muted-foreground border border-border"
-                        }`}
+                        className={`capitalize font-semibold text-[10px] tracking-wide px-2 py-0.5 rounded-full ${user.role === "admin"
+                          ? "bg-primary/15 text-primary border border-primary/20"
+                          : "bg-muted text-muted-foreground border border-border"
+                          }`}
                       >
                         {user.role}
                       </Badge>
@@ -344,13 +343,12 @@ export default function DashboardPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <div
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            user.status === "completed"
-                              ? "bg-emerald-500"
-                              : user.status === "onboarding"
-                                ? "bg-amber-500"
-                                : "bg-slate-400"
-                          }`}
+                          className={`w-1.5 h-1.5 rounded-full ${user.status === "completed"
+                            ? "bg-emerald-500"
+                            : user.status === "onboarding"
+                              ? "bg-amber-500"
+                              : "bg-slate-400"
+                            }`}
                         />
                         <span className="text-xs capitalize text-muted-foreground font-medium">
                           {user.status}
@@ -377,7 +375,7 @@ export default function DashboardPage() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
                           align="end"
-                          className="w-48 bg-card border-border shadow-xl"
+                          className="w-48 bg-card border-border shadow-none"
                         >
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator className="bg-border/50" />
@@ -464,7 +462,7 @@ export default function DashboardPage() {
       <div className="fixed bottom-6 right-6 hidden md:block">
         <Button
           size="icon"
-          className="w-12 h-12 rounded-full shadow-2xl bg-primary hover:scale-105 transition-transform"
+          className="w-12 h-12 rounded-full border border-border bg-primary hover:scale-105 transition-transform"
         >
           <LayoutDashboard className="w-6 h-6 text-primary-foreground" />
         </Button>

@@ -31,7 +31,7 @@ export function StatsCards({
       {/* Card 1: Revenue */}
       <motion.div
         className={cn(
-          `relative z-10 ${width} ${height} bg-card rounded-[16px] p-5 flex flex-col justify-between hover:z-50 shadow-sm border border-border/50`
+          `relative z-10 ${width} ${height} bg-card rounded-[16px] p-5 flex flex-col justify-between hover:z-50 border border-border/50`
         )}
         initial={{
           rotate: -3,
@@ -61,7 +61,7 @@ export function StatsCards({
       {/* Card 2: Image Stats */}
       <motion.div
         className={cn(
-          `relative z-20 ${width} ${height} rounded-[16px] overflow-hidden group hover:z-50 shadow-sm border border-border/50`
+          `relative z-20 ${width} ${height} rounded-[16px] overflow-hidden group hover:z-50 border border-border/50`
         )}
         initial={{
           rotate: 2,
@@ -82,7 +82,7 @@ export function StatsCards({
       {/* Card 3: Impressions */}
       <motion.div
         className={cn(
-          `relative z-30 ${width} ${height} bg-primary rounded-[16px] p-5 flex flex-col justify-between flex-shrink-0 hover:z-50 shadow-xl`
+          `relative z-30 ${width} ${height} bg-primary rounded-[16px] p-5 flex flex-col justify-between flex-shrink-0 hover:z-50`
         )}
         initial={{
           rotate: 8,
@@ -112,7 +112,7 @@ export function StatsCards({
       {/* Card 4: Image Stats */}
       <motion.div
         className={cn(
-          `relative z-40 ${width} ${height} rounded-[16px] overflow-hidden -ml-1 hover:z-50 shadow-sm border border-border/50`
+          `relative z-40 ${width} ${height} rounded-[16px] overflow-hidden -ml-1 hover:z-50 border border-border/50`
         )}
         initial={{
           rotate: -4,
