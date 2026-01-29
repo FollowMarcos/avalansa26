@@ -45,23 +45,29 @@ export default function Home() {
           transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
           className="relative group"
         >
-          <div className="relative w-32 h-32 flex items-center justify-center">
-            <Image
-              src="/ab.svg"
-              alt="Avalansa Logo"
-              width={100}
-              height={100}
-              priority
-              className="dark:hidden transition-all duration-700"
-            />
-            <Image
-              src="/aw.svg"
-              alt="Avalansa Logo"
-              width={100}
-              height={100}
-              priority
-              className="hidden dark:block transition-all duration-700"
-            />
+          <div className="flex flex-col items-center">
+            <div className="relative w-32 h-32 flex items-center justify-center">
+              <Image
+                src="/ab.svg"
+                alt="Avalansa Logo"
+                width={100}
+                height={100}
+                priority
+                className="dark:hidden transition-all duration-700"
+              />
+              <Image
+                src="/aw.svg"
+                alt="Avalansa Logo"
+                width={100}
+                height={100}
+                priority
+                className="hidden dark:block transition-all duration-700"
+              />
+            </div>
+            <div className="flex items-center gap-2 mt-4 select-none">
+              <span className="font-serif italic text-3xl tracking-tight text-foreground/80">workflows</span>
+              <span className="font-sans font-black text-3xl tracking-[0.2em] uppercase text-foreground">AVALANSA</span>
+            </div>
           </div>
         </motion.div>
 
