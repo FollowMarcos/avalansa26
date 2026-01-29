@@ -6,6 +6,7 @@ import { GoogleSignInButton } from "@/components/google-signin-button"
 import Image from 'next/image'
 import { motion, AnimatePresence } from "motion/react"
 import { useEffect, useState } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import { User } from '@supabase/supabase-js'
 
@@ -23,8 +24,52 @@ export default function Home() {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background overflow-hidden relative selection:bg-primary/10">
-      {/* High-End Background: Subtle grain and gradient */}
+      {/* High-End Background: Subtle grain and grid */}
       <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay bg-noise" />
+
+      {/* Vertical Dashed Lines */}
+      <div
+        className="absolute inset-0 z-0 pointer-events-none opacity-100 dark:opacity-40"
+        style={{
+          backgroundImage: `linear-gradient(to right, var(--border) 1px, transparent 1px)`,
+          backgroundSize: "24px 24px",
+          backgroundPosition: "center center",
+          maskImage: `
+            repeating-linear-gradient(
+              to bottom,
+              black 0px,
+              black 3px,
+              transparent 3px,
+              transparent 8px
+            ),
+            radial-gradient(ellipse 60% 60% at 50% 50%, #000 30%, transparent 70%)
+          `,
+          WebkitMaskComposite: "source-in",
+          maskComposite: "intersect",
+        }}
+      />
+
+      {/* Horizontal Dashed Lines */}
+      <div
+        className="absolute inset-0 z-0 pointer-events-none opacity-100 dark:opacity-40"
+        style={{
+          backgroundImage: `linear-gradient(to bottom, var(--border) 1px, transparent 1px)`,
+          backgroundSize: "24px 24px",
+          backgroundPosition: "center center",
+          maskImage: `
+            repeating-linear-gradient(
+              to right,
+              black 0px,
+              black 3px,
+              transparent 3px,
+              transparent 8px
+            ),
+            radial-gradient(ellipse 60% 60% at 50% 50%, #000 30%, transparent 70%)
+          `,
+          WebkitMaskComposite: "source-in",
+          maskComposite: "intersect",
+        }}
+      />
 
       {/* Navigation: Absolute positioned at top */}
       <nav className="absolute top-0 w-full px-8 py-8 flex justify-end">
@@ -64,9 +109,9 @@ export default function Home() {
                 className="hidden dark:block transition-all duration-700"
               />
             </div>
-            <div className="flex items-center gap-2 mt-4 select-none">
-              <span className="font-serif italic text-3xl tracking-tight text-foreground/80">workflows</span>
-              <span className="font-sans font-black text-3xl tracking-[0.2em] uppercase text-foreground">AVALANSA</span>
+            <div className="flex items-center mt-6 select-none">
+              <span className="font-sans font-medium text-3xl tracking-[0.15em] uppercase text-foreground">AVALANSA</span>
+              <span className="font-serif italic text-3xl tracking-tight text-foreground/70">workflows</span>
             </div>
           </div>
         </motion.div>
@@ -108,8 +153,10 @@ export default function Home() {
       </main>
 
       {/* High-End Footer */}
-      <footer className="absolute bottom-12 text-xs uppercase tracking-[0.4em] text-muted-foreground/50 font-medium select-none">
-        Avalansa &bull; {new Date().getFullYear()}
+      <footer className="absolute bottom-12 flex items-center gap-4 text-xs uppercase tracking-[0.4em] text-muted-foreground/50 font-medium select-none">
+        <span>Avalansa &bull; {new Date().getFullYear()}</span>
+        <span className="opacity-20 text-[10px]">&bull;</span>
+        <Link href="/labs" className="hover:text-foreground transition-colors">Labs</Link>
       </footer>
 
     </div>
