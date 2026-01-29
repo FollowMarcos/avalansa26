@@ -97,9 +97,19 @@ export async function updateCurrentProfile(
     return null;
   }
 
+  // ONLY allow specific fields to be updated by the user themselves
+  const { name, bio, avatar_url, interests, username } = updates;
+  const filteredUpdates: ProfileUpdate = {};
+
+  if (name !== undefined) filteredUpdates.name = name;
+  if (bio !== undefined) filteredUpdates.bio = bio;
+  if (avatar_url !== undefined) filteredUpdates.avatar_url = avatar_url;
+  if (interests !== undefined) filteredUpdates.interests = interests;
+  if (username !== undefined) filteredUpdates.username = username;
+
   const { data, error } = await supabase
     .from('profiles')
-    .update(updates)
+    .update(filteredUpdates)
     .eq('id', user.id)
     .select()
     .single();

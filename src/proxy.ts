@@ -47,9 +47,13 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isPublicRoute = PUBLIC_ROUTES.some(
-    (route) => pathname === route || pathname.startsWith(route + '/')
-  );
+  const isPublicRoute = PUBLIC_ROUTES.some((route) => {
+    if (route === '/u') {
+      const segments = pathname.split('/').filter(Boolean);
+      return segments.length === 2 && segments[0] === 'u';
+    }
+    return pathname === route || pathname.startsWith(route + '/');
+  });
   const isOnboardingRoute = ONBOARDING_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(route)
   );

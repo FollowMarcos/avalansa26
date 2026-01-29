@@ -9,7 +9,8 @@ import { User } from '@supabase/supabase-js'
 import { Button } from "@/components/ui/button"
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
-import { LogOut, LayoutDashboard, Sparkles } from "lucide-react"
+import { LogOut, LayoutDashboard, Sparkles, User as UserIcon } from "lucide-react"
+import { ModeToggle } from "@/components/mode-toggle"
 
 interface LandingPageProps {
     user: User | null;
@@ -51,6 +52,11 @@ export function LandingPage({ user }: LandingPageProps) {
         <div className="flex flex-col items-center justify-center min-h-dvh bg-background text-foreground px-6 py-12 selection:bg-primary/10 relative overflow-hidden">
             {/* Analog Grain Texture - Static layer, minimal performance impact */}
             <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.03] mix-blend-multiply bg-noise"></div>
+
+            {/* Top Bar with Theme Toggle */}
+            <div className="fixed top-6 right-6 z-50">
+                <ModeToggle />
+            </div>
 
             <main className="flex flex-col items-center max-w-2xl w-full space-y-12 text-center relative z-10">
 
@@ -149,6 +155,14 @@ export function LandingPage({ user }: LandingPageProps) {
                                     alt="Avalansa"
                                     fill
                                     priority
+                                    className="dark:hidden"
+                                />
+                                <Image
+                                    src="/aw.svg"
+                                    alt="Avalansa"
+                                    fill
+                                    priority
+                                    className="hidden dark:block"
                                 />
                             </motion.div>
                             <h1 className="font-vt323 text-5xl md:text-6xl tracking-tight text-primary flex items-center text-balance">
@@ -180,7 +194,7 @@ export function LandingPage({ user }: LandingPageProps) {
                         >
                             <div className="h-[1px] flex-1 bg-primary/10" />
                             <span className="font-lato text-xs text-muted-foreground/60 whitespace-nowrap font-normal">
-                                Sign or sign up with
+                                Sign In or Sign Up With
                             </span>
                             <div className="h-[1px] flex-1 bg-primary/10" />
                         </motion.div>

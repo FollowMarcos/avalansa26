@@ -17,6 +17,7 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { ModeToggle } from "@/components/mode-toggle";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -206,6 +207,8 @@ export default function DashboardPage() {
             <Button className="h-9 gap-2 bg-primary text-primary-foreground hover:opacity-90">
               <UserPlus className="w-4 h-4" /> Add User
             </Button>
+            <div className="h-9 w-px bg-border mx-2" />
+            <ModeToggle />
           </div>
         </div>
       </header>

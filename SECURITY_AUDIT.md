@@ -28,3 +28,22 @@
 
 ---
 **Verification Pending:** User should verify that `.env` files are in `.gitignore` (Checked: Yes, `.env.local` is standard in Next.js gitignore).
+
+## Update: Security Hardening (Depth Review)
+**Date:** 2026-01-29
+**Scope:** Full Project Security Sweep
+
+### 1. Authentication Middleware Bypass (Pattern 4)
+- **Status:** FIXED
+- **Finding:** The proxy middleware allowed all sub-paths of `/u/` as public routes. This meant private pages like `/u/[username]/settings` could be accessed without the middleware enforcing authentication or onboarding checks.
+- **Remediation:** Refactored `src/proxy.ts` to use stricter path matching for `/u/`. Only `/u/[username]` (2 path segments) is now considered public. Sub-paths like `/settings` now correctly trigger auth and onboarding enforcement.
+
+### 2. Role Elevation Vulnerability (Pattern 6)
+- **Status:** FIXED
+- **Finding:** The `updateCurrentProfile` server action in `src/utils/supabase/profiles.ts` accepted the entire `ProfileUpdate` object from the client without filtering. A malicious user could have updated their own `role` to `admin` or manipulated `onboarding_completed` status.
+- **Remediation:** Implemented property filtering in `updateCurrentProfile`. It now explicitly only allows updates to `name`, `bio`, `avatar_url`, `interests`, and `username`. Sensitive fields like `role` are ignored.
+
+### 3. Dependency Audit (Pattern 7)
+- **Status:** VERIFIED
+- **Finding:** Audited `package.json` for suspicious versions or packages.
+- **Note:** Version `2.93.2` of `supabase-js` was verified as the legitimate latest version (released 2026-01-27). No typosquatting detected.

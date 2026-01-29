@@ -87,9 +87,8 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} ${vt323.variable} ${lato.variable} antialiased`}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
-          forcedTheme="light"
-          enableSystem={false}
+          defaultTheme="system"
+          enableSystem
           disableTransitionOnChange
         >
           {children}
