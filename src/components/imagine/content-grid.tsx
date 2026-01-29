@@ -30,14 +30,17 @@ const generateMockData = (count: number): ContentItem[] => {
     }));
 };
 
-export function ContentGrid({ itemsPerRow }: ContentGridProps) {
+import { useImagine } from "./imagine-context";
+
+export function ContentGrid() {
+    const { galleryColumns } = useImagine();
     const items = React.useMemo(() => generateMockData(20), []);
 
     return (
         <div className="w-full px-8 pb-32">
             <div
                 className="grid gap-4 transition-all duration-500 ease-in-out"
-                style={{ gridTemplateColumns: `repeat(${itemsPerRow}, minmax(0, 1fr))` }}
+                style={{ gridTemplateColumns: `repeat(${galleryColumns}, minmax(0, 1fr))` }}
             >
                 {items.map((item, index) => (
                     <motion.div

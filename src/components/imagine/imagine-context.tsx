@@ -23,15 +23,18 @@ interface ImagineContextType {
     setActiveTab: (tab: string) => void;
     isInputVisible: boolean;
     toggleInputVisibility: () => void;
+    galleryColumns: number;
+    setGalleryColumns: (cols: number) => void;
 }
 
 const ImagineContext = React.createContext<ImagineContextType | undefined>(undefined);
 
 export function ImagineProvider({ children }: { children: React.ReactNode }) {
     const [prompt, setPrompt] = React.useState("");
-    const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+    const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
     const [isInputVisible, setIsInputVisible] = React.useState(false);
     const [activeTab, setActiveTab] = React.useState("imagine");
+    const [galleryColumns, setGalleryColumns] = React.useState(4);
     const [settings, setSettings] = React.useState<ImagineSettings>({
         aspectRatio: "16:9",
         outputCount: 1,
@@ -64,8 +67,10 @@ export function ImagineProvider({ children }: { children: React.ReactNode }) {
         activeTab,
         setActiveTab,
         isInputVisible,
-        toggleInputVisibility
-    }), [prompt, settings, isSidebarOpen, activeTab, isInputVisible, updateSettings, toggleSidebar, toggleInputVisibility]);
+        toggleInputVisibility,
+        galleryColumns,
+        setGalleryColumns
+    }), [prompt, settings, isSidebarOpen, activeTab, isInputVisible, galleryColumns, updateSettings, toggleSidebar, toggleInputVisibility]);
 
     return (
         <ImagineContext.Provider value={value}>

@@ -15,6 +15,8 @@ const NAV_ITEMS = [
 export function ImagineDock() {
     const { isInputVisible, toggleInputVisibility, activeTab, setActiveTab } = useImagine();
 
+    if (isInputVisible) return null;
+
     const handleItemClick = (id: string) => {
         if (id === 'imagine') {
             toggleInputVisibility();
