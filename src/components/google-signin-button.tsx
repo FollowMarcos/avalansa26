@@ -61,9 +61,13 @@ export function GoogleSignInButton() {
             </Button>
 
             {lastUser && (
-                <p className="text-[10px] text-muted-foreground/60">
-                    Detected: <span className="text-foreground">{lastUser}</span>
-                </p>
+                <div className="flex items-center gap-3 mt-4 animate-in fade-in slide-in-from-top-2 duration-700">
+                    <div className="h-[1px] w-8 bg-primary/5" />
+                    <p className="text-[11px] text-muted-foreground/40 font-medium tracking-tight">
+                        You last logged in with <span className="text-muted-foreground/80">{lastUser}</span>
+                    </p>
+                    <div className="h-[1px] w-8 bg-primary/5" />
+                </div>
             )}
         </div>
     );
