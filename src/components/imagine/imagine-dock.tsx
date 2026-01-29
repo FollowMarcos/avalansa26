@@ -1,25 +1,40 @@
 "use client";
 
-import { Home, Library, Image as ImageIcon, Beaker, Settings, User } from "lucide-react";
+import { Home, Library, Sparkles, Beaker, Settings, User } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useImagine } from "./imagine-context";
 
 const NAV_ITEMS = [
     { icon: Home, id: 'home', label: 'Home' },
     { icon: Library, id: 'library', label: 'Library' },
-    { icon: ImageIcon, id: 'imagine', label: 'Imagine' },
+    { icon: Sparkles, id: 'imagine', label: 'Imagine' },
     { icon: Beaker, id: 'labs', label: 'Labs' },
     { icon: User, id: 'profile', label: 'Profile' },
 ];
 
 export function ImagineDock() {
+    const { isInputVisible, toggleInputVisibility, activeTab, setActiveTab } = useImagine();
+
+    const handleItemClick = (id: string) => {
+        if (id === 'imagine') {
+            toggleInputVisibility();
+        } else {
+            setActiveTab(id);
+        }
+    };
+
     return (
         <div className="flex items-center justify-center pointer-events-auto">
             <div className="flex items-center gap-1 p-1.5 rounded-full bg-background border shadow-xl backdrop-blur-2xl">
                 {NAV_ITEMS.map((item) => {
-                    const isActive = item.id === 'imagine';
+                    const isImagine = item.id === 'imagine';
+                    // Highlight if active tab OR if it's the imagine button and input is visible
+                    const isActive = activeTab === item.id || (isImagine && isInputVisible);
+
                     return (
                         <button
                             key={item.id}
+                            onClick={() => handleItemClick(item.id)}
                             className={cn(
                                 "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300",
                                 isActive
@@ -28,7 +43,7 @@ export function ImagineDock() {
                             )}
                         >
                             <item.icon className="w-5 h-5" />
-                            {isActive && (
+                            {isActive && !isImagine && (
                                 <span className="absolute -bottom-8 text-[10px] font-medium text-foreground bg-background/80 px-2 py-0.5 rounded-full border opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none">
                                     {item.label}
                                 </span>

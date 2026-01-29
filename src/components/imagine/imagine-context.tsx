@@ -21,6 +21,8 @@ interface ImagineContextType {
     toggleSidebar: () => void;
     activeTab: string;
     setActiveTab: (tab: string) => void;
+    isInputVisible: boolean;
+    toggleInputVisibility: () => void;
 }
 
 const ImagineContext = React.createContext<ImagineContextType | undefined>(undefined);
@@ -28,6 +30,7 @@ const ImagineContext = React.createContext<ImagineContextType | undefined>(undef
 export function ImagineProvider({ children }: { children: React.ReactNode }) {
     const [prompt, setPrompt] = React.useState("");
     const [isSidebarOpen, setIsSidebarOpen] = React.useState(true);
+    const [isInputVisible, setIsInputVisible] = React.useState(false);
     const [activeTab, setActiveTab] = React.useState("imagine");
     const [settings, setSettings] = React.useState<ImagineSettings>({
         aspectRatio: "16:9",
@@ -47,6 +50,10 @@ export function ImagineProvider({ children }: { children: React.ReactNode }) {
         setIsSidebarOpen(prev => !prev);
     }, []);
 
+    const toggleInputVisibility = React.useCallback(() => {
+        setIsInputVisible(prev => !prev);
+    }, []);
+
     const value = React.useMemo(() => ({
         prompt,
         setPrompt,
@@ -55,8 +62,10 @@ export function ImagineProvider({ children }: { children: React.ReactNode }) {
         isSidebarOpen,
         toggleSidebar,
         activeTab,
-        setActiveTab
-    }), [prompt, settings, isSidebarOpen, activeTab, updateSettings, toggleSidebar]);
+        setActiveTab,
+        isInputVisible,
+        toggleInputVisibility
+    }), [prompt, settings, isSidebarOpen, activeTab, isInputVisible, updateSettings, toggleSidebar, toggleInputVisibility]);
 
     return (
         <ImagineContext.Provider value={value}>
