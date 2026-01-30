@@ -188,7 +188,7 @@ export function DashboardClient({
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-6 lg:p-10 space-y-8 max-w-[1600px] mx-auto">
+    <div className="min-h-screen bg-background text-foreground p-6 lg:p-8 space-y-8 max-w-[2400px] mx-auto">
       {/* Header & Breadcrumbs */}
       <header className="space-y-1.5">
         <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
@@ -307,6 +307,7 @@ export function DashboardClient({
                   variant="outline"
                   size="icon"
                   className="shrink-0 border-border hover:bg-muted"
+                  aria-label="Filter users"
                 >
                   <Filter className="w-4 h-4" />
                 </Button>
@@ -518,6 +519,7 @@ export function DashboardClient({
         <Button
           size="icon"
           className="w-12 h-12 rounded-full shadow-2xl bg-primary hover:scale-105 transition-transform"
+          aria-label="Toggle dashboard view"
         >
           <LayoutDashboard className="w-6 h-6 text-primary-foreground" />
         </Button>

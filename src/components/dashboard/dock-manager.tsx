@@ -171,6 +171,8 @@ export function DockManager() {
 
     // Dialog State
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [itemToDelete, setItemToDelete] = useState<DockItem | null>(null);
     const [currentItem, setCurrentItem] = useState<Partial<DockItem>>({});
     const [dropdownItems, setDropdownItems] = useState<DockDropdownItem[]>([]);
 
@@ -261,16 +263,23 @@ export function DockManager() {
         setIsDialogOpen(false);
     };
 
-    const handleDeleteItem = async (item: DockItem) => {
-        if (confirm('Are you sure you want to delete this dock item?')) {
-            const success = await deleteDockItem(item.id);
-            if (success) {
-                setItems(items.filter(i => i.id !== item.id));
-                toast.success('Dock item deleted');
-            } else {
-                toast.error('Failed to delete dock item');
-            }
+    const confirmDelete = (item: DockItem) => {
+        setItemToDelete(item);
+        setIsDeleteDialogOpen(true);
+    };
+
+    const handleDeleteItem = async () => {
+        if (!itemToDelete) return;
+
+        const success = await deleteDockItem(itemToDelete.id);
+        if (success) {
+            setItems(items.filter(i => i.id !== itemToDelete.id));
+            toast.success('Dock item deleted');
+        } else {
+            toast.error('Failed to delete dock item');
         }
+        setIsDeleteDialogOpen(false);
+        setItemToDelete(null);
     };
 
     const openEditDialog = (item: DockItem) => {
@@ -336,7 +345,7 @@ export function DockManager() {
                                 key={item.id}
                                 item={item}
                                 onEdit={openEditDialog}
-                                onDelete={handleDeleteItem}
+                                onDelete={confirmDelete}
                             />
                         ))}
                     </div>
@@ -362,16 +371,24 @@ export function DockManager() {
                     <div className="grid gap-6 py-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label>Label</Label>
+                                <Label htmlFor="item-label">Label</Label>
                                 <Input
+                                    id="item-label"
                                     value={currentItem.label || ''}
                                     onChange={e => setCurrentItem({ ...currentItem, label: e.target.value })}
                                     placeholder="e.g. Library"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label>Icon</Label>
+                                <Label htmlFor="item-icon">Icon</Label>
                                 <div className="flex gap-2">
+                                    <div className={cn(
+                                        "w-10 h-10 rounded-md border flex items-center justify-center shrink-0 shadow-sm",
+                                        currentItem.bg_color || "bg-muted",
+                                        currentItem.text_color || "text-foreground"
+                                    )}>
+                                        <IconDisplay name={currentItem.icon} className="w-6 h-6" />
+                                    </div>
                                     <Select
                                         value={
                                             currentItem.icon?.startsWith('hugeicons:') ? 'hugeicons' :
@@ -387,7 +404,7 @@ export function DockManager() {
                                             else setCurrentItem({ ...currentItem, icon: currentName });
                                         }}
                                     >
-                                        <SelectTrigger className="w-[130px]">
+                                        <SelectTrigger className="w-[130px]" aria-label="Icon Library">
                                             <SelectValue placeholder="Library" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -398,6 +415,7 @@ export function DockManager() {
                                         </SelectContent>
                                     </Select>
                                     <Input
+                                        id="item-icon"
                                         value={currentItem.icon?.replace(/^(hugeicons:|fa:|si:)/, '') || ''}
                                         onChange={e => {
                                             const newVal = e.target.value;
@@ -465,6 +483,7 @@ export function DockManager() {
                                     ))}
                                 </div>
                                 <Input
+                                    aria-label="Custom background classes"
                                     value={currentItem.bg_color || ''}
                                     onChange={e => setCurrentItem({ ...currentItem, bg_color: e.target.value })}
                                     placeholder="Or type Tailwind classes..."
@@ -499,6 +518,7 @@ export function DockManager() {
                                     ))}
                                 </div>
                                 <Input
+                                    aria-label="Custom text color classes"
                                     value={currentItem.text_color || ''}
                                     onChange={e => setCurrentItem({ ...currentItem, text_color: e.target.value })}
                                     placeholder="Or type Tailwind classes..."
@@ -508,9 +528,10 @@ export function DockManager() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label>Main Link URL</Label>
+                            <Label htmlFor="item-url">Main Link URL</Label>
                             <div className="flex gap-2">
                                 <Input
+                                    id="item-url"
                                     value={currentItem.href || ''}
                                     onChange={e => setCurrentItem({ ...currentItem, href: e.target.value })}
                                     placeholder="e.g. /library or https://google.com"
@@ -533,12 +554,12 @@ export function DockManager() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label>Required Role</Label>
+                                <Label htmlFor="item-role">Required Role</Label>
                                 <Select
                                     value={currentItem.required_role || "all"}
                                     onValueChange={v => setCurrentItem({ ...currentItem, required_role: v === "all" ? undefined : v as any })}
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger id="item-role">
                                         <SelectValue placeholder="All Users" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -571,19 +592,27 @@ export function DockManager() {
                                         <div className="grid gap-2 flex-1">
                                             <div className="grid grid-cols-2 gap-2">
                                                 <Input
+                                                    aria-label="Dropdown Item Label"
                                                     value={item.label}
                                                     onChange={e => updateDropdownItem(idx, 'label', e.target.value)}
                                                     placeholder="Label"
                                                     className="h-8 text-sm"
                                                 />
-                                                <Input
-                                                    value={item.icon || ''}
-                                                    onChange={e => updateDropdownItem(idx, 'icon', e.target.value)}
-                                                    placeholder="Icon"
-                                                    className="h-8 text-sm"
-                                                />
+                                                <div className="relative">
+                                                    <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+                                                        <IconDisplay name={item.icon} className="w-4 h-4" />
+                                                    </div>
+                                                    <Input
+                                                        aria-label="Dropdown Item Icon"
+                                                        value={item.icon || ''}
+                                                        onChange={e => updateDropdownItem(idx, 'icon', e.target.value)}
+                                                        placeholder="Icon (e.g. Home or fa:FaBeer)"
+                                                        className="h-8 text-sm pl-9"
+                                                    />
+                                                </div>
                                             </div>
                                             <Input
+                                                aria-label="Dropdown Item URL"
                                                 value={item.href}
                                                 onChange={e => updateDropdownItem(idx, 'href', e.target.value)}
                                                 placeholder="URL"
@@ -616,6 +645,27 @@ export function DockManager() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-        </div>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Delete Dock Item</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete <span className="font-medium text-foreground">{itemToDelete?.label}</span>?
+                            This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button variant="destructive" onClick={handleDeleteItem}>
+                            Delete
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div >
     );
 }
