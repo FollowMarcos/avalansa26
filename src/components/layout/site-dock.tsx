@@ -292,11 +292,11 @@ export function SiteDock() {
                                                 )}
                                             >
                                                 {item.dropdown_items.map((dropdownItem, idx) => (
-                                                    <DropdownMenuItem key={idx} asChild className={cn("rounded-lg cursor-pointer", isDockDark ? "focus:bg-zinc-800" : "focus:bg-zinc-100")}>
-                                                        <Link href={dropdownItem.href} className="flex items-center gap-2 py-2 px-3">
+                                                    <DropdownMenuItem key={idx} asChild className={cn("rounded-lg cursor-pointer group", isDockDark ? "focus:bg-white focus:text-zinc-900" : "focus:bg-zinc-900 focus:text-white")}>
+                                                        <Link href={dropdownItem.href} className="flex items-center gap-2.5 py-2 px-2.5">
                                                             {dropdownItem.icon ? (
-                                                                <div className="w-5 h-5 rounded-md bg-opacity-20 flex items-center justify-center bg-primary/20 text-primary">
-                                                                    <IconComponent name={dropdownItem.icon} className="w-3 h-3" />
+                                                                <div className={cn("w-5 h-5 rounded-md flex items-center justify-center transition-colors", isDockDark ? "bg-zinc-800 text-amber-400 group-focus:bg-zinc-100 group-focus:text-amber-600" : "bg-zinc-100 text-amber-500 group-focus:bg-zinc-800")}>
+                                                                    <IconComponent name={dropdownItem.icon} className="w-3.5 h-3.5" />
                                                                 </div>
                                                             ) : null}
                                                             <span className="text-sm font-medium">{dropdownItem.label}</span>
@@ -436,7 +436,10 @@ export function SiteDock() {
                                     {/* Theme Toggle */}
                                     <DropdownMenuItem
                                         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                                        className={cn("rounded-lg cursor-pointer group", isDockDark ? "focus:bg-white focus:text-zinc-900" : "focus:bg-zinc-900 focus:text-white")}
+                                        className={cn(
+                                            "rounded-lg cursor-pointer group p-0",
+                                            isDockDark ? "focus:bg-white focus:text-zinc-900" : "focus:bg-zinc-900 focus:text-white"
+                                        )}
                                     >
                                         <div className="flex items-center gap-2.5 py-2 px-2.5 w-full">
                                             {theme === 'dark' ? (

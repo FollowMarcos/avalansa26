@@ -13,10 +13,8 @@ interface DefaultAvatarProps {
 export function DefaultAvatar({ className, size = 44 }: DefaultAvatarProps) {
     return (
         <svg
-            width={size}
-            height={size}
             viewBox="0 0 16 16"
-            className={cn("rounded-xl", className)}
+            className={cn("rounded-xl w-full h-full", className)}
             xmlns="http://www.w3.org/2000/svg"
             style={{ imageRendering: 'pixelated' }}
         >
