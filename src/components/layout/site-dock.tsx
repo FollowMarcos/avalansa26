@@ -130,70 +130,86 @@ export function SiteDock() {
     if (isAuthenticated === null || isAuthenticated === false) return null;
     if (isInputVisible && isImaginePage) return null;
 
-    // Helper to render specific items by ID
+    // Helper to render specific items by ID - returns both the visual element and its click handler
     const renderDockItem = (id: DockItemId) => {
+        const baseIconClass = "relative flex items-center justify-center w-12 h-12 rounded-[12px] transition-all duration-300 shadow-lg";
+
         switch (id) {
             case 'library':
                 return (
-                    <Link
-                        href="/library"
+                    <div
+                        onClick={() => router.push('/library')}
                         className={cn(
-                            "relative flex items-center justify-center w-12 h-12 rounded-[12px] transition-all duration-300 shadow-lg bg-gradient-to-br from-blue-400 to-blue-600",
+                            baseIconClass,
+                            "bg-gradient-to-br from-blue-400 to-blue-600 cursor-pointer",
                             pathname === "/library" ? "scale-110 shadow-xl" : "hover:scale-105 active:scale-95"
                         )}
+                        role="link"
                         aria-label="Library"
                     >
-                        <Library className="w-6 h-6 text-white" strokeWidth={1.5} />
-                    </Link>
+                        <Library className="w-6 h-6 text-white pointer-events-none" strokeWidth={1.5} />
+                    </div>
                 );
             case 'imagine':
                 return (
                     <div className="relative group/imagine">
-                        <div className="absolute inset-0 bg-gradient-to-br from-[#5856D6] to-[#AF52DE] blur-md opacity-40 group-hover/imagine:opacity-80 transition-opacity rounded-[12px]" />
-                        <Link
-                            href="/imagine"
-                            onClick={handleImagineClick}
+                        <div className="absolute inset-0 bg-gradient-to-br from-[#5856D6] to-[#AF52DE] blur-md opacity-40 group-hover/imagine:opacity-80 transition-opacity rounded-[12px] pointer-events-none" />
+                        <div
+                            onClick={(e) => {
+                                if (isImaginePage) {
+                                    toggleInputVisibility();
+                                } else {
+                                    setActiveTab("imagine");
+                                    router.push('/imagine');
+                                }
+                            }}
                             className={cn(
-                                "relative flex items-center justify-center w-12 h-12 rounded-[12px] transition-all duration-300 shadow-lg bg-gradient-to-br from-[#5856D6] to-[#AF52DE]",
+                                baseIconClass,
+                                "bg-gradient-to-br from-[#5856D6] to-[#AF52DE] cursor-pointer",
                                 pathname === "/imagine" ? "scale-110 shadow-xl" : "hover:scale-105 active:scale-95"
                             )}
+                            role="link"
                             aria-label="Imagine"
                         >
                             <motion.div
                                 animate={{ x: ['-100%', '100%'] }}
                                 transition={{ duration: 2, repeat: Infinity, ease: "linear", repeatDelay: 3 }}
-                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 rounded-[12px]"
+                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 rounded-[12px] pointer-events-none"
                             />
-                            <Sparkles className="w-6 h-6 text-white relative z-10" strokeWidth={1.5} />
-                        </Link>
+                            <Sparkles className="w-6 h-6 text-white relative z-10 pointer-events-none" strokeWidth={1.5} />
+                        </div>
                     </div>
                 );
             case 'labs':
                 return (
-                    <Link
-                        href="/labs"
+                    <div
+                        onClick={() => router.push('/labs')}
                         className={cn(
-                            "relative flex items-center justify-center w-12 h-12 rounded-[12px] transition-all duration-300 shadow-lg bg-gradient-to-br from-orange-400 to-orange-600",
+                            baseIconClass,
+                            "bg-gradient-to-br from-orange-400 to-orange-600 cursor-pointer",
                             pathname === "/labs" ? "scale-110 shadow-xl" : "hover:scale-105 active:scale-95"
                         )}
+                        role="link"
                         aria-label="Labs"
                     >
-                        <FlaskConical className="w-6 h-6 text-white" strokeWidth={1.5} />
-                    </Link>
+                        <FlaskConical className="w-6 h-6 text-white pointer-events-none" strokeWidth={1.5} />
+                    </div>
                 );
             case 'tools':
                 return (
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <button
+                            <div
                                 className={cn(
-                                    "relative flex items-center justify-center w-12 h-12 rounded-[12px] transition-all duration-300 shadow-lg bg-gradient-to-br from-pink-500 to-rose-600",
+                                    baseIconClass,
+                                    "bg-gradient-to-br from-pink-500 to-rose-600 cursor-pointer",
                                     pathname.startsWith("/tools") ? "scale-110 shadow-xl" : "hover:scale-105 active:scale-95"
                                 )}
+                                role="button"
                                 aria-label="Tools"
                             >
-                                <Hammer className="w-6 h-6 text-white" strokeWidth={1.5} />
-                            </button>
+                                <Hammer className="w-6 h-6 text-white pointer-events-none" strokeWidth={1.5} />
+                            </div>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent side="top" align="center" className="mb-2 min-w-[170px] p-1.5 bg-background/80 backdrop-blur-3xl border-border rounded-2xl shadow-2xl">
                             <DropdownMenuItem asChild className="rounded-[12px] cursor-pointer focus:bg-primary/10">
@@ -259,7 +275,13 @@ export function SiteDock() {
                     {/* Draggable Zone */}
                     <Reorder.Group axis="x" values={items} onReorder={handleReorder} className="flex items-center gap-2">
                         {items.map((id) => (
-                            <Reorder.Item key={id} value={id} className="cursor-grab active:cursor-grabbing">
+                            <Reorder.Item
+                                key={id}
+                                value={id}
+                                className="cursor-grab active:cursor-grabbing"
+                                whileDrag={{ scale: 1.1, zIndex: 50 }}
+                                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            >
                                 {renderDockItem(id)}
                             </Reorder.Item>
                         ))}

@@ -4,16 +4,13 @@ import { createClient } from './client';
 import type { DockPreferences, DockPreferencesUpdate, DockType, DockIconPosition } from '@/types/database';
 
 /**
- * Default icon order for the dock
+ * Default icon order for the dock (matches site-dock draggable items)
  */
 export const DEFAULT_ICON_ORDER: DockIconPosition[] = [
-    { id: 'finder', order: 0 },
-    { id: 'safari', order: 1 },
-    { id: 'messages', order: 2 },
-    { id: 'mail', order: 3 },
-    { id: 'photos', order: 4 },
-    { id: 'music', order: 5 },
-    { id: 'settings', order: 6 },
+    { id: 'library', order: 0 },
+    { id: 'imagine', order: 1 },
+    { id: 'labs', order: 2 },
+    { id: 'tools', order: 3 },
 ];
 
 /**
