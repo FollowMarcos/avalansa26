@@ -8,6 +8,7 @@ import { Library, Sparkles, FlaskConical, Settings, User, ChevronUp, ExternalLin
 import { cn } from "@/lib/utils";
 import { useImagine } from "@/components/imagine/imagine-context";
 import { createClient } from "@/utils/supabase/client";
+import { motion } from "motion/react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -96,17 +97,35 @@ export function SiteDock() {
                 </Link>
 
                 {/* Imagine */}
-                <Link
-                    href="/imagine"
-                    onClick={(e) => handleItemClick(e, { id: "imagine", label: "Imagine", href: "/imagine", icon: Sparkles })}
-                    className={cn(
-                        "relative flex items-center justify-center w-10 h-10 rounded-[11px] transition-all duration-300 group overflow-hidden shadow-sm bg-gradient-to-br from-[#5856D6] to-[#AF52DE]",
-                        (pathname === "/imagine" || (isImaginePage && isInputVisible)) ? "scale-110 shadow-lg ring-2 ring-[#AF52DE]/50" : "hover:scale-105 active:scale-95"
-                    )}
-                    aria-label="Imagine"
-                >
-                    <Sparkles className="w-5 h-5 text-white" />
-                </Link>
+                <div className="relative group/imagine">
+                    {/* Magic Glow behind Imagine button */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-[#5856D6] to-[#AF52DE] blur-md opacity-40 group-hover/imagine:opacity-80 transition-opacity animate-pulse" />
+
+                    <Link
+                        href="/imagine"
+                        onClick={(e) => handleItemClick(e, { id: "imagine", label: "Imagine", href: "/imagine", icon: Sparkles })}
+                        className={cn(
+                            "relative flex items-center justify-center w-10 h-10 rounded-[11px] transition-all duration-300 group overflow-hidden shadow-sm bg-gradient-to-br from-[#5856D6] to-[#AF52DE]",
+                            (pathname === "/imagine" || (isImaginePage && isInputVisible)) ? "scale-110 shadow-lg ring-2 ring-[#AF52DE]/50" : "hover:scale-105 active:scale-95"
+                        )}
+                        aria-label="Imagine"
+                    >
+                        {/* Shimmer Effect */}
+                        <motion.div
+                            animate={{
+                                x: ['-100%', '100%'],
+                            }}
+                            transition={{
+                                duration: 2,
+                                repeat: Infinity,
+                                ease: "linear",
+                                repeatDelay: 3
+                            }}
+                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 -z-0"
+                        />
+                        <Sparkles className="w-5 h-5 text-white relative z-10" />
+                    </Link>
+                </div>
 
                 {/* Labs */}
                 <Link
@@ -156,7 +175,7 @@ export function SiteDock() {
                     </DropdownMenuContent>
                 </DropdownMenu>
 
-                <div className="w-px h-6 bg-border mx-1" />
+                <div className="w-px h-6 bg-white/20 mx-1" />
 
                 {/* Profile Link */}
                 <Link
