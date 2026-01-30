@@ -62,72 +62,84 @@ export function SiteDock() {
 
     return (
         <div className="flex items-center justify-center pointer-events-auto">
-            <div className="flex items-center gap-1 p-1.5 rounded-full bg-background/80 border border-border shadow-xl backdrop-blur-2xl">
+            <div className="flex items-center gap-2 p-2 rounded-[24px] bg-background/80 border border-border shadow-2xl backdrop-blur-2xl">
                 {/* Home / Logo */}
                 <Link
                     href="/"
                     className={cn(
-                        "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 group",
-                        pathname === "/"
-                            ? "bg-foreground text-background shadow-md scale-110"
-                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        "relative flex items-center justify-center w-10 h-10 rounded-[11px] transition-all duration-300 group overflow-hidden shadow-sm",
+                        "bg-white dark:bg-zinc-100",
+                        pathname === "/" ? "scale-110 shadow-lg ring-2 ring-white/50" : "hover:scale-105 active:scale-95"
                     )}
                     aria-label="Home"
                 >
-                    <div className="relative w-5 h-5">
+                    <div className="relative w-6 h-6">
                         <Image
-                            src="/aw.svg"
+                            src="/ab.svg"
                             alt="Logo"
                             fill
-                            className={cn(
-                                "object-contain transition-all",
-                                pathname === "/" ? "invert dark:invert-0" : "opacity-70 group-hover:opacity-100"
-                            )}
+                            className="object-contain"
                         />
                     </div>
                 </Link>
 
-                {/* Other Nav Items */}
-                {NAV_ITEMS.slice(1).map((item) => {
-                    const isImagine = item.id === "imagine";
-                    const isActive = pathname === item.href || (isImagine && isImaginePage && isInputVisible);
+                {/* Library */}
+                <Link
+                    href="/library"
+                    className={cn(
+                        "relative flex items-center justify-center w-10 h-10 rounded-[11px] transition-all duration-300 group overflow-hidden shadow-sm bg-[#007AFF]",
+                        pathname === "/library" ? "scale-110 shadow-lg ring-2 ring-[#007AFF]/50" : "hover:scale-105 active:scale-95"
+                    )}
+                    aria-label="Library"
+                >
+                    <Library className="w-5 h-5 text-white" />
+                </Link>
 
-                    return (
-                        <Link
-                            key={item.id}
-                            href={item.href}
-                            onClick={(e) => handleItemClick(e, item)}
-                            className={cn(
-                                "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 group",
-                                isActive
-                                    ? "bg-foreground text-background shadow-md scale-110"
-                                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                            )}
-                            aria-label={item.label}
-                        >
-                            {item.icon && <item.icon className="w-5 h-5" />}
-                        </Link>
-                    );
-                })}
+                {/* Imagine */}
+                <Link
+                    href="/imagine"
+                    onClick={(e) => handleItemClick(e, { id: "imagine", label: "Imagine", href: "/imagine", icon: Sparkles })}
+                    className={cn(
+                        "relative flex items-center justify-center w-10 h-10 rounded-[11px] transition-all duration-300 group overflow-hidden shadow-sm bg-gradient-to-br from-[#5856D6] to-[#AF52DE]",
+                        (pathname === "/imagine" || (isImaginePage && isInputVisible)) ? "scale-110 shadow-lg ring-2 ring-[#AF52DE]/50" : "hover:scale-105 active:scale-95"
+                    )}
+                    aria-label="Imagine"
+                >
+                    <Sparkles className="w-5 h-5 text-white" />
+                </Link>
+
+                {/* Labs */}
+                <Link
+                    href="/labs"
+                    className={cn(
+                        "relative flex items-center justify-center w-10 h-10 rounded-[11px] transition-all duration-300 group overflow-hidden shadow-sm bg-[#FF9500]",
+                        pathname === "/labs" ? "scale-110 shadow-lg ring-2 ring-[#FF9500]/50" : "hover:scale-105 active:scale-95"
+                    )}
+                    aria-label="Labs"
+                >
+                    <FlaskConical className="w-5 h-5 text-white" />
+                </Link>
 
                 {/* Tools Dropdown */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <button
                             className={cn(
-                                "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 group text-muted-foreground hover:bg-muted hover:text-foreground",
-                                pathname.startsWith("/tools") && "bg-muted text-foreground"
+                                "relative flex items-center justify-center w-10 h-10 rounded-[11px] transition-all duration-300 group overflow-hidden shadow-sm bg-[#FF2D55]",
+                                pathname.startsWith("/tools") ? "scale-110 shadow-lg ring-2 ring-[#FF2D55]/50" : "hover:scale-105 active:scale-95"
                             )}
                             aria-label="Tools"
                         >
-                            <Hammer className="w-5 h-5" />
+                            <Hammer className="w-5 h-5 text-white" />
                         </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent side="top" align="center" className="mb-2 min-w-[160px] p-2 bg-background/80 backdrop-blur-xl border-border rounded-2xl shadow-2xl">
-                        <DropdownMenuItem asChild className="rounded-xl cursor-pointer">
-                            <Link href="/tools/x-preview" className="flex items-center justify-between w-full group/item">
-                                <span className="flex items-center gap-2">
-                                    <Sparkles className="w-4 h-4" />
+                    <DropdownMenuContent side="top" align="center" className="mb-2 min-w-[170px] p-1.5 bg-background/80 backdrop-blur-3xl border-border rounded-2xl shadow-2xl">
+                        <DropdownMenuItem asChild className="rounded-[12px] cursor-pointer focus:bg-primary/10">
+                            <Link href="/tools/x-preview" className="flex items-center justify-between w-full group/item py-2 px-3">
+                                <span className="flex items-center gap-2.5 font-medium">
+                                    <div className="w-6 h-6 rounded-[7px] bg-[#5856D6] flex items-center justify-center shadow-sm">
+                                        <Sparkles className="w-3.5 h-3.5 text-white" />
+                                    </div>
                                     X Preview
                                 </span>
                                 <button
@@ -135,7 +147,7 @@ export function SiteDock() {
                                         e.preventDefault();
                                         window.open("/tools/x-preview", "_blank");
                                     }}
-                                    className="opacity-0 group-hover/item:opacity-100 hover:text-primary transition-opacity"
+                                    className="opacity-0 group-hover/item:opacity-100 hover:text-primary transition-opacity p-1"
                                 >
                                     <ExternalLink className="w-3.5 h-3.5" />
                                 </button>
@@ -150,28 +162,27 @@ export function SiteDock() {
                 <Link
                     href={username ? `/u/${username}` : "/onboarding"}
                     className={cn(
-                        "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 group",
-                        pathname === `/u/${username}`
-                            ? "bg-foreground text-background shadow-md scale-110"
-                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        "relative flex items-center justify-center w-10 h-10 rounded-[11px] transition-all duration-300 group overflow-hidden shadow-sm bg-[#34C759]",
+                        pathname === `/u/${username}` ? "scale-110 shadow-lg ring-2 ring-[#34C759]/50" : "hover:scale-105 active:scale-95"
                     )}
                     aria-label="Profile"
                 >
-                    <User className="w-5 h-5" />
+                    <User className="w-5 h-5 text-white" />
                 </Link>
 
                 {/* Settings link */}
                 <Link
                     href={username ? `/u/${username}/settings` : "/onboarding"}
                     className={cn(
-                        "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 group text-muted-foreground hover:bg-muted hover:text-foreground",
-                        username && pathname === `/u/${username}/settings` && "bg-foreground text-background shadow-md scale-110"
+                        "relative flex items-center justify-center w-10 h-10 rounded-[11px] transition-all duration-300 group overflow-hidden shadow-sm bg-[#8E8E93]",
+                        (username && pathname === `/u/${username}/settings`) ? "scale-110 shadow-lg ring-2 ring-[#8E8E93]/50" : "hover:scale-105 active:scale-95"
                     )}
                     aria-label="Settings"
                 >
-                    <Settings className="w-5 h-5" />
+                    <Settings className="w-5 h-5 text-white" />
                 </Link>
             </div>
         </div>
     );
 }
+
