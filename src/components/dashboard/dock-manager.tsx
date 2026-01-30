@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { IconDisplay } from '@/components/ui/icon-display';
+import { IconPicker } from '@/components/ui/icon-picker';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -381,69 +382,20 @@ export function DockManager() {
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="item-icon">Icon</Label>
-                                <div className="flex gap-2">
+                                <div className="flex gap-2 items-center">
                                     <div className={cn(
                                         "w-10 h-10 rounded-md border flex items-center justify-center shrink-0 shadow-sm",
                                         currentItem.bg_color || "bg-muted",
                                         currentItem.text_color || "text-foreground"
                                     )}>
-                                        <IconDisplay name={currentItem.icon} className="w-6 h-6" />
+                                        <IconDisplay name={currentItem.icon} className="w-5 h-5" />
                                     </div>
-                                    <Select
-                                        value={
-                                            currentItem.icon?.startsWith('hugeicons:') ? 'hugeicons' :
-                                                currentItem.icon?.startsWith('fa:') ? 'fa' :
-                                                    currentItem.icon?.startsWith('si:') ? 'si' :
-                                                        'lucide'
-                                        }
-                                        onValueChange={(provider) => {
-                                            const currentName = currentItem.icon?.replace(/^(hugeicons:|fa:|si:)/, '') || '';
-                                            if (provider === 'hugeicons') setCurrentItem({ ...currentItem, icon: `hugeicons:${currentName}` });
-                                            else if (provider === 'fa') setCurrentItem({ ...currentItem, icon: `fa:${currentName}` });
-                                            else if (provider === 'si') setCurrentItem({ ...currentItem, icon: `si:${currentName}` });
-                                            else setCurrentItem({ ...currentItem, icon: currentName });
-                                        }}
-                                    >
-                                        <SelectTrigger className="w-[130px]" aria-label="Icon Library">
-                                            <SelectValue placeholder="Library" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="lucide">Lucide</SelectItem>
-                                            <SelectItem value="hugeicons">HugeIcons</SelectItem>
-                                            <SelectItem value="fa">FontAwesome 6</SelectItem>
-                                            <SelectItem value="si">Simple Icons</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <Input
-                                        id="item-icon"
-                                        value={currentItem.icon?.replace(/^(hugeicons:|fa:|si:)/, '') || ''}
-                                        onChange={e => {
-                                            const newVal = e.target.value;
-                                            let prefix = '';
-                                            if (currentItem.icon?.startsWith('hugeicons:')) prefix = 'hugeicons:';
-                                            else if (currentItem.icon?.startsWith('fa:')) prefix = 'fa:';
-                                            else if (currentItem.icon?.startsWith('si:')) prefix = 'si:';
-
-                                            setCurrentItem({ ...currentItem, icon: `${prefix}${newVal}` });
-                                        }}
-                                        placeholder="Icon Name"
+                                    <IconPicker
+                                        value={currentItem.icon || ''}
+                                        onChange={(icon) => setCurrentItem({ ...currentItem, icon })}
                                         className="flex-1"
                                     />
                                 </div>
-                                <p className="text-[10px] text-muted-foreground text-right pt-1 flex flex-col gap-0.5">
-                                    {currentItem.icon?.startsWith('hugeicons:') && (
-                                        <>Use <a href="https://hugeicons.com/icons" target="_blank" className="underline hover:text-primary">HugeIcons names</a> (e.g. Home01Icon)</>
-                                    )}
-                                    {currentItem.icon?.startsWith('fa:') && (
-                                        <>Use <a href="https://react-icons.github.io/react-icons/icons/fa6/" target="_blank" className="underline hover:text-primary">FontAwesome names</a> (e.g. FaBeer)</>
-                                    )}
-                                    {currentItem.icon?.startsWith('si:') && (
-                                        <>Use <a href="https://react-icons.github.io/react-icons/icons/si/" target="_blank" className="underline hover:text-primary">Simple Icons names</a> (e.g. SiNextdotjs)</>
-                                    )}
-                                    {!currentItem.icon?.includes(':') && (
-                                        <>Use <a href="https://lucide.dev/icons" target="_blank" className="underline hover:text-primary">Lucide icon names</a> (e.g. Library)</>
-                                    )}
-                                </p>
                             </div>
                         </div>
 
@@ -590,26 +542,19 @@ export function DockManager() {
                                 {dropdownItems.map((item, idx) => (
                                     <div key={idx} className="flex gap-2 items-start p-3 bg-muted/30 rounded-lg border">
                                         <div className="grid gap-2 flex-1">
-                                            <div className="grid grid-cols-2 gap-2">
+                                            <div className="flex gap-2">
                                                 <Input
                                                     aria-label="Dropdown Item Label"
                                                     value={item.label}
                                                     onChange={e => updateDropdownItem(idx, 'label', e.target.value)}
                                                     placeholder="Label"
-                                                    className="h-8 text-sm"
+                                                    className="h-9 text-sm flex-1"
                                                 />
-                                                <div className="relative">
-                                                    <div className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
-                                                        <IconDisplay name={item.icon} className="w-4 h-4" />
-                                                    </div>
-                                                    <Input
-                                                        aria-label="Dropdown Item Icon"
-                                                        value={item.icon || ''}
-                                                        onChange={e => updateDropdownItem(idx, 'icon', e.target.value)}
-                                                        placeholder="Icon (e.g. Home or fa:FaBeer)"
-                                                        className="h-8 text-sm pl-9"
-                                                    />
-                                                </div>
+                                                <IconPicker
+                                                    value={item.icon || ''}
+                                                    onChange={(icon) => updateDropdownItem(idx, 'icon', icon)}
+                                                    className="w-[160px]"
+                                                />
                                             </div>
                                             <Input
                                                 aria-label="Dropdown Item URL"
@@ -624,7 +569,7 @@ export function DockManager() {
                                             variant="ghost"
                                             size="icon"
                                             aria-label="Remove sub-item"
-                                            className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                                            className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0 mt-0.5"
                                             onClick={() => removeDropdownItem(idx)}
                                         >
                                             <X className="w-4 h-4" />
