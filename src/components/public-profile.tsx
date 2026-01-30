@@ -41,7 +41,7 @@ export function PublicProfile({ profile }: PublicProfileProps) {
               transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
               className="relative group"
             >
-              <div className="relative w-full aspect-square rounded-[2rem] overflow-hidden bg-card border-4 border-background ring-1 ring-primary/10 shadow-2xl">
+              <div className="relative w-full aspect-square rounded-[2rem] overflow-hidden bg-card border-4 border-background ring-1 ring-primary/10">
                 {avatarUrl ? (
                   <Image
                     src={avatarUrl}
@@ -59,7 +59,7 @@ export function PublicProfile({ profile }: PublicProfileProps) {
               </div>
 
               {/* Online Indicator Badge */}
-              <div className="absolute -bottom-2 -right-2 bg-background p-1 rounded-2xl shadow-lg">
+              <div className="absolute -bottom-2 -right-2 bg-background p-1 rounded-2xl">
                 <div className="bg-green-500 text-[10px] font-bold text-white px-3 py-1 rounded-xl uppercase tracking-wider animate-pulse">
                   Live Now
                 </div>
@@ -123,7 +123,7 @@ export function PublicProfile({ profile }: PublicProfileProps) {
               className="space-y-4"
             >
               <h2 className="font-vt323 text-xl text-muted-foreground uppercase tracking-[0.2em]">~/ Biography</h2>
-              <div className="p-8 rounded-[2rem] bg-card border border-border/50 shadow-xl relative overflow-hidden group">
+              <div className="p-8 rounded-[2rem] bg-card border border-border/50 relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-4 opacity-5">
                   <span className="font-vt323 text-6xl select-none">"</span>
                 </div>
