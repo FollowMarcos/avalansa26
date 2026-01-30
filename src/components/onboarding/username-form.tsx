@@ -61,7 +61,7 @@ export function UsernameForm({ initialUsername }: UsernameFormProps) {
       setIsChecking(false);
 
       if (result) {
-        router.push('/onboarding/bio');
+        router.push('/onboarding/avatar');
       } else {
         form.setError('username', {
           type: 'manual',

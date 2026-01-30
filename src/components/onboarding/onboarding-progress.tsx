@@ -6,8 +6,9 @@ import { cn } from '@/lib/utils';
 
 const STEPS = [
   { path: '/onboarding/username', label: 'Username', step: 1 },
-  { path: '/onboarding/bio', label: 'Bio', step: 2 },
-  { path: '/onboarding/interests', label: 'Interests', step: 3 },
+  { path: '/onboarding/avatar', label: 'Avatar', step: 2 },
+  { path: '/onboarding/bio', label: 'Bio', step: 3 },
+  { path: '/onboarding/interests', label: 'Interests', step: 4 },
 ];
 
 export function OnboardingProgress() {

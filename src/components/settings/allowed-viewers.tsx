@@ -117,14 +117,14 @@ export function AllowedViewers({ currentAllowedIds, onChange }: AllowedViewersPr
 
             {/* Search Results Dropdown */}
             {searchQuery.length >= 2 && searchResults.length > 0 && (
-                <div className="absolute z-50 w-full max-w-[calc(100%-3rem)] mt-1 bg-popover border rounded-xl shadow-lg overflow-hidden">
+                <div className="absolute z-50 w-full mt-1 bg-popover border rounded-xl shadow-lg overflow-hidden max-h-[240px] overflow-y-auto">
                     {searchResults.map(user => (
                         <button
                             key={user.id}
                             onClick={() => addUser(user)}
-                            className="flex items-center gap-3 w-full p-3 hover:bg-muted/50 transition-colors text-left"
+                            className="flex items-center gap-3 w-full p-2 hover:bg-muted/50 transition-colors text-left"
                         >
-                            <Avatar className="h-8 w-8">
+                            <Avatar className="h-8 w-8 flex-shrink-0">
                                 <AvatarImage src={user.avatar_url || undefined} />
                                 <AvatarFallback><User className="h-4 w-4" /></AvatarFallback>
                             </Avatar>
@@ -132,7 +132,7 @@ export function AllowedViewers({ currentAllowedIds, onChange }: AllowedViewersPr
                                 <p className="text-sm font-medium truncate">{user.name || user.username}</p>
                                 <p className="text-xs text-muted-foreground truncate">@{user.username}</p>
                             </div>
-                            <PlusIcon className="h-4 w-4 text-muted-foreground" />
+                            <PlusIcon className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                         </button>
                     ))}
                 </div>
