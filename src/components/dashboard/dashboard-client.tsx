@@ -498,14 +498,15 @@ export function DashboardClient({
               </div>
             )}
           </div>
-        ) : (
-          <div className="p-6">
-            <DockManager />
-          </div>
-        )}
+        </div>
+
+        {/* Dock Tab - Keep mounted, toggle visibility */}
+        <div className={activeTab === 'dock' ? 'block p-6' : 'hidden'}>
+          <DockManager />
+        </div>
 
         {/* Pagination Footer - Only show if in Users tab */}
-        {activeTab === 'users' && (
+        <div className={activeTab === 'users' ? 'block' : 'hidden'}>
           <div className="px-6 py-4 border-t border-border/40 flex items-center justify-between bg-muted/10">
             <p className="text-xs text-muted-foreground">
               Showing{' '}
@@ -536,7 +537,7 @@ export function DashboardClient({
               </Button>
             </div>
           </div>
-        )}
+        </div>
       </Card>
 
       {/* Floating Action Button */}
