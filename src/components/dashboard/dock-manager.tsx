@@ -373,39 +373,56 @@ export function DockManager() {
                                 <Label>Icon</Label>
                                 <div className="flex gap-2">
                                     <Select
-                                        value={currentItem.icon?.startsWith('hugeicons:') ? 'hugeicons' : 'lucide'}
+                                        value={
+                                            currentItem.icon?.startsWith('hugeicons:') ? 'hugeicons' :
+                                                currentItem.icon?.startsWith('fa:') ? 'fa' :
+                                                    currentItem.icon?.startsWith('si:') ? 'si' :
+                                                        'lucide'
+                                        }
                                         onValueChange={(provider) => {
-                                            const currentName = currentItem.icon?.replace('hugeicons:', '') || '';
-                                            if (provider === 'hugeicons') {
-                                                setCurrentItem({ ...currentItem, icon: `hugeicons:${currentName}` });
-                                            } else {
-                                                setCurrentItem({ ...currentItem, icon: currentName });
-                                            }
+                                            const currentName = currentItem.icon?.replace(/^(hugeicons:|fa:|si:)/, '') || '';
+                                            if (provider === 'hugeicons') setCurrentItem({ ...currentItem, icon: `hugeicons:${currentName}` });
+                                            else if (provider === 'fa') setCurrentItem({ ...currentItem, icon: `fa:${currentName}` });
+                                            else if (provider === 'si') setCurrentItem({ ...currentItem, icon: `si:${currentName}` });
+                                            else setCurrentItem({ ...currentItem, icon: currentName });
                                         }}
                                     >
-                                        <SelectTrigger className="w-[110px]">
+                                        <SelectTrigger className="w-[130px]">
                                             <SelectValue placeholder="Library" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="lucide">Lucide</SelectItem>
                                             <SelectItem value="hugeicons">HugeIcons</SelectItem>
+                                            <SelectItem value="fa">FontAwesome 6</SelectItem>
+                                            <SelectItem value="si">Simple Icons</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     <Input
-                                        value={currentItem.icon?.replace('hugeicons:', '') || ''}
+                                        value={currentItem.icon?.replace(/^(hugeicons:|fa:|si:)/, '') || ''}
                                         onChange={e => {
                                             const newVal = e.target.value;
-                                            const isHuge = currentItem.icon?.startsWith('hugeicons:');
-                                            setCurrentItem({ ...currentItem, icon: isHuge ? `hugeicons:${newVal}` : newVal });
+                                            let prefix = '';
+                                            if (currentItem.icon?.startsWith('hugeicons:')) prefix = 'hugeicons:';
+                                            else if (currentItem.icon?.startsWith('fa:')) prefix = 'fa:';
+                                            else if (currentItem.icon?.startsWith('si:')) prefix = 'si:';
+
+                                            setCurrentItem({ ...currentItem, icon: `${prefix}${newVal}` });
                                         }}
-                                        placeholder={currentItem.icon?.startsWith('hugeicons:') ? "e.g. Home01Icon" : "e.g. Library"}
+                                        placeholder="Icon Name"
                                         className="flex-1"
                                     />
                                 </div>
-                                <p className="text-[10px] text-muted-foreground text-right pt-1">
-                                    {currentItem.icon?.startsWith('hugeicons:') ? (
-                                        <>Use <a href="https://hugeicons.com/icons" target="_blank" className="underline hover:text-primary">HugeIcons component names</a> (e.g. Home01Icon)</>
-                                    ) : (
+                                <p className="text-[10px] text-muted-foreground text-right pt-1 flex flex-col gap-0.5">
+                                    {currentItem.icon?.startsWith('hugeicons:') && (
+                                        <>Use <a href="https://hugeicons.com/icons" target="_blank" className="underline hover:text-primary">HugeIcons names</a> (e.g. Home01Icon)</>
+                                    )}
+                                    {currentItem.icon?.startsWith('fa:') && (
+                                        <>Use <a href="https://react-icons.github.io/react-icons/icons/fa6/" target="_blank" className="underline hover:text-primary">FontAwesome names</a> (e.g. FaBeer)</>
+                                    )}
+                                    {currentItem.icon?.startsWith('si:') && (
+                                        <>Use <a href="https://react-icons.github.io/react-icons/icons/si/" target="_blank" className="underline hover:text-primary">Simple Icons names</a> (e.g. SiNextdotjs)</>
+                                    )}
+                                    {!currentItem.icon?.includes(':') && (
                                         <>Use <a href="https://lucide.dev/icons" target="_blank" className="underline hover:text-primary">Lucide icon names</a> (e.g. Library)</>
                                     )}
                                 </p>
