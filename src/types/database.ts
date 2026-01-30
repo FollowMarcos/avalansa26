@@ -9,7 +9,8 @@
 // Database Schema Types
 // ============================================
 
-/** User role enum matching database user_role type */
+import type { ProfileVisibility } from './visibility';
+
 export type UserRole = 'user' | 'admin';
 
 export interface Database {
@@ -76,6 +77,10 @@ export interface Profile {
   website?: string | null;
   /** Array of previously used avatar URLs */
   avatar_history?: string[];
+  /** Profile visibility setting */
+  visibility?: ProfileVisibility;
+  /** Array of user IDs allowed to view the profile when visibility is 'restricted' */
+  allowed_viewers?: string[];
 }
 
 /**
@@ -95,6 +100,8 @@ export interface ProfileInsert {
   updated_at?: string;
   website?: string | null;
   avatar_history?: string[];
+  visibility?: ProfileVisibility;
+  allowed_viewers?: string[];
 }
 
 /**
@@ -111,6 +118,8 @@ export interface ProfileUpdate {
   updated_at?: string;
   website?: string | null;
   avatar_history?: string[];
+  visibility?: ProfileVisibility;
+  allowed_viewers?: string[];
 }
 
 // ============================================

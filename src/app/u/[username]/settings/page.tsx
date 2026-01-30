@@ -20,7 +20,10 @@ import {
     Camera,
     Check,
     Loader2,
-    Monitor
+    Monitor,
+    Users,
+    Ghost,
+    Fingerprint
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -28,7 +31,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { AllowedViewers } from "@/components/settings/allowed-viewers";
+import type { ProfileVisibility } from "@/types/visibility";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
@@ -55,7 +60,8 @@ export default function SettingsPage() {
     const [userBio, setUserBio] = useState("");
     const [website, setWebsite] = useState("");
     const [websiteError, setWebsiteError] = useState<string | null>(null);
-    const [discoverable, setDiscoverable] = useState(true);
+    const [visibility, setVisibility] = useState<ProfileVisibility>('public');
+    const [allowedViewers, setAllowedViewers] = useState<string[]>([]);
 
     useEffect(() => {
         async function loadProfile() {
@@ -72,6 +78,8 @@ export default function SettingsPage() {
                 setUserBio(data.bio || "");
                 setWebsite(data.website || "");
                 // Manage profile visibility and discoverability
+                setVisibility(data.visibility || 'public');
+                setAllowedViewers(data.allowed_viewers || []);
             } else {
                 router.push('/');
             }
@@ -112,6 +120,8 @@ export default function SettingsPage() {
                 name: displayName,
                 bio: userBio,
                 website: website || null,
+                visibility: visibility,
+                allowed_viewers: allowedViewers,
             });
 
             if (success) {
@@ -273,15 +283,95 @@ export default function SettingsPage() {
 
                                     <section className="space-y-4 pt-4">
                                         <h2 className="font-vt323 text-xl text-primary">Discoverability</h2>
-                                        <div className="flex items-center justify-between p-4 rounded-2xl bg-primary/[0.02] border border-primary/5">
-                                            <div className="space-y-0.5">
-                                                <Label className="text-sm font-semibold font-lato text-balance">Public Profile</Label>
-                                                <p className="text-xs text-muted-foreground font-lato text-pretty">
-                                                    Allow anyone to see your collection and creations.
-                                                </p>
+
+                                        <RadioGroup value={visibility} onValueChange={(val) => setVisibility(val as ProfileVisibility)} className="grid gap-3">
+                                            <div>
+                                                <RadioGroupItem value="public" id="public" className="peer sr-only" />
+                                                <Label
+                                                    htmlFor="public"
+                                                    className="flex flex-col items-start justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary transition-all cursor-pointer"
+                                                >
+                                                    <div className="flex w-full items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <Globe className="h-4 w-4 text-primary" />
+                                                            <span className="font-semibold font-lato">Public</span>
+                                                        </div>
+                                                        {visibility === 'public' && <Check className="h-4 w-4 text-primary" />}
+                                                    </div>
+                                                    <p className="mt-2 text-xs text-muted-foreground font-lato text-pretty leading-relaxed">
+                                                        Visible to everyone, including search engines and users not logged in.
+                                                    </p>
+                                                </Label>
                                             </div>
-                                            <Switch checked={discoverable} onCheckedChange={setDiscoverable} />
-                                        </div>
+
+                                            <div>
+                                                <RadioGroupItem value="authenticated" id="authenticated" className="peer sr-only" />
+                                                <Label
+                                                    htmlFor="authenticated"
+                                                    className="flex flex-col items-start justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary transition-all cursor-pointer"
+                                                >
+                                                    <div className="flex w-full items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <Users className="h-4 w-4 text-blue-500" />
+                                                            <span className="font-semibold font-lato">Community Only</span>
+                                                        </div>
+                                                        {visibility === 'authenticated' && <Check className="h-4 w-4 text-primary" />}
+                                                    </div>
+                                                    <p className="mt-2 text-xs text-muted-foreground font-lato text-pretty leading-relaxed">
+                                                        Visible only to logged-in users. Hidden from search engines and guests.
+                                                    </p>
+                                                </Label>
+                                            </div>
+
+                                            <div>
+                                                <RadioGroupItem value="stealth" id="stealth" className="peer sr-only" />
+                                                <Label
+                                                    htmlFor="stealth"
+                                                    className="flex flex-col items-start justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary transition-all cursor-pointer"
+                                                >
+                                                    <div className="flex w-full items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <Ghost className="h-4 w-4 text-purple-500" />
+                                                            <span className="font-semibold font-lato">Stealth</span>
+                                                        </div>
+                                                        {visibility === 'stealth' && <Check className="h-4 w-4 text-primary" />}
+                                                    </div>
+                                                    <p className="mt-2 text-xs text-muted-foreground font-lato text-pretty leading-relaxed">
+                                                        Completely hidden. Only you can see your profile.
+                                                    </p>
+                                                </Label>
+                                            </div>
+
+                                            <div>
+                                                <RadioGroupItem value="restricted" id="restricted" className="peer sr-only" />
+                                                <Label
+                                                    htmlFor="restricted"
+                                                    className="flex flex-col items-start justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary transition-all cursor-pointer"
+                                                >
+                                                    <div className="flex w-full items-center justify-between">
+                                                        <div className="flex items-center gap-2">
+                                                            <Fingerprint className="h-4 w-4 text-orange-500" />
+                                                            <span className="font-semibold font-lato">Restricted Access</span>
+                                                        </div>
+                                                        {visibility === 'restricted' && <Check className="h-4 w-4 text-primary" />}
+                                                    </div>
+                                                    <p className="mt-2 text-xs text-muted-foreground font-lato text-pretty leading-relaxed">
+                                                        Stealth mode, but visible to specific users you select.
+                                                    </p>
+                                                </Label>
+                                            </div>
+                                        </RadioGroup>
+
+                                        {/* Restricted Access User Selection */}
+                                        {visibility === 'restricted' && (
+                                            <div className="mt-4 p-4 rounded-xl border border-primary/10 bg-primary/[0.02]">
+                                                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 block">Manage Access</Label>
+                                                <AllowedViewers
+                                                    currentAllowedIds={allowedViewers}
+                                                    onChange={setAllowedViewers}
+                                                />
+                                            </div>
+                                        )}
                                     </section>
                                 </TabsContent>
 
