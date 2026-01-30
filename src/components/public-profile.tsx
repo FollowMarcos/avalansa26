@@ -113,7 +113,11 @@ export function PublicProfile({ profile }: PublicProfileProps) {
                 <div className="flex items-center gap-3 text-sm text-muted-foreground font-lato">
                   <Globe className="w-4 h-4 text-primary/60" />
                   <a
-                    href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`}
+                    href={
+                      profile.website.startsWith('http://') || profile.website.startsWith('https://')
+                        ? profile.website
+                        : `https://${profile.website}`
+                    }
                     target="_blank"
                     rel="noopener noreferrer"
                     className="hover:text-primary transition-colors truncate"
@@ -140,8 +144,8 @@ export function PublicProfile({ profile }: PublicProfileProps) {
                 <div className="absolute top-0 right-0 p-4 opacity-5">
                   <span className="font-vt323 text-6xl select-none">"</span>
                 </div>
-                <p className="font-lato text-xl leading-relaxed text-foreground/90 selection:bg-primary/20">
-                  {profile.bio || "No biography provided yet. This user is keeping their mystery alive..."}
+                <p className="font-lato text-xl leading-relaxed text-foreground/90 selection:bg-primary/20 text-pretty">
+                  {profile.bio || "No biography provided yet. This user is keeping their mystery alive…"}
                 </p>
               </div>
             </motion.section>

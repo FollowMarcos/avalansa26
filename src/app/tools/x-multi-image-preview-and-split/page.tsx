@@ -22,8 +22,10 @@ import {
     Type,
     User as UserIcon,
     Timer,
-    Eye,
-    Camera
+    Camera,
+    Smile,
+    Calendar,
+    MapPin
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -44,7 +46,7 @@ interface SlicedImage {
 // --- Icons (Accurate X style) ---
 
 const XLogo = ({ className }: { className?: string }) => (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
+    <svg viewBox="0 0 24 24" aria-label="X Logo" role="img" className={className} fill="currentColor">
         <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
     </svg>
 );
@@ -105,25 +107,28 @@ export default function XPreviewTool() {
 
             // We need to collect all slices and then set state
             const processSlices = async () => {
-                for (let i = 0; i < 4; i++) {
-                    canvas.width = img.width;
-                    canvas.height = sliceHeight;
-                    ctx.drawImage(img, 0, i * sliceHeight, img.width, sliceHeight, 0, 0, img.width, sliceHeight);
+                const slicePromises = Array.from({ length: 4 }).map((_, i) => {
+                    return new Promise<SlicedImage>((resolve) => {
+                        const tempCanvas = document.createElement('canvas');
+                        const tempCtx = tempCanvas.getContext('2d')!;
+                        tempCanvas.width = img.width;
+                        tempCanvas.height = sliceHeight;
+                        tempCtx.drawImage(img, 0, i * sliceHeight, img.width, sliceHeight, 0, 0, img.width, sliceHeight);
 
-                    await new Promise<void>((resolve) => {
-                        canvas.toBlob((blob) => {
+                        tempCanvas.toBlob((blob) => {
                             if (blob) {
-                                newSlices.push({
+                                resolve({
                                     id: `slice-${i}`,
                                     url: URL.createObjectURL(blob),
                                     blob
                                 });
                             }
-                            resolve();
                         }, 'image/png');
                     });
-                }
-                setSlices(newSlices);
+                });
+
+                const results = await Promise.all(slicePromises);
+                setSlices(results);
                 setIsSlicing(false);
                 toast.success('Image sliced successfully!');
             };
@@ -139,7 +144,7 @@ export default function XPreviewTool() {
             link.download = `x-slice-${index + 1}.png`;
             link.click();
         });
-        toast.success('Downloading all slices...');
+        toast.success('Downloading all slices…');
     };
 
     const removeSlices = () => {
@@ -167,7 +172,7 @@ export default function XPreviewTool() {
                         <span className="text-[#71767b] whitespace-nowrap text-[15px]">{date.split(',')[0]}</span>
                         <div className="ml-auto flex items-center gap-2">
                             <GrokIcon className="w-[18px] h-[18px] text-[#71767b]" />
-                            <MoreHorizontal className="w-[18px] h-[18px] text-[#71767b]" />
+                            <MoreHorizontal className="w-[18px] h-[18px] text-[#71767b]" aria-label="More" />
                         </div>
                     </div>
 
@@ -244,7 +249,7 @@ export default function XPreviewTool() {
                 </div>
                 <div className="ml-auto flex items-center gap-3">
                     <GrokIcon className="w-[20px] h-[20px] text-[#71767b]" />
-                    <MoreHorizontal className="w-[20px] h-[20px] text-[#71767b]" />
+                    <MoreHorizontal className="w-[20px] h-[20px] text-[#71767b]" aria-label="More options" />
                 </div>
             </div>
 
@@ -273,37 +278,42 @@ export default function XPreviewTool() {
                 <span>·</span>
                 <span>{date}</span>
                 <span>·</span>
-                <span className="text-white font-bold ml-1">{views}</span>
+                <span className="text-white font-bold ml-1 tabular-nums">{views}</span>
                 <span>Views</span>
             </div>
 
             <div className="flex items-center justify-between text-[#71767b] pt-2">
                 <div className="flex items-center group cursor-pointer hover:text-[#1d9bf0]">
                     <div className="p-2 rounded-full group-hover:bg-[#1d9bf015]">
-                        <MessageCircle className="w-[22px] h-[22px]" />
+                        <MessageCircle className="w-[18px] h-[18px]" />
                     </div>
-                    <span className="text-[13px] mt-0.5">{replies}</span>
+                    <span className="text-[13px] tabular-nums">{replies}</span>
                 </div>
                 <div className="flex items-center group cursor-pointer hover:text-[#00ba7c]">
                     <div className="p-2 rounded-full group-hover:bg-[#00ba7c15]">
-                        <Repeat2 className="w-[22px] h-[22px]" />
+                        <Repeat2 className="w-[18px] h-[18px]" />
                     </div>
-                    <span className="text-[13px] mt-0.5">{reposts}</span>
+                    <span className="text-[13px] tabular-nums">{reposts}</span>
                 </div>
                 <div className="flex items-center group cursor-pointer hover:text-[#f91880]">
                     <div className="p-2 rounded-full group-hover:bg-[#f9188015]">
-                        <Heart className="w-[22px] h-[22px]" />
+                        <Heart className="w-[18px] h-[18px]" />
                     </div>
-                    <span className="text-[13px] mt-0.5">{likes}</span>
+                    <span className="text-[13px] tabular-nums">{likes}</span>
                 </div>
                 <div className="flex items-center group cursor-pointer hover:text-[#1d9bf0]">
                     <div className="p-2 rounded-full group-hover:bg-[#1d9bf015]">
-                        <Bookmark className="w-[22px] h-[22px]" />
+                        <BarChart3 className="w-[18px] h-[18px]" />
                     </div>
-                    <span className="text-[13px] mt-0.5">{bookmarks}</span>
+                    <span className="text-[13px] tabular-nums">{views}</span>
                 </div>
-                <div className="p-2 rounded-full hover:bg-[#1d9bf015] hover:text-[#1d9bf0] cursor-pointer">
-                    <Share className="w-[22px] h-[22px]" />
+                <div className="flex items-center">
+                    <div className="p-2 rounded-full hover:bg-[#1d9bf015] hover:text-[#1d9bf0] cursor-pointer" aria-label="Bookmark">
+                        <Bookmark className="w-[18px] h-[18px]" />
+                    </div>
+                    <div className="p-2 rounded-full hover:bg-[#1d9bf015] hover:text-[#1d9bf0] cursor-pointer" aria-label="Share">
+                        <Share className="w-[18px] h-[18px]" />
+                    </div>
                 </div>
             </div>
         </div>
@@ -312,7 +322,7 @@ export default function XPreviewTool() {
     const renderComposeView = () => (
         <div className="bg-black text-[#e7e9ea] p-4 max-w-[600px] w-full border border-[#2f3336] rounded-2xl font-sans relative">
             <div className="flex items-center justify-between mb-4">
-                <XIcon className="w-5 h-5 cursor-pointer" />
+                <XIcon className="w-5 h-5 cursor-pointer" aria-label="Close" role="button" />
                 <span className="text-[#1d9bf0] font-bold text-sm">Drafts</span>
             </div>
 
@@ -345,8 +355,8 @@ export default function XPreviewTool() {
                             <div className="grid grid-cols-2 gap-2 rounded-2xl overflow-hidden border border-[#2f3336]">
                                 {slices.map((slice, i) => (
                                     <div key={slice.id} className="aspect-square relative bg-[#16181c]">
-                                        <img src={slice.url} className="w-full h-full object-cover" alt={`Slice ${i}`} />
-                                        <div className="absolute top-1 right-1 bg-black/60 rounded-full p-1 border border-white/20">
+                                        <img src={slice.url} className="w-full h-full object-cover" alt={`Composer slice ${i + 1}`} />
+                                        <div className="absolute top-1 right-1 bg-black/60 rounded-full p-1 border border-white/20 cursor-pointer" aria-label="Remove image">
                                             <XIcon className="w-3 h-3 text-white" />
                                         </div>
                                     </div>
@@ -391,18 +401,18 @@ export default function XPreviewTool() {
 
     return (
         <PageShell contentClassName="bg-[#0f172a]/20">
-            <div className="min-h-screen pt-24 pb-20 px-6 max-w-7xl mx-auto">
+            <div className="min-h-dvh pt-24 pb-20 px-6 max-w-7xl mx-auto">
 
                 {/* Header Block */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
                     <div className="space-y-3">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-primary/10 rounded-xl">
+                            <div className="p-2 bg-primary/10 rounded-xl" aria-hidden="true">
                                 <XLogo className="w-6 h-6 text-primary" />
                             </div>
-                            <h1 className="text-4xl font-vt323 tracking-tight text-primary uppercase">X // Multi-Image Laboratory</h1>
+                            <h1 className="text-4xl font-vt323 tracking-tight text-primary uppercase text-balance">X // Multi-Image Laboratory</h1>
                         </div>
-                        <p className="font-lato text-muted-foreground text-lg italic opacity-80 max-w-2xl">
+                        <p className="font-lato text-muted-foreground text-lg italic opacity-80 max-w-2xl text-pretty">
                             Upload a vertical image and slice it perfectly for X. Preview how it looks in the timeline, composer, and expanded view to ensure pixel-perfect alignment.
                         </p>
                     </div>
@@ -413,7 +423,7 @@ export default function XPreviewTool() {
                             onClick={removeSlices}
                             disabled={slices.length === 0}
                         >
-                            <Trash2 className="w-4 h-4 mr-2" />
+                            <Trash2 className="w-4 h-4 mr-2" aria-hidden="true" />
                             Reset
                         </Button>
                         <Button
@@ -421,14 +431,16 @@ export default function XPreviewTool() {
                             onClick={() => fileInputRef.current?.click()}
                             disabled={isSlicing}
                         >
-                            {isSlicing ? <Timer className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-                            {isSlicing ? 'Slicing...' : 'Upload Image'}
+                            {isSlicing ? <Timer className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" /> : <Upload className="w-4 h-4 mr-2" aria-hidden="true" />}
+                            {isSlicing ? 'Slicing…' : 'Upload Image'}
                         </Button>
                         <input
+                            id="x-image-upload"
                             type="file"
                             ref={fileInputRef}
                             className="hidden"
                             accept="image/*"
+                            aria-label="Upload image to slice"
                             onChange={handleSliceImage}
                         />
                     </div>
@@ -460,10 +472,12 @@ export default function XPreviewTool() {
                                 <div className="space-y-1.5">
                                     <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Username Handle</Label>
                                     <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 opacity-20 font-bold">@</span>
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 opacity-20 font-bold" aria-hidden="true">@</span>
                                         <Input
                                             value={handle}
                                             onChange={e => setHandle(e.target.value)}
+                                            spellCheck={false}
+                                            autoComplete="off"
                                             className="rounded-xl pl-8 border-primary/10 bg-primary/[0.02] focus:bg-background"
                                         />
                                     </div>
@@ -485,6 +499,7 @@ export default function XPreviewTool() {
                                         value={content}
                                         onChange={e => setContent(e.target.value)}
                                         placeholder="What's happening?"
+                                        spellCheck={true}
                                         className="rounded-xl border-primary/10 bg-primary/[0.02] focus:bg-background min-h-[80px] resize-none"
                                     />
                                 </div>
@@ -512,6 +527,7 @@ export default function XPreviewTool() {
                                                     size="icon"
                                                     variant="ghost"
                                                     className="text-white hover:scale-110"
+                                                    aria-label={`Download slice ${i + 1}`}
                                                     onClick={() => {
                                                         const link = document.createElement('a');
                                                         link.href = slice.url;

@@ -208,7 +208,7 @@ export function SiteDock() {
                 >
                     <PortugalTopo dark={isDockDark} className="opacity-50" />
                     <div className="relative z-10 w-7 h-7">
-                        <Image src={isDockDark ? "/aw.svg" : "/ab.svg"} alt="Logo" fill className="object-contain" />
+                        <Image src={isDockDark ? "/aw.svg" : "/ab.svg"} alt="Avalansa Logo" fill className="object-contain" />
                     </div>
                 </Link>
 

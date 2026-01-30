@@ -27,7 +27,7 @@ import {
     GripVertical,
     Save,
     X,
-    ChevronDown,
+    ChevronDown
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { toast } from 'sonner';
@@ -146,7 +146,7 @@ function SortableDockItem({
             </div>
 
             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button variant="ghost" size="icon" onClick={() => onEdit(item)}>
+                <Button variant="ghost" size="icon" onClick={() => onEdit(item)} aria-label={`Edit ${item.label}`}>
                     <Pencil className="w-4 h-4" />
                 </Button>
                 <Button
@@ -154,6 +154,7 @@ function SortableDockItem({
                     size="icon"
                     className="text-destructive hover:text-destructive hover:bg-destructive/10"
                     onClick={() => onDelete(item)}
+                    aria-label={`Delete ${item.label}`}
                 >
                     <Trash2 className="w-4 h-4" />
                 </Button>
@@ -400,6 +401,7 @@ export function DockManager() {
                                     ].map(preset => (
                                         <button
                                             key={preset.label}
+                                            aria-label={`Set background to ${preset.label}`}
                                             onClick={() => setCurrentItem({
                                                 ...currentItem,
                                                 bg_color: preset.color,
@@ -544,6 +546,7 @@ export function DockManager() {
                                             type="button"
                                             variant="ghost"
                                             size="icon"
+                                            aria-label="Remove sub-item"
                                             className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
                                             onClick={() => removeDropdownItem(idx)}
                                         >

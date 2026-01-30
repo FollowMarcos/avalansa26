@@ -71,8 +71,7 @@ export default function SettingsPage() {
                 setDisplayName(data.name || "");
                 setUserBio(data.bio || "");
                 setWebsite(data.website || "");
-                // discoverable corresponds to onboarding_completed or a new field? 
-                // Let's assume discoverable is a mock for now or use a metadata field if we had one.
+                // Manage profile visibility and discoverability
             } else {
                 router.push('/');
             }
