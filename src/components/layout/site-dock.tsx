@@ -79,19 +79,38 @@ export function SiteDock() {
                 onMouseEnter={() => setHoveredItem(item.id)}
                 onMouseLeave={() => setHoveredItem(null)}
                 onClick={(e) => handleItemClick(e, item)}
-                className="relative flex items-center h-10"
+                className="relative flex items-center h-10 group"
             >
+                {/* Pulsing Neural Aura for Imagine */}
+                {isImagine && (
+                    <motion.div
+                        animate={{
+                            opacity: [0.2, 0.5, 0.2],
+                            scale: [0.9, 1.1, 0.9],
+                            rotate: [0, 180, 360],
+                        }}
+                        transition={{
+                            duration: 8,
+                            repeat: Infinity,
+                            ease: "linear"
+                        }}
+                        className="absolute inset-0 bg-gradient-to-r from-[#4285F4]/40 via-[#9B72CB]/40 to-[#D96570]/40 blur-2xl rounded-full -z-10"
+                    />
+                )}
+
                 <motion.div
                     layout
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                     transition={{ type: "spring", stiffness: 400, damping: 30 }}
                     className={cn(
-                        "flex items-center justify-center rounded-full transition-all duration-300 overflow-hidden",
+                        "flex items-center justify-center rounded-full transition-all duration-300 overflow-hidden relative z-10",
                         isActive
-                            ? "bg-gradient-to-r from-[#007AFF] to-[#00CFFF] px-4 shadow-[0_0_20px_rgba(0,122,255,0.3)]"
-                            : "w-10 text-white/40 hover:text-white/80 group"
+                            ? "bg-gradient-to-r from-[#4285F4] via-[#9B72CB] to-[#D96570] px-4 shadow-[0_0_25px_rgba(155,114,203,0.5)] bg-[length:200%_auto] animate-gradient"
+                            : "w-10 text-white/40 hover:text-white/80"
                     )}
                 >
-                    <item.icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", isActive ? "text-white" : "")} />
+                    <item.icon className={cn("w-5 h-5", isActive ? "text-white" : "transition-transform group-hover:scale-110")} />
                     <AnimatePresence mode="popLayout">
                         {isActive && (
                             <motion.span
@@ -105,10 +124,6 @@ export function SiteDock() {
                         )}
                     </AnimatePresence>
                 </motion.div>
-
-                {isImagine && (
-                    <div className="absolute inset-0 bg-blue-500/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity rounded-full -z-10" />
-                )}
             </Link>
         );
     };
@@ -123,13 +138,15 @@ export function SiteDock() {
 
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <button
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
                             onMouseEnter={() => setHoveredItem("tools")}
                             onMouseLeave={() => setHoveredItem(null)}
                             className={cn(
                                 "relative flex items-center h-10 transition-all duration-300 group rounded-full",
                                 pathname.startsWith("/tools")
-                                    ? "bg-gradient-to-r from-[#007AFF] to-[#00CFFF] px-4 shadow-[0_0_20px_rgba(0,122,255,0.3)]"
+                                    ? "bg-gradient-to-r from-[#4285F4] via-[#9B72CB] to-[#D96570] px-4 shadow-[0_0_25px_rgba(155,114,203,0.5)]"
                                     : "w-10 text-white/40 hover:text-white/80"
                             )}
                         >
@@ -146,9 +163,9 @@ export function SiteDock() {
                                     </motion.span>
                                 )}
                             </AnimatePresence>
-                        </button>
+                        </motion.button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent side="top" align="center" className="mb-4 min-w-[200px] p-2 bg-black/60 backdrop-blur-3xl border-white/10 rounded-2xl shadow-2xl">
+                    <DropdownMenuContent side="top" align="center" className="mb-4 min-w-[200px] p-2 bg-black/60 backdrop-blur-3xl border-white/10 rounded-2xl shadow-2xl overflow-hidden">
                         <DropdownMenuItem asChild className="rounded-xl cursor-pointer focus:bg-white/10 text-white/70 hover:text-white py-2.5 px-3">
                             <Link href="/tools/x-preview" className="flex items-center justify-between w-full group/item">
                                 <span className="flex items-center gap-3 font-medium">
@@ -173,57 +190,61 @@ export function SiteDock() {
 
                 <div className="w-px h-6 bg-white/10 mx-1" />
 
-                <Link
-                    href={username ? `/u/${username}` : "/onboarding"}
-                    onMouseEnter={() => setHoveredItem("profile")}
-                    onMouseLeave={() => setHoveredItem(null)}
-                    className={cn(
-                        "relative flex items-center h-10 transition-all duration-300 group rounded-full",
-                        (username && pathname === `/u/${username}`)
-                            ? "bg-gradient-to-r from-[#007AFF] to-[#00CFFF] px-4 shadow-[0_0_20px_rgba(0,122,255,0.3)]"
-                            : "w-10 text-white/40 hover:text-white/80"
-                    )}
-                >
-                    <User className={cn("w-5 h-5", (username && pathname === `/u/${username}`) ? "text-white" : "transition-transform group-hover:scale-110")} />
-                    <AnimatePresence>
-                        {(username && pathname === `/u/${username}`) && (
-                            <motion.span
-                                initial={{ opacity: 0, x: -10, width: 0 }}
-                                animate={{ opacity: 1, x: 0, width: "auto" }}
-                                exit={{ opacity: 0, x: -10, width: 0 }}
-                                className="ml-2 text-sm font-medium text-white"
-                            >
-                                Profile
-                            </motion.span>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Link
+                        href={username ? `/u/${username}` : "/onboarding"}
+                        onMouseEnter={() => setHoveredItem("profile")}
+                        onMouseLeave={() => setHoveredItem(null)}
+                        className={cn(
+                            "relative flex items-center h-10 transition-all duration-300 group rounded-full",
+                            (username && pathname === `/u/${username}`)
+                                ? "bg-gradient-to-r from-[#4285F4] via-[#9B72CB] to-[#D96570] px-4 shadow-[0_0_25px_rgba(155,114,203,0.5)]"
+                                : "w-10 text-white/40 hover:text-white/80"
                         )}
-                    </AnimatePresence>
-                </Link>
+                    >
+                        <User className={cn("w-5 h-5", (username && pathname === `/u/${username}`) ? "text-white" : "transition-transform group-hover:scale-110")} />
+                        <AnimatePresence>
+                            {(username && pathname === `/u/${username}`) && (
+                                <motion.span
+                                    initial={{ opacity: 0, x: -10, width: 0 }}
+                                    animate={{ opacity: 1, x: 0, width: "auto" }}
+                                    exit={{ opacity: 0, x: -10, width: 0 }}
+                                    className="ml-2 text-sm font-medium text-white"
+                                >
+                                    Profile
+                                </motion.span>
+                            )}
+                        </AnimatePresence>
+                    </Link>
+                </motion.div>
 
-                <Link
-                    href={username ? `/u/${username}/settings` : "/onboarding"}
-                    onMouseEnter={() => setHoveredItem("settings")}
-                    onMouseLeave={() => setHoveredItem(null)}
-                    className={cn(
-                        "relative flex items-center h-10 transition-all duration-300 group rounded-full",
-                        (username && pathname === `/u/${username}/settings`)
-                            ? "bg-gradient-to-r from-[#007AFF] to-[#00CFFF] px-4 shadow-[0_0_20px_rgba(0,122,255,0.3)]"
-                            : "w-10 text-white/40 hover:text-white/80"
-                    )}
-                >
-                    <Settings2 className={cn("w-5 h-5", (username && pathname === `/u/${username}/settings`) ? "text-white" : "transition-transform group-hover:scale-110")} />
-                    <AnimatePresence>
-                        {(username && pathname === `/u/${username}/settings`) && (
-                            <motion.span
-                                initial={{ opacity: 0, x: -10, width: 0 }}
-                                animate={{ opacity: 1, x: 0, width: "auto" }}
-                                exit={{ opacity: 0, x: -10, width: 0 }}
-                                className="ml-2 text-sm font-medium text-white"
-                            >
-                                Settings
-                            </motion.span>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Link
+                        href={username ? `/u/${username}/settings` : "/onboarding"}
+                        onMouseEnter={() => setHoveredItem("settings")}
+                        onMouseLeave={() => setHoveredItem(null)}
+                        className={cn(
+                            "relative flex items-center h-10 transition-all duration-300 group rounded-full",
+                            (username && pathname === `/u/${username}/settings`)
+                                ? "bg-gradient-to-r from-[#4285F4] via-[#9B72CB] to-[#D96570] px-4 shadow-[0_0_25px_rgba(155,114,203,0.5)]"
+                                : "w-10 text-white/40 hover:text-white/80"
                         )}
-                    </AnimatePresence>
-                </Link>
+                    >
+                        <Settings2 className={cn("w-5 h-5", (username && pathname === `/u/${username}/settings`) ? "text-white" : "transition-transform group-hover:scale-110")} />
+                        <AnimatePresence>
+                            {(username && pathname === `/u/${username}/settings`) && (
+                                <motion.span
+                                    initial={{ opacity: 0, x: -10, width: 0 }}
+                                    animate={{ opacity: 1, x: 0, width: "auto" }}
+                                    exit={{ opacity: 0, x: -10, width: 0 }}
+                                    className="ml-2 text-sm font-medium text-white"
+                                >
+                                    Settings
+                                </motion.span>
+                            )}
+                        </AnimatePresence>
+                    </Link>
+                </motion.div>
             </motion.div>
         </div>
     );
