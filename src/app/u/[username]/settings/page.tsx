@@ -33,6 +33,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { AvatarUpload } from "@/components/settings/avatar-upload";
 
 export default function SettingsPage() {
     const params = useParams();
@@ -170,81 +171,65 @@ export default function SettingsPage() {
                         >
                             <TabsContent value="profile" className="mt-0 space-y-8 focus-visible:outline-none">
                                 <section className="space-y-6">
-                                    <div className="flex flex-col gap-6">
-                                        <div className="flex items-center gap-6">
-                                            <div className="relative group">
-                                                <Avatar className="size-24 border-4 border-background ring-1 ring-primary/5">
-                                                    <AvatarImage src="" />
-                                                    <AvatarFallback className="bg-muted text-2xl font-bold">U</AvatarFallback>
-                                                </Avatar>
-                                                <button
-                                                    className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                                                    aria-label="Update profile picture"
-                                                >
-                                                    <Camera className="h-6 w-6 text-white" aria-hidden="true" />
-                                                </button>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <h2 className="font-vt323 text-xl text-primary text-balance">Profile Picture</h2>
-                                                <p className="text-sm text-muted-foreground font-lato text-pretty">
-                                                    PNG, JPG or GIF. Max 2MB.
-                                                </p>
-                                                <div className="flex gap-2 mt-2">
-                                                    <Button variant="outline" size="sm" className="rounded-full font-lato h-8">Upload</Button>
-                                                    <Button variant="ghost" size="sm" className="rounded-full font-lato h-8 text-destructive">Remove</Button>
-                                                </div>
-                                            </div>
+                                    {profile ? (
+                                        <AvatarUpload
+                                            userId={profile.id}
+                                            currentAvatarUrl={profile.avatar_url}
+                                            onAvatarUpdate={(url) => setProfile(curr => curr ? { ...curr, avatar_url: url } : null)}
+                                        />
+                                    ) : (
+                                        <div className="h-24 w-full animate-pulse bg-muted rounded-xl" />
+                                    )}
+
+                                    <Separator className="bg-primary/5" />
+
+                                    <div className="grid gap-6">
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="display-name" className="font-lato font-semibold text-xs uppercase tracking-wider text-muted-foreground">Display Name</Label>
+                                            <Input
+                                                id="display-name"
+                                                placeholder="Your name"
+                                                className="rounded-xl bg-primary/[0.02] border-primary/10 focus:bg-background transition-all h-12"
+                                                value={displayName}
+                                                onChange={(e) => setDisplayName(e.target.value)}
+                                            />
                                         </div>
 
-                                        <Separator className="bg-primary/5" />
-
-                                        <div className="grid gap-6">
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="display-name" className="font-lato font-semibold text-xs uppercase tracking-wider text-muted-foreground">Display Name</Label>
-                                                <Input
-                                                    id="display-name"
-                                                    placeholder="Your name"
-                                                    className="rounded-xl bg-primary/[0.02] border-primary/10 focus:bg-background transition-all h-12"
-                                                    value={displayName}
-                                                    onChange={(e) => setDisplayName(e.target.value)}
-                                                />
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="username" className="font-lato font-semibold text-xs uppercase tracking-wider text-muted-foreground">Username</Label>
+                                            <div className="flex items-center">
+                                                <span className="px-3 py-2 bg-muted/50 border border-r-0 rounded-l-xl text-muted-foreground font-mono text-sm h-12 flex items-center">u/</span>
+                                                <Input id="username" placeholder="username" className="rounded-l-none rounded-r-xl bg-primary/[0.02] border-primary/10 focus:bg-background transition-all h-12" defaultValue={profile?.username || usernameFromUrl} disabled aria-describedby="username-hint" spellCheck={false} />
                                             </div>
+                                            <p id="username-hint" className="text-[11px] text-muted-foreground font-lato italic text-pretty">Your public profile will be at avalansa.com/u/{profile?.username || usernameFromUrl}</p>
+                                        </div>
 
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="username" className="font-lato font-semibold text-xs uppercase tracking-wider text-muted-foreground">Username</Label>
-                                                <div className="flex items-center">
-                                                    <span className="px-3 py-2 bg-muted/50 border border-r-0 rounded-l-xl text-muted-foreground font-mono text-sm h-12 flex items-center">u/</span>
-                                                    <Input id="username" placeholder="username" className="rounded-l-none rounded-r-xl bg-primary/[0.02] border-primary/10 focus:bg-background transition-all h-12" defaultValue={profile?.username || usernameFromUrl} disabled aria-describedby="username-hint" spellCheck={false} />
-                                                </div>
-                                                <p id="username-hint" className="text-[11px] text-muted-foreground font-lato italic text-pretty">Your public profile will be at avalansa.com/u/{profile?.username || usernameFromUrl}</p>
-                                            </div>
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="bio" className="font-lato font-semibold text-xs uppercase tracking-wider text-muted-foreground">Bio</Label>
+                                            <Textarea
+                                                id="bio"
+                                                placeholder="Tell the world about your creative space..."
+                                                className="rounded-xl bg-primary/[0.02] border-primary/10 focus:bg-background transition-all min-h-[120px] resize-none"
+                                                value={userBio}
+                                                onChange={(e) => setUserBio(e.target.value.slice(0, 160))}
+                                                aria-describedby="bio-counter"
+                                            />
+                                            <p id="bio-counter" className="text-[11px] text-muted-foreground text-right font-lato tabular-nums">{userBio.length} / 160 characters</p>
+                                        </div>
 
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="bio" className="font-lato font-semibold text-xs uppercase tracking-wider text-muted-foreground">Bio</Label>
-                                                <Textarea
-                                                    id="bio"
-                                                    placeholder="Tell the world about your creative space..."
-                                                    className="rounded-xl bg-primary/[0.02] border-primary/10 focus:bg-background transition-all min-h-[120px] resize-none"
-                                                    value={userBio}
-                                                    onChange={(e) => setUserBio(e.target.value.slice(0, 160))}
-                                                    aria-describedby="bio-counter"
-                                                />
-                                                <p id="bio-counter" className="text-[11px] text-muted-foreground text-right font-lato tabular-nums">{userBio.length} / 160 characters</p>
-                                            </div>
-
-                                            <div className="grid gap-2">
-                                                <Label htmlFor="website" className="font-lato font-semibold text-xs uppercase tracking-wider text-muted-foreground">Portfolio/Website</Label>
-                                                <Input
-                                                    id="website"
-                                                    type="url"
-                                                    placeholder="https://..."
-                                                    className="rounded-xl bg-primary/[0.02] border-primary/10 focus:bg-background transition-all h-12"
-                                                    value={website}
-                                                    onChange={(e) => setWebsite(e.target.value)}
-                                                />
-                                            </div>
+                                        <div className="grid gap-2">
+                                            <Label htmlFor="website" className="font-lato font-semibold text-xs uppercase tracking-wider text-muted-foreground">Portfolio/Website</Label>
+                                            <Input
+                                                id="website"
+                                                type="url"
+                                                placeholder="https://..."
+                                                className="rounded-xl bg-primary/[0.02] border-primary/10 focus:bg-background transition-all h-12"
+                                                value={website}
+                                                onChange={(e) => setWebsite(e.target.value)}
+                                            />
                                         </div>
                                     </div>
+
                                 </section>
 
                                 <Separator className="bg-primary/5" />
@@ -385,6 +370,6 @@ export default function SettingsPage() {
 
             {/* Footer Background Effect */}
             <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-background to-transparent pointer-events-none z-0"></div>
-        </div>
+        </div >
     );
 }

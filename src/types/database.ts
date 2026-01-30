@@ -25,6 +25,11 @@ export interface Database {
         Insert: DockPreferencesInsert;
         Update: DockPreferencesUpdate;
       };
+      dock_items: {
+        Row: DockItem;
+        Insert: DockItemInsert;
+        Update: DockItemUpdate;
+      };
     };
     Views: {
       [_ in never]: never;
@@ -177,6 +182,53 @@ export interface DockPreferencesInsert {
 export interface DockPreferencesUpdate {
   dock_type?: DockType;
   icon_positions?: DockIconPosition[];
+}
+
+// ============================================
+// Dock Items Types (Admin Managed)
+// ============================================
+
+export interface DockDropdownItem {
+  label: string;
+  href: string;
+  icon?: string; // Icon name
+}
+
+export interface DockItem {
+  id: string;
+  label: string;
+  icon: string; // Lucide icon name
+  href?: string; // Optional, if it has dropdowns it might not navigate directly
+  dropdown_items?: DockDropdownItem[];
+  order: number;
+  is_visible: boolean;
+  required_role?: UserRole; // 'admin' or null (for all)
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DockItemInsert {
+  id?: string;
+  label: string;
+  icon: string;
+  href?: string;
+  dropdown_items?: DockDropdownItem[];
+  order: number;
+  is_visible?: boolean;
+  required_role?: UserRole;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface DockItemUpdate {
+  label?: string;
+  icon?: string;
+  href?: string;
+  dropdown_items?: DockDropdownItem[];
+  order?: number;
+  is_visible?: boolean;
+  required_role?: UserRole;
+  updated_at?: string;
 }
 
 // ============================================
