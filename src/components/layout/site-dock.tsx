@@ -18,8 +18,8 @@ import {
 import type { DockType, DockIconPosition } from "@/types/database";
 import { getDockPreferences, saveDockPreferences } from "@/utils/supabase/dock-preferences.client";
 
-// Draggable items config (Home and Settings are fixed)
-const DRAGGABLE_DOCK_ITEMS = ['library', 'imagine', 'labs', 'tools', 'profile'] as const;
+// Draggable items config (Home, Profile, and Settings are fixed)
+const DRAGGABLE_DOCK_ITEMS = ['library', 'imagine', 'labs', 'tools'] as const;
 type DockItemId = typeof DRAGGABLE_DOCK_ITEMS[number];
 
 // Wavy lines SVG pattern for Milky Dream style
@@ -70,9 +70,12 @@ export function SiteDock() {
                     }
                     if (prefs.icon_positions && prefs.icon_positions.length > 0) {
                         // Sort draggable items based on saved preferences
+                        // Filter out any saved positions that are no longer in DRAGGABLE_DOCK_ITEMS
+                        const validIconPositions = prefs.icon_positions.filter(p => DRAGGABLE_DOCK_ITEMS.includes(p.id as DockItemId));
+
                         const sortedItems = [...DRAGGABLE_DOCK_ITEMS].sort((a, b) => {
-                            const posA = prefs.icon_positions.find(p => p.id === a);
-                            const posB = prefs.icon_positions.find(p => p.id === b);
+                            const posA = validIconPositions.find(p => p.id === a);
+                            const posB = validIconPositions.find(p => p.id === b);
                             const orderA = posA ? posA.order : DRAGGABLE_DOCK_ITEMS.indexOf(a);
                             const orderB = posB ? posB.order : DRAGGABLE_DOCK_ITEMS.indexOf(b);
                             return orderA - orderB;
@@ -91,20 +94,18 @@ export function SiteDock() {
         setItems(newOrder);
 
         // Save to DB
+        // We only save the order of the draggable items. 
+        // Fixed items (Home, Profile, Settings) are not in this list.
         const positions: DockIconPosition[] = newOrder.map((id, index) => ({
             id,
             order: index
         }));
-        // We include Home/Settings implicitly in the full list if needed, 
-        // but for now we only store the draggable order relative to each other.
-        // Or we could store indices shifted by 1 to account for Home.
-        // Let's store direct order, but interpretation is "start of draggable section".
         saveDockPreferences({ icon_positions: positions });
     };
 
     const isImaginePage = pathname === "/imagine";
     const isDark = dockType.includes('dark');
-    const isFloating = dockType.includes('floating'); // Simplified logic, assuming floating styles not requested for this specific draggable implementation right now or handled generically
+    const isFloating = dockType.includes('floating');
 
     const handleImagineClick = (e: React.MouseEvent) => {
         if (isImaginePage) {
@@ -204,19 +205,6 @@ export function SiteDock() {
                         </DropdownMenuContent>
                     </DropdownMenu>
                 );
-            case 'profile':
-                return (
-                    <Link
-                        href={username ? `/u/${username}` : "/onboarding"}
-                        className={cn(
-                            "relative flex items-center justify-center w-12 h-12 rounded-[12px] transition-all duration-300 shadow-lg bg-gradient-to-br from-green-400 to-green-600",
-                            pathname === `/u/${username}` ? "scale-110 shadow-xl" : "hover:scale-105 active:scale-95"
-                        )}
-                        aria-label="Profile"
-                    >
-                        <User className="w-6 h-6 text-white" strokeWidth={1.5} />
-                    </Link>
-                );
             default:
                 return null;
         }
@@ -260,7 +248,7 @@ export function SiteDock() {
                         </div>
                     </Link>
 
-                    {/* Separator */}
+                    {/* Separator 1 */}
                     <div className={cn("w-px h-10 mx-1", isDark ? "bg-zinc-700/50" : "bg-gray-200/50")} />
 
                     {/* Draggable Zone */}
@@ -272,20 +260,35 @@ export function SiteDock() {
                         ))}
                     </Reorder.Group>
 
-                    {/* Separator (Optional, keeping it symmetric or just rely on spacing? Request asked for separator between Home and rest. Settings is 'fixed' at end, so maybe separator there too?) */}
-                    {/* <div className={cn("w-px h-10 mx-1", isDark ? "bg-zinc-700/50" : "bg-gray-200/50")} /> */}
+                    {/* Separator 2 */}
+                    <div className={cn("w-px h-10 mx-1", isDark ? "bg-zinc-700/50" : "bg-gray-200/50")} />
 
-                    {/* Fixed Settings Button */}
-                    <Link
-                        href={username ? `/u/${username}/settings` : "/onboarding"}
-                        className={cn(
-                            "relative flex items-center justify-center w-12 h-12 rounded-[12px] transition-all duration-300 shadow-lg bg-gradient-to-br from-gray-600 to-gray-800",
-                            (username && pathname === `/u/${username}/settings`) ? "scale-110 shadow-xl" : "hover:scale-105 active:scale-95"
-                        )}
-                        aria-label="Settings"
-                    >
-                        <Settings className="w-6 h-6 text-white" strokeWidth={1.5} />
-                    </Link>
+                    {/* Fixed End Group: Profile & Settings */}
+                    <div className="flex items-center gap-2">
+                        {/* Profile */}
+                        <Link
+                            href={username ? `/u/${username}` : "/onboarding"}
+                            className={cn(
+                                "relative flex items-center justify-center w-12 h-12 rounded-[12px] transition-all duration-300 shadow-lg bg-gradient-to-br from-green-400 to-green-600",
+                                pathname === `/u/${username}` ? "scale-110 shadow-xl" : "hover:scale-105 active:scale-95"
+                            )}
+                            aria-label="Profile"
+                        >
+                            <User className="w-6 h-6 text-white" strokeWidth={1.5} />
+                        </Link>
+
+                        {/* Settings */}
+                        <Link
+                            href={username ? `/u/${username}/settings` : "/onboarding"}
+                            className={cn(
+                                "relative flex items-center justify-center w-12 h-12 rounded-[12px] transition-all duration-300 shadow-lg bg-gradient-to-br from-gray-600 to-gray-800",
+                                (username && pathname === `/u/${username}/settings`) ? "scale-110 shadow-xl" : "hover:scale-105 active:scale-95"
+                            )}
+                            aria-label="Settings"
+                        >
+                            <Settings className="w-6 h-6 text-white" strokeWidth={1.5} />
+                        </Link>
+                    </div>
                 </div>
             </div>
         </div>
