@@ -147,8 +147,8 @@ export function SiteDock() {
     // Before hydration, render nothing to avoid mismatch
     if (!mounted) return null;
 
-    // Hide dock on imagine page during input boards, or for logged out users/loading
-    if ((isInputVisible && isImaginePage) || !isAuthenticated) return null;
+    // Hide dock on imagine page during input boards, or while loading
+    if ((isInputVisible && isImaginePage) || isAuthenticated === null) return null;
 
     const containerClass = isDockDark
         ? "bg-zinc-900 border-zinc-700/50"
@@ -157,22 +157,7 @@ export function SiteDock() {
     const displayName = profile?.name || profile?.username || 'User';
     const avatarUrl = profile?.avatar_url;
 
-    // Draggable icon component
-    const DraggableIcon = ({ item, children }: { item: DockItem; children: React.ReactNode }) => (
-        <Reorder.Item
-            value={item}
-            id={item.id}
-            onDragStart={() => setIsDragging(true)}
-            onDragEnd={() => setTimeout(() => setIsDragging(false), 100)}
-            whileDrag={{ scale: 1.15, zIndex: 100 }}
-            dragListener={true}
-            dragControls={undefined}
-            style={{ touchAction: 'none' }}
-            className="cursor-grab active:cursor-grabbing select-none"
-        >
-            {children}
-        </Reorder.Item>
-    );
+
 
     // Base icon styles
     const iconBase = "relative flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-200 shadow-md";
@@ -226,10 +211,19 @@ export function SiteDock() {
                         style={{ touchAction: 'pan-y' }}
                     >
                         {items.map((item) => {
+                            // Helper for dragging events
+                            const dragProps = {
+                                onDragStart: () => setIsDragging(true),
+                                onDragEnd: () => setTimeout(() => setIsDragging(false), 100),
+                                whileDrag: { scale: 1.15, zIndex: 100 },
+                                style: { touchAction: 'none' as const },
+                                className: "cursor-grab active:cursor-grabbing select-none"
+                            };
+
                             // Special case for Imagine to handle overlay
                             if (item.id === 'imagine') {
                                 return (
-                                    <DraggableIcon key={item.id} item={item}>
+                                    <Reorder.Item key={item.id} value={item} {...dragProps}>
                                         <div className="relative group/imagine">
                                             <div className="absolute -inset-1 bg-gradient-to-br from-[#5856D6] to-[#AF52DE] blur-lg opacity-0 group-hover/imagine:opacity-60 transition-opacity rounded-xl pointer-events-none" />
                                             <button
@@ -248,14 +242,14 @@ export function SiteDock() {
                                                 <IconComponent name={item.icon} className={cn("w-5 h-5 pointer-events-none", item.text_color || "text-white")} strokeWidth={1.5} aria-hidden="true" />
                                             </button>
                                         </div>
-                                    </DraggableIcon>
+                                    </Reorder.Item>
                                 );
                             }
 
                             // Items with dropdowns
                             if (item.dropdown_items && item.dropdown_items.length > 0) {
                                 return (
-                                    <DraggableIcon key={item.id} item={item}>
+                                    <Reorder.Item key={item.id} value={item} {...dragProps}>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild disabled={isDragging}>
                                                 <button
@@ -289,13 +283,13 @@ export function SiteDock() {
                                                 ))}
                                             </DropdownMenuContent>
                                         </DropdownMenu>
-                                    </DraggableIcon>
+                                    </Reorder.Item>
                                 )
                             }
 
                             // Standard Link Items
                             return (
-                                <DraggableIcon key={item.id} item={item}>
+                                <Reorder.Item key={item.id} value={item} {...dragProps}>
                                     <button
                                         onClick={() => handleNavigation(item.href || '/')}
                                         className={cn(getItemStyle(item), "cursor-pointer")}
@@ -303,7 +297,7 @@ export function SiteDock() {
                                     >
                                         <IconComponent name={item.icon} className={cn("w-5 h-5 pointer-events-none", item.text_color || "text-white")} strokeWidth={1.5} aria-hidden="true" />
                                     </button>
-                                </DraggableIcon>
+                                </Reorder.Item>
                             );
                         })}
                     </Reorder.Group>
