@@ -20,6 +20,11 @@ export interface Database {
         Insert: ProfileInsert;
         Update: ProfileUpdate;
       };
+      dock_preferences: {
+        Row: DockPreferences;
+        Insert: DockPreferencesInsert;
+        Update: DockPreferencesUpdate;
+      };
     };
     Views: {
       [_ in never]: never;
@@ -29,6 +34,7 @@ export interface Database {
     };
     Enums: {
       user_role: UserRole;
+      dock_type: DockType;
     };
   };
 }
@@ -121,6 +127,56 @@ export interface PaginatedProfiles {
   total: number;
   page: number;
   totalPages: number;
+}
+
+// ============================================
+// Dock Preferences Types
+// ============================================
+
+/** Dock type enum matching database dock_type */
+export type DockType = 'milky_dream_light' | 'milky_dream_dark' | 'floating_islands_light' | 'floating_islands_dark';
+
+/** Position of a single dock icon */
+export interface DockIconPosition {
+  /** Unique icon identifier */
+  id: string;
+  /** Order index in the dock */
+  order: number;
+}
+
+/**
+ * Dock preferences row type - represents user's dock customization
+ */
+export interface DockPreferences {
+  /** UUID primary key */
+  id: string;
+  /** UUID - Foreign key to auth.users */
+  user_id: string;
+  /** Selected dock style */
+  dock_type: DockType;
+  /** Array of icon positions */
+  icon_positions: DockIconPosition[];
+  /** Timestamp when created */
+  created_at: string;
+  /** Timestamp when last updated */
+  updated_at: string;
+}
+
+/**
+ * Dock preferences insert type
+ */
+export interface DockPreferencesInsert {
+  user_id: string;
+  dock_type?: DockType;
+  icon_positions?: DockIconPosition[];
+}
+
+/**
+ * Dock preferences update type
+ */
+export interface DockPreferencesUpdate {
+  dock_type?: DockType;
+  icon_positions?: DockIconPosition[];
 }
 
 // ============================================
