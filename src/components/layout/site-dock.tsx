@@ -6,7 +6,7 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import * as LucideIcons from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useImagine } from "@/components/imagine/imagine-context";
+import { useCreate } from "@/components/create/create-context";
 import { createClient } from "@/utils/supabase/client";
 import { motion, Reorder } from "motion/react";
 import {
@@ -26,7 +26,7 @@ import { DefaultAvatar } from "@/components/ui/default-avatar";
 // Default icons to fallback if DB is empty or during loading
 const DEFAULT_ITEMS: DockItem[] = [
     { id: 'library', label: 'Library', icon: 'Library', href: '/library', order: 0, is_visible: true, created_at: '', updated_at: '', bg_color: 'bg-gradient-to-br from-blue-400 to-blue-600', text_color: 'text-white' },
-    { id: 'imagine', label: 'Imagine', icon: 'Sparkles', href: '/imagine', order: 1, is_visible: true, created_at: '', updated_at: '', bg_color: 'bg-gradient-to-br from-[#5856D6] to-[#AF52DE]', text_color: 'text-white' },
+    { id: 'create', label: 'Create', icon: 'Sparkles', href: '/create', order: 1, is_visible: true, created_at: '', updated_at: '', bg_color: 'bg-gradient-to-br from-[#5856D6] to-[#AF52DE]', text_color: 'text-white' },
     { id: 'labs', label: 'Labs', icon: 'FlaskConical', href: '/labs', order: 2, is_visible: true, created_at: '', updated_at: '', bg_color: 'bg-gradient-to-br from-orange-400 to-orange-600', text_color: 'text-white' },
     { id: 'tools', label: 'Tools', icon: 'Hammer', href: '/tools', dropdown_items: [{ label: 'X Multi-Image', href: '/tools/x-multi-image-preview-and-split', icon: 'Sparkles' }], order: 3, is_visible: true, created_at: '', updated_at: '', bg_color: 'bg-zinc-100 dark:bg-zinc-800', text_color: 'text-zinc-900 dark:text-zinc-100' },
 ];
@@ -73,7 +73,7 @@ export function SiteDock() {
     const pathname = usePathname();
     const router = useRouter();
     const { theme, setTheme } = useTheme();
-    const { isInputVisible, toggleInputVisibility, setActiveTab } = useImagine();
+    const { isInputVisible, toggleInputVisibility, setActiveTab } = useCreate();
     const [profile, setProfile] = React.useState<UserProfile | null>(null);
     const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null);
     const [items, setItems] = React.useState<DockItem[]>(DEFAULT_ITEMS);
@@ -155,7 +155,7 @@ export function SiteDock() {
         router.refresh();
     };
 
-    const isImaginePage = pathname === "/imagine";
+    const isCreatePage = pathname === "/create";
     // Invert: light mode = dark dock, dark mode = light dock
     const isDockDark = theme === 'light';
     const isAdmin = profile?.role === 'admin';
@@ -170,8 +170,8 @@ export function SiteDock() {
     // Before hydration, render nothing to avoid mismatch
     if (!mounted) return null;
 
-    // Hide dock on imagine page during input boards, or for logged out users/loading
-    if ((isInputVisible && isImaginePage) || !isAuthenticated) return null;
+    // Hide dock on create page during input boards, or for logged out users/loading
+    if ((isInputVisible && isCreatePage) || !isAuthenticated) return null;
 
     const onDragStart = () => setIsDragging(true);
     const onDragEnd = () => setTimeout(() => setIsDragging(false), 100);
@@ -235,8 +235,8 @@ export function SiteDock() {
                         style={{ touchAction: 'pan-y' }}
                     >
                         {items.map((item) => {
-                            // Special case for Imagine to handle overlay
-                            if (item.id === 'imagine') {
+                            // Special case for Create to handle overlay
+                            if (item.id === 'create') {
                                 return (
                                     <DraggableIcon
                                         key={item.id}
@@ -245,16 +245,16 @@ export function SiteDock() {
                                         onDragStart={onDragStart}
                                         onDragEnd={onDragEnd}
                                     >
-                                        <div className="relative group/imagine">
-                                            <div className="absolute -inset-1 bg-gradient-to-br from-[#5856D6] to-[#AF52DE] blur-lg opacity-0 group-hover/imagine:opacity-60 transition-opacity rounded-xl pointer-events-none" />
+                                        <div className="relative group/create">
+                                            <div className="absolute -inset-1 bg-gradient-to-br from-[#5856D6] to-[#AF52DE] blur-lg opacity-0 group-hover/create:opacity-60 transition-opacity rounded-xl pointer-events-none" />
                                             <button
                                                 onClick={() => {
                                                     if (isDragging) return;
-                                                    if (isImaginePage) {
+                                                    if (isCreatePage) {
                                                         toggleInputVisibility();
                                                     } else {
-                                                        setActiveTab("imagine");
-                                                        router.push('/imagine');
+                                                        setActiveTab("create");
+                                                        router.push('/create');
                                                     }
                                                 }}
                                                 className={cn(getItemStyle(item), "cursor-pointer")}

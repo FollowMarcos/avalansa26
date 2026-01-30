@@ -1,7 +1,11 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "WebFetch(domain:www.prompt-kit.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:prompt-kit.com)",
+      "Bash(npx shadcn@latest add:*)"
     ]
   }
 }

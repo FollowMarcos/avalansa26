@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ImagineProvider } from "@/components/imagine/imagine-context";
+import { CreateProvider } from "@/components/create/create-context";
 import { SiteDock } from "./site-dock";
 import { cn } from "@/lib/utils";
 
@@ -14,7 +14,7 @@ interface PageShellProps {
 
 export function PageShell({ children, className, contentClassName, showDock = true }: PageShellProps) {
     return (
-        <ImagineProvider>
+        <CreateProvider>
             <div className={cn("relative min-h-screen bg-background text-foreground flex flex-col antialiased", className)}>
                 {/* Analog Grain Texture */}
                 <div className="fixed inset-0 pointer-events-none z-[100] opacity-[0.03] mix-blend-multiply bg-noise"></div>
@@ -35,6 +35,6 @@ export function PageShell({ children, className, contentClassName, showDock = tr
                     </div>
                 )}
             </div>
-        </ImagineProvider>
+        </CreateProvider>
     );
 }
