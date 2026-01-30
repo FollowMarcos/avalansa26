@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Folder, Compass, MessageCircle, Mail, Image, Music, Settings, Phone, Globe } from 'lucide-react';
 import { motion } from 'motion/react';
 import { ModeToggle } from '@/components/mode-toggle';
 import { PageShell } from "@/components/layout/page-shell";
@@ -24,25 +24,30 @@ export default function LabsPage() {
 
             <main className="flex-1 pt-32 pb-48 px-8 relative z-10 w-full max-w-7xl mx-auto">
                 <header className="mb-16 text-center">
-                    <h1 className="text-3xl font-light tracking-tight mb-2">Wordmark Explorations</h1>
-                    <p className="text-sm text-muted-foreground uppercase tracking-widest opacity-60">20 Variations of AVALANSA workflows</p>
+                    <h1 className="text-3xl font-light tracking-tight mb-2">Dock Explorations</h1>
+                    <p className="text-sm text-muted-foreground uppercase tracking-widest opacity-60">20 Variations of Navigation Docks</p>
                 </header>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {variations.map((v, i) => (
+                <div className="grid grid-cols-1 gap-16">
+                    {dockDesigns.map((design, i) => (
                         <motion.div
                             key={i}
-                            initial={{ opacity: 0, y: 10 }}
+                            initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.05, duration: 0.5 }}
-                            className="flex flex-col items-center justify-center p-12 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] transition-all group"
+                            className="flex flex-col items-center"
                         >
-                            <div className="flex flex-col items-center select-none text-center">
-                                <span className={`${v.avalansaClass} uppercase`}>AVALANSA</span>
-                                <span className={`${v.workflowsClass}`}>workflows</span>
-                            </div>
-                            <div className="mt-8 text-[10px] uppercase tracking-[0.2em] text-muted-foreground/40 group-hover:text-muted-foreground/60 transition-colors">
-                                {v.label}
+                            <div className="w-full max-w-4xl">
+                                <div className="mb-4 flex items-center gap-3">
+                                    <span className="text-xs font-mono text-muted-foreground/40">#{String(i + 1).padStart(2, '0')}</span>
+                                    <span className="text-sm font-medium">{design.name}</span>
+                                </div>
+                                <div className="relative flex items-center justify-center p-12 rounded-2xl border border-white/5 bg-white/[0.02] min-h-[180px]">
+                                    {design.component}
+                                </div>
+                                {design.description && (
+                                    <p className="mt-3 text-xs text-muted-foreground/50 text-center">{design.description}</p>
+                                )}
                             </div>
                         </motion.div>
                     ))}
@@ -52,206 +57,521 @@ export default function LabsPage() {
     );
 }
 
+// macOS-inspired icon button component
+const MacIcon = ({ icon: Icon, color, className = "" }: { icon: React.ElementType; color: string; className?: string }) => (
+    <div
+        className={`w-12 h-12 rounded-[12px] flex items-center justify-center shadow-lg transition-transform hover:scale-110 active:scale-95 cursor-pointer ${className}`}
+        style={{ background: color }}
+    >
+        <Icon className="w-6 h-6 text-white" strokeWidth={1.5} />
+    </div>
+);
 
-const variations = [
+// Wavy lines SVG pattern for the special dock
+const WavyPattern = () => (
+    <svg className="absolute inset-0 w-full h-full opacity-30" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <pattern id="wavy-lines" x="0" y="0" width="40" height="20" patternUnits="userSpaceOnUse">
+                <path
+                    d="M0 10 Q10 5, 20 10 T40 10"
+                    fill="none"
+                    stroke="#d1d5db"
+                    strokeWidth="0.5"
+                />
+            </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#wavy-lines)" />
+    </svg>
+);
+
+const dockDesigns = [
+    // #1 - macOS Milky White with Wavy Lines (THE SPECIAL ONE)
     {
-        label: "Modern Serif (Newsreader)",
-        avalansaClass: "font-sans font-medium text-2xl tracking-[0.15em]",
-        workflowsClass: "font-serif italic text-2xl tracking-tight text-foreground/70"
+        name: "macOS Milky Dream",
+        description: "Rounded corners, milky white background with subtle wavy lines — macOS-inspired icons",
+        component: (
+            <div className="relative flex items-center gap-2 p-3 rounded-[28px] overflow-hidden shadow-2xl" style={{ background: 'linear-gradient(135deg, #fefefe 0%, #f8f8f8 50%, #fefefe 100%)' }}>
+                <WavyPattern />
+                <div className="relative z-10 flex items-center gap-2">
+                    <div className="w-12 h-12 rounded-[12px] flex items-center justify-center shadow-lg bg-gradient-to-br from-blue-400 to-blue-600 transition-transform hover:scale-110 cursor-pointer">
+                        <Folder className="w-6 h-6 text-white" strokeWidth={1.5} />
+                    </div>
+                    <div className="w-12 h-12 rounded-[12px] flex items-center justify-center shadow-lg bg-gradient-to-br from-blue-500 to-cyan-500 transition-transform hover:scale-110 cursor-pointer">
+                        <Compass className="w-6 h-6 text-white" strokeWidth={1.5} />
+                    </div>
+                    <div className="w-12 h-12 rounded-[12px] flex items-center justify-center shadow-lg bg-gradient-to-br from-green-400 to-green-600 transition-transform hover:scale-110 cursor-pointer">
+                        <MessageCircle className="w-6 h-6 text-white" strokeWidth={1.5} />
+                    </div>
+                    <div className="w-12 h-12 rounded-[12px] flex items-center justify-center shadow-lg bg-gradient-to-br from-blue-400 to-blue-600 transition-transform hover:scale-110 cursor-pointer">
+                        <Mail className="w-6 h-6 text-white" strokeWidth={1.5} />
+                    </div>
+                    <div className="w-12 h-12 rounded-[12px] flex items-center justify-center shadow-lg bg-gradient-to-br from-pink-400 via-purple-400 to-orange-400 transition-transform hover:scale-110 cursor-pointer">
+                        <Image className="w-6 h-6 text-white" strokeWidth={1.5} />
+                    </div>
+                    <div className="w-12 h-12 rounded-[12px] flex items-center justify-center shadow-lg bg-gradient-to-br from-red-500 to-pink-500 transition-transform hover:scale-110 cursor-pointer">
+                        <Music className="w-6 h-6 text-white" strokeWidth={1.5} />
+                    </div>
+                    <div className="w-px h-10 bg-gray-200/50 mx-1" />
+                    <div className="w-12 h-12 rounded-[12px] flex items-center justify-center shadow-lg bg-gradient-to-br from-gray-600 to-gray-800 transition-transform hover:scale-110 cursor-pointer">
+                        <Settings className="w-6 h-6 text-white" strokeWidth={1.5} />
+                    </div>
+                </div>
+            </div>
+        )
     },
+
+    // #2 - Glassmorphism Dark
     {
-        label: "Classic Display (Playfair)",
-        avalansaClass: "font-sans font-light text-2xl tracking-[0.2em]",
-        workflowsClass: "font-[family-name:var(--font-playfair)] italic text-2xl tracking-tight text-foreground/80"
+        name: "Glassmorphism Dark",
+        description: "Frosted glass effect with deep blur and subtle border",
+        component: (
+            <div className="flex items-center gap-3 p-4 rounded-2xl bg-black/40 backdrop-blur-2xl border border-white/10 shadow-2xl">
+                <MacIcon icon={Folder} color="linear-gradient(135deg, #3b82f6, #1d4ed8)" />
+                <MacIcon icon={Compass} color="linear-gradient(135deg, #06b6d4, #0284c7)" />
+                <MacIcon icon={MessageCircle} color="linear-gradient(135deg, #22c55e, #16a34a)" />
+                <MacIcon icon={Mail} color="linear-gradient(135deg, #3b82f6, #2563eb)" />
+                <MacIcon icon={Music} color="linear-gradient(135deg, #f43f5e, #e11d48)" />
+                <MacIcon icon={Settings} color="linear-gradient(135deg, #6b7280, #4b5563)" />
+            </div>
+        )
     },
+
+    // #3 - Pill Minimal
     {
-        label: "Tech Mono (JetBrains)",
-        avalansaClass: "font-sans font-bold text-2xl tracking-tight",
-        workflowsClass: "font-[family-name:var(--font-mono)] text-xl text-foreground/60 ml-1"
+        name: "Pill Minimal",
+        description: "Ultra-minimal pill-shaped dock with monochrome icons",
+        component: (
+            <div className="flex items-center gap-4 px-6 py-3 rounded-full bg-zinc-900 shadow-xl">
+                <Folder className="w-5 h-5 text-zinc-400 hover:text-white transition-colors cursor-pointer" />
+                <Compass className="w-5 h-5 text-zinc-400 hover:text-white transition-colors cursor-pointer" />
+                <MessageCircle className="w-5 h-5 text-zinc-400 hover:text-white transition-colors cursor-pointer" />
+                <div className="w-1 h-1 rounded-full bg-zinc-600" />
+                <Mail className="w-5 h-5 text-zinc-400 hover:text-white transition-colors cursor-pointer" />
+                <Music className="w-5 h-5 text-zinc-400 hover:text-white transition-colors cursor-pointer" />
+                <Settings className="w-5 h-5 text-zinc-400 hover:text-white transition-colors cursor-pointer" />
+            </div>
+        )
     },
+
+    // #4 - Floating Islands
     {
-        label: "Elegant Garamond",
-        avalansaClass: "font-sans font-normal text-2xl tracking-widest",
-        workflowsClass: "font-[family-name:var(--font-cormorant)] italic text-3xl text-foreground/90 -mt-2"
+        name: "Floating Islands",
+        description: "Separated icon groups floating independently",
+        component: (
+            <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 p-2 rounded-2xl bg-zinc-800/80 backdrop-blur-xl border border-zinc-700/50 shadow-lg">
+                    <MacIcon icon={Folder} color="#3b82f6" />
+                    <MacIcon icon={Compass} color="#0ea5e9" />
+                </div>
+                <div className="flex items-center gap-2 p-2 rounded-2xl bg-zinc-800/80 backdrop-blur-xl border border-zinc-700/50 shadow-lg">
+                    <MacIcon icon={MessageCircle} color="#22c55e" />
+                    <MacIcon icon={Mail} color="#3b82f6" />
+                    <MacIcon icon={Music} color="#f43f5e" />
+                </div>
+                <div className="flex items-center gap-2 p-2 rounded-2xl bg-zinc-800/80 backdrop-blur-xl border border-zinc-700/50 shadow-lg">
+                    <MacIcon icon={Settings} color="#6b7280" />
+                </div>
+            </div>
+        )
     },
+
+    // #5 - Vertical Stack
     {
-        label: "Geometric Brutalist (Syne)",
-        avalansaClass: "font-[family-name:var(--font-syne)] font-extrabold text-2xl tracking-tighter",
-        workflowsClass: "font-serif italic text-2xl text-foreground/70"
+        name: "Vertical Stack",
+        description: "Side-aligned vertical dock like classic macOS",
+        component: (
+            <div className="flex flex-col items-center gap-2 p-3 rounded-2xl bg-zinc-100/90 dark:bg-zinc-800/90 backdrop-blur-xl shadow-2xl">
+                <MacIcon icon={Folder} color="linear-gradient(135deg, #3b82f6, #1d4ed8)" />
+                <MacIcon icon={Compass} color="linear-gradient(135deg, #06b6d4, #0284c7)" />
+                <MacIcon icon={MessageCircle} color="linear-gradient(135deg, #22c55e, #16a34a)" />
+                <div className="w-10 h-px bg-zinc-300 dark:bg-zinc-600 my-1" />
+                <MacIcon icon={Mail} color="linear-gradient(135deg, #3b82f6, #2563eb)" />
+                <MacIcon icon={Music} color="linear-gradient(135deg, #f43f5e, #e11d48)" />
+                <MacIcon icon={Settings} color="linear-gradient(135deg, #6b7280, #4b5563)" />
+            </div>
+        )
     },
+
+    // #6 - Brutalist
     {
-        label: "Minimalist (Inter)",
-        avalansaClass: "font-[family-name:var(--font-inter)] font-black text-xl tracking-[0.3em]",
-        workflowsClass: "font-[family-name:var(--font-inter)] font-light text-xl text-foreground/50 mt-1"
+        name: "Brutalist",
+        description: "Raw, bold design with hard edges and stark contrast",
+        component: (
+            <div className="flex items-center gap-0 border-4 border-black dark:border-white">
+                <div className="w-14 h-14 flex items-center justify-center border-r-4 border-black dark:border-white bg-white dark:bg-black hover:bg-black dark:hover:bg-white group cursor-pointer transition-colors">
+                    <Folder className="w-6 h-6 text-black dark:text-white group-hover:text-white dark:group-hover:text-black transition-colors" />
+                </div>
+                <div className="w-14 h-14 flex items-center justify-center border-r-4 border-black dark:border-white bg-white dark:bg-black hover:bg-black dark:hover:bg-white group cursor-pointer transition-colors">
+                    <Compass className="w-6 h-6 text-black dark:text-white group-hover:text-white dark:group-hover:text-black transition-colors" />
+                </div>
+                <div className="w-14 h-14 flex items-center justify-center border-r-4 border-black dark:border-white bg-white dark:bg-black hover:bg-black dark:hover:bg-white group cursor-pointer transition-colors">
+                    <MessageCircle className="w-6 h-6 text-black dark:text-white group-hover:text-white dark:group-hover:text-black transition-colors" />
+                </div>
+                <div className="w-14 h-14 flex items-center justify-center border-r-4 border-black dark:border-white bg-white dark:bg-black hover:bg-black dark:hover:bg-white group cursor-pointer transition-colors">
+                    <Mail className="w-6 h-6 text-black dark:text-white group-hover:text-white dark:group-hover:text-black transition-colors" />
+                </div>
+                <div className="w-14 h-14 flex items-center justify-center border-r-4 border-black dark:border-white bg-white dark:bg-black hover:bg-black dark:hover:bg-white group cursor-pointer transition-colors">
+                    <Music className="w-6 h-6 text-black dark:text-white group-hover:text-white dark:group-hover:text-black transition-colors" />
+                </div>
+                <div className="w-14 h-14 flex items-center justify-center bg-white dark:bg-black hover:bg-black dark:hover:bg-white group cursor-pointer transition-colors">
+                    <Settings className="w-6 h-6 text-black dark:text-white group-hover:text-white dark:group-hover:text-black transition-colors" />
+                </div>
+            </div>
+        )
     },
+
+    // #7 - Neumorphic
     {
-        label: "Futuristic (Space Grotesk)",
-        avalansaClass: "font-[family-name:var(--font-space-grotesk)] font-medium text-2xl",
-        workflowsClass: "font-serif italic text-2xl text-foreground/60"
+        name: "Neumorphic",
+        description: "Soft UI with subtle shadows creating depth illusion",
+        component: (
+            <div className="flex items-center gap-4 p-5 rounded-3xl bg-zinc-200 dark:bg-zinc-800" style={{ boxShadow: '8px 8px 16px #bebebe, -8px -8px 16px #ffffff' }}>
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-zinc-200 dark:bg-zinc-800 cursor-pointer transition-all hover:scale-105" style={{ boxShadow: 'inset 4px 4px 8px #bebebe, inset -4px -4px 8px #ffffff' }}>
+                    <Folder className="w-5 h-5 text-blue-500" />
+                </div>
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-zinc-200 dark:bg-zinc-800 cursor-pointer transition-all hover:scale-105" style={{ boxShadow: 'inset 4px 4px 8px #bebebe, inset -4px -4px 8px #ffffff' }}>
+                    <Compass className="w-5 h-5 text-cyan-500" />
+                </div>
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-zinc-200 dark:bg-zinc-800 cursor-pointer transition-all hover:scale-105" style={{ boxShadow: 'inset 4px 4px 8px #bebebe, inset -4px -4px 8px #ffffff' }}>
+                    <MessageCircle className="w-5 h-5 text-green-500" />
+                </div>
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-zinc-200 dark:bg-zinc-800 cursor-pointer transition-all hover:scale-105" style={{ boxShadow: 'inset 4px 4px 8px #bebebe, inset -4px -4px 8px #ffffff' }}>
+                    <Mail className="w-5 h-5 text-blue-500" />
+                </div>
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-zinc-200 dark:bg-zinc-800 cursor-pointer transition-all hover:scale-105" style={{ boxShadow: 'inset 4px 4px 8px #bebebe, inset -4px -4px 8px #ffffff' }}>
+                    <Music className="w-5 h-5 text-pink-500" />
+                </div>
+                <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-zinc-200 dark:bg-zinc-800 cursor-pointer transition-all hover:scale-105" style={{ boxShadow: 'inset 4px 4px 8px #bebebe, inset -4px -4px 8px #ffffff' }}>
+                    <Settings className="w-5 h-5 text-gray-500" />
+                </div>
+            </div>
+        )
     },
+
+    // #8 - Gradient Border
     {
-        label: "Sophisticated (Lora)",
-        avalansaClass: "font-sans font-thin text-3xl tracking-tighter",
-        workflowsClass: "font-[family-name:var(--font-lora)] italic text-2xl text-foreground/80 mt-1"
+        name: "Gradient Border",
+        description: "Vibrant gradient border with dark interior",
+        component: (
+            <div className="p-[2px] rounded-3xl bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500">
+                <div className="flex items-center gap-3 p-4 rounded-[22px] bg-zinc-900">
+                    <MacIcon icon={Folder} color="#3b82f6" />
+                    <MacIcon icon={Compass} color="#0ea5e9" />
+                    <MacIcon icon={MessageCircle} color="#22c55e" />
+                    <MacIcon icon={Mail} color="#3b82f6" />
+                    <MacIcon icon={Music} color="#f43f5e" />
+                    <MacIcon icon={Settings} color="#6b7280" />
+                </div>
+            </div>
+        )
     },
+
+    // #9 - Neon Glow
     {
-        label: "Bold & Delicate",
-        avalansaClass: "font-sans font-black text-2xl tracking-normal",
-        workflowsClass: "font-serif italic font-extralight text-3xl text-foreground/40 -mt-1"
+        name: "Neon Glow",
+        description: "Cyberpunk-inspired neon glowing icons",
+        component: (
+            <div className="flex items-center gap-4 p-5 rounded-2xl bg-black border border-purple-500/30">
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-transparent border border-cyan-400 cursor-pointer transition-all hover:scale-110" style={{ boxShadow: '0 0 20px #22d3ee, inset 0 0 10px #22d3ee33' }}>
+                    <Folder className="w-5 h-5 text-cyan-400" style={{ filter: 'drop-shadow(0 0 8px #22d3ee)' }} />
+                </div>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-transparent border border-pink-400 cursor-pointer transition-all hover:scale-110" style={{ boxShadow: '0 0 20px #f472b6, inset 0 0 10px #f472b633' }}>
+                    <Compass className="w-5 h-5 text-pink-400" style={{ filter: 'drop-shadow(0 0 8px #f472b6)' }} />
+                </div>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-transparent border border-green-400 cursor-pointer transition-all hover:scale-110" style={{ boxShadow: '0 0 20px #4ade80, inset 0 0 10px #4ade8033' }}>
+                    <MessageCircle className="w-5 h-5 text-green-400" style={{ filter: 'drop-shadow(0 0 8px #4ade80)' }} />
+                </div>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-transparent border border-purple-400 cursor-pointer transition-all hover:scale-110" style={{ boxShadow: '0 0 20px #c084fc, inset 0 0 10px #c084fc33' }}>
+                    <Mail className="w-5 h-5 text-purple-400" style={{ filter: 'drop-shadow(0 0 8px #c084fc)' }} />
+                </div>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-transparent border border-yellow-400 cursor-pointer transition-all hover:scale-110" style={{ boxShadow: '0 0 20px #facc15, inset 0 0 10px #facc1533' }}>
+                    <Music className="w-5 h-5 text-yellow-400" style={{ filter: 'drop-shadow(0 0 8px #facc15)' }} />
+                </div>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center bg-transparent border border-orange-400 cursor-pointer transition-all hover:scale-110" style={{ boxShadow: '0 0 20px #fb923c, inset 0 0 10px #fb923c33' }}>
+                    <Settings className="w-5 h-5 text-orange-400" style={{ filter: 'drop-shadow(0 0 8px #fb923c)' }} />
+                </div>
+            </div>
+        )
     },
+
+    // #10 - Retro Pixel
     {
-        label: "Spaced Sans",
-        avalansaClass: "font-sans font-normal text-sm tracking-[0.8em]",
-        workflowsClass: "font-serif italic text-4xl text-foreground/90 block mt-2 text-center w-full"
+        name: "Retro Pixel",
+        description: "8-bit inspired pixelated aesthetic",
+        component: (
+            <div className="flex items-center gap-1 p-2 bg-zinc-800 border-4 border-zinc-600" style={{ imageRendering: 'pixelated' }}>
+                <div className="w-12 h-12 flex items-center justify-center bg-blue-600 border-2 border-blue-400 cursor-pointer hover:bg-blue-500 transition-colors">
+                    <Folder className="w-6 h-6 text-white" />
+                </div>
+                <div className="w-12 h-12 flex items-center justify-center bg-cyan-600 border-2 border-cyan-400 cursor-pointer hover:bg-cyan-500 transition-colors">
+                    <Compass className="w-6 h-6 text-white" />
+                </div>
+                <div className="w-12 h-12 flex items-center justify-center bg-green-600 border-2 border-green-400 cursor-pointer hover:bg-green-500 transition-colors">
+                    <MessageCircle className="w-6 h-6 text-white" />
+                </div>
+                <div className="w-12 h-12 flex items-center justify-center bg-purple-600 border-2 border-purple-400 cursor-pointer hover:bg-purple-500 transition-colors">
+                    <Mail className="w-6 h-6 text-white" />
+                </div>
+                <div className="w-12 h-12 flex items-center justify-center bg-red-600 border-2 border-red-400 cursor-pointer hover:bg-red-500 transition-colors">
+                    <Music className="w-6 h-6 text-white" />
+                </div>
+                <div className="w-12 h-12 flex items-center justify-center bg-gray-600 border-2 border-gray-400 cursor-pointer hover:bg-gray-500 transition-colors">
+                    <Settings className="w-6 h-6 text-white" />
+                </div>
+            </div>
+        )
     },
+
+    // #11 - Material Design
     {
-        label: "The Architect",
-        avalansaClass: "font-[family-name:var(--font-space-grotesk)] font-light text-2xl tracking-[0.1em]",
-        workflowsClass: "font-[family-name:var(--font-mono)] text-sm uppercase text-foreground/50 mt-1"
+        name: "Material Design",
+        description: "Google's Material Design with elevation and ripple hints",
+        component: (
+            <div className="flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-zinc-800 shadow-xl">
+                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-blue-500 shadow-lg shadow-blue-500/30 cursor-pointer hover:shadow-blue-500/50 transition-shadow">
+                    <Folder className="w-5 h-5 text-white" />
+                </div>
+                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-teal-500 shadow-lg shadow-teal-500/30 cursor-pointer hover:shadow-teal-500/50 transition-shadow">
+                    <Compass className="w-5 h-5 text-white" />
+                </div>
+                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-green-500 shadow-lg shadow-green-500/30 cursor-pointer hover:shadow-green-500/50 transition-shadow">
+                    <MessageCircle className="w-5 h-5 text-white" />
+                </div>
+                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-indigo-500 shadow-lg shadow-indigo-500/30 cursor-pointer hover:shadow-indigo-500/50 transition-shadow">
+                    <Mail className="w-5 h-5 text-white" />
+                </div>
+                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-pink-500 shadow-lg shadow-pink-500/30 cursor-pointer hover:shadow-pink-500/50 transition-shadow">
+                    <Music className="w-5 h-5 text-white" />
+                </div>
+                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gray-500 shadow-lg shadow-gray-500/30 cursor-pointer hover:shadow-gray-500/50 transition-shadow">
+                    <Settings className="w-5 h-5 text-white" />
+                </div>
+            </div>
+        )
     },
+
+    // #12 - Frosted White
     {
-        label: "Fashion House",
-        avalansaClass: "font-[family-name:var(--font-playfair)] font-normal text-3xl tracking-widest",
-        workflowsClass: "font-sans font-thin text-xs uppercase tracking-[1em] block mt-4 text-foreground/40"
+        name: "Frosted White",
+        description: "Light mode frosted glass with subtle shadows",
+        component: (
+            <div className="flex items-center gap-3 p-4 rounded-[24px] bg-white/70 backdrop-blur-xl border border-white/50 shadow-2xl shadow-black/5">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600 shadow-md cursor-pointer hover:scale-105 transition-transform">
+                    <Folder className="w-5 h-5 text-white" />
+                </div>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-gradient-to-br from-orange-400 to-red-500 shadow-md cursor-pointer hover:scale-105 transition-transform">
+                    <Compass className="w-5 h-5 text-white" />
+                </div>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-gradient-to-br from-green-400 to-emerald-600 shadow-md cursor-pointer hover:scale-105 transition-transform">
+                    <MessageCircle className="w-5 h-5 text-white" />
+                </div>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-gradient-to-br from-sky-400 to-blue-600 shadow-md cursor-pointer hover:scale-105 transition-transform">
+                    <Mail className="w-5 h-5 text-white" />
+                </div>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-gradient-to-br from-pink-400 to-rose-600 shadow-md cursor-pointer hover:scale-105 transition-transform">
+                    <Music className="w-5 h-5 text-white" />
+                </div>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-gradient-to-br from-gray-400 to-gray-600 shadow-md cursor-pointer hover:scale-105 transition-transform">
+                    <Settings className="w-5 h-5 text-white" />
+                </div>
+            </div>
+        )
     },
+
+    // #13 - Outlined Wireframe
     {
-        label: "Swiss Modern",
-        avalansaClass: "font-[family-name:var(--font-inter)] font-bold text-2xl tracking-tighter",
-        workflowsClass: "font-[family-name:var(--font-inter)] font-medium text-2xl tracking-tighter text-foreground/60"
+        name: "Outlined Wireframe",
+        description: "Minimalist wireframe with outlined icons",
+        component: (
+            <div className="flex items-center gap-3 p-4 rounded-2xl border-2 border-zinc-300 dark:border-zinc-600 bg-transparent">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center border-2 border-blue-500 cursor-pointer hover:bg-blue-500/10 transition-colors">
+                    <Folder className="w-5 h-5 text-blue-500" />
+                </div>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center border-2 border-cyan-500 cursor-pointer hover:bg-cyan-500/10 transition-colors">
+                    <Compass className="w-5 h-5 text-cyan-500" />
+                </div>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center border-2 border-green-500 cursor-pointer hover:bg-green-500/10 transition-colors">
+                    <MessageCircle className="w-5 h-5 text-green-500" />
+                </div>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center border-2 border-indigo-500 cursor-pointer hover:bg-indigo-500/10 transition-colors">
+                    <Mail className="w-5 h-5 text-indigo-500" />
+                </div>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center border-2 border-pink-500 cursor-pointer hover:bg-pink-500/10 transition-colors">
+                    <Music className="w-5 h-5 text-pink-500" />
+                </div>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center border-2 border-gray-500 cursor-pointer hover:bg-gray-500/10 transition-colors">
+                    <Settings className="w-5 h-5 text-gray-500" />
+                </div>
+            </div>
+        )
     },
+
+    // #14 - Rainbow Gradient
     {
-        label: "High Contrast",
-        avalansaClass: "font-sans font-black text-3xl tracking-[-0.05em]",
-        workflowsClass: "font-[family-name:var(--font-cormorant)] italic text-xl text-foreground/60 transition-transform group-hover:translate-y-1"
+        name: "Rainbow Gradient",
+        description: "Full spectrum gradient dock with white icons",
+        component: (
+            <div className="flex items-center gap-3 p-4 rounded-3xl bg-gradient-to-r from-red-500 via-yellow-500 via-green-500 via-blue-500 to-purple-500 shadow-xl">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-white/20 backdrop-blur-sm cursor-pointer hover:bg-white/30 transition-colors">
+                    <Folder className="w-5 h-5 text-white" />
+                </div>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-white/20 backdrop-blur-sm cursor-pointer hover:bg-white/30 transition-colors">
+                    <Compass className="w-5 h-5 text-white" />
+                </div>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-white/20 backdrop-blur-sm cursor-pointer hover:bg-white/30 transition-colors">
+                    <MessageCircle className="w-5 h-5 text-white" />
+                </div>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-white/20 backdrop-blur-sm cursor-pointer hover:bg-white/30 transition-colors">
+                    <Mail className="w-5 h-5 text-white" />
+                </div>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-white/20 backdrop-blur-sm cursor-pointer hover:bg-white/30 transition-colors">
+                    <Music className="w-5 h-5 text-white" />
+                </div>
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-white/20 backdrop-blur-sm cursor-pointer hover:bg-white/30 transition-colors">
+                    <Settings className="w-5 h-5 text-white" />
+                </div>
+            </div>
+        )
     },
+
+    // #15 - Monochrome Elegant
     {
-        label: "Micro-Text",
-        avalansaClass: "font-sans font-medium text-[10px] tracking-[0.5em]",
-        workflowsClass: "font-serif italic text-5xl text-foreground/10 absolute opacity-20"
+        name: "Monochrome Elegant",
+        description: "Single-tone sophisticated design",
+        component: (
+            <div className="flex items-center gap-4 p-5 rounded-2xl bg-zinc-900">
+                <div className="w-11 h-11 rounded-lg flex items-center justify-center bg-zinc-800 cursor-pointer hover:bg-zinc-700 transition-colors">
+                    <Folder className="w-5 h-5 text-zinc-400" />
+                </div>
+                <div className="w-11 h-11 rounded-lg flex items-center justify-center bg-zinc-800 cursor-pointer hover:bg-zinc-700 transition-colors">
+                    <Compass className="w-5 h-5 text-zinc-400" />
+                </div>
+                <div className="w-11 h-11 rounded-lg flex items-center justify-center bg-zinc-800 cursor-pointer hover:bg-zinc-700 transition-colors">
+                    <MessageCircle className="w-5 h-5 text-zinc-400" />
+                </div>
+                <div className="w-px h-8 bg-zinc-700" />
+                <div className="w-11 h-11 rounded-lg flex items-center justify-center bg-zinc-800 cursor-pointer hover:bg-zinc-700 transition-colors">
+                    <Mail className="w-5 h-5 text-zinc-400" />
+                </div>
+                <div className="w-11 h-11 rounded-lg flex items-center justify-center bg-zinc-800 cursor-pointer hover:bg-zinc-700 transition-colors">
+                    <Music className="w-5 h-5 text-zinc-400" />
+                </div>
+                <div className="w-11 h-11 rounded-lg flex items-center justify-center bg-zinc-800 cursor-pointer hover:bg-zinc-700 transition-colors">
+                    <Settings className="w-5 h-5 text-zinc-400" />
+                </div>
+            </div>
+        )
     },
+
+    // #16 - Aurora Gradient
     {
-        label: "The Editor",
-        avalansaClass: "font-serif italic text-2xl",
-        workflowsClass: "font-sans font-bold text-2xl tracking-tighter"
+        name: "Aurora Gradient",
+        description: "Northern lights inspired gradient background",
+        component: (
+            <div className="flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-r from-emerald-400 via-cyan-400 to-blue-500 shadow-xl shadow-cyan-500/20">
+                <MacIcon icon={Folder} color="rgba(255,255,255,0.25)" className="backdrop-blur-md" />
+                <MacIcon icon={Compass} color="rgba(255,255,255,0.25)" className="backdrop-blur-md" />
+                <MacIcon icon={MessageCircle} color="rgba(255,255,255,0.25)" className="backdrop-blur-md" />
+                <MacIcon icon={Mail} color="rgba(255,255,255,0.25)" className="backdrop-blur-md" />
+                <MacIcon icon={Music} color="rgba(255,255,255,0.25)" className="backdrop-blur-md" />
+                <MacIcon icon={Settings} color="rgba(255,255,255,0.25)" className="backdrop-blur-md" />
+            </div>
+        )
     },
+
+    // #17 - Stacked Cards
     {
-        label: "Cyber Serif",
-        avalansaClass: "font-[family-name:var(--font-mono)] text-xl",
-        workflowsClass: "font-[family-name:var(--font-playfair)] italic text-3xl text-foreground/70 -mt-1"
+        name: "Stacked Cards",
+        description: "Layered card effect with depth perception",
+        component: (
+            <div className="relative">
+                <div className="absolute inset-0 translate-y-2 translate-x-2 flex items-center gap-3 p-4 rounded-2xl bg-zinc-300 dark:bg-zinc-700" />
+                <div className="absolute inset-0 translate-y-1 translate-x-1 flex items-center gap-3 p-4 rounded-2xl bg-zinc-200 dark:bg-zinc-600" />
+                <div className="relative flex items-center gap-3 p-4 rounded-2xl bg-white dark:bg-zinc-800 shadow-lg">
+                    <MacIcon icon={Folder} color="#3b82f6" />
+                    <MacIcon icon={Compass} color="#0ea5e9" />
+                    <MacIcon icon={MessageCircle} color="#22c55e" />
+                    <MacIcon icon={Mail} color="#6366f1" />
+                    <MacIcon icon={Music} color="#ec4899" />
+                    <MacIcon icon={Settings} color="#6b7280" />
+                </div>
+            </div>
+        )
     },
+
+    // #18 - Minimal Dots
     {
-        label: "Heavy Syne",
-        avalansaClass: "font-[family-name:var(--font-syne)] font-black text-4xl leading-none",
-        workflowsClass: "font-serif italic text-lg text-foreground/50"
+        name: "Minimal Dots",
+        description: "Extremely minimal with dot indicators",
+        component: (
+            <div className="flex flex-col items-center gap-3">
+                <div className="flex items-center gap-6 px-8 py-4 rounded-full bg-zinc-100 dark:bg-zinc-800">
+                    <Folder className="w-6 h-6 text-zinc-600 dark:text-zinc-300 hover:text-blue-500 cursor-pointer transition-colors" />
+                    <Compass className="w-6 h-6 text-zinc-600 dark:text-zinc-300 hover:text-cyan-500 cursor-pointer transition-colors" />
+                    <MessageCircle className="w-6 h-6 text-zinc-600 dark:text-zinc-300 hover:text-green-500 cursor-pointer transition-colors" />
+                    <Mail className="w-6 h-6 text-blue-500 cursor-pointer" />
+                    <Music className="w-6 h-6 text-zinc-600 dark:text-zinc-300 hover:text-pink-500 cursor-pointer transition-colors" />
+                    <Settings className="w-6 h-6 text-zinc-600 dark:text-zinc-300 hover:text-gray-500 cursor-pointer transition-colors" />
+                </div>
+                <div className="flex items-center gap-6 px-8">
+                    <div className="w-1 h-1 rounded-full bg-transparent" />
+                    <div className="w-1 h-1 rounded-full bg-transparent" />
+                    <div className="w-1 h-1 rounded-full bg-transparent" />
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                    <div className="w-1 h-1 rounded-full bg-transparent" />
+                    <div className="w-1 h-1 rounded-full bg-transparent" />
+                </div>
+            </div>
+        )
     },
+
+    // #19 - Windows 11 Inspired
     {
-        label: "Ultra Light",
-        avalansaClass: "font-sans font-thin text-2xl tracking-[0.4em]",
-        workflowsClass: "font-serif italic text-2xl text-foreground/30"
+        name: "Windows 11 Inspired",
+        description: "Microsoft's Fluent Design with mica effect",
+        component: (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-zinc-100/80 dark:bg-zinc-800/80 backdrop-blur-xl border border-zinc-200 dark:border-zinc-700 shadow-lg">
+                <div className="w-11 h-11 rounded-lg flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer transition-colors">
+                    <Folder className="w-5 h-5 text-yellow-500" />
+                </div>
+                <div className="w-11 h-11 rounded-lg flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer transition-colors">
+                    <Globe className="w-5 h-5 text-blue-500" />
+                </div>
+                <div className="w-11 h-11 rounded-lg flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer transition-colors">
+                    <MessageCircle className="w-5 h-5 text-blue-400" />
+                </div>
+                <div className="w-11 h-11 rounded-lg flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer transition-colors">
+                    <Mail className="w-5 h-5 text-blue-600" />
+                </div>
+                <div className="w-11 h-11 rounded-lg flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer transition-colors">
+                    <Music className="w-5 h-5 text-orange-500" />
+                </div>
+                <div className="w-11 h-11 rounded-lg flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-700 cursor-pointer transition-colors">
+                    <Settings className="w-5 h-5 text-zinc-600 dark:text-zinc-400" />
+                </div>
+            </div>
+        )
     },
+
+    // #20 - iOS Dock
     {
-        label: "Condensed Core",
-        avalansaClass: "font-[family-name:var(--font-inter)] font-extrabold text-3xl scale-x-75 origin-left",
-        workflowsClass: "font-serif italic text-2xl text-foreground/80"
+        name: "iOS Dock",
+        description: "Apple iOS-style dock with squircle icons",
+        component: (
+            <div className="flex items-center gap-4 p-4 rounded-[32px] bg-white/30 dark:bg-black/30 backdrop-blur-2xl border border-white/20 shadow-xl">
+                <div className="w-14 h-14 rounded-[16px] flex items-center justify-center bg-gradient-to-br from-green-400 to-green-600 shadow-lg cursor-pointer hover:scale-105 transition-transform">
+                    <Phone className="w-7 h-7 text-white" />
+                </div>
+                <div className="w-14 h-14 rounded-[16px] flex items-center justify-center bg-gradient-to-br from-blue-400 to-blue-600 shadow-lg cursor-pointer hover:scale-105 transition-transform">
+                    <Compass className="w-7 h-7 text-white" />
+                </div>
+                <div className="w-14 h-14 rounded-[16px] flex items-center justify-center bg-gradient-to-br from-green-500 to-green-700 shadow-lg cursor-pointer hover:scale-105 transition-transform">
+                    <MessageCircle className="w-7 h-7 text-white" />
+                </div>
+                <div className="w-14 h-14 rounded-[16px] flex items-center justify-center bg-gradient-to-br from-red-400 via-pink-500 to-red-600 shadow-lg cursor-pointer hover:scale-105 transition-transform">
+                    <Music className="w-7 h-7 text-white" />
+                </div>
+            </div>
+        )
     },
-    {
-        label: "The Studio (Bricolage)",
-        avalansaClass: "font-[family-name:var(--font-bricolage)] font-bold text-2xl tracking-tighter",
-        workflowsClass: "font-[family-name:var(--font-bricolage)] font-light text-2xl lowercase tracking-tight opacity-40"
-    },
-    {
-        label: "Editorial Luxe (Fraunces)",
-        avalansaClass: "font-[family-name:var(--font-fraunces)] font-black text-2xl tracking-[0.05em]",
-        workflowsClass: "font-[family-name:var(--font-fraunces)] italic font-light text-3xl -mt-3 text-foreground/60"
-    },
-    {
-        label: "Apple-Esque Minimal",
-        avalansaClass: "font-sans font-medium text-xl tracking-[-0.02em]",
-        workflowsClass: "font-sans font-light text-xl tracking-[-0.02em] opacity-30"
-    },
-    {
-        label: "Brutalist Impact",
-        avalansaClass: "font-[family-name:var(--font-archivo)] text-4xl leading-none tracking-tighter",
-        workflowsClass: "font-mono text-xs uppercase tracking-[0.3em] mt-2 opacity-50"
-    },
-    {
-        label: "Soft Tech (Outfit)",
-        avalansaClass: "font-[family-name:var(--font-outfit)] font-semibold text-2xl tracking-tight",
-        workflowsClass: "font-[family-name:var(--font-outfit)] font-light text-2xl tracking-tight text-foreground/40"
-    },
-    {
-        label: "Renaissance Modern",
-        avalansaClass: "font-sans font-thin text-sm tracking-[1em] mb-2 mr-[-1em]",
-        workflowsClass: "font-[family-name:var(--font-dm-serif)] italic text-4xl leading-none"
-    },
-    {
-        label: "The Architect V2",
-        avalansaClass: "font-mono text-lg tracking-widest uppercase",
-        workflowsClass: "font-serif italic text-3xl -mt-1 opacity-70"
-    },
-    {
-        label: "Swiss Bold",
-        avalansaClass: "font-sans font-black text-5xl tracking-[-0.08em] leading-[0.8]",
-        workflowsClass: "font-sans font-normal text-xs uppercase tracking-[0.5em] mt-4"
-    },
-    {
-        label: "Organic Script (Fraunces)",
-        avalansaClass: "font-[family-name:var(--font-fraunces)] font-light text-xl tracking-widest",
-        workflowsClass: "font-[family-name:var(--font-fraunces)] italic font-semibold text-3xl -mt-2"
-    },
-    {
-        label: "Mono-spaced Flow",
-        avalansaClass: "font-mono font-bold text-2xl tracking-tighter bg-foreground text-background px-2 py-0.5",
-        workflowsClass: "font-mono text-2xl tracking-tighter opacity-50 mt-1"
-    },
-    {
-        label: "The Gallery",
-        avalansaClass: "font-[family-name:var(--font-dm-serif)] text-3xl mb-1",
-        workflowsClass: "font-sans font-thin text-[10px] uppercase tracking-[0.8em] mr-[-0.8em] opacity-40"
-    },
-    {
-        label: "Neo-Grotesque",
-        avalansaClass: "font-[family-name:var(--font-work-sans)] font-black text-3xl tracking-tighter",
-        workflowsClass: "font-[family-name:var(--font-work-sans)] font-thin text-3xl tracking-tighter -mt-1"
-    },
-    {
-        label: "Stacked Symmetery",
-        avalansaClass: "font-sans font-semibold text-xs tracking-[1.2rem] mr-[-1.2rem] mb-4 opacity-50",
-        workflowsClass: "font-sans font-semibold text-xs tracking-[1.2rem] mr-[-1.2rem]"
-    },
-    {
-        label: "Digital Craft",
-        avalansaClass: "font-mono text-sm opacity-30",
-        workflowsClass: "font-[family-name:var(--font-syne)] font-black text-4xl -mt-2"
-    },
-    {
-        label: "High Line Luxury",
-        avalansaClass: "font-sans font-light text-3xl tracking-[0.2em] border-b border-foreground/10 pb-2 mb-2",
-        workflowsClass: "font-serif italic text-xl opacity-60"
-    },
-    {
-        label: "Kinetic Bold",
-        avalansaClass: "font-[family-name:var(--font-bricolage)] font-black text-4xl italic tracking-tighter",
-        workflowsClass: "font-sans font-bold text-xs uppercase tracking-[0.4em] mt-1"
-    },
-    {
-        label: "Mathematical",
-        avalansaClass: "font-mono text-2xl",
-        workflowsClass: "font-mono italic text-2xl border-l-[3px] border-foreground pl-4 mt-2"
-    },
-    {
-        label: "The Boutique",
-        avalansaClass: "font-[family-name:var(--font-fraunces)] font-thin text-4xl",
-        workflowsClass: "font-sans font-medium text-[8px] uppercase tracking-[1em] mt-2 opacity-50"
-    },
-    {
-        label: "Fragmented",
-        avalansaClass: "font-sans font-black text-2xl tracking-[0.5em] mb-4",
-        workflowsClass: "font-serif italic text-2xl tracking-[-0.05em] opacity-40"
-    },
-    {
-        label: "Final Prototype",
-        avalansaClass: "font-[family-name:var(--font-outfit)] font-bold text-3xl tracking-tighter",
-        workflowsClass: "font-serif italic text-3xl tracking-tight text-foreground/50 -mt-2"
-    }
 ];
