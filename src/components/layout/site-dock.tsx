@@ -3,8 +3,8 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
-import { Library, Sparkles, FlaskConical, Settings, User, ExternalLink, Hammer } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Library, Sparkles, FlaskConical, Settings, User, ExternalLink, Hammer, LayoutDashboard, LogOut, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useImagine } from "@/components/imagine/imagine-context";
 import { createClient } from "@/utils/supabase/client";
@@ -13,12 +13,13 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { DockType, DockIconPosition } from "@/types/database";
+import type { DockType, DockIconPosition, UserRole } from "@/types/database";
 import { getDockPreferences, saveDockPreferences } from "@/utils/supabase/dock-preferences.client";
 
-// Draggable items config (Home, Profile, and Settings are fixed)
+// Draggable items config (Home, Dashboard, and User Avatar are fixed)
 const DRAGGABLE_DOCK_ITEMS = ['library', 'imagine', 'labs', 'tools'] as const;
 type DockItemId = typeof DRAGGABLE_DOCK_ITEMS[number];
 
@@ -39,10 +40,18 @@ const WavyPattern = ({ dark = false }: { dark?: boolean }) => (
     </svg>
 );
 
+interface UserProfile {
+    username: string | null;
+    name: string | null;
+    avatar_url: string | null;
+    role: UserRole;
+}
+
 export function SiteDock() {
     const pathname = usePathname();
+    const router = useRouter();
     const { isInputVisible, toggleInputVisibility, setActiveTab } = useImagine();
-    const [username, setUsername] = React.useState<string | null>(null);
+    const [profile, setProfile] = React.useState<UserProfile | null>(null);
     const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null);
     const [dockType, setDockType] = React.useState<DockType>('milky_dream_light');
     const [items, setItems] = React.useState<DockItemId[]>([...DRAGGABLE_DOCK_ITEMS]);
@@ -53,13 +62,13 @@ export function SiteDock() {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
                 setIsAuthenticated(true);
-                const { data: profile } = await supabase
+                const { data: profileData } = await supabase
                     .from("profiles")
-                    .select("username")
+                    .select("username, name, avatar_url, role")
                     .eq("id", user.id)
                     .single();
-                if (profile?.username) {
-                    setUsername(profile.username);
+                if (profileData) {
+                    setProfile(profileData as UserProfile);
                 }
 
                 // Load dock preferences
@@ -69,10 +78,7 @@ export function SiteDock() {
                         setDockType(prefs.dock_type);
                     }
                     if (prefs.icon_positions && prefs.icon_positions.length > 0) {
-                        // Sort draggable items based on saved preferences
-                        // Filter out any saved positions that are no longer in DRAGGABLE_DOCK_ITEMS
                         const validIconPositions = prefs.icon_positions.filter(p => DRAGGABLE_DOCK_ITEMS.includes(p.id as DockItemId));
-
                         const sortedItems = [...DRAGGABLE_DOCK_ITEMS].sort((a, b) => {
                             const posA = validIconPositions.find(p => p.id === a);
                             const posB = validIconPositions.find(p => p.id === b);
@@ -92,10 +98,6 @@ export function SiteDock() {
 
     const handleReorder = (newOrder: DockItemId[]) => {
         setItems(newOrder);
-
-        // Save to DB
-        // We only save the order of the draggable items. 
-        // Fixed items (Home, Profile, Settings) are not in this list.
         const positions: DockIconPosition[] = newOrder.map((id, index) => ({
             id,
             order: index
@@ -103,9 +105,17 @@ export function SiteDock() {
         saveDockPreferences({ icon_positions: positions });
     };
 
+    const handleLogout = async () => {
+        const supabase = createClient();
+        await supabase.auth.signOut();
+        router.push('/');
+        router.refresh();
+    };
+
     const isImaginePage = pathname === "/imagine";
     const isDark = dockType.includes('dark');
     const isFloating = dockType.includes('floating');
+    const isAdmin = profile?.role === 'admin';
 
     const handleImagineClick = (e: React.MouseEvent) => {
         if (isImaginePage) {
@@ -210,15 +220,6 @@ export function SiteDock() {
         }
     };
 
-    // If floating layout is active, we just render the standard implementation for now 
-    // but adapted to include draggable support if desired. 
-    // For simplicity based on request, I'll focus on the main dock structure 
-    // being customizable but support the floating islands style if selected.
-
-    // NOTE: The user asked to enable draggable icons for the main dock. 
-    // The previous implementation had a specific floating logic that split icons.
-    // I will unify them into one Reorder list for simplicity, or handle style changes via CSS/container classes.
-
     const containerClass = isFloating
         ? isDark ? "bg-zinc-900/90 border-zinc-700/50" : "bg-white/90 border-zinc-200/50"
         : isDark ? "bg-[#111111]" : "bg-gradient-to-br from-[#fefefe] via-[#f8f8f8] to-[#fefefe]";
@@ -226,6 +227,10 @@ export function SiteDock() {
     const wrapperClass = isFloating
         ? "flex items-center gap-2 p-3 rounded-2xl backdrop-blur-xl border shadow-lg"
         : "relative flex items-center gap-2 p-3 rounded-[20px] overflow-hidden shadow-2xl";
+
+    // Display name for the user
+    const displayName = profile?.name || profile?.username || 'User';
+    const avatarUrl = profile?.avatar_url;
 
     return (
         <div className="flex items-center justify-center pointer-events-auto">
@@ -254,7 +259,7 @@ export function SiteDock() {
                     {/* Draggable Zone */}
                     <Reorder.Group axis="x" values={items} onReorder={handleReorder} className="flex items-center gap-2">
                         {items.map((id) => (
-                            <Reorder.Item key={id} value={id}>
+                            <Reorder.Item key={id} value={id} className="cursor-grab active:cursor-grabbing">
                                 {renderDockItem(id)}
                             </Reorder.Item>
                         ))}
@@ -263,31 +268,109 @@ export function SiteDock() {
                     {/* Separator 2 */}
                     <div className={cn("w-px h-10 mx-1", isDark ? "bg-zinc-700/50" : "bg-gray-200/50")} />
 
-                    {/* Fixed End Group: Profile & Settings */}
+                    {/* Fixed End Group */}
                     <div className="flex items-center gap-2">
-                        {/* Profile */}
-                        <Link
-                            href={username ? `/u/${username}` : "/onboarding"}
-                            className={cn(
-                                "relative flex items-center justify-center w-12 h-12 rounded-[12px] transition-all duration-300 shadow-lg bg-gradient-to-br from-green-400 to-green-600",
-                                pathname === `/u/${username}` ? "scale-110 shadow-xl" : "hover:scale-105 active:scale-95"
-                            )}
-                            aria-label="Profile"
-                        >
-                            <User className="w-6 h-6 text-white" strokeWidth={1.5} />
-                        </Link>
+                        {/* Dashboard - Admin Only */}
+                        {isAdmin && (
+                            <Link
+                                href="/dashboard"
+                                className={cn(
+                                    "relative flex items-center justify-center w-12 h-12 rounded-[12px] transition-all duration-300 shadow-lg bg-gradient-to-br from-amber-400 to-amber-600",
+                                    pathname === "/dashboard" ? "scale-110 shadow-xl" : "hover:scale-105 active:scale-95"
+                                )}
+                                aria-label="Dashboard"
+                            >
+                                <LayoutDashboard className="w-6 h-6 text-white" strokeWidth={1.5} />
+                            </Link>
+                        )}
 
-                        {/* Settings */}
-                        <Link
-                            href={username ? `/u/${username}/settings` : "/onboarding"}
-                            className={cn(
-                                "relative flex items-center justify-center w-12 h-12 rounded-[12px] transition-all duration-300 shadow-lg bg-gradient-to-br from-gray-600 to-gray-800",
-                                (username && pathname === `/u/${username}/settings`) ? "scale-110 shadow-xl" : "hover:scale-105 active:scale-95"
-                            )}
-                            aria-label="Settings"
-                        >
-                            <Settings className="w-6 h-6 text-white" strokeWidth={1.5} />
-                        </Link>
+                        {/* User Avatar with Dropdown */}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button
+                                    className={cn(
+                                        "relative flex items-center gap-2 h-12 pl-2 pr-3 rounded-[12px] transition-all duration-300 shadow-lg",
+                                        "bg-gradient-to-br from-green-400 to-green-600",
+                                        "hover:scale-105 active:scale-95"
+                                    )}
+                                    aria-label="User menu"
+                                >
+                                    {/* Avatar */}
+                                    <div className="relative w-8 h-8 rounded-full overflow-hidden bg-white/20 flex items-center justify-center">
+                                        {avatarUrl ? (
+                                            <Image
+                                                src={avatarUrl}
+                                                alt={displayName}
+                                                fill
+                                                className="object-cover"
+                                            />
+                                        ) : (
+                                            <User className="w-4 h-4 text-white" strokeWidth={1.5} />
+                                        )}
+                                    </div>
+                                    {/* Username */}
+                                    <span className="text-sm font-medium text-white max-w-[80px] truncate">
+                                        {displayName}
+                                    </span>
+                                    <ChevronUp className="w-3.5 h-3.5 text-white/70" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                                side="top"
+                                align="end"
+                                className="mb-2 min-w-[200px] p-1.5 bg-background/80 backdrop-blur-3xl border-border rounded-2xl shadow-2xl"
+                            >
+                                {/* User Info Header */}
+                                <div className="px-3 py-2 mb-1">
+                                    <p className="text-sm font-medium truncate">{displayName}</p>
+                                    {profile?.username && (
+                                        <p className="text-xs text-muted-foreground">@{profile.username}</p>
+                                    )}
+                                </div>
+                                <DropdownMenuSeparator />
+
+                                {/* Profile Link */}
+                                <DropdownMenuItem asChild className="rounded-[12px] cursor-pointer focus:bg-primary/10">
+                                    <Link
+                                        href={profile?.username ? `/u/${profile.username}` : "/onboarding"}
+                                        className="flex items-center gap-2.5 py-2 px-3"
+                                    >
+                                        <div className="w-6 h-6 rounded-[7px] bg-green-500 flex items-center justify-center shadow-sm">
+                                            <User className="w-3.5 h-3.5 text-white" />
+                                        </div>
+                                        <span className="font-medium">Profile</span>
+                                    </Link>
+                                </DropdownMenuItem>
+
+                                {/* Settings Link */}
+                                <DropdownMenuItem asChild className="rounded-[12px] cursor-pointer focus:bg-primary/10">
+                                    <Link
+                                        href={profile?.username ? `/u/${profile.username}/settings` : "/onboarding"}
+                                        className="flex items-center gap-2.5 py-2 px-3"
+                                    >
+                                        <div className="w-6 h-6 rounded-[7px] bg-gray-500 flex items-center justify-center shadow-sm">
+                                            <Settings className="w-3.5 h-3.5 text-white" />
+                                        </div>
+                                        <span className="font-medium">Settings</span>
+                                    </Link>
+                                </DropdownMenuItem>
+
+                                <DropdownMenuSeparator />
+
+                                {/* Logout */}
+                                <DropdownMenuItem
+                                    onClick={handleLogout}
+                                    className="rounded-[12px] cursor-pointer focus:bg-red-500/10 text-red-500 focus:text-red-500"
+                                >
+                                    <div className="flex items-center gap-2.5 py-2 px-3">
+                                        <div className="w-6 h-6 rounded-[7px] bg-red-500 flex items-center justify-center shadow-sm">
+                                            <LogOut className="w-3.5 h-3.5 text-white" />
+                                        </div>
+                                        <span className="font-medium">Log out</span>
+                                    </div>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </div>
             </div>
