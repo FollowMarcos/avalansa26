@@ -16,9 +16,11 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { DockType, DockIconPosition, UserRole } from "@/types/database";
+import type { DockIconPosition, UserRole } from "@/types/database";
 import { getDockPreferences, saveDockPreferences } from "@/utils/supabase/dock-preferences.client";
 import { useTheme } from "next-themes";
+import { PortugalTopo } from "./portugal-topo";
+import { DefaultAvatar } from "@/components/ui/default-avatar";
 
 // Draggable items config (Home, Dashboard, and User Avatar are fixed)
 const DRAGGABLE_DOCK_ITEMS = ['library', 'imagine', 'labs', 'tools'] as const;
@@ -38,7 +40,6 @@ export function SiteDock() {
     const { isInputVisible, toggleInputVisibility, setActiveTab } = useImagine();
     const [profile, setProfile] = React.useState<UserProfile | null>(null);
     const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null);
-    const [dockType, setDockType] = React.useState<DockType>('floating_islands_light');
     const [items, setItems] = React.useState<DockItemId[]>([...DRAGGABLE_DOCK_ITEMS]);
     const [isDragging, setIsDragging] = React.useState(false);
 
@@ -60,10 +61,6 @@ export function SiteDock() {
                 // Load dock preferences
                 const prefs = await getDockPreferences();
                 if (prefs) {
-                    // Only accept floating islands variants
-                    if (prefs.dock_type?.includes('floating_islands')) {
-                        setDockType(prefs.dock_type);
-                    }
                     if (prefs.icon_positions && prefs.icon_positions.length > 0) {
                         const validIconPositions = prefs.icon_positions.filter(p => DRAGGABLE_DOCK_ITEMS.includes(p.id as DockItemId));
                         const sortedItems = [...DRAGGABLE_DOCK_ITEMS].sort((a, b) => {
@@ -100,7 +97,8 @@ export function SiteDock() {
     };
 
     const isImaginePage = pathname === "/imagine";
-    const isDark = dockType === 'floating_islands_dark';
+    // Invert: light mode = dark dock, dark mode = light dock
+    const isDockDark = theme === 'light';
     const isAdmin = profile?.role === 'admin';
 
     // Navigation handler that respects drag state
@@ -114,13 +112,12 @@ export function SiteDock() {
     if (isAuthenticated === null || isAuthenticated === false) return null;
     if (isInputVisible && isImaginePage) return null;
 
-    const containerClass = isDark
-        ? "bg-zinc-900/90 border-zinc-700/50"
-        : "bg-white/90 border-zinc-200/50";
+    const containerClass = isDockDark
+        ? "bg-zinc-900 border-zinc-700/50"
+        : "bg-white border-zinc-200/50";
 
     const displayName = profile?.name || profile?.username || 'User';
     const avatarUrl = profile?.avatar_url;
-    const initials = displayName.slice(0, 2).toUpperCase();
 
     // Draggable icon component
     const DraggableIcon = ({ id, children }: { id: DockItemId; children: React.ReactNode }) => (
@@ -143,29 +140,29 @@ export function SiteDock() {
         <div className="flex items-center justify-center pointer-events-auto">
             <div className="flex items-center gap-2">
                 {/* Home Button - Fixed */}
-                <div className={cn("flex items-center p-2 rounded-2xl backdrop-blur-xl border shadow-lg", containerClass)}>
-                    <Link
-                        href="/"
-                        className={cn(
-                            iconBase,
-                            "bg-white dark:bg-zinc-100",
-                            pathname === "/" ? "ring-2 ring-primary/50 scale-105" : iconHover
-                        )}
-                        aria-label="Home"
-                    >
-                        <div className="relative w-5 h-5">
-                            <Image src="/ab.svg" alt="Logo" fill className="object-contain" />
-                        </div>
-                    </Link>
-                </div>
+                <Link
+                    href="/"
+                    className={cn(
+                        "relative flex items-center justify-center w-14 h-14 rounded-2xl border shadow-lg overflow-hidden transition-all duration-200",
+                        containerClass,
+                        pathname === "/" ? "ring-2 ring-primary/50 scale-105" : "hover:scale-105 hover:shadow-xl active:scale-95"
+                    )}
+                    aria-label="Home"
+                >
+                    <PortugalTopo dark={isDockDark} className="opacity-50" />
+                    <div className="relative z-10 w-7 h-7">
+                        <Image src="/ab.svg" alt="Logo" fill className="object-contain" />
+                    </div>
+                </Link>
 
                 {/* Main Nav - Draggable */}
-                <div className={cn("flex items-center p-2 rounded-2xl backdrop-blur-xl border shadow-lg", containerClass)}>
+                <div className={cn("relative flex items-center p-2 rounded-2xl border shadow-lg overflow-hidden", containerClass)}>
+                    <PortugalTopo dark={isDockDark} className="opacity-50" />
                     <Reorder.Group
                         axis="x"
                         values={items}
                         onReorder={handleReorder}
-                        className="flex items-center gap-1"
+                        className="relative z-10 flex items-center gap-1"
                     >
                         {items.map((id) => {
                             switch (id) {
@@ -269,14 +266,15 @@ export function SiteDock() {
                 </div>
 
                 {/* Right Section - Dashboard (admin) + User */}
-                <div className={cn("flex items-center gap-1 p-2 rounded-2xl backdrop-blur-xl border shadow-lg", containerClass)}>
+                <div className={cn("relative flex items-center gap-1 p-2 rounded-2xl border shadow-lg overflow-hidden", containerClass)}>
+                    <PortugalTopo dark={isDockDark} className="opacity-50" />
                     {/* Dashboard - Admin Only */}
                     {isAdmin && (
                         <Link
                             href="/dashboard"
                             className={cn(
                                 iconBase,
-                                "bg-gradient-to-br from-amber-400 to-amber-600",
+                                "relative z-10 bg-gradient-to-br from-amber-400 to-amber-600",
                                 pathname === "/dashboard" ? "ring-2 ring-amber-400/50 scale-105" : iconHover
                             )}
                             aria-label="Dashboard"
@@ -285,29 +283,12 @@ export function SiteDock() {
                         </Link>
                     )}
 
-                    {/* Theme Toggle */}
-                    <button
-                        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                        className={cn(
-                            iconBase,
-                            isDark ? "bg-zinc-700 hover:bg-zinc-600" : "bg-zinc-100 hover:bg-zinc-200",
-                            iconHover
-                        )}
-                        aria-label="Toggle theme"
-                    >
-                        {theme === 'dark' ? (
-                            <Sun className="w-5 h-5 text-amber-400" strokeWidth={1.5} />
-                        ) : (
-                            <Moon className="w-5 h-5 text-zinc-600" strokeWidth={1.5} />
-                        )}
-                    </button>
-
                     {/* User Avatar with Dropdown */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <button
                                 className={cn(
-                                    "relative flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-200",
+                                    "relative z-10 flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-200 overflow-hidden",
                                     "ring-2 ring-transparent hover:ring-primary/30",
                                     iconHover
                                 )}
@@ -318,15 +299,13 @@ export function SiteDock() {
                                         src={avatarUrl}
                                         alt={displayName}
                                         fill
-                                        className="object-cover rounded-xl"
+                                        className="object-cover"
                                     />
                                 ) : (
-                                    <div className="w-full h-full rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
-                                        <span className="text-sm font-semibold text-white">{initials}</span>
-                                    </div>
+                                    <DefaultAvatar size={44} />
                                 )}
                                 {/* Online indicator */}
-                                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-zinc-900" />
+                                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-zinc-900 z-10" />
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent
@@ -340,9 +319,7 @@ export function SiteDock() {
                                     {avatarUrl ? (
                                         <Image src={avatarUrl} alt={displayName} fill className="object-cover" />
                                     ) : (
-                                        <div className="w-full h-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
-                                            <span className="text-sm font-semibold text-white">{initials}</span>
-                                        </div>
+                                        <DefaultAvatar size={40} className="rounded-lg" />
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -375,6 +352,21 @@ export function SiteDock() {
                                     <Settings className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
                                     <span className="text-sm">Settings</span>
                                 </Link>
+                            </DropdownMenuItem>
+
+                            {/* Theme Toggle */}
+                            <DropdownMenuItem
+                                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                                className="rounded-lg cursor-pointer"
+                            >
+                                <div className="flex items-center gap-2.5 py-2 px-2">
+                                    {theme === 'dark' ? (
+                                        <Sun className="w-4 h-4 text-amber-500" strokeWidth={1.5} />
+                                    ) : (
+                                        <Moon className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
+                                    )}
+                                    <span className="text-sm">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+                                </div>
                             </DropdownMenuItem>
 
                             <DropdownMenuSeparator className="my-1" />
