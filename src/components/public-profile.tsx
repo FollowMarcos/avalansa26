@@ -1,10 +1,9 @@
 'use client';
 
 import Image from 'next/image';
-import Link from 'next/link';
 import { motion } from 'motion/react';
-import { ModeToggle } from '@/components/mode-toggle';
 import type { Profile } from '@/types/database';
+import { PageShell } from "@/components/layout/page-shell";
 
 interface PublicProfileProps {
   profile: Profile;
@@ -14,34 +13,8 @@ export function PublicProfile({ profile }: PublicProfileProps) {
   const displayName = profile.name || profile.username;
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background overflow-hidden relative selection:bg-primary/10">
-      {/* Background grain */}
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay bg-noise" />
-
-      {/* Navigation */}
-      <nav className="absolute top-0 w-full px-8 py-8 flex justify-between items-center">
-        <motion.div
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <Link
-            href="/"
-            className="text-xs uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Avalansa
-          </Link>
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        >
-          <ModeToggle />
-        </motion.div>
-      </nav>
-
-      <main className="flex flex-col items-center max-w-md w-full z-10 px-6 space-y-10">
+    <PageShell className="items-center justify-center min-h-screen">
+      <main className="flex flex-col items-center max-w-md w-full z-10 px-6 space-y-10 py-20">
         {/* Avatar */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95, filter: 'blur(10px)' }}
@@ -141,9 +114,10 @@ export function PublicProfile({ profile }: PublicProfileProps) {
       </main>
 
       {/* Footer */}
-      <footer className="absolute bottom-12 text-xs uppercase tracking-[0.4em] text-muted-foreground/50 font-medium select-none">
+      <footer className="py-12 text-xs uppercase tracking-[0.4em] text-muted-foreground/50 font-medium select-none">
         Avalansa &bull; {new Date().getFullYear()}
       </footer>
-    </div>
+    </PageShell>
   );
 }
+

@@ -4,55 +4,56 @@ import Link from 'next/link';
 import { Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
 import { ModeToggle } from '@/components/mode-toggle';
+import { PageShell } from "@/components/layout/page-shell";
 
 export default function LabsPage() {
     return (
-        <div className="flex flex-col min-h-screen bg-background text-foreground antialiased selection:bg-primary/20 overflow-x-hidden">
-            {/* Background Noise */}
-            <div className="fixed inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay bg-noise z-0" />
-
-            {/* Navbar */}
-            <nav className="fixed top-0 w-full px-8 py-6 flex justify-between items-center z-50 bg-background/50 backdrop-blur-md border-b border-white/5">
-                <Link href="/" className="flex items-center gap-2 group">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 group-hover:bg-primary/20 transition-colors">
-                        <Sparkles className="w-4 h-4 text-primary" />
+        <PageShell>
+            <div className="flex flex-col antialiased selection:bg-primary/20 overflow-x-hidden">
+                {/* Navbar */}
+                <nav className="fixed top-0 w-full px-8 py-6 flex justify-between items-center z-50 bg-background/50 backdrop-blur-md border-b border-white/5">
+                    <Link href="/" className="flex items-center gap-2 group">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 group-hover:bg-primary/20 transition-colors">
+                            <Sparkles className="w-4 h-4 text-primary" />
+                        </div>
+                        <span className="text-sm font-medium tracking-wide">AVALANSA <span className="opacity-50 font-normal">LABS</span></span>
+                    </Link>
+                    <div className="flex items-center gap-4">
+                        <ModeToggle />
                     </div>
-                    <span className="text-sm font-medium tracking-wide">AVALANSA <span className="opacity-50 font-normal">LABS</span></span>
-                </Link>
-                <div className="flex items-center gap-4">
-                    <ModeToggle />
-                </div>
-            </nav>
+                </nav>
 
-            <main className="flex-1 pt-32 pb-20 px-8 relative z-10 w-full max-w-7xl mx-auto">
-                <header className="mb-16 text-center">
-                    <h1 className="text-3xl font-light tracking-tight mb-2">Wordmark Explorations</h1>
-                    <p className="text-sm text-muted-foreground uppercase tracking-widest opacity-60">20 Variations of AVALANSA workflows</p>
-                </header>
+                <main className="flex-1 pt-32 pb-48 px-8 relative z-10 w-full max-w-7xl mx-auto">
+                    <header className="mb-16 text-center">
+                        <h1 className="text-3xl font-light tracking-tight mb-2">Wordmark Explorations</h1>
+                        <p className="text-sm text-muted-foreground uppercase tracking-widest opacity-60">20 Variations of AVALANSA workflows</p>
+                    </header>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {variations.map((v, i) => (
-                        <motion.div
-                            key={i}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.05, duration: 0.5 }}
-                            className="flex flex-col items-center justify-center p-12 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] transition-all group"
-                        >
-                            <div className="flex flex-col items-center select-none text-center">
-                                <span className={`${v.avalansaClass} uppercase`}>AVALANSA</span>
-                                <span className={`${v.workflowsClass}`}>workflows</span>
-                            </div>
-                            <div className="mt-8 text-[10px] uppercase tracking-[0.2em] text-muted-foreground/40 group-hover:text-muted-foreground/60 transition-colors">
-                                {v.label}
-                            </div>
-                        </motion.div>
-                    ))}
-                </div>
-            </main>
-        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {variations.map((v, i) => (
+                            <motion.div
+                                key={i}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ delay: i * 0.05, duration: 0.5 }}
+                                className="flex flex-col items-center justify-center p-12 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] transition-all group"
+                            >
+                                <div className="flex flex-col items-center select-none text-center">
+                                    <span className={`${v.avalansaClass} uppercase`}>AVALANSA</span>
+                                    <span className={`${v.workflowsClass}`}>workflows</span>
+                                </div>
+                                <div className="mt-8 text-[10px] uppercase tracking-[0.2em] text-muted-foreground/40 group-hover:text-muted-foreground/60 transition-colors">
+                                    {v.label}
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                </main>
+            </div>
+        </PageShell>
     );
 }
+
 
 const variations = [
     {

@@ -3,8 +3,7 @@
 import * as React from "react";
 import { motion } from "motion/react";
 import { XPreviewProvider, useXPreview } from "@/components/x-preview/x-preview-context";
-import { ImagineProvider } from "@/components/imagine/imagine-context";
-import { ImagineDock } from "@/components/imagine/imagine-dock";
+import { PageShell } from "@/components/layout/page-shell";
 import { PostComposer } from "@/components/x-preview/post-composer";
 import { PreviewFrame } from "@/components/x-preview/preview-frame";
 import { Button } from "@/components/ui/button";
@@ -30,7 +29,7 @@ function ModeToggle() {
 
 function XPreviewContent() {
   return (
-    <div className="min-h-screen bg-background pb-32">
+    <div className="flex-1 flex flex-col pb-32">
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -94,22 +93,16 @@ function XPreviewContent() {
           </motion.div>
         </div>
       </main>
-
-      {/* Dock at Bottom */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 p-6 pointer-events-none">
-        <ImagineDock />
-      </div>
     </div>
   );
 }
 
 export default function XPreviewPage() {
   return (
-    <ImagineProvider>
+    <PageShell>
       <XPreviewProvider>
         <XPreviewContent />
       </XPreviewProvider>
-    </ImagineProvider>
+    </PageShell>
   );
 }
-

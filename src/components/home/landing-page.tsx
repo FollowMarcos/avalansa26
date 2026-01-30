@@ -11,6 +11,8 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { LogOut, LayoutDashboard, Sparkles, User as UserIcon } from "lucide-react"
 import { ModeToggle } from "@/components/mode-toggle"
+import { PageShell } from "@/components/layout/page-shell";
+
 
 interface LandingPageProps {
     user: User | null;
@@ -49,15 +51,7 @@ export function LandingPage({ user }: LandingPageProps) {
     if (!mounted) return null; // Avoid hydration mismatch on initial render if any
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-dvh bg-background text-foreground px-6 py-12 selection:bg-primary/10 relative overflow-hidden">
-            {/* Analog Grain Texture - Static layer, minimal performance impact */}
-            <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.03] mix-blend-multiply bg-noise"></div>
-
-            {/* Top Bar with Theme Toggle */}
-            <div className="fixed top-6 right-6 z-50">
-                <ModeToggle />
-            </div>
-
+        <PageShell className="items-center justify-center min-h-dvh px-6 py-12">
             <main className="flex flex-col items-center max-w-2xl w-full space-y-12 text-center relative z-10">
 
                 {user ? (
@@ -187,9 +181,8 @@ export function LandingPage({ user }: LandingPageProps) {
 
                         {/* Line 3: Sign in or Sign up with (lines on each side) */}
                         <motion.div
-                            initial={{ opacity: 0, y: 10 }}
+                            initial={{ opacity: 1, y: 0 }}
                             animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: 0.2 }}
                             className="flex items-center gap-4 w-full max-w-md will-change-transform"
                         >
                             <div className="h-[1px] flex-1 bg-primary/10" />
@@ -214,7 +207,7 @@ export function LandingPage({ user }: LandingPageProps) {
             </main>
 
             {/* Footer at Bottom */}
-            <footer className="absolute bottom-12 w-full px-12 z-10">
+            <footer className="py-12 w-full px-12 z-10">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6 opacity-40 text-foreground">
                     <div className="flex items-center gap-6 text-xs font-normal font-lato">
                         <span>&copy; {new Date().getFullYear()} Avalansa</span>
@@ -227,6 +220,6 @@ export function LandingPage({ user }: LandingPageProps) {
                     </div>
                 </div>
             </footer>
-        </div>
+        </PageShell>
     );
 }
