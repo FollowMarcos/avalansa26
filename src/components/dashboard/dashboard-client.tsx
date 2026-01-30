@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useMemo, useTransition } from 'react';
+import { useState, useMemo, useTransition, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
   Users,
@@ -113,7 +114,16 @@ export function DashboardClient({
   initialPage,
   initialTotalPages,
 }: DashboardClientProps) {
-  const [activeTab, setActiveTab] = useState<'users' | 'dock'>('users');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const tabParam = searchParams.get('tab');
+  const activeTab = tabParam === 'dock' ? 'dock' : 'users';
+
+  const setActiveTab = (tab: 'users' | 'dock') => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set('tab', tab);
+    router.push(`/dashboard?${params.toString()}`, { scroll: false });
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [profiles, setProfiles] = useState<Profile[]>(initialProfiles);
   const [stats, setStats] = useState<AdminStats>(initialStats);
@@ -188,7 +198,7 @@ export function DashboardClient({
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground p-6 lg:p-8 space-y-8 max-w-[2400px] mx-auto">
+    <div className="min-h-screen bg-background text-foreground p-4 pt-6 lg:p-8 space-y-8 max-w-[2000px]">
       {/* Header & Breadcrumbs */}
       <header className="space-y-1.5">
         <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-2">
