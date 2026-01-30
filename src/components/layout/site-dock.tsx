@@ -161,11 +161,14 @@ export function SiteDock() {
     const DraggableIcon = ({ item, children }: { item: DockItem; children: React.ReactNode }) => (
         <Reorder.Item
             value={item}
+            id={item.id}
             onDragStart={() => setIsDragging(true)}
             onDragEnd={() => setTimeout(() => setIsDragging(false), 100)}
             whileDrag={{ scale: 1.15, zIndex: 100 }}
-            className="cursor-grab active:cursor-grabbing"
-            key={item.id}
+            dragListener={true}
+            dragControls={undefined}
+            style={{ touchAction: 'none' }}
+            className="cursor-grab active:cursor-grabbing select-none"
         >
             {children}
         </Reorder.Item>
@@ -213,13 +216,14 @@ export function SiteDock() {
                 </Link>
 
                 {/* Main Nav - Draggable */}
-                <div className={cn("relative flex items-center p-1.5 rounded-2xl border shadow-lg overflow-hidden h-14", containerClass)}>
-                    <PortugalTopo dark={isDockDark} className="opacity-50" />
+                <div className={cn("relative flex items-center p-1.5 rounded-2xl border shadow-lg h-14", containerClass)}>
+                    <PortugalTopo dark={isDockDark} className="opacity-50 rounded-2xl pointer-events-none" />
                     <Reorder.Group
                         axis="x"
                         values={items}
                         onReorder={handleReorder}
                         className="relative z-10 flex items-center gap-1.5"
+                        style={{ touchAction: 'pan-y' }}
                     >
                         {items.map((item) => {
                             // Special case for Imagine to handle overlay
