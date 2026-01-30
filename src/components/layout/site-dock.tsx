@@ -38,11 +38,11 @@ interface UserProfile {
     role: UserRole;
 }
 
+import { IconDisplay } from "@/components/ui/icon-display";
+
 // Helper to dynamically get icon component
 const IconComponent = ({ name, className, strokeWidth }: { name: string; className?: string; strokeWidth?: number }) => {
-    // @ts-ignore - Dynamic access to Lucide icons
-    const Icon = LucideIcons[name] || LucideIcons.HelpCircle;
-    return <Icon className={className} strokeWidth={strokeWidth} />;
+    return <IconDisplay name={name} className={className} strokeWidth={strokeWidth} />;
 };
 
 export function SiteDock() {

@@ -30,6 +30,7 @@ import {
     ChevronDown
 } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
+import { IconDisplay } from '@/components/ui/icon-display';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -100,7 +101,7 @@ function SortableDockItem({
     };
 
     // @ts-ignore
-    const Icon = LucideIcons[item.icon] || LucideIcons.HelpCircle;
+    const Icon = ({ className }: { className?: string }) => <IconDisplay name={item.icon} className={className} />;
 
     return (
         <div
@@ -369,14 +370,44 @@ export function DockManager() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label>Icon Name (Lucide)</Label>
-                                <Input
-                                    value={currentItem.icon || ''}
-                                    onChange={e => setCurrentItem({ ...currentItem, icon: e.target.value })}
-                                    placeholder="e.g. Library, Sparkles"
-                                />
+                                <Label>Icon</Label>
+                                <div className="flex gap-2">
+                                    <Select
+                                        value={currentItem.icon?.startsWith('hugeicons:') ? 'hugeicons' : 'lucide'}
+                                        onValueChange={(provider) => {
+                                            const currentName = currentItem.icon?.replace('hugeicons:', '') || '';
+                                            if (provider === 'hugeicons') {
+                                                setCurrentItem({ ...currentItem, icon: `hugeicons:${currentName}` });
+                                            } else {
+                                                setCurrentItem({ ...currentItem, icon: currentName });
+                                            }
+                                        }}
+                                    >
+                                        <SelectTrigger className="w-[110px]">
+                                            <SelectValue placeholder="Library" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="lucide">Lucide</SelectItem>
+                                            <SelectItem value="hugeicons">HugeIcons</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <Input
+                                        value={currentItem.icon?.replace('hugeicons:', '') || ''}
+                                        onChange={e => {
+                                            const newVal = e.target.value;
+                                            const isHuge = currentItem.icon?.startsWith('hugeicons:');
+                                            setCurrentItem({ ...currentItem, icon: isHuge ? `hugeicons:${newVal}` : newVal });
+                                        }}
+                                        placeholder={currentItem.icon?.startsWith('hugeicons:') ? "e.g. Home01Icon" : "e.g. Library"}
+                                        className="flex-1"
+                                    />
+                                </div>
                                 <p className="text-[10px] text-muted-foreground text-right pt-1">
-                                    Use <a href="https://lucide.dev/icons" target="_blank" className="underline hover:text-primary">Lucide icon names</a>
+                                    {currentItem.icon?.startsWith('hugeicons:') ? (
+                                        <>Use <a href="https://hugeicons.com/icons" target="_blank" className="underline hover:text-primary">HugeIcons component names</a> (e.g. Home01Icon)</>
+                                    ) : (
+                                        <>Use <a href="https://lucide.dev/icons" target="_blank" className="underline hover:text-primary">Lucide icon names</a> (e.g. Library)</>
+                                    )}
                                 </p>
                             </div>
                         </div>
