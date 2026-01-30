@@ -25,10 +25,10 @@ import { DefaultAvatar } from "@/components/ui/default-avatar";
 
 // Default icons to fallback if DB is empty or during loading
 const DEFAULT_ITEMS: DockItem[] = [
-    { id: 'library', label: 'Library', icon: 'Library', href: '/library', order: 0, is_visible: true, created_at: '', updated_at: '' },
-    { id: 'imagine', label: 'Imagine', icon: 'Sparkles', href: '/imagine', order: 1, is_visible: true, created_at: '', updated_at: '' },
-    { id: 'labs', label: 'Labs', icon: 'FlaskConical', href: '/labs', order: 2, is_visible: true, created_at: '', updated_at: '' },
-    { id: 'tools', label: 'Tools', icon: 'Hammer', href: '/tools', dropdown_items: [{ label: 'X Preview', href: '/tools/x-preview', icon: 'Sparkles' }], order: 3, is_visible: true, created_at: '', updated_at: '' },
+    { id: 'library', label: 'Library', icon: 'Library', href: '/library', order: 0, is_visible: true, created_at: '', updated_at: '', bg_color: 'bg-gradient-to-br from-blue-400 to-blue-600', text_color: 'text-white' },
+    { id: 'imagine', label: 'Imagine', icon: 'Sparkles', href: '/imagine', order: 1, is_visible: true, created_at: '', updated_at: '', bg_color: 'bg-gradient-to-br from-[#5856D6] to-[#AF52DE]', text_color: 'text-white' },
+    { id: 'labs', label: 'Labs', icon: 'FlaskConical', href: '/labs', order: 2, is_visible: true, created_at: '', updated_at: '', bg_color: 'bg-gradient-to-br from-orange-400 to-orange-600', text_color: 'text-white' },
+    { id: 'tools', label: 'Tools', icon: 'Hammer', href: '/tools', dropdown_items: [{ label: 'X Preview', href: '/tools/x-preview', icon: 'Sparkles' }], order: 3, is_visible: true, created_at: '', updated_at: '', bg_color: 'bg-zinc-100 dark:bg-zinc-800', text_color: 'text-zinc-900 dark:text-zinc-100' },
 ];
 
 interface UserProfile {
@@ -175,34 +175,16 @@ export function SiteDock() {
     const iconBase = "relative flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-200 shadow-md";
     const iconHover = "hover:scale-105 hover:shadow-lg active:scale-95";
 
-    // Helper to determine style based on item id (keeping legacy styles for specific items if needed)
-    const getItemStyle = (id: string, path: string) => {
-        if (id === 'library') {
-            return cn(
-                iconBase,
-                "bg-gradient-to-br from-blue-400 to-blue-600",
-                pathname === path ? "ring-2 ring-blue-400/50 scale-105" : iconHover
-            );
-        }
-        if (id === 'imagine') {
-            return cn(
-                iconBase,
-                "bg-gradient-to-br from-[#5856D6] to-[#AF52DE]",
-                pathname === path ? "ring-2 ring-purple-400/50 scale-105" : iconHover
-            );
-        }
-        if (id === 'labs') {
-            return cn(
-                iconBase,
-                "bg-gradient-to-br from-orange-400 to-orange-600",
-                pathname === path ? "ring-2 ring-orange-400/50 scale-105" : iconHover
-            );
-        }
-        // Default for dynamic items
+    // Helper to determine style based on item properties
+    const getItemStyle = (item: DockItem) => {
+        const path = item.href || '/';
+        const isActive = pathname === path || (path !== '/' && pathname.startsWith(path));
+
         return cn(
             iconBase,
-            "bg-gradient-to-br from-zinc-500 to-zinc-700",
-            pathname.startsWith(path) ? "ring-2 ring-zinc-400/50 scale-105" : iconHover
+            item.bg_color || "bg-gradient-to-br from-zinc-500 to-zinc-700",
+            item.text_color || "text-white",
+            isActive ? "ring-2 ring-primary/50 scale-105" : iconHover
         );
     };
 
@@ -256,11 +238,11 @@ export function SiteDock() {
                                                         router.push('/imagine');
                                                     }
                                                 }}
-                                                className={getItemStyle(item.id, item.href || '/imagine')}
+                                                className={getItemStyle(item)}
                                                 role="button"
                                                 aria-label={item.label}
                                             >
-                                                <IconComponent name={item.icon} className="w-5 h-5 text-white pointer-events-none" strokeWidth={1.5} />
+                                                <IconComponent name={item.icon} className={cn("w-5 h-5 pointer-events-none", item.text_color || "text-white")} strokeWidth={1.5} />
                                             </div>
                                         </div>
                                     </DraggableIcon>
@@ -274,11 +256,11 @@ export function SiteDock() {
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild disabled={isDragging}>
                                                 <div
-                                                    className={getItemStyle(item.id, item.href || '/')}
+                                                    className={getItemStyle(item)}
                                                     role="button"
                                                     aria-label={item.label}
                                                 >
-                                                    <IconComponent name={item.icon} className="w-5 h-5 text-white pointer-events-none" strokeWidth={1.5} />
+                                                    <IconComponent name={item.icon} className={cn("w-5 h-5 pointer-events-none", item.text_color || "text-white")} strokeWidth={1.5} />
                                                 </div>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent
@@ -314,11 +296,11 @@ export function SiteDock() {
                                 <DraggableIcon key={item.id} item={item}>
                                     <div
                                         onClick={() => handleNavigation(item.href || '/')}
-                                        className={getItemStyle(item.id, item.href || '/')}
+                                        className={getItemStyle(item)}
                                         role="button"
                                         aria-label={item.label}
                                     >
-                                        <IconComponent name={item.icon} className="w-5 h-5 text-white pointer-events-none" strokeWidth={1.5} />
+                                        <IconComponent name={item.icon} className={cn("w-5 h-5 pointer-events-none", item.text_color || "text-white")} strokeWidth={1.5} />
                                     </div>
                                 </DraggableIcon>
                             );

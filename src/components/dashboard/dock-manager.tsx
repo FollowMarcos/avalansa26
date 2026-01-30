@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 import {
     DndContext,
     closestCenter,
@@ -115,7 +116,13 @@ function SortableDockItem({
                 <GripVertical className="w-5 h-5 text-muted-foreground" />
             </div>
 
-            <div className="flex items-center justify-center w-10 h-10 rounded-md bg-muted/50">
+            <div
+                className={cn(
+                    "flex items-center justify-center w-10 h-10 rounded-md shadow-sm",
+                    item.bg_color || "bg-muted/50",
+                    item.text_color || "text-foreground"
+                )}
+            >
                 <Icon className="w-5 h-5" />
             </div>
 
@@ -221,6 +228,8 @@ export function DockManager() {
             href: currentItem.href || null,
             is_visible: currentItem.is_visible !== false, // default true
             required_role: currentItem.required_role || null,
+            bg_color: currentItem.bg_color || null,
+            text_color: currentItem.text_color || null,
             dropdown_items: dropdownItems.length > 0 ? dropdownItems : null,
             order: currentItem.order ?? items.length,
         };
@@ -363,6 +372,52 @@ export function DockManager() {
                                 <p className="text-[10px] text-muted-foreground text-right pt-1">
                                     Use <a href="https://lucide.dev/icons" target="_blank" className="underline hover:text-primary">Lucide icon names</a>
                                 </p>
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-3">
+                                <Label>Background Style (Tailwind classes)</Label>
+                                <Input
+                                    value={currentItem.bg_color || ''}
+                                    onChange={e => setCurrentItem({ ...currentItem, bg_color: e.target.value })}
+                                    placeholder="bg-gradient-to-br from-blue-400 to-blue-600"
+                                />
+                                <div className="flex flex-wrap gap-2">
+                                    {[
+                                        { label: 'Blue', color: 'bg-gradient-to-br from-blue-400 to-blue-600' },
+                                        { label: 'Purple', color: 'bg-gradient-to-br from-[#5856D6] to-[#AF52DE]' },
+                                        { label: 'Orange', color: 'bg-gradient-to-br from-orange-400 to-orange-600' },
+                                        { label: 'Zinc', color: 'bg-gradient-to-br from-zinc-500 to-zinc-700' },
+                                        { label: 'Glass', color: 'bg-zinc-100 dark:bg-zinc-800' },
+                                    ].map(preset => (
+                                        <button
+                                            key={preset.label}
+                                            onClick={() => setCurrentItem({ ...currentItem, bg_color: preset.color, text_color: preset.label === 'Glass' ? 'text-zinc-900 dark:text-zinc-100' : 'text-white' })}
+                                            className={cn("w-6 h-6 rounded-md border border-border shadow-sm", preset.color)}
+                                            title={preset.label}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                            <div className="space-y-3">
+                                <Label>Text/Icon Color</Label>
+                                <Input
+                                    value={currentItem.text_color || ''}
+                                    onChange={e => setCurrentItem({ ...currentItem, text_color: e.target.value })}
+                                    placeholder="text-white"
+                                />
+                                <div className="flex gap-2">
+                                    {['text-white', 'text-black', 'text-zinc-400', 'text-primary'].map(color => (
+                                        <button
+                                            key={color}
+                                            onClick={() => setCurrentItem({ ...currentItem, text_color: color })}
+                                            className={cn("px-2 py-1 text-[10px] rounded border border-border bg-background", color)}
+                                        >
+                                            Abc
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
 

@@ -207,6 +207,8 @@ export interface DockItem {
   order: number;
   is_visible: boolean;
   required_role?: UserRole; // 'admin' or null (for all)
+  bg_color?: string; // Tailwind classes or hex
+  text_color?: string; // Tailwind classes or hex
   created_at: string;
   updated_at: string;
 }
@@ -220,6 +222,8 @@ export interface DockItemInsert {
   order: number;
   is_visible?: boolean;
   required_role?: UserRole;
+  bg_color?: string;
+  text_color?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -232,6 +236,8 @@ export interface DockItemUpdate {
   order?: number;
   is_visible?: boolean;
   required_role?: UserRole;
+  bg_color?: string;
+  text_color?: string;
   updated_at?: string;
 }
 
