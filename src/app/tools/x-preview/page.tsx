@@ -99,7 +99,7 @@ function XPreviewContent() {
 
 export default function XPreviewPage() {
   return (
-    <PageShell contentClassName="flex flex-col pb-32">
+    <PageShell contentClassName="flex flex-col">
       <XPreviewProvider>
         <XPreviewContent />
       </XPreviewProvider>

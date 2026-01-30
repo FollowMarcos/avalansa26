@@ -21,7 +21,11 @@ export function PageShell({ children, className, contentClassName, showDock = tr
 
                 {/* Background Gradients / Effects could go here */}
 
-                <main className={cn("flex-1 flex flex-col relative z-10 w-full", contentClassName)}>
+                <main className={cn(
+                    "flex-1 flex flex-col relative z-10 w-full",
+                    showDock && "pb-24 lg:pb-32",
+                    contentClassName
+                )}>
                     {children}
                 </main>
 

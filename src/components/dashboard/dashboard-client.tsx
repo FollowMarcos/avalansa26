@@ -370,8 +370,8 @@ export function DashboardClient({
                         <Badge
                           variant="secondary"
                           className={`capitalize font-semibold text-[10px] tracking-wide px-2 py-0.5 rounded-full ${profile.role === 'admin'
-                              ? 'bg-primary/15 text-primary border border-primary/20'
-                              : 'bg-muted text-muted-foreground border border-border'
+                            ? 'bg-primary/15 text-primary border border-primary/20'
+                            : 'bg-muted text-muted-foreground border border-border'
                             }`}
                         >
                           {profile.role}
@@ -381,8 +381,8 @@ export function DashboardClient({
                         <div className="flex items-center gap-2">
                           <div
                             className={`w-1.5 h-1.5 rounded-full ${getUserStatus(profile) === 'completed'
-                                ? 'bg-emerald-500'
-                                : 'bg-amber-500'
+                              ? 'bg-emerald-500'
+                              : 'bg-amber-500'
                               }`}
                           />
                           <span className="text-xs capitalize text-muted-foreground font-medium">
