@@ -213,13 +213,13 @@ export function SiteDock() {
                 </Link>
 
                 {/* Main Nav - Draggable */}
-                <div className={cn("relative flex items-center p-2 rounded-2xl border shadow-lg overflow-hidden", containerClass)}>
+                <div className={cn("relative flex items-center p-1.5 rounded-2xl border shadow-lg overflow-hidden h-14", containerClass)}>
                     <PortugalTopo dark={isDockDark} className="opacity-50" />
                     <Reorder.Group
                         axis="x"
                         values={items}
                         onReorder={handleReorder}
-                        className="relative z-10 flex items-center gap-1"
+                        className="relative z-10 flex items-center gap-1.5"
                     >
                         {items.map((item) => {
                             // Special case for Imagine to handle overlay
@@ -309,7 +309,7 @@ export function SiteDock() {
                 </div>
 
                 {/* Right Section - Dashboard (admin) + User */}
-                <div className={cn("relative flex items-center gap-1 p-2 rounded-2xl border shadow-lg overflow-hidden h-14", containerClass)}>
+                <div className={cn("relative flex items-center gap-1.5 p-1.5 rounded-2xl border shadow-lg overflow-hidden h-14", containerClass)}>
                     <PortugalTopo dark={isDockDark} className="opacity-50" />
 
                     <div className="flex items-center gap-1">

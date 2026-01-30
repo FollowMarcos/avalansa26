@@ -83,6 +83,7 @@ export default function SettingsPage() {
 
     const handleSave = async () => {
         if (!profile) return;
+        setIsSaving(true);
 
         // Content Safety Checks
         const nameSafety = validateContentSafety(displayName);

@@ -278,7 +278,12 @@ export function DockManager() {
     };
 
     const openCreateDialog = () => {
-        setCurrentItem({ is_visible: true, required_role: null as any });
+        setCurrentItem({
+            is_visible: true,
+            required_role: null as any,
+            bg_color: 'bg-gradient-to-br from-zinc-500 to-zinc-700',
+            text_color: 'text-white'
+        });
         setDropdownItems([]);
         setIsDialogOpen(true);
     };
@@ -377,47 +382,78 @@ export function DockManager() {
 
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-3">
-                                <Label>Background Style (Tailwind classes)</Label>
-                                <Input
-                                    value={currentItem.bg_color || ''}
-                                    onChange={e => setCurrentItem({ ...currentItem, bg_color: e.target.value })}
-                                    placeholder="bg-gradient-to-br from-blue-400 to-blue-600"
-                                />
-                                <div className="flex flex-wrap gap-2">
+                                <Label className="text-xs uppercase font-bold tracking-widest opacity-50 flex items-center gap-2">
+                                    Background Style
+                                </Label>
+                                <div className="flex flex-wrap gap-2.5 p-3 border rounded-xl bg-muted/20">
                                     {[
                                         { label: 'Blue', color: 'bg-gradient-to-br from-blue-400 to-blue-600' },
                                         { label: 'Purple', color: 'bg-gradient-to-br from-[#5856D6] to-[#AF52DE]' },
+                                        { label: 'Pink', color: 'bg-gradient-to-br from-pink-500 to-rose-600' },
                                         { label: 'Orange', color: 'bg-gradient-to-br from-orange-400 to-orange-600' },
+                                        { label: 'Amber', color: 'bg-gradient-to-br from-amber-400 to-yellow-600' },
+                                        { label: 'Green', color: 'bg-gradient-to-br from-emerald-400 to-teal-600' },
+                                        { label: 'Lime', color: 'bg-gradient-to-br from-lime-400 to-green-600' },
                                         { label: 'Zinc', color: 'bg-gradient-to-br from-zinc-500 to-zinc-700' },
+                                        { label: 'Dark', color: 'bg-zinc-800 to-zinc-950' },
                                         { label: 'Glass', color: 'bg-zinc-100 dark:bg-zinc-800' },
                                     ].map(preset => (
                                         <button
                                             key={preset.label}
-                                            onClick={() => setCurrentItem({ ...currentItem, bg_color: preset.color, text_color: preset.label === 'Glass' ? 'text-zinc-900 dark:text-zinc-100' : 'text-white' })}
-                                            className={cn("w-6 h-6 rounded-md border border-border shadow-sm", preset.color)}
+                                            onClick={() => setCurrentItem({
+                                                ...currentItem,
+                                                bg_color: preset.color,
+                                                text_color: preset.label === 'Glass' ? 'text-zinc-900 dark:text-zinc-100' : 'text-white'
+                                            })}
+                                            className={cn(
+                                                "w-8 h-8 rounded-lg border-2 shadow-sm transition-all hover:scale-110 active:scale-95",
+                                                preset.color,
+                                                currentItem.bg_color === preset.color ? "border-primary scale-110 shadow-md" : "border-transparent"
+                                            )}
                                             title={preset.label}
                                         />
                                     ))}
                                 </div>
+                                <Input
+                                    value={currentItem.bg_color || ''}
+                                    onChange={e => setCurrentItem({ ...currentItem, bg_color: e.target.value })}
+                                    placeholder="Or type Tailwind classes..."
+                                    className="h-8 text-[10px] font-mono"
+                                />
                             </div>
                             <div className="space-y-3">
-                                <Label>Text/Icon Color</Label>
-                                <Input
-                                    value={currentItem.text_color || ''}
-                                    onChange={e => setCurrentItem({ ...currentItem, text_color: e.target.value })}
-                                    placeholder="text-white"
-                                />
-                                <div className="flex gap-2">
-                                    {['text-white', 'text-black', 'text-zinc-400', 'text-primary'].map(color => (
+                                <Label className="text-xs uppercase font-bold tracking-widest opacity-50 flex items-center gap-2">
+                                    Icon / Text Color
+                                </Label>
+                                <div className="flex flex-wrap gap-2 p-3 border rounded-xl bg-muted/20">
+                                    {[
+                                        { label: 'White', class: 'text-white', bg: 'bg-zinc-800' },
+                                        { label: 'Black', class: 'text-black', bg: 'bg-zinc-100' },
+                                        { label: 'Muted', class: 'text-zinc-400', bg: 'bg-zinc-800' },
+                                        { label: 'Primary', class: 'text-primary', bg: 'bg-zinc-800' },
+                                        { label: 'Amber', class: 'text-amber-400', bg: 'bg-zinc-900' },
+                                        { label: 'Blue', class: 'text-blue-400', bg: 'bg-zinc-900' },
+                                    ].map(color => (
                                         <button
-                                            key={color}
-                                            onClick={() => setCurrentItem({ ...currentItem, text_color: color })}
-                                            className={cn("px-2 py-1 text-[10px] rounded border border-border bg-background", color)}
+                                            key={color.label}
+                                            onClick={() => setCurrentItem({ ...currentItem, text_color: color.class })}
+                                            className={cn(
+                                                "px-3 py-1.5 text-[10px] font-bold uppercase tracking-tighter rounded-md border transition-all hover:bg-muted active:scale-95",
+                                                color.class,
+                                                color.bg,
+                                                currentItem.text_color === color.class ? "border-primary ring-1 ring-primary/30" : "border-border"
+                                            )}
                                         >
                                             Abc
                                         </button>
                                     ))}
                                 </div>
+                                <Input
+                                    value={currentItem.text_color || ''}
+                                    onChange={e => setCurrentItem({ ...currentItem, text_color: e.target.value })}
+                                    placeholder="Or type Tailwind classes..."
+                                    className="h-8 text-[10px] font-mono"
+                                />
                             </div>
                         </div>
 
