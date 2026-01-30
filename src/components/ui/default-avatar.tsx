@@ -20,8 +20,7 @@ export function DefaultAvatar({ className, size = 44 }: DefaultAvatarProps) {
             xmlns="http://www.w3.org/2000/svg"
             style={{ imageRendering: 'pixelated' }}
         >
-            {/* Background */}
-            <rect width="16" height="16" fill="#f4f4f5" />
+            {/* Background removed */}
 
             {/* Ears - black */}
             <rect x="2" y="1" width="2" height="3" fill="#18181b" />

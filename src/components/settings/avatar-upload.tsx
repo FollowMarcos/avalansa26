@@ -1,18 +1,23 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { createClient } from '@/utils/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Camera, Loader2, X, Cat } from 'lucide-react';
+import { Camera, Loader2, X, Plus, History, Sparkles } from 'lucide-react';
 import { DefaultAvatar } from '@/components/ui/default-avatar';
+import { PRESET_AVATARS, getPresetAsDataUri } from '@/components/ui/preset-avatars';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 interface AvatarUploadProps {
     userId: string;
     currentAvatarUrl: string | null;
     onAvatarUpdate: (newUrl: string | null) => void;
+    avatarHistory?: string[];
     className?: string;
     size?: 'sm' | 'md' | 'lg' | 'xl';
 }
@@ -21,6 +26,7 @@ export function AvatarUpload({
     userId,
     currentAvatarUrl,
     onAvatarUpdate,
+    avatarHistory = [],
     className = '',
     size = 'lg',
 }: AvatarUploadProps) {
@@ -52,6 +58,19 @@ export function AvatarUpload({
         uploadAvatar(file);
     };
 
+    const updateHistory = async (newUrl: string, currentHistory: string[]) => {
+        const supabase = createClient();
+        // Keep unique URLs, max 10
+        const updatedHistory = [newUrl, ...currentHistory.filter(url => url !== newUrl)].slice(0, 10);
+
+        await supabase
+            .from('profiles')
+            .update({ avatar_history: updatedHistory })
+            .eq('id', userId);
+
+        return updatedHistory;
+    };
+
     const uploadAvatar = async (file: File) => {
         setIsUploading(true);
         const supabase = createClient();
@@ -66,23 +85,21 @@ export function AvatarUpload({
                 .from('avatars')
                 .upload(filePath, file, { upsert: true });
 
-            if (uploadError) {
-                throw uploadError;
-            }
+            if (uploadError) throw uploadError;
 
             const { data: { publicUrl } } = supabase.storage
                 .from('avatars')
                 .getPublicUrl(filePath);
 
-            // Update profile in DB
+            // Update profile
             const { error: updateError } = await supabase
                 .from('profiles')
                 .update({ avatar_url: publicUrl })
                 .eq('id', userId);
 
-            if (updateError) {
-                throw updateError;
-            }
+            if (updateError) throw updateError;
+
+            await updateHistory(publicUrl, avatarHistory);
 
             onAvatarUpdate(publicUrl);
             router.refresh();
@@ -90,19 +107,42 @@ export function AvatarUpload({
 
         } catch (error) {
             console.error('Error uploading avatar:', error);
-            toast.error('Failed to upload avatar. Please try again.');
+            toast.error('Failed to upload avatar.');
         } finally {
             setIsUploading(false);
-            // Clear input
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    const handleSetAvatar = async (url: string) => {
+        if (url === currentAvatarUrl) return;
+
+        setIsUploading(true);
+        const supabase = createClient();
+
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ avatar_url: url })
+                .eq('id', userId);
+
+            if (error) throw error;
+
+            await updateHistory(url, avatarHistory);
+
+            onAvatarUpdate(url);
+            router.refresh();
+            toast.success('Avatar updated!');
+        } catch (error) {
+            console.error('Error setting avatar:', error);
+            toast.error('Failed to update avatar.');
+        } finally {
+            setIsUploading(false);
         }
     };
 
     const handleRemoveAvatar = async () => {
         if (!currentAvatarUrl) return;
-
         if (!confirm('Are you sure you want to remove your profile picture?')) return;
 
         setIsUploading(true);
@@ -127,104 +167,160 @@ export function AvatarUpload({
         }
     };
 
-    const handleSetCatAvatar = async () => {
-        setIsUploading(true);
-        const supabase = createClient();
-
-        try {
-            // We'll use a string identifier or a Data URI. 
-            // Since our system expects a URL, let's use a special string or just the Data URI of the cat SVG.
-            // For simplicity and since it's small, a Data URI is fine, or we could just set it to 'DEFAULT_CAT'
-            // and handle it in the components. But 'avatar_url' in profiles table might be limited.
-            // Let's use the actual SVG converted to Data URI to ensure it works everywhere without special logic.
-
-            const catSvg = `data:image/svg+xml;base64,${btoa('<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" style="image-rendering: pixelated"><rect width="16" height="16" fill="#f4f4f5" /><rect x="2" y="1" width="2" height="3" fill="#18181b" /><rect x="3" y="1" width="1" height="1" fill="#18181b" /><rect x="12" y="1" width="2" height="3" fill="#18181b" /><rect x="12" y="1" width="1" height="1" fill="#18181b" /><rect x="3" y="2" width="1" height="1" fill="#fda4af" /><rect x="12" y="2" width="1" height="1" fill="#fda4af" /><rect x="1" y="4" width="1" height="6" fill="#18181b" /><rect x="14" y="4" width="1" height="6" fill="#18181b" /><rect x="2" y="3" width="1" height="1" fill="#18181b" /><rect x="13" y="3" width="1" height="1" fill="#18181b" /><rect x="2" y="10" width="1" height="1" fill="#18181b" /><rect x="13" y="10" width="1" height="1" fill="#18181b" /><rect x="3" y="11" width="2" height="1" fill="#18181b" /><rect x="11" y="11" width="2" height="1" fill="#18181b" /><rect x="5" y="12" width="6" height="1" fill="#18181b" /><rect x="2" y="4" width="12" height="6" fill="#fafafa" /><rect x="3" y="10" width="10" height="1" fill="#fafafa" /><rect x="5" y="11" width="6" height="1" fill="#fafafa" /><rect x="2" y="4" width="3" height="2" fill="#18181b" /><rect x="11" y="4" width="3" height="2" fill="#18181b" /><rect x="6" y="3" width="4" height="2" fill="#18181b" /><rect x="4" y="6" width="2" height="2" fill="#22c55e" /><rect x="10" y="6" width="2" height="2" fill="#22c55e" /><rect x="5" y="6" width="1" height="1" fill="#18181b" /><rect x="10" y="6" width="1" height="1" fill="#18181b" /><rect x="4" y="6" width="1" height="1" fill="#bbf7d0" /><rect x="11" y="7" width="1" height="1" fill="#bbf7d0" /><rect x="7" y="8" width="2" height="1" fill="#fda4af" /><rect x="7" y="9" width="1" height="1" fill="#18181b" /><rect x="8" y="9" width="1" height="1" fill="#18181b" /><rect x="6" y="10" width="1" height="1" fill="#18181b" /><rect x="9" y="10" width="1" height="1" fill="#18181b" /><rect x="1" y="7" width="2" height="1" fill="#a1a1aa" /><rect x="1" y="9" width="2" height="1" fill="#a1a1aa" /><rect x="13" y="7" width="2" height="1" fill="#a1a1aa" /><rect x="13" y="9" width="2" height="1" fill="#a1a1aa" /></svg>')} `;
-
-            const { error } = await supabase
-                .from('profiles')
-                .update({ avatar_url: catSvg })
-                .eq('id', userId);
-
-            if (error) throw error;
-
-            onAvatarUpdate(catSvg);
-            router.refresh();
-            toast.success('Changed to Cat avatar!');
-        } catch (error) {
-            console.error('Error setting cat avatar:', error);
-            toast.error('Failed to set cat avatar.');
-        } finally {
-            setIsUploading(false);
-        }
-    };
-
     return (
-        <div className={`flex flex-col gap-6 ${className}`}>
-            <div className="flex items-center gap-6">
+        <div className={cn("space-y-8", className)}>
+            <div className="flex items-center gap-8">
                 <div className="relative group">
-                    <Avatar className={`${sizeClasses[size]} border-4 border-background ring-1 ring-primary/5`}>
-                        <AvatarImage src={currentAvatarUrl || ''} className="object-cover" />
-                        <AvatarFallback className="bg-muted text-2xl font-bold">U</AvatarFallback>
-                    </Avatar>
+                    <div className={cn(
+                        "rounded-full overflow-hidden border-4 border-background ring-1 ring-primary/10",
+                        sizeClasses[size]
+                    )}>
+                        {currentAvatarUrl ? (
+                            <div className="relative w-full h-full">
+                                <Image
+                                    src={currentAvatarUrl}
+                                    alt="Profile"
+                                    fill
+                                    className="object-cover"
+                                    unoptimized={currentAvatarUrl.startsWith('data:')}
+                                />
+                            </div>
+                        ) : (
+                            <DefaultAvatar size={size === 'xl' ? 128 : 96} className="w-full h-full" />
+                        )}
+                    </div>
 
                     <button
                         onClick={() => fileInputRef.current?.click()}
                         disabled={isUploading}
-                        className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:cursor-not-allowed"
+                        className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer focus-visible:opacity-100 disabled:cursor-not-allowed"
                         aria-label="Update profile picture"
                     >
                         {isUploading ? (
                             <Loader2 className="h-6 w-6 text-white animate-spin" />
                         ) : (
-                            <Camera className="h-6 w-6 text-white" aria-hidden="true" />
+                            <Camera className="h-6 w-6 text-white" />
                         )}
                     </button>
-                    <input
-                        type="file"
-                        ref={fileInputRef}
-                        className="hidden"
-                        accept="image/*"
-                        onChange={handleFileSelect}
-                    />
+                    <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileSelect} />
                 </div>
 
                 <div className="space-y-1">
-                    <h2 className="font-vt323 text-xl text-primary text-balance">Profile Picture</h2>
-                    <p className="text-sm text-muted-foreground font-lato text-pretty">
-                        PNG, JPG or GIF. Max 2MB.
+                    <h2 className="font-vt323 text-2xl text-primary uppercase tracking-tight">Identity // Avatar</h2>
+                    <p className="text-sm text-muted-foreground font-lato">
+                        Upload a photo or choose a pixel-art preset.
                     </p>
-                    <div className="flex gap-2 mt-2">
+                    <div className="flex gap-2 mt-4">
                         <Button
                             variant="outline"
                             size="sm"
-                            className="rounded-full font-lato h-8"
+                            className="rounded-full h-9 px-4 font-lato"
                             onClick={() => fileInputRef.current?.click()}
                             disabled={isUploading}
                         >
-                            Upload
+                            <Plus className="w-4 h-4 mr-2" />
+                            Upload New
                         </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="rounded-full font-lato h-8 text-primary"
-                            onClick={handleSetCatAvatar}
-                            disabled={isUploading}
-                        >
-                            <Cat className="h-3.5 w-3.5 mr-1.5" />
-                            Use Cat
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            className="rounded-full font-lato h-8 text-destructive"
-                            onClick={handleRemoveAvatar}
-                            disabled={isUploading || !currentAvatarUrl}
-                        >
-                            Remove
-                        </Button>
+                        {currentAvatarUrl && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="rounded-full h-9 px-4 font-lato text-destructive hover:bg-destructive/5"
+                                onClick={handleRemoveAvatar}
+                                disabled={isUploading}
+                            >
+                                Remove
+                            </Button>
+                        )}
                     </div>
                 </div>
             </div>
+
+            {/* Presets & History */}
+            <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-amber-500" />
+                        Preset Avatars
+                    </h3>
+                </div>
+
+                <ScrollArea className="w-full whitespace-nowrap rounded-xl">
+                    <div className="flex w-max space-x-4 p-1">
+                        {PRESET_AVATARS.map((preset) => {
+                            const dataUri = getPresetAsDataUri(preset.svg);
+                            const isActive = currentAvatarUrl === dataUri;
+                            return (
+                                <button
+                                    key={preset.id}
+                                    onClick={() => handleSetAvatar(dataUri)}
+                                    disabled={isUploading}
+                                    className={cn(
+                                        "group relative flex flex-col items-center gap-2 transition-all p-2 rounded-xl",
+                                        isActive ? "bg-primary/5 ring-1 ring-primary/20" : "hover:bg-muted"
+                                    )}
+                                >
+                                    <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-border group-hover:border-primary/30 transition-colors">
+                                        <div
+                                            className="w-full h-full"
+                                            dangerouslySetInnerHTML={{ __html: preset.svg }}
+                                        />
+                                        {isActive && (
+                                            <div className="absolute inset-0 bg-primary/10 flex items-center justify-center">
+                                                <div className="bg-primary text-primary-foreground rounded-full p-0.5">
+                                                    <Plus className="w-3 h-3 rotate-45" />
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <span className="text-[10px] font-bold uppercase tracking-tight text-muted-foreground group-hover:text-primary">
+                                        {preset.label}
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
+                    <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+            </div>
+
+            {avatarHistory.length > 0 && (
+                <div className="space-y-4">
+                    <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                        <History className="w-4 h-4" />
+                        Recently Used
+                    </h3>
+                    <div className="flex flex-wrap gap-4">
+                        {avatarHistory.map((url, idx) => {
+                            const isActive = currentAvatarUrl === url;
+                            return (
+                                <button
+                                    key={`${url}-${idx}`}
+                                    onClick={() => handleSetAvatar(url)}
+                                    disabled={isUploading || isActive}
+                                    className={cn(
+                                        "relative w-14 h-14 rounded-xl overflow-hidden border transition-all",
+                                        isActive ? "border-primary ring-2 ring-primary/20 scale-105" : "border-border hover:border-primary/50"
+                                    )}
+                                >
+                                    <Image
+                                        src={url}
+                                        alt="Past Avatar"
+                                        fill
+                                        className="object-cover"
+                                        unoptimized={url.startsWith('data:')}
+                                    />
+                                    {isActive && (
+                                        <div className="absolute inset-x-0 bottom-0 bg-primary text-[8px] text-primary-foreground font-bold uppercase text-center py-0.5">
+                                            Active
+                                        </div>
+                                    )}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

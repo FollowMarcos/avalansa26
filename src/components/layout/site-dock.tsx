@@ -347,21 +347,6 @@ export function SiteDock() {
                         </Link>
                     ) : (
                         <div className="flex items-center gap-1">
-                            {/* Dashboard - Admin Only */}
-                            {isAdmin && (
-                                <Link
-                                    href="/dashboard"
-                                    className={cn(
-                                        iconBase,
-                                        "relative z-10 bg-gradient-to-br from-amber-400 to-amber-600",
-                                        pathname === "/dashboard" ? "ring-2 ring-amber-400/50 scale-105" : iconHover
-                                    )}
-                                    aria-label="Dashboard"
-                                >
-                                    <LucideIcons.LayoutDashboard className="w-5 h-5 text-white" strokeWidth={1.5} />
-                                </Link>
-                            )}
-
                             {/* User Avatar with Dropdown */}
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
@@ -391,7 +376,7 @@ export function SiteDock() {
                                     side="top"
                                     align="end"
                                     className={cn(
-                                        "mb-2 w-56 p-1.5 backdrop-blur-xl rounded-xl shadow-2xl",
+                                        "mb-2 w-60 p-1.5 backdrop-blur-xl rounded-xl shadow-2xl",
                                         isDockDark
                                             ? "bg-zinc-900/95 border-zinc-700/50 text-zinc-100"
                                             : "bg-white/95 border-zinc-200/50 text-zinc-900"
@@ -416,40 +401,52 @@ export function SiteDock() {
 
                                     <DropdownMenuSeparator className={cn("my-1", isDockDark ? "bg-zinc-700/50" : "bg-zinc-200/50")} />
 
+                                    {/* Dashboard - Admin Only */}
+                                    {isAdmin && (
+                                        <DropdownMenuItem asChild className={cn("rounded-lg cursor-pointer group", isDockDark ? "focus:bg-white focus:text-zinc-900" : "focus:bg-zinc-900 focus:text-white")}>
+                                            <Link href="/dashboard" className="flex items-center gap-2.5 py-2 px-2.5">
+                                                <LucideIcons.LayoutDashboard className={cn("w-4 h-4 transition-colors", isDockDark ? "text-amber-400 group-focus:text-zinc-900" : "text-amber-500 group-focus:text-white")} strokeWidth={1.5} />
+                                                <span className="text-sm font-medium">Admin Dashboard</span>
+                                            </Link>
+                                        </DropdownMenuItem>
+                                    )}
+
                                     {/* Profile */}
-                                    <DropdownMenuItem asChild className={cn("rounded-lg cursor-pointer", isDockDark ? "focus:bg-zinc-800" : "focus:bg-zinc-100")}>
+                                    <DropdownMenuItem asChild className={cn("rounded-lg cursor-pointer group", isDockDark ? "focus:bg-white focus:text-zinc-900" : "focus:bg-zinc-900 focus:text-white")}>
                                         <Link
                                             href={profile?.username ? `/u/${profile.username}` : "/onboarding"}
-                                            className="flex items-center gap-2.5 py-2 px-2"
+                                            className="flex items-center gap-2.5 py-2 px-2.5"
                                         >
-                                            <LucideIcons.User className={cn("w-4 h-4", isDockDark ? "text-zinc-400" : "text-zinc-500")} strokeWidth={1.5} />
-                                            <span className="text-sm">Profile</span>
+                                            <LucideIcons.User className={cn("w-4 h-4 transition-colors", isDockDark ? "text-zinc-400 group-focus:text-zinc-900" : "text-zinc-500 group-focus:text-white")} strokeWidth={1.5} />
+                                            <span className="text-sm font-medium">Profile</span>
                                         </Link>
                                     </DropdownMenuItem>
 
                                     {/* Settings */}
-                                    <DropdownMenuItem asChild className={cn("rounded-lg cursor-pointer", isDockDark ? "focus:bg-zinc-800" : "focus:bg-zinc-100")}>
+                                    <DropdownMenuItem asChild className={cn("rounded-lg cursor-pointer group", isDockDark ? "focus:bg-white focus:text-zinc-900" : "focus:bg-zinc-900 focus:text-white")}>
                                         <Link
                                             href={profile?.username ? `/u/${profile.username}/settings` : "/onboarding"}
-                                            className="flex items-center gap-2.5 py-2 px-2"
+                                            className="flex items-center gap-2.5 py-2 px-2.5"
                                         >
-                                            <LucideIcons.Settings className={cn("w-4 h-4", isDockDark ? "text-zinc-400" : "text-zinc-500")} strokeWidth={1.5} />
-                                            <span className="text-sm">Settings</span>
+                                            <LucideIcons.Settings className={cn("w-4 h-4 transition-colors", isDockDark ? "text-zinc-400 group-focus:text-zinc-900" : "text-zinc-500 group-focus:text-white")} strokeWidth={1.5} />
+                                            <span className="text-sm font-medium">Settings</span>
                                         </Link>
                                     </DropdownMenuItem>
 
                                     {/* Theme Toggle */}
                                     <DropdownMenuItem
                                         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                                        className={cn("rounded-lg cursor-pointer", isDockDark ? "focus:bg-zinc-800" : "focus:bg-zinc-100")}
+                                        className={cn("rounded-lg cursor-pointer group", isDockDark ? "focus:bg-white focus:text-zinc-900" : "focus:bg-zinc-900 focus:text-white")}
                                     >
-                                        <div className="flex items-center gap-2.5 py-2 px-2">
+                                        <div className="flex items-center gap-2.5 py-2 px-2.5 w-full">
                                             {theme === 'dark' ? (
                                                 <LucideIcons.Sun className="w-4 h-4 text-amber-500" strokeWidth={1.5} />
                                             ) : (
-                                                <LucideIcons.Moon className={cn("w-4 h-4", isDockDark ? "text-zinc-400" : "text-zinc-500")} strokeWidth={1.5} />
+                                                <LucideIcons.Moon className={cn("w-4 h-4 transition-colors", isDockDark ? "text-zinc-400 group-focus:text-zinc-900" : "text-zinc-500 group-focus:text-white")} strokeWidth={1.5} />
                                             )}
-                                            <span className="text-sm">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+                                            <span className="text-sm font-medium">
+                                                {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+                                            </span>
                                         </div>
                                     </DropdownMenuItem>
 
@@ -458,11 +455,11 @@ export function SiteDock() {
                                     {/* Logout */}
                                     <DropdownMenuItem
                                         onClick={handleLogout}
-                                        className="rounded-lg cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-500/10"
+                                        className="rounded-lg cursor-pointer text-red-500 focus:text-white focus:bg-red-500 transition-colors group"
                                     >
-                                        <div className="flex items-center gap-2.5 py-2 px-2">
-                                            <LucideIcons.LogOut className="w-4 h-4" strokeWidth={1.5} />
-                                            <span className="text-sm">Log out</span>
+                                        <div className="flex items-center gap-2.5 py-2 px-2.5">
+                                            <LucideIcons.LogOut className="w-4 h-4 transition-colors group-focus:text-white" strokeWidth={1.5} />
+                                            <span className="text-sm font-medium">Log out</span>
                                         </div>
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
