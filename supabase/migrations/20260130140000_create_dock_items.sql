@@ -1,3 +1,6 @@
+-- Enable moddatetime extension
+create extension if not exists moddatetime schema extensions;
+
 -- Create dock_items table
 create table if not exists public.dock_items (
   id uuid default gen_random_uuid() primary key,
