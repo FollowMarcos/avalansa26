@@ -35,6 +35,8 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { AvatarUpload } from "@/components/settings/avatar-upload";
+import { validateWebsite, validateContentSafety } from "@/lib/validations/profile";
+import { toast } from "sonner";
 
 export default function SettingsPage() {
     const params = useParams();
@@ -51,7 +53,8 @@ export default function SettingsPage() {
     // Form State
     const [displayName, setDisplayName] = useState("");
     const [userBio, setUserBio] = useState("");
-    const [website, setWebsite] = useState(""); // Currently not in schema, will be mock
+    const [website, setWebsite] = useState("");
+    const [websiteError, setWebsiteError] = useState<string | null>(null);
     const [discoverable, setDiscoverable] = useState(true);
 
     useEffect(() => {
@@ -67,7 +70,7 @@ export default function SettingsPage() {
                 setProfile(data);
                 setDisplayName(data.name || "");
                 setUserBio(data.bio || "");
-                // website is not in the current DB schema based on types/database.ts
+                setWebsite(data.website || "");
                 // discoverable corresponds to onboarding_completed or a new field? 
                 // Let's assume discoverable is a mock for now or use a metadata field if we had one.
             } else {
@@ -81,12 +84,34 @@ export default function SettingsPage() {
     const handleSave = async () => {
         if (!profile) return;
 
-        setIsSaving(true);
+        // Content Safety Checks
+        const nameSafety = validateContentSafety(displayName);
+        if (!nameSafety.isValid) {
+            toast.error(`Display Name: ${nameSafety.error}`);
+            return;
+        }
+
+        const bioSafety = validateContentSafety(userBio);
+        if (!bioSafety.isValid) {
+            toast.error(`Bio: ${bioSafety.error}`);
+            return;
+        }
+
+        // Validate website
+        const { isValid, error } = validateWebsite(website);
+        if (!isValid) {
+            setWebsiteError(error || "Invalid website");
+            toast.error(error || "Please check your website URL");
+            setIsSaving(false);
+            return;
+        }
+        setWebsiteError(null);
 
         try {
             const success = await updateCurrentProfile({
                 name: displayName,
                 bio: userBio,
+                website: website || null,
             });
 
             if (success) {
@@ -226,10 +251,19 @@ export default function SettingsPage() {
                                                     id="website"
                                                     type="url"
                                                     placeholder="https://..."
-                                                    className="rounded-xl bg-primary/[0.02] border-primary/10 focus:bg-background transition-all h-12"
+                                                    className={cn(
+                                                        "rounded-xl bg-primary/[0.02] border-primary/10 focus:bg-background transition-all h-12",
+                                                        websiteError && "border-destructive ring-destructive/20 focus:border-destructive"
+                                                    )}
                                                     value={website}
-                                                    onChange={(e) => setWebsite(e.target.value)}
+                                                    onChange={(e) => {
+                                                        setWebsite(e.target.value);
+                                                        setWebsiteError(null);
+                                                    }}
                                                 />
+                                                {websiteError && (
+                                                    <p className="text-[11px] text-destructive font-lato italic">{websiteError}</p>
+                                                )}
                                             </div>
                                         </div>
 

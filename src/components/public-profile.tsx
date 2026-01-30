@@ -6,7 +6,7 @@ import type { Profile } from '@/types/database';
 import { PageShell } from "@/components/layout/page-shell";
 import { DefaultAvatar } from "@/components/ui/default-avatar";
 import { cn } from "@/lib/utils";
-import { Calendar, Mail, Link as LinkIcon, Share2, MapPin } from 'lucide-react';
+import { Calendar, Mail, Link as LinkIcon, Share2, MapPin, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -109,6 +109,19 @@ export function PublicProfile({ profile }: PublicProfileProps) {
                 <ShieldCheck className="w-4 h-4 text-primary/60" />
                 <span className="capitalize">{profile.role || 'Member'} // Identity Verified</span>
               </div>
+              {profile.website && (
+                <div className="flex items-center gap-3 text-sm text-muted-foreground font-lato">
+                  <Globe className="w-4 h-4 text-primary/60" />
+                  <a
+                    href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="hover:text-primary transition-colors truncate"
+                  >
+                    {profile.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                  </a>
+                </div>
+              )}
             </motion.div>
           </div>
 

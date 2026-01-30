@@ -1,5 +1,15 @@
 import { z } from 'zod';
 
+const FORBIDDEN_WORDS = [
+  'nigger', 'nigga', 'faggot', 'kike', 'whore', 'slut', 'cunt', 'retard', 'hitler', 'nazi'
+];
+
+function isSafe(text: string | null | undefined): boolean {
+  if (!text) return true;
+  const lowerText = text.toLowerCase().replace(/[^a-z0-9]/g, '');
+  return !FORBIDDEN_WORDS.some(word => lowerText.includes(word));
+}
+
 /**
  * Username validation schema
  * - 3-20 characters
@@ -16,7 +26,10 @@ export const usernameSchema = z.object({
       /^[a-zA-Z][a-zA-Z0-9_]*$/,
       'Username must start with a letter and contain only letters, numbers, and underscores'
     )
-    .transform((val) => val.toLowerCase()),
+    .transform((val) => val.toLowerCase())
+    .refine(val => isSafe(val), {
+      message: 'Contains prohibited language',
+    }),
 });
 
 /**
@@ -28,7 +41,10 @@ export const bioSchema = z.object({
     .string()
     .max(200, 'Bio must be at most 200 characters')
     .optional()
-    .or(z.literal('')),
+    .or(z.literal(''))
+    .refine(val => isSafe(val), {
+      message: 'Contains prohibited language',
+    }),
 });
 
 /**

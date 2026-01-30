@@ -72,6 +72,8 @@ export interface Profile {
   created_at: string;
   /** Timestamp when the profile was last updated */
   updated_at: string;
+  /** Primary website/link for the user */
+  website?: string | null;
   /** Array of previously used avatar URLs */
   avatar_history?: string[];
 }
@@ -91,6 +93,7 @@ export interface ProfileInsert {
   role?: UserRole;
   created_at?: string;
   updated_at?: string;
+  website?: string | null;
   avatar_history?: string[];
 }
 
@@ -106,6 +109,7 @@ export interface ProfileUpdate {
   onboarding_completed?: boolean;
   role?: UserRole;
   updated_at?: string;
+  website?: string | null;
   avatar_history?: string[];
 }
 
