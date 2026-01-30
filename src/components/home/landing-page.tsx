@@ -51,9 +51,8 @@ export function LandingPage({ user }: LandingPageProps) {
     if (!mounted) return null; // Avoid hydration mismatch on initial render if any
 
     return (
-        <PageShell className="items-center justify-center min-h-dvh px-6 py-12">
+        <PageShell className="overflow-hidden min-h-dvh" contentClassName="items-center justify-center px-6 py-12">
             <main className="flex flex-col items-center max-w-2xl w-full space-y-12 text-center relative z-10">
-
                 {user ? (
                     /* LOGGED IN VIEW */
                     <motion.div
@@ -127,7 +126,6 @@ export function LandingPage({ user }: LandingPageProps) {
                                 Sign Out
                             </Button>
                         </motion.div>
-
                     </motion.div>
                 ) : (
                     /* GUEST VIEW (Original) */
@@ -203,11 +201,10 @@ export function LandingPage({ user }: LandingPageProps) {
                         </motion.div>
                     </>
                 )}
-
             </main>
 
             {/* Footer at Bottom */}
-            <footer className="py-12 w-full px-12 z-10">
+            <footer className="absolute bottom-12 w-full px-12 z-10">
                 <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6 opacity-40 text-foreground">
                     <div className="flex items-center gap-6 text-xs font-normal font-lato">
                         <span>&copy; {new Date().getFullYear()} Avalansa</span>

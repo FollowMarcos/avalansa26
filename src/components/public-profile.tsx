@@ -13,8 +13,8 @@ export function PublicProfile({ profile }: PublicProfileProps) {
   const displayName = profile.name || profile.username;
 
   return (
-    <PageShell className="items-center justify-center min-h-screen">
-      <main className="flex flex-col items-center max-w-md w-full z-10 px-6 space-y-10 py-20">
+    <PageShell contentClassName="items-center justify-center px-6 py-20">
+      <main className="flex flex-col items-center max-w-md w-full z-10 space-y-10">
         {/* Avatar */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95, filter: 'blur(10px)' }}
@@ -25,7 +25,7 @@ export function PublicProfile({ profile }: PublicProfileProps) {
           {profile.avatar_url ? (
             <div className="relative w-28 h-28 rounded-full overflow-hidden ring-2 ring-border">
               <Image
-                src={profile.avatar_url}
+                src={profile.avatar_url!}
                 alt={displayName || 'Profile'}
                 fill
                 className="object-cover"
@@ -114,7 +114,7 @@ export function PublicProfile({ profile }: PublicProfileProps) {
       </main>
 
       {/* Footer */}
-      <footer className="py-12 text-xs uppercase tracking-[0.4em] text-muted-foreground/50 font-medium select-none">
+      <footer className="py-12 mt-auto text-xs uppercase tracking-[0.4em] text-muted-foreground/50 font-medium select-none">
         Avalansa &bull; {new Date().getFullYear()}
       </footer>
     </PageShell>

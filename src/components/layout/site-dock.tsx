@@ -2,13 +2,21 @@
 
 import * as React from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { usePathname, useRouter } from "next/navigation";
-import { Library, Sparkles, FlaskConical, Settings, User, ChevronUp, ExternalLink, Hammer } from "lucide-react";
+import { usePathname } from "next/navigation";
+import {
+    Library,
+    Sparkles,
+    FlaskConical,
+    Settings2,
+    User,
+    Globe,
+    ExternalLink,
+    Orbit
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useImagine } from "@/components/imagine/imagine-context";
 import { createClient } from "@/utils/supabase/client";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -17,17 +25,17 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const NAV_ITEMS = [
-    { id: "home", label: "Home", href: "/", icon: null }, // Icon replaced by logo
-    { icon: Library, id: "library", label: "Library", href: "/library" },
-    { icon: Sparkles, id: "imagine", label: "Imagine", href: "/imagine" },
-    { icon: FlaskConical, id: "labs", label: "Labs", href: "/labs" },
+    { id: "home", label: "Home", href: "/", icon: Orbit },
+    { id: "library", label: "Library", href: "/library", icon: Library },
+    { id: "imagine", label: "Imagine", href: "/imagine", icon: Sparkles },
+    { id: "labs", label: "Labs", href: "/labs", icon: FlaskConical },
 ];
 
 export function SiteDock() {
     const pathname = usePathname();
-    const router = useRouter();
     const { isInputVisible, toggleInputVisibility, setActiveTab } = useImagine();
     const [username, setUsername] = React.useState<string | null>(null);
+    const [hoveredItem, setHoveredItem] = React.useState<string | null>(null);
 
     React.useEffect(() => {
         async function fetchProfile() {
@@ -47,7 +55,6 @@ export function SiteDock() {
         fetchProfile();
     }, []);
 
-    // On the imagine page, we have special behavior for the sparkles button
     const isImaginePage = pathname === "/imagine";
 
     const handleItemClick = (e: React.MouseEvent, item: typeof NAV_ITEMS[0]) => {
@@ -61,103 +68,92 @@ export function SiteDock() {
 
     if (isInputVisible && isImaginePage) return null;
 
+    const renderNavItem = (item: typeof NAV_ITEMS[0]) => {
+        const isImagine = item.id === "imagine";
+        const isActive = pathname === item.href || (isImagine && isImaginePage && isInputVisible);
+
+        return (
+            <Link
+                key={item.id}
+                href={item.href}
+                onMouseEnter={() => setHoveredItem(item.id)}
+                onMouseLeave={() => setHoveredItem(null)}
+                onClick={(e) => handleItemClick(e, item)}
+                className="relative flex items-center h-10"
+            >
+                <motion.div
+                    layout
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                    className={cn(
+                        "flex items-center justify-center rounded-full transition-all duration-300 overflow-hidden",
+                        isActive
+                            ? "bg-gradient-to-r from-[#007AFF] to-[#00CFFF] px-4 shadow-[0_0_20px_rgba(0,122,255,0.3)]"
+                            : "w-10 text-white/40 hover:text-white/80 group"
+                    )}
+                >
+                    <item.icon className={cn("w-5 h-5 transition-transform group-hover:scale-110", isActive ? "text-white" : "")} />
+                    <AnimatePresence mode="popLayout">
+                        {isActive && (
+                            <motion.span
+                                initial={{ opacity: 0, x: -10, width: 0 }}
+                                animate={{ opacity: 1, x: 0, width: "auto" }}
+                                exit={{ opacity: 0, x: -10, width: 0 }}
+                                className="ml-2 text-sm font-medium text-white whitespace-nowrap"
+                            >
+                                {item.label}
+                            </motion.span>
+                        )}
+                    </AnimatePresence>
+                </motion.div>
+
+                {isImagine && (
+                    <div className="absolute inset-0 bg-blue-500/20 blur-xl opacity-0 group-hover:opacity-100 transition-opacity rounded-full -z-10" />
+                )}
+            </Link>
+        );
+    };
+
     return (
         <div className="flex items-center justify-center pointer-events-auto">
-            <div className="flex items-center gap-2 p-2 rounded-[24px] bg-background/80 border border-border shadow-2xl backdrop-blur-2xl">
-                {/* Home / Logo */}
-                <Link
-                    href="/"
-                    className={cn(
-                        "relative flex items-center justify-center w-10 h-10 rounded-[11px] transition-all duration-300 group overflow-hidden shadow-sm",
-                        "bg-white dark:bg-zinc-100",
-                        pathname === "/" ? "scale-110 shadow-lg ring-2 ring-white/50" : "hover:scale-105 active:scale-95"
-                    )}
-                    aria-label="Home"
-                >
-                    <div className="relative w-6 h-6">
-                        <Image
-                            src="/ab.svg"
-                            alt="Logo"
-                            fill
-                            className="object-contain"
-                        />
-                    </div>
-                </Link>
+            <motion.div
+                layout
+                className="flex items-center gap-1.5 p-1.5 rounded-full bg-black/40 border border-white/10 shadow-2xl backdrop-blur-3xl"
+            >
+                {NAV_ITEMS.map(renderNavItem)}
 
-                {/* Library */}
-                <Link
-                    href="/library"
-                    className={cn(
-                        "relative flex items-center justify-center w-10 h-10 rounded-[11px] transition-all duration-300 group overflow-hidden shadow-sm bg-[#007AFF]",
-                        pathname === "/library" ? "scale-110 shadow-lg ring-2 ring-[#007AFF]/50" : "hover:scale-105 active:scale-95"
-                    )}
-                    aria-label="Library"
-                >
-                    <Library className="w-5 h-5 text-white" />
-                </Link>
-
-                {/* Imagine */}
-                <div className="relative group/imagine">
-                    {/* Magic Glow behind Imagine button */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#5856D6] to-[#AF52DE] blur-md opacity-40 group-hover/imagine:opacity-80 transition-opacity animate-pulse" />
-
-                    <Link
-                        href="/imagine"
-                        onClick={(e) => handleItemClick(e, { id: "imagine", label: "Imagine", href: "/imagine", icon: Sparkles })}
-                        className={cn(
-                            "relative flex items-center justify-center w-10 h-10 rounded-[11px] transition-all duration-300 group overflow-hidden shadow-sm bg-gradient-to-br from-[#5856D6] to-[#AF52DE]",
-                            (pathname === "/imagine" || (isImaginePage && isInputVisible)) ? "scale-110 shadow-lg ring-2 ring-[#AF52DE]/50" : "hover:scale-105 active:scale-95"
-                        )}
-                        aria-label="Imagine"
-                    >
-                        {/* Shimmer Effect */}
-                        <motion.div
-                            animate={{
-                                x: ['-100%', '100%'],
-                            }}
-                            transition={{
-                                duration: 2,
-                                repeat: Infinity,
-                                ease: "linear",
-                                repeatDelay: 3
-                            }}
-                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 -z-0"
-                        />
-                        <Sparkles className="w-5 h-5 text-white relative z-10" />
-                    </Link>
-                </div>
-
-                {/* Labs */}
-                <Link
-                    href="/labs"
-                    className={cn(
-                        "relative flex items-center justify-center w-10 h-10 rounded-[11px] transition-all duration-300 group overflow-hidden shadow-sm bg-[#FF9500]",
-                        pathname === "/labs" ? "scale-110 shadow-lg ring-2 ring-[#FF9500]/50" : "hover:scale-105 active:scale-95"
-                    )}
-                    aria-label="Labs"
-                >
-                    <FlaskConical className="w-5 h-5 text-white" />
-                </Link>
-
-                {/* Tools Dropdown */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <button
+                            onMouseEnter={() => setHoveredItem("tools")}
+                            onMouseLeave={() => setHoveredItem(null)}
                             className={cn(
-                                "relative flex items-center justify-center w-10 h-10 rounded-[11px] transition-all duration-300 group overflow-hidden shadow-sm bg-[#FF2D55]",
-                                pathname.startsWith("/tools") ? "scale-110 shadow-lg ring-2 ring-[#FF2D55]/50" : "hover:scale-105 active:scale-95"
+                                "relative flex items-center h-10 transition-all duration-300 group rounded-full",
+                                pathname.startsWith("/tools")
+                                    ? "bg-gradient-to-r from-[#007AFF] to-[#00CFFF] px-4 shadow-[0_0_20px_rgba(0,122,255,0.3)]"
+                                    : "w-10 text-white/40 hover:text-white/80"
                             )}
-                            aria-label="Tools"
                         >
-                            <Hammer className="w-5 h-5 text-white" />
+                            <Globe className={cn("w-5 h-5", pathname.startsWith("/tools") ? "text-white" : "transition-transform group-hover:scale-110")} />
+                            <AnimatePresence>
+                                {pathname.startsWith("/tools") && (
+                                    <motion.span
+                                        initial={{ opacity: 0, x: -10, width: 0 }}
+                                        animate={{ opacity: 1, x: 0, width: "auto" }}
+                                        exit={{ opacity: 0, x: -10, width: 0 }}
+                                        className="ml-2 text-sm font-medium text-white"
+                                    >
+                                        Tools
+                                    </motion.span>
+                                )}
+                            </AnimatePresence>
                         </button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent side="top" align="center" className="mb-2 min-w-[170px] p-1.5 bg-background/80 backdrop-blur-3xl border-border rounded-2xl shadow-2xl">
-                        <DropdownMenuItem asChild className="rounded-[12px] cursor-pointer focus:bg-primary/10">
-                            <Link href="/tools/x-preview" className="flex items-center justify-between w-full group/item py-2 px-3">
-                                <span className="flex items-center gap-2.5 font-medium">
-                                    <div className="w-6 h-6 rounded-[7px] bg-[#5856D6] flex items-center justify-center shadow-sm">
-                                        <Sparkles className="w-3.5 h-3.5 text-white" />
+                    <DropdownMenuContent side="top" align="center" className="mb-4 min-w-[200px] p-2 bg-black/60 backdrop-blur-3xl border-white/10 rounded-2xl shadow-2xl">
+                        <DropdownMenuItem asChild className="rounded-xl cursor-pointer focus:bg-white/10 text-white/70 hover:text-white py-2.5 px-3">
+                            <Link href="/tools/x-preview" className="flex items-center justify-between w-full group/item">
+                                <span className="flex items-center gap-3 font-medium">
+                                    <div className="w-8 h-8 rounded-lg bg-[#007AFF]/20 flex items-center justify-center border border-[#007AFF]/30">
+                                        <Sparkles className="w-4 h-4 text-[#007AFF]" />
                                     </div>
                                     X Preview
                                 </span>
@@ -166,42 +162,69 @@ export function SiteDock() {
                                         e.preventDefault();
                                         window.open("/tools/x-preview", "_blank");
                                     }}
-                                    className="opacity-0 group-hover/item:opacity-100 hover:text-primary transition-opacity p-1"
+                                    className="opacity-0 group-hover/item:opacity-100 transition-opacity p-2 hover:bg-white/10 rounded-full"
                                 >
-                                    <ExternalLink className="w-3.5 h-3.5" />
+                                    <ExternalLink className="w-4 h-4 text-white/50" />
                                 </button>
                             </Link>
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
 
-                <div className="w-px h-6 bg-white/20 mx-1" />
+                <div className="w-px h-6 bg-white/10 mx-1" />
 
-                {/* Profile Link */}
                 <Link
                     href={username ? `/u/${username}` : "/onboarding"}
+                    onMouseEnter={() => setHoveredItem("profile")}
+                    onMouseLeave={() => setHoveredItem(null)}
                     className={cn(
-                        "relative flex items-center justify-center w-10 h-10 rounded-[11px] transition-all duration-300 group overflow-hidden shadow-sm bg-[#34C759]",
-                        pathname === `/u/${username}` ? "scale-110 shadow-lg ring-2 ring-[#34C759]/50" : "hover:scale-105 active:scale-95"
+                        "relative flex items-center h-10 transition-all duration-300 group rounded-full",
+                        (username && pathname === `/u/${username}`)
+                            ? "bg-gradient-to-r from-[#007AFF] to-[#00CFFF] px-4 shadow-[0_0_20px_rgba(0,122,255,0.3)]"
+                            : "w-10 text-white/40 hover:text-white/80"
                     )}
-                    aria-label="Profile"
                 >
-                    <User className="w-5 h-5 text-white" />
+                    <User className={cn("w-5 h-5", (username && pathname === `/u/${username}`) ? "text-white" : "transition-transform group-hover:scale-110")} />
+                    <AnimatePresence>
+                        {(username && pathname === `/u/${username}`) && (
+                            <motion.span
+                                initial={{ opacity: 0, x: -10, width: 0 }}
+                                animate={{ opacity: 1, x: 0, width: "auto" }}
+                                exit={{ opacity: 0, x: -10, width: 0 }}
+                                className="ml-2 text-sm font-medium text-white"
+                            >
+                                Profile
+                            </motion.span>
+                        )}
+                    </AnimatePresence>
                 </Link>
 
-                {/* Settings link */}
                 <Link
                     href={username ? `/u/${username}/settings` : "/onboarding"}
+                    onMouseEnter={() => setHoveredItem("settings")}
+                    onMouseLeave={() => setHoveredItem(null)}
                     className={cn(
-                        "relative flex items-center justify-center w-10 h-10 rounded-[11px] transition-all duration-300 group overflow-hidden shadow-sm bg-[#8E8E93]",
-                        (username && pathname === `/u/${username}/settings`) ? "scale-110 shadow-lg ring-2 ring-[#8E8E93]/50" : "hover:scale-105 active:scale-95"
+                        "relative flex items-center h-10 transition-all duration-300 group rounded-full",
+                        (username && pathname === `/u/${username}/settings`)
+                            ? "bg-gradient-to-r from-[#007AFF] to-[#00CFFF] px-4 shadow-[0_0_20px_rgba(0,122,255,0.3)]"
+                            : "w-10 text-white/40 hover:text-white/80"
                     )}
-                    aria-label="Settings"
                 >
-                    <Settings className="w-5 h-5 text-white" />
+                    <Settings2 className={cn("w-5 h-5", (username && pathname === `/u/${username}/settings`) ? "text-white" : "transition-transform group-hover:scale-110")} />
+                    <AnimatePresence>
+                        {(username && pathname === `/u/${username}/settings`) && (
+                            <motion.span
+                                initial={{ opacity: 0, x: -10, width: 0 }}
+                                animate={{ opacity: 1, x: 0, width: "auto" }}
+                                exit={{ opacity: 0, x: -10, width: 0 }}
+                                className="ml-2 text-sm font-medium text-white"
+                            >
+                                Settings
+                            </motion.span>
+                        )}
+                    </AnimatePresence>
                 </Link>
-            </div>
+            </motion.div>
         </div>
     );
 }
-

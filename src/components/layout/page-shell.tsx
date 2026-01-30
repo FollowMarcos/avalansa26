@@ -7,11 +7,12 @@ import { cn } from "@/lib/utils";
 
 interface PageShellProps {
     children: React.ReactNode;
-    className?: string;
+    className?: string; // Classes for the root container
+    contentClassName?: string; // Classes for the internal main element
     showDock?: boolean;
 }
 
-export function PageShell({ children, className, showDock = true }: PageShellProps) {
+export function PageShell({ children, className, contentClassName, showDock = true }: PageShellProps) {
     return (
         <ImagineProvider>
             <div className={cn("relative min-h-screen bg-background text-foreground flex flex-col antialiased", className)}>
@@ -20,7 +21,7 @@ export function PageShell({ children, className, showDock = true }: PageShellPro
 
                 {/* Background Gradients / Effects could go here */}
 
-                <main className="flex-1 flex flex-col relative z-10 w-full">
+                <main className={cn("flex-1 flex flex-col relative z-10 w-full", contentClassName)}>
                     {children}
                 </main>
 
