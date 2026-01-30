@@ -8,7 +8,7 @@ import * as LucideIcons from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useImagine } from "@/components/imagine/imagine-context";
 import { createClient } from "@/utils/supabase/client";
-import { Reorder } from "motion/react";
+import { motion, Reorder } from "motion/react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -52,9 +52,10 @@ export function SiteDock() {
     const { isInputVisible, toggleInputVisibility, setActiveTab } = useImagine();
     const [profile, setProfile] = React.useState<UserProfile | null>(null);
     const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null);
-    const [items, setItems] = React.useState<DockItem[]>([]);
+    const [items, setItems] = React.useState<DockItem[]>(DEFAULT_ITEMS);
     const [isDragging, setIsDragging] = React.useState(false);
     const [mounted, setMounted] = React.useState(false);
+    const [isInitialLoading, setIsInitialLoading] = React.useState(true);
 
     // Handle hydration mismatch for theme
     React.useEffect(() => {
@@ -65,6 +66,11 @@ export function SiteDock() {
         async function fetchProfileAndPreferences() {
             const supabase = createClient();
             const { data: { user } } = await supabase.auth.getUser();
+
+            // Load available dock items from DB (available to guests too)
+            const dbItems = await getDockItems();
+            const availableItems = dbItems.length > 0 ? dbItems : DEFAULT_ITEMS;
+
             if (user) {
                 setIsAuthenticated(true);
                 const { data: profileData } = await supabase
@@ -75,11 +81,6 @@ export function SiteDock() {
                 if (profileData) {
                     setProfile(profileData as UserProfile);
                 }
-
-                // Load available dock items from DB
-                const dbItems = await getDockItems();
-                // If DB is empty, use defaults (or waiting for migration)
-                const availableItems = dbItems.length > 0 ? dbItems : DEFAULT_ITEMS;
 
                 // Filter items based on role visibility
                 const authorizedItems = availableItems.filter(item => {
@@ -94,7 +95,6 @@ export function SiteDock() {
                     const sortedItems = [...authorizedItems].sort((a, b) => {
                         const posA = prefs.icon_positions.find(p => p.id === a.id);
                         const posB = prefs.icon_positions.find(p => p.id === b.id);
-                        // If position exists, use it's order. If not, append to end based on default order
                         const orderA = posA ? posA.order : 999 + a.order;
                         const orderB = posB ? posB.order : 999 + b.order;
                         return orderA - orderB;
@@ -105,18 +105,24 @@ export function SiteDock() {
                 }
             } else {
                 setIsAuthenticated(false);
+                // For guests, only show items with no required role
+                const guestItems = availableItems.filter(item => !item.required_role && item.is_visible);
+                setItems(guestItems);
             }
+            setIsInitialLoading(false);
         }
         fetchProfileAndPreferences();
     }, []);
 
     const handleReorder = (newItems: DockItem[]) => {
         setItems(newItems);
-        const positions: DockIconPosition[] = newItems.map((item, index) => ({
-            id: item.id,
-            order: index
-        }));
-        saveDockPreferences({ icon_positions: positions });
+        if (isAuthenticated) {
+            const positions: DockIconPosition[] = newItems.map((item, index) => ({
+                id: item.id,
+                order: index
+            }));
+            saveDockPreferences({ icon_positions: positions });
+        }
     };
 
     const handleLogout = async () => {
@@ -138,8 +144,10 @@ export function SiteDock() {
         router.push(path);
     };
 
-    // Don't render dock for unauthenticated users, while checking auth, or before hydration
-    if (!mounted || isAuthenticated === null || isAuthenticated === false) return null;
+    // Before hydration, render nothing to avoid mismatch
+    if (!mounted) return null;
+
+    // Hide dock on imagine page during input boards
     if (isInputVisible && isImaginePage) return null;
 
     const containerClass = isDockDark
@@ -199,7 +207,12 @@ export function SiteDock() {
     };
 
     return (
-        <div className="flex items-center justify-center pointer-events-auto">
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="flex items-center justify-center pointer-events-auto"
+        >
             <div className="flex items-center gap-2">
                 {/* Home Button - Fixed */}
                 <Link
@@ -314,130 +327,150 @@ export function SiteDock() {
                 </div>
 
                 {/* Right Section - Dashboard (admin) + User */}
-                <div className={cn("relative flex items-center gap-1 p-2 rounded-2xl border shadow-lg overflow-hidden", containerClass)}>
+                <div className={cn("relative flex items-center gap-1 p-2 rounded-2xl border shadow-lg overflow-hidden h-14", containerClass)}>
                     <PortugalTopo dark={isDockDark} className="opacity-50" />
-                    {/* Dashboard - Admin Only */}
-                    {isAdmin && (
+
+                    {isAuthenticated === null ? (
+                        <div className="w-11 h-11 flex items-center justify-center">
+                            <LucideIcons.Loader2 className="w-5 h-5 animate-spin opacity-20" />
+                        </div>
+                    ) : isAuthenticated === false ? (
                         <Link
-                            href="/dashboard"
+                            href="/onboarding"
                             className={cn(
-                                iconBase,
-                                "relative z-10 bg-gradient-to-br from-amber-400 to-amber-600",
-                                pathname === "/dashboard" ? "ring-2 ring-amber-400/50 scale-105" : iconHover
+                                "relative z-10 px-4 h-10 flex items-center justify-center rounded-xl font-medium transition-all duration-200",
+                                isDockDark ? "bg-white text-zinc-900" : "bg-zinc-900 text-white",
+                                "hover:scale-105 active:scale-95"
                             )}
-                            aria-label="Dashboard"
                         >
-                            <LucideIcons.LayoutDashboard className="w-5 h-5 text-white" strokeWidth={1.5} />
+                            Get Started
                         </Link>
-                    )}
-
-                    {/* User Avatar with Dropdown */}
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <button
-                                className={cn(
-                                    "relative z-10 flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-200 overflow-hidden",
-                                    "ring-2 ring-transparent hover:ring-primary/30",
-                                    iconHover
-                                )}
-                                aria-label="User menu"
-                            >
-                                {avatarUrl ? (
-                                    <Image
-                                        src={avatarUrl}
-                                        alt={displayName}
-                                        fill
-                                        className="object-cover"
-                                    />
-                                ) : (
-                                    <DefaultAvatar size={44} />
-                                )}
-                                {/* Online indicator */}
-                                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-zinc-900 z-10" />
-                            </button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent
-                            side="top"
-                            align="end"
-                            className={cn(
-                                "mb-2 w-56 p-1.5 backdrop-blur-xl rounded-xl shadow-2xl",
-                                isDockDark
-                                    ? "bg-zinc-900/95 border-zinc-700/50 text-zinc-100"
-                                    : "bg-white/95 border-zinc-200/50 text-zinc-900"
+                    ) : (
+                        <div className="flex items-center gap-1">
+                            {/* Dashboard - Admin Only */}
+                            {isAdmin && (
+                                <Link
+                                    href="/dashboard"
+                                    className={cn(
+                                        iconBase,
+                                        "relative z-10 bg-gradient-to-br from-amber-400 to-amber-600",
+                                        pathname === "/dashboard" ? "ring-2 ring-amber-400/50 scale-105" : iconHover
+                                    )}
+                                    aria-label="Dashboard"
+                                >
+                                    <LucideIcons.LayoutDashboard className="w-5 h-5 text-white" strokeWidth={1.5} />
+                                </Link>
                             )}
-                        >
-                            {/* User Header */}
-                            <div className="flex items-center gap-3 px-2 py-2.5 mb-1">
-                                <div className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
-                                    {avatarUrl ? (
-                                        <Image src={avatarUrl} alt={displayName} fill className="object-cover" />
-                                    ) : (
-                                        <DefaultAvatar size={40} className="rounded-lg" />
-                                    )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-semibold truncate">{displayName}</p>
-                                    {profile?.username && (
-                                        <p className={cn("text-xs truncate", isDockDark ? "text-zinc-400" : "text-zinc-500")}>@{profile.username}</p>
-                                    )}
-                                </div>
-                            </div>
 
-                            <DropdownMenuSeparator className={cn("my-1", isDockDark ? "bg-zinc-700/50" : "bg-zinc-200/50")} />
-
-                            {/* Profile */}
-                            <DropdownMenuItem asChild className={cn("rounded-lg cursor-pointer", isDockDark ? "focus:bg-zinc-800" : "focus:bg-zinc-100")}>
-                                <Link
-                                    href={profile?.username ? `/u/${profile.username}` : "/onboarding"}
-                                    className="flex items-center gap-2.5 py-2 px-2"
+                            {/* User Avatar with Dropdown */}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button
+                                        className={cn(
+                                            "relative z-10 flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-200 overflow-hidden",
+                                            "ring-2 ring-transparent hover:ring-primary/30",
+                                            iconHover
+                                        )}
+                                        aria-label="User menu"
+                                    >
+                                        {avatarUrl ? (
+                                            <Image
+                                                src={avatarUrl}
+                                                alt={displayName}
+                                                fill
+                                                className="object-cover"
+                                            />
+                                        ) : (
+                                            <DefaultAvatar size={44} />
+                                        )}
+                                        {/* Online indicator */}
+                                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-zinc-900 z-10" />
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                    side="top"
+                                    align="end"
+                                    className={cn(
+                                        "mb-2 w-56 p-1.5 backdrop-blur-xl rounded-xl shadow-2xl",
+                                        isDockDark
+                                            ? "bg-zinc-900/95 border-zinc-700/50 text-zinc-100"
+                                            : "bg-white/95 border-zinc-200/50 text-zinc-900"
+                                    )}
                                 >
-                                    <LucideIcons.User className={cn("w-4 h-4", isDockDark ? "text-zinc-400" : "text-zinc-500")} strokeWidth={1.5} />
-                                    <span className="text-sm">Profile</span>
-                                </Link>
-                            </DropdownMenuItem>
+                                    {/* User Header */}
+                                    <div className="flex items-center gap-3 px-2 py-2.5 mb-1">
+                                        <div className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
+                                            {avatarUrl ? (
+                                                <Image src={avatarUrl} alt={displayName} fill className="object-cover" />
+                                            ) : (
+                                                <DefaultAvatar size={40} className="rounded-lg" />
+                                            )}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-semibold truncate">{displayName}</p>
+                                            {profile?.username && (
+                                                <p className={cn("text-xs truncate", isDockDark ? "text-zinc-400" : "text-zinc-500")}>@{profile.username}</p>
+                                            )}
+                                        </div>
+                                    </div>
 
-                            {/* Settings */}
-                            <DropdownMenuItem asChild className={cn("rounded-lg cursor-pointer", isDockDark ? "focus:bg-zinc-800" : "focus:bg-zinc-100")}>
-                                <Link
-                                    href={profile?.username ? `/u/${profile.username}/settings` : "/onboarding"}
-                                    className="flex items-center gap-2.5 py-2 px-2"
-                                >
-                                    <LucideIcons.Settings className={cn("w-4 h-4", isDockDark ? "text-zinc-400" : "text-zinc-500")} strokeWidth={1.5} />
-                                    <span className="text-sm">Settings</span>
-                                </Link>
-                            </DropdownMenuItem>
+                                    <DropdownMenuSeparator className={cn("my-1", isDockDark ? "bg-zinc-700/50" : "bg-zinc-200/50")} />
 
-                            {/* Theme Toggle */}
-                            <DropdownMenuItem
-                                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                                className={cn("rounded-lg cursor-pointer", isDockDark ? "focus:bg-zinc-800" : "focus:bg-zinc-100")}
-                            >
-                                <div className="flex items-center gap-2.5 py-2 px-2">
-                                    {theme === 'dark' ? (
-                                        <LucideIcons.Sun className="w-4 h-4 text-amber-500" strokeWidth={1.5} />
-                                    ) : (
-                                        <LucideIcons.Moon className={cn("w-4 h-4", isDockDark ? "text-zinc-400" : "text-zinc-500")} strokeWidth={1.5} />
-                                    )}
-                                    <span className="text-sm">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
-                                </div>
-                            </DropdownMenuItem>
+                                    {/* Profile */}
+                                    <DropdownMenuItem asChild className={cn("rounded-lg cursor-pointer", isDockDark ? "focus:bg-zinc-800" : "focus:bg-zinc-100")}>
+                                        <Link
+                                            href={profile?.username ? `/u/${profile.username}` : "/onboarding"}
+                                            className="flex items-center gap-2.5 py-2 px-2"
+                                        >
+                                            <LucideIcons.User className={cn("w-4 h-4", isDockDark ? "text-zinc-400" : "text-zinc-500")} strokeWidth={1.5} />
+                                            <span className="text-sm">Profile</span>
+                                        </Link>
+                                    </DropdownMenuItem>
 
-                            <DropdownMenuSeparator className={cn("my-1", isDockDark ? "bg-zinc-700/50" : "bg-zinc-200/50")} />
+                                    {/* Settings */}
+                                    <DropdownMenuItem asChild className={cn("rounded-lg cursor-pointer", isDockDark ? "focus:bg-zinc-800" : "focus:bg-zinc-100")}>
+                                        <Link
+                                            href={profile?.username ? `/u/${profile.username}/settings` : "/onboarding"}
+                                            className="flex items-center gap-2.5 py-2 px-2"
+                                        >
+                                            <LucideIcons.Settings className={cn("w-4 h-4", isDockDark ? "text-zinc-400" : "text-zinc-500")} strokeWidth={1.5} />
+                                            <span className="text-sm">Settings</span>
+                                        </Link>
+                                    </DropdownMenuItem>
 
-                            {/* Logout */}
-                            <DropdownMenuItem
-                                onClick={handleLogout}
-                                className="rounded-lg cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-500/10"
-                            >
-                                <div className="flex items-center gap-2.5 py-2 px-2">
-                                    <LucideIcons.LogOut className="w-4 h-4" strokeWidth={1.5} />
-                                    <span className="text-sm">Log out</span>
-                                </div>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                                    {/* Theme Toggle */}
+                                    <DropdownMenuItem
+                                        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                                        className={cn("rounded-lg cursor-pointer", isDockDark ? "focus:bg-zinc-800" : "focus:bg-zinc-100")}
+                                    >
+                                        <div className="flex items-center gap-2.5 py-2 px-2">
+                                            {theme === 'dark' ? (
+                                                <LucideIcons.Sun className="w-4 h-4 text-amber-500" strokeWidth={1.5} />
+                                            ) : (
+                                                <LucideIcons.Moon className={cn("w-4 h-4", isDockDark ? "text-zinc-400" : "text-zinc-500")} strokeWidth={1.5} />
+                                            )}
+                                            <span className="text-sm">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+                                        </div>
+                                    </DropdownMenuItem>
+
+                                    <DropdownMenuSeparator className={cn("my-1", isDockDark ? "bg-zinc-700/50" : "bg-zinc-200/50")} />
+
+                                    {/* Logout */}
+                                    <DropdownMenuItem
+                                        onClick={handleLogout}
+                                        className="rounded-lg cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-500/10"
+                                    >
+                                        <div className="flex items-center gap-2.5 py-2 px-2">
+                                            <LucideIcons.LogOut className="w-4 h-4" strokeWidth={1.5} />
+                                            <span className="text-sm">Log out</span>
+                                        </div>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                    )}
                 </div>
             </div>
-        </div>
+        </motion.div>
     );
 }
