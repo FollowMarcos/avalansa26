@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -24,6 +25,7 @@ export function AvatarUpload({
 }: AvatarUploadProps) {
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const router = useRouter();
 
     const sizeClasses = {
         sm: 'w-10 h-10',
@@ -82,6 +84,7 @@ export function AvatarUpload({
             }
 
             onAvatarUpdate(publicUrl);
+            router.refresh();
             toast.success('Profile picture updated!');
 
         } catch (error) {
@@ -113,6 +116,7 @@ export function AvatarUpload({
             if (error) throw error;
 
             onAvatarUpdate(null);
+            router.refresh();
             toast.success('Profile picture removed.');
         } catch (error) {
             console.error('Error removing avatar:', error);
