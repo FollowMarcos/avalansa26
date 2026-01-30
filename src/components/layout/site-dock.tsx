@@ -42,6 +42,12 @@ export function SiteDock() {
     const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null);
     const [items, setItems] = React.useState<DockItemId[]>([...DRAGGABLE_DOCK_ITEMS]);
     const [isDragging, setIsDragging] = React.useState(false);
+    const [mounted, setMounted] = React.useState(false);
+
+    // Handle hydration mismatch for theme
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
 
     React.useEffect(() => {
         async function fetchProfileAndPreferences() {
@@ -108,8 +114,8 @@ export function SiteDock() {
         router.push(path);
     };
 
-    // Don't render dock for unauthenticated users or while checking auth
-    if (isAuthenticated === null || isAuthenticated === false) return null;
+    // Don't render dock for unauthenticated users, while checking auth, or before hydration
+    if (!mounted || isAuthenticated === null || isAuthenticated === false) return null;
     if (isInputVisible && isImaginePage) return null;
 
     const containerClass = isDockDark
@@ -151,7 +157,7 @@ export function SiteDock() {
                 >
                     <PortugalTopo dark={isDockDark} className="opacity-50" />
                     <div className="relative z-10 w-7 h-7">
-                        <Image src="/ab.svg" alt="Logo" fill className="object-contain" />
+                        <Image src={isDockDark ? "/aw.svg" : "/ab.svg"} alt="Logo" fill className="object-contain" />
                     </div>
                 </Link>
 
@@ -245,8 +251,17 @@ export function SiteDock() {
                                                         <Hammer className="w-5 h-5 text-white pointer-events-none" strokeWidth={1.5} />
                                                     </div>
                                                 </DropdownMenuTrigger>
-                                                <DropdownMenuContent side="top" align="center" className="mb-2 min-w-[160px] p-1 bg-background/95 backdrop-blur-xl border-border rounded-xl shadow-2xl">
-                                                    <DropdownMenuItem asChild className="rounded-lg cursor-pointer">
+                                                <DropdownMenuContent
+                                                    side="top"
+                                                    align="center"
+                                                    className={cn(
+                                                        "mb-2 min-w-[160px] p-1 backdrop-blur-xl rounded-xl shadow-2xl",
+                                                        isDockDark
+                                                            ? "bg-zinc-900/95 border-zinc-700/50 text-zinc-100"
+                                                            : "bg-white/95 border-zinc-200/50 text-zinc-900"
+                                                    )}
+                                                >
+                                                    <DropdownMenuItem asChild className={cn("rounded-lg cursor-pointer", isDockDark ? "focus:bg-zinc-800" : "focus:bg-zinc-100")}>
                                                         <Link href="/tools/x-preview" className="flex items-center gap-2 py-2 px-3">
                                                             <div className="w-5 h-5 rounded-md bg-[#5856D6] flex items-center justify-center">
                                                                 <Sparkles className="w-3 h-3 text-white" />
@@ -311,7 +326,12 @@ export function SiteDock() {
                         <DropdownMenuContent
                             side="top"
                             align="end"
-                            className="mb-2 w-56 p-1.5 bg-background/95 backdrop-blur-xl border-border rounded-xl shadow-2xl"
+                            className={cn(
+                                "mb-2 w-56 p-1.5 backdrop-blur-xl rounded-xl shadow-2xl",
+                                isDockDark
+                                    ? "bg-zinc-900/95 border-zinc-700/50 text-zinc-100"
+                                    : "bg-white/95 border-zinc-200/50 text-zinc-900"
+                            )}
                         >
                             {/* User Header */}
                             <div className="flex items-center gap-3 px-2 py-2.5 mb-1">
@@ -325,31 +345,31 @@ export function SiteDock() {
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-semibold truncate">{displayName}</p>
                                     {profile?.username && (
-                                        <p className="text-xs text-muted-foreground truncate">@{profile.username}</p>
+                                        <p className={cn("text-xs truncate", isDockDark ? "text-zinc-400" : "text-zinc-500")}>@{profile.username}</p>
                                     )}
                                 </div>
                             </div>
 
-                            <DropdownMenuSeparator className="my-1" />
+                            <DropdownMenuSeparator className={cn("my-1", isDockDark ? "bg-zinc-700/50" : "bg-zinc-200/50")} />
 
                             {/* Profile */}
-                            <DropdownMenuItem asChild className="rounded-lg cursor-pointer">
+                            <DropdownMenuItem asChild className={cn("rounded-lg cursor-pointer", isDockDark ? "focus:bg-zinc-800" : "focus:bg-zinc-100")}>
                                 <Link
                                     href={profile?.username ? `/u/${profile.username}` : "/onboarding"}
                                     className="flex items-center gap-2.5 py-2 px-2"
                                 >
-                                    <User className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
+                                    <User className={cn("w-4 h-4", isDockDark ? "text-zinc-400" : "text-zinc-500")} strokeWidth={1.5} />
                                     <span className="text-sm">Profile</span>
                                 </Link>
                             </DropdownMenuItem>
 
                             {/* Settings */}
-                            <DropdownMenuItem asChild className="rounded-lg cursor-pointer">
+                            <DropdownMenuItem asChild className={cn("rounded-lg cursor-pointer", isDockDark ? "focus:bg-zinc-800" : "focus:bg-zinc-100")}>
                                 <Link
                                     href={profile?.username ? `/u/${profile.username}/settings` : "/onboarding"}
                                     className="flex items-center gap-2.5 py-2 px-2"
                                 >
-                                    <Settings className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
+                                    <Settings className={cn("w-4 h-4", isDockDark ? "text-zinc-400" : "text-zinc-500")} strokeWidth={1.5} />
                                     <span className="text-sm">Settings</span>
                                 </Link>
                             </DropdownMenuItem>
@@ -357,19 +377,19 @@ export function SiteDock() {
                             {/* Theme Toggle */}
                             <DropdownMenuItem
                                 onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                                className="rounded-lg cursor-pointer"
+                                className={cn("rounded-lg cursor-pointer", isDockDark ? "focus:bg-zinc-800" : "focus:bg-zinc-100")}
                             >
                                 <div className="flex items-center gap-2.5 py-2 px-2">
                                     {theme === 'dark' ? (
                                         <Sun className="w-4 h-4 text-amber-500" strokeWidth={1.5} />
                                     ) : (
-                                        <Moon className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
+                                        <Moon className={cn("w-4 h-4", isDockDark ? "text-zinc-400" : "text-zinc-500")} strokeWidth={1.5} />
                                     )}
                                     <span className="text-sm">{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
                                 </div>
                             </DropdownMenuItem>
 
-                            <DropdownMenuSeparator className="my-1" />
+                            <DropdownMenuSeparator className={cn("my-1", isDockDark ? "bg-zinc-700/50" : "bg-zinc-200/50")} />
 
                             {/* Logout */}
                             <DropdownMenuItem
