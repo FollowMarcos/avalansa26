@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useTransition, useEffect } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
   Users,
@@ -115,15 +115,29 @@ export function DashboardClient({
   initialTotalPages,
 }: DashboardClientProps) {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const tabParam = searchParams.get('tab');
-  const activeTab = tabParam === 'dock' ? 'dock' : 'users';
 
+  // Use local state for instant switching, initialized from URL
+  const [activeTab, setActiveTabState] = useState<'users' | 'dock'>(
+    tabParam === 'dock' ? 'dock' : 'users'
+  );
+
+  // Sync URL changes to local state (for sidebar navigation)
+  useEffect(() => {
+    const newTab = tabParam === 'dock' ? 'dock' : 'users';
+    if (newTab !== activeTab) {
+      setActiveTabState(newTab);
+    }
+  }, [tabParam]);
+
+  // Update URL shallowly without triggering navigation
   const setActiveTab = (tab: 'users' | 'dock') => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set('tab', tab);
-    router.push(`/dashboard?${params.toString()}`, { scroll: false });
+    setActiveTabState(tab);
+    const url = new URL(window.location.href);
+    url.searchParams.set('tab', tab);
+    window.history.replaceState({}, '', url.toString());
   };
+
   const [searchQuery, setSearchQuery] = useState('');
   const [profiles, setProfiles] = useState<Profile[]>(initialProfiles);
   const [stats, setStats] = useState<AdminStats>(initialStats);
