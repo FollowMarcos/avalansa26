@@ -340,7 +340,8 @@ export function DashboardClient({
           </div>
         </CardHeader>
 
-        {activeTab === 'users' ? (
+        {/* Users Tab - Keep mounted, toggle visibility */}
+        <div className={activeTab === 'users' ? 'block' : 'hidden'}>
           <div className="relative">
             {isPending && (
               <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-center">
