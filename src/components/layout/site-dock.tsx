@@ -147,8 +147,8 @@ export function SiteDock() {
     // Before hydration, render nothing to avoid mismatch
     if (!mounted) return null;
 
-    // Hide dock on imagine page during input boards
-    if (isInputVisible && isImaginePage) return null;
+    // Hide dock on imagine page during input boards, or for logged out users/loading
+    if ((isInputVisible && isImaginePage) || !isAuthenticated) return null;
 
     const containerClass = isDockDark
         ? "bg-zinc-900 border-zinc-700/50"
@@ -312,145 +312,128 @@ export function SiteDock() {
                 <div className={cn("relative flex items-center gap-1 p-2 rounded-2xl border shadow-lg overflow-hidden h-14", containerClass)}>
                     <PortugalTopo dark={isDockDark} className="opacity-50" />
 
-                    {isAuthenticated === null ? (
-                        <div className="w-11 h-11 flex items-center justify-center">
-                            <LucideIcons.Loader2 className="w-5 h-5 animate-spin opacity-20" />
-                        </div>
-                    ) : isAuthenticated === false ? (
-                        <Link
-                            href="/onboarding"
-                            className={cn(
-                                "relative z-10 px-4 h-10 flex items-center justify-center rounded-xl font-medium transition-all duration-200",
-                                isDockDark ? "bg-white text-zinc-900" : "bg-zinc-900 text-white",
-                                "hover:scale-105 active:scale-95"
-                            )}
-                        >
-                            Get Started
-                        </Link>
-                    ) : (
-                        <div className="flex items-center gap-1">
-                            {/* User Avatar with Dropdown */}
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <button
-                                        className={cn(
-                                            "relative z-10 flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-200 overflow-hidden",
-                                            "ring-2 ring-transparent hover:ring-primary/30",
-                                            iconHover
-                                        )}
-                                        aria-label="User menu"
-                                    >
-                                        {avatarUrl ? (
-                                            <Image
-                                                src={avatarUrl}
-                                                alt={displayName}
-                                                fill
-                                                className="object-cover"
-                                            />
-                                        ) : (
-                                            <DefaultAvatar size={44} />
-                                        )}
-                                        {/* Online indicator */}
-                                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-zinc-900 z-10" />
-                                    </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent
-                                    side="top"
-                                    align="end"
+                    <div className="flex items-center gap-1">
+                        {/* User Avatar with Dropdown */}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <button
                                     className={cn(
-                                        "mb-2 w-60 p-1.5 backdrop-blur-xl rounded-xl shadow-2xl",
-                                        isDockDark
-                                            ? "bg-zinc-900/95 border-zinc-700/50 text-zinc-100"
-                                            : "bg-white/95 border-zinc-200/50 text-zinc-900"
+                                        "relative z-10 flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-200 overflow-hidden",
+                                        "ring-2 ring-transparent hover:ring-primary/30",
+                                        iconHover
+                                    )}
+                                    aria-label="User menu"
+                                >
+                                    {avatarUrl ? (
+                                        <Image
+                                            src={avatarUrl}
+                                            alt={displayName}
+                                            fill
+                                            className="object-cover"
+                                        />
+                                    ) : (
+                                        <DefaultAvatar size={44} />
+                                    )}
+                                    {/* Online indicator */}
+                                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-zinc-900 z-10" />
+                                </button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent
+                                side="top"
+                                align="end"
+                                className={cn(
+                                    "mb-2 w-60 p-1.5 backdrop-blur-xl rounded-xl shadow-2xl",
+                                    isDockDark
+                                        ? "bg-zinc-900/95 border-zinc-700/50 text-zinc-100"
+                                        : "bg-white/95 border-zinc-200/50 text-zinc-900"
+                                )}
+                            >
+                                {/* User Header */}
+                                <div className="flex items-center gap-3 px-2 py-2.5 mb-1">
+                                    <div className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
+                                        {avatarUrl ? (
+                                            <Image src={avatarUrl} alt={displayName} fill className="object-cover" />
+                                        ) : (
+                                            <DefaultAvatar size={40} className="rounded-lg" />
+                                        )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-semibold truncate">{displayName}</p>
+                                        {profile?.username && (
+                                            <p className={cn("text-xs truncate", isDockDark ? "text-zinc-400" : "text-zinc-500")}>@{profile.username}</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <DropdownMenuSeparator className={cn("my-1", isDockDark ? "bg-zinc-700/50" : "bg-zinc-200/50")} />
+
+                                {/* Dashboard - Admin Only */}
+                                {isAdmin && (
+                                    <DropdownMenuItem asChild className={cn("rounded-lg cursor-pointer group", isDockDark ? "focus:bg-white focus:text-zinc-900" : "focus:bg-zinc-900 focus:text-white")}>
+                                        <Link href="/dashboard" className="flex items-center gap-2.5 py-2 px-2.5">
+                                            <LucideIcons.LayoutDashboard className={cn("w-4 h-4 transition-colors", isDockDark ? "text-amber-400 group-focus:text-zinc-900" : "text-amber-500 group-focus:text-white")} strokeWidth={1.5} />
+                                            <span className="text-sm font-medium">Admin Dashboard</span>
+                                        </Link>
+                                    </DropdownMenuItem>
+                                )}
+
+                                {/* Profile */}
+                                <DropdownMenuItem asChild className={cn("rounded-lg cursor-pointer group", isDockDark ? "focus:bg-white focus:text-zinc-900" : "focus:bg-zinc-900 focus:text-white")}>
+                                    <Link
+                                        href={profile?.username ? `/u/${profile.username}` : "/onboarding"}
+                                        className="flex items-center gap-2.5 py-2 px-2.5"
+                                    >
+                                        <LucideIcons.User className={cn("w-4 h-4 transition-colors", isDockDark ? "text-zinc-400 group-focus:text-zinc-900" : "text-zinc-500 group-focus:text-white")} strokeWidth={1.5} />
+                                        <span className="text-sm font-medium">Profile</span>
+                                    </Link>
+                                </DropdownMenuItem>
+
+                                {/* Settings */}
+                                <DropdownMenuItem asChild className={cn("rounded-lg cursor-pointer group", isDockDark ? "focus:bg-white focus:text-zinc-900" : "focus:bg-zinc-900 focus:text-white")}>
+                                    <Link
+                                        href={profile?.username ? `/u/${profile.username}/settings` : "/onboarding"}
+                                        className="flex items-center gap-2.5 py-2 px-2.5"
+                                    >
+                                        <LucideIcons.Settings className={cn("w-4 h-4 transition-colors", isDockDark ? "text-zinc-400 group-focus:text-zinc-900" : "text-zinc-500 group-focus:text-white")} strokeWidth={1.5} />
+                                        <span className="text-sm font-medium">Settings</span>
+                                    </Link>
+                                </DropdownMenuItem>
+
+                                {/* Theme Toggle */}
+                                <DropdownMenuItem
+                                    onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                                    className={cn(
+                                        "rounded-lg cursor-pointer group p-0",
+                                        isDockDark ? "focus:bg-white focus:text-zinc-900" : "focus:bg-zinc-900 focus:text-white"
                                     )}
                                 >
-                                    {/* User Header */}
-                                    <div className="flex items-center gap-3 px-2 py-2.5 mb-1">
-                                        <div className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
-                                            {avatarUrl ? (
-                                                <Image src={avatarUrl} alt={displayName} fill className="object-cover" />
-                                            ) : (
-                                                <DefaultAvatar size={40} className="rounded-lg" />
-                                            )}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-sm font-semibold truncate">{displayName}</p>
-                                            {profile?.username && (
-                                                <p className={cn("text-xs truncate", isDockDark ? "text-zinc-400" : "text-zinc-500")}>@{profile.username}</p>
-                                            )}
-                                        </div>
-                                    </div>
-
-                                    <DropdownMenuSeparator className={cn("my-1", isDockDark ? "bg-zinc-700/50" : "bg-zinc-200/50")} />
-
-                                    {/* Dashboard - Admin Only */}
-                                    {isAdmin && (
-                                        <DropdownMenuItem asChild className={cn("rounded-lg cursor-pointer group", isDockDark ? "focus:bg-white focus:text-zinc-900" : "focus:bg-zinc-900 focus:text-white")}>
-                                            <Link href="/dashboard" className="flex items-center gap-2.5 py-2 px-2.5">
-                                                <LucideIcons.LayoutDashboard className={cn("w-4 h-4 transition-colors", isDockDark ? "text-amber-400 group-focus:text-zinc-900" : "text-amber-500 group-focus:text-white")} strokeWidth={1.5} />
-                                                <span className="text-sm font-medium">Admin Dashboard</span>
-                                            </Link>
-                                        </DropdownMenuItem>
-                                    )}
-
-                                    {/* Profile */}
-                                    <DropdownMenuItem asChild className={cn("rounded-lg cursor-pointer group", isDockDark ? "focus:bg-white focus:text-zinc-900" : "focus:bg-zinc-900 focus:text-white")}>
-                                        <Link
-                                            href={profile?.username ? `/u/${profile.username}` : "/onboarding"}
-                                            className="flex items-center gap-2.5 py-2 px-2.5"
-                                        >
-                                            <LucideIcons.User className={cn("w-4 h-4 transition-colors", isDockDark ? "text-zinc-400 group-focus:text-zinc-900" : "text-zinc-500 group-focus:text-white")} strokeWidth={1.5} />
-                                            <span className="text-sm font-medium">Profile</span>
-                                        </Link>
-                                    </DropdownMenuItem>
-
-                                    {/* Settings */}
-                                    <DropdownMenuItem asChild className={cn("rounded-lg cursor-pointer group", isDockDark ? "focus:bg-white focus:text-zinc-900" : "focus:bg-zinc-900 focus:text-white")}>
-                                        <Link
-                                            href={profile?.username ? `/u/${profile.username}/settings` : "/onboarding"}
-                                            className="flex items-center gap-2.5 py-2 px-2.5"
-                                        >
-                                            <LucideIcons.Settings className={cn("w-4 h-4 transition-colors", isDockDark ? "text-zinc-400 group-focus:text-zinc-900" : "text-zinc-500 group-focus:text-white")} strokeWidth={1.5} />
-                                            <span className="text-sm font-medium">Settings</span>
-                                        </Link>
-                                    </DropdownMenuItem>
-
-                                    {/* Theme Toggle */}
-                                    <DropdownMenuItem
-                                        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                                        className={cn(
-                                            "rounded-lg cursor-pointer group p-0",
-                                            isDockDark ? "focus:bg-white focus:text-zinc-900" : "focus:bg-zinc-900 focus:text-white"
+                                    <div className="flex items-center gap-2.5 py-2 px-2.5 w-full">
+                                        {theme === 'dark' ? (
+                                            <LucideIcons.Sun className="w-4 h-4 text-amber-500" strokeWidth={1.5} />
+                                        ) : (
+                                            <LucideIcons.Moon className={cn("w-4 h-4 transition-colors", isDockDark ? "text-zinc-400 group-focus:text-zinc-900" : "text-zinc-500 group-focus:text-white")} strokeWidth={1.5} />
                                         )}
-                                    >
-                                        <div className="flex items-center gap-2.5 py-2 px-2.5 w-full">
-                                            {theme === 'dark' ? (
-                                                <LucideIcons.Sun className="w-4 h-4 text-amber-500" strokeWidth={1.5} />
-                                            ) : (
-                                                <LucideIcons.Moon className={cn("w-4 h-4 transition-colors", isDockDark ? "text-zinc-400 group-focus:text-zinc-900" : "text-zinc-500 group-focus:text-white")} strokeWidth={1.5} />
-                                            )}
-                                            <span className="text-sm font-medium">
-                                                {theme === 'dark' ? 'Light mode' : 'Dark mode'}
-                                            </span>
-                                        </div>
-                                    </DropdownMenuItem>
+                                        <span className="text-sm font-medium">
+                                            {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+                                        </span>
+                                    </div>
+                                </DropdownMenuItem>
 
-                                    <DropdownMenuSeparator className={cn("my-1", isDockDark ? "bg-zinc-700/50" : "bg-zinc-200/50")} />
+                                <DropdownMenuSeparator className={cn("my-1", isDockDark ? "bg-zinc-700/50" : "bg-zinc-200/50")} />
 
-                                    {/* Logout */}
-                                    <DropdownMenuItem
-                                        onClick={handleLogout}
-                                        className="rounded-lg cursor-pointer text-red-500 focus:text-white focus:bg-red-500 transition-colors group"
-                                    >
-                                        <div className="flex items-center gap-2.5 py-2 px-2.5">
-                                            <LucideIcons.LogOut className="w-4 h-4 transition-colors group-focus:text-white" strokeWidth={1.5} />
-                                            <span className="text-sm font-medium">Log out</span>
-                                        </div>
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
-                    )}
+                                {/* Logout */}
+                                <DropdownMenuItem
+                                    onClick={handleLogout}
+                                    className="rounded-lg cursor-pointer text-red-500 focus:text-white focus:bg-red-500 transition-colors group"
+                                >
+                                    <div className="flex items-center gap-2.5 py-2 px-2.5">
+                                        <LucideIcons.LogOut className="w-4 h-4 transition-colors group-focus:text-white" strokeWidth={1.5} />
+                                        <span className="text-sm font-medium">Log out</span>
+                                    </div>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                 </div>
             </div>
         </motion.div>
