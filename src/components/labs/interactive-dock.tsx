@@ -220,6 +220,31 @@ export function InteractiveDock({ className }: InteractiveDockProps) {
         );
     }
 
+    // Only show dock to authenticated users
+    if (!isAuthenticated) {
+        return (
+            <div className={cn("flex flex-col items-center gap-8", className)}>
+                <div className="flex flex-col items-center gap-4 p-8 rounded-2xl border border-white/10 bg-white/[0.02]">
+                    <div className="w-16 h-16 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
+                        <Settings className="w-8 h-8 text-zinc-400" />
+                    </div>
+                    <div className="text-center">
+                        <h3 className="text-lg font-medium mb-1">Sign in to customize</h3>
+                        <p className="text-sm text-muted-foreground/60 max-w-xs">
+                            Create an account or sign in to customize your dock and save your preferences.
+                        </p>
+                    </div>
+                    <a
+                        href="/sign-in"
+                        className="mt-2 px-6 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                    >
+                        Sign in
+                    </a>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className={cn("flex flex-col items-center gap-8", className)}>
             {/* Dock Type Selector */}
@@ -247,15 +272,10 @@ export function InteractiveDock({ className }: InteractiveDockProps) {
                         <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
                         <span>Saving...</span>
                     </>
-                ) : isAuthenticated ? (
+                ) : (
                     <>
                         <div className="w-2 h-2 rounded-full bg-green-500" />
                         <span>Changes saved automatically</span>
-                    </>
-                ) : (
-                    <>
-                        <div className="w-2 h-2 rounded-full bg-zinc-400" />
-                        <span>Sign in to save your preferences</span>
                     </>
                 )}
             </div>
@@ -332,7 +352,7 @@ export function InteractiveDock({ className }: InteractiveDockProps) {
 
             {/* Instructions */}
             <p className="text-xs text-muted-foreground/60 text-center max-w-md">
-                Drag icons to reorder them. Select a dock style above. {isAuthenticated ? 'Your preferences are saved automatically.' : 'Sign in to save your preferences.'}
+                Drag icons to reorder them. Select a dock style above. Your preferences are saved automatically.
             </p>
         </div>
     );
