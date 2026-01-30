@@ -73,7 +73,7 @@ export function FeatureGrid() {
                                 <feature.icon className={cn("h-6 w-6", feature.color)} />
                             </div>
                             <h3 className="mb-2 text-xl font-bold tracking-tight text-foreground">{feature.title}</h3>
-                            <p className="text-sm leading-relaxed text-muted-foreground">{feature.description}</p>
+                            <p className="text-sm leading-relaxed text-muted-foreground text-pretty">{feature.description}</p>
                         </div>
 
                         {feature.className?.includes("md:col-span-2") && (

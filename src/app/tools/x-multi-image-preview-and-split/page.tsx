@@ -35,12 +35,17 @@ import { cn } from '@/lib/utils';
 import { PageShell } from '@/components/layout/page-shell';
 import { toast } from 'sonner';
 
-// --- Types ---
-
 interface SlicedImage {
     id: string;
     url: string;
     blob: Blob;
+}
+
+interface HistoryItem {
+    id: string;
+    timestamp: number;
+    originalName: string;
+    slices: { blob: Blob; url: string }[];
 }
 
 // --- Icons (Accurate X style) ---
@@ -67,31 +72,118 @@ const GrokIcon = ({ className }: { className?: string }) => (
 
 export default function XPreviewTool() {
     // Post Details
-    const [name, setName] = useState('albert');
-    const [handle, setHandle] = useState('albert12798');
-    const [avatar, setAvatar] = useState('https://pbs.twimg.com/profile_images/1872343986532212736/pj5OapGF_bigger.jpg');
-    const [content, setContent] = useState('Tap this to see a Dream');
-    const [time, setTime] = useState('2:50 AM');
-    const [date, setDate] = useState('Jan 28, 2026');
-    const [views, setViews] = useState('1.1M');
-    const [replies, setReplies] = useState('58');
-    const [reposts, setReposts] = useState('14');
-    const [likes, setLikes] = useState('1.1K');
-    const [bookmarks, setBookmarks] = useState('200');
+    const [name, setName] = useState('Ethereal');
+    const [handle, setHandle] = useState('ethereal_lab');
+    const [avatar, setAvatar] = useState('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=500&auto=format&fit=crop&q=60');
+    const [content, setContent] = useState('Exploring the intersection of geometry and light. 💎✨');
+    const [time, setTime] = useState('11:11 PM');
+    const [date, setDate] = useState('Jan 30, 2026');
+    const [views, setViews] = useState('2.4M');
+    const [replies, setReplies] = useState('124');
+    const [reposts, setReposts] = useState('89');
+    const [likes, setLikes] = useState('4.2K');
+    const [bookmarks, setBookmarks] = useState('512');
 
     // Multi-Image State
     const [slices, setSlices] = useState<SlicedImage[]>([]);
     const [isSlicing, setIsSlicing] = useState(false);
-    const [previewTab, setPreviewTab] = useState<'timeline' | 'open' | 'compose'>('timeline');
+    const [previewTab, setPreviewTab] = useState<'timeline' | 'open'>('timeline');
+    const [history, setHistory] = useState<HistoryItem[]>([]);
 
     // Refs
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // --- Handlers ---
+    // --- IndexedDB Logic ---
+    const initDB = (): Promise<IDBDatabase> => {
+        return new Promise((resolve, reject) => {
+            const request = indexedDB.open('XMultiImageStore', 1);
+            request.onerror = () => reject(request.error);
+            request.onsuccess = () => resolve(request.result);
+            request.onupgradeneeded = (e: any) => {
+                const db = e.target.result;
+                if (!db.objectStoreNames.contains('history')) {
+                    db.createObjectStore('history', { keyPath: 'id' });
+                }
+            };
+        });
+    };
+
+    const loadHistory = async () => {
+        try {
+            const db = await initDB();
+            const transaction = db.transaction('history', 'readonly');
+            const store = transaction.objectStore('history');
+            const request = store.getAll();
+            request.onsuccess = () => {
+                const items = request.result.sort((a: any, b: any) => b.timestamp - a.timestamp);
+                // Create URLs for existing blobs
+                const itemsWithUrls = items.map((item: any) => ({
+                    ...item,
+                    slices: item.slices.map((s: any) => ({
+                        ...s,
+                        url: URL.createObjectURL(s.blob)
+                    }))
+                }));
+                setHistory(itemsWithUrls);
+            };
+        } catch (err) {
+            console.error('Failed to load history', err);
+        }
+    };
+
+    const saveToHistory = async (originalName: string, newSlices: SlicedImage[]) => {
+        try {
+            const db = await initDB();
+            const transaction = db.transaction('history', 'readwrite');
+            const store = transaction.objectStore('history');
+            const newItem: HistoryItem = {
+                id: crypto.randomUUID(),
+                timestamp: Date.now(),
+                originalName,
+                slices: newSlices.map(s => ({ blob: s.blob, url: '' }))
+            };
+            store.add(newItem);
+            loadHistory();
+        } catch (err) {
+            console.error('Failed to save to history', err);
+        }
+    };
+
+    const clearHistory = async () => {
+        const db = await initDB();
+        const transaction = db.transaction('history', 'readwrite');
+        const store = transaction.objectStore('history');
+        store.clear();
+        setHistory([]);
+        toast.success('Archives purged…');
+    };
+
+    const restoreFromHistory = (item: HistoryItem) => {
+        const restoredSlices = item.slices.map((s, i) => ({
+            id: `slice-${i}`,
+            url: s.url,
+            blob: s.blob
+        }));
+        setSlices(restoredSlices);
+        toast.success(`Restored: ${item.originalName}`);
+    };
+
+    React.useEffect(() => {
+        loadHistory();
+    }, []);
+
+    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
     const handleSliceImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
+
+        // --- File Size Check ---
+        if (file.size > MAX_FILE_SIZE) {
+            toast.error('File too large (Max 20MB)');
+            if (fileInputRef.current) fileInputRef.current.value = '';
+            return;
+        }
 
         setIsSlicing(true);
         const img = new Image();
@@ -130,6 +222,7 @@ export default function XPreviewTool() {
                 const results = await Promise.all(slicePromises);
                 setSlices(results);
                 setIsSlicing(false);
+                saveToHistory(file.name, results);
                 toast.success('Image sliced successfully!');
             };
 
@@ -172,7 +265,9 @@ export default function XPreviewTool() {
                         <span className="text-[#71767b] whitespace-nowrap text-[15px]">{date.split(',')[0]}</span>
                         <div className="ml-auto flex items-center gap-2">
                             <GrokIcon className="w-[18px] h-[18px] text-[#71767b]" />
-                            <MoreHorizontal className="w-[18px] h-[18px] text-[#71767b]" aria-label="More" />
+                            <button className="rounded-full hover:bg-[#71767b15] p-1 transition-colors" aria-label="More options">
+                                <MoreHorizontal className="w-[18px] h-[18px] text-[#71767b]" />
+                            </button>
                         </div>
                     </div>
 
@@ -196,39 +291,38 @@ export default function XPreviewTool() {
                         </div>
                     )}
 
-                    {/* Actions */}
                     <div className="flex items-center justify-between text-[#71767b] mt-3 max-w-[425px]">
-                        <div className="flex items-center group cursor-pointer hover:text-[#1d9bf0]">
+                        <button className="flex items-center group cursor-pointer hover:text-[#1d9bf0] bg-transparent border-none p-0 outline-none focus-visible:ring-2 ring-[#1d9bf0] rounded-full" aria-label={`${replies} replies`}>
                             <div className="p-2 rounded-full group-hover:bg-[#1d9bf015]">
                                 <MessageCircle className="w-[18px] h-[18px]" />
                             </div>
-                            <span className="text-[13px]">{replies}</span>
-                        </div>
-                        <div className="flex items-center group cursor-pointer hover:text-[#00ba7c]">
+                            <span className="text-[13px] tabular-nums">{replies}</span>
+                        </button>
+                        <button className="flex items-center group cursor-pointer hover:text-[#00ba7c] bg-transparent border-none p-0 outline-none focus-visible:ring-2 ring-[#00ba7c] rounded-full" aria-label={`${reposts} reposts`}>
                             <div className="p-2 rounded-full group-hover:bg-[#00ba7c15]">
                                 <Repeat2 className="w-[18px] h-[18px]" />
                             </div>
-                            <span className="text-[13px]">{reposts}</span>
-                        </div>
-                        <div className="flex items-center group cursor-pointer hover:text-[#f91880]">
+                            <span className="text-[13px] tabular-nums">{reposts}</span>
+                        </button>
+                        <button className="flex items-center group cursor-pointer hover:text-[#f91880] bg-transparent border-none p-0 outline-none focus-visible:ring-2 ring-[#f91880] rounded-full" aria-label={`${likes} likes`}>
                             <div className="p-2 rounded-full group-hover:bg-[#f9188015]">
                                 <Heart className="w-[18px] h-[18px]" />
                             </div>
-                            <span className="text-[13px]">{likes}</span>
-                        </div>
-                        <div className="flex items-center group cursor-pointer hover:text-[#1d9bf0]">
+                            <span className="text-[13px] tabular-nums">{likes}</span>
+                        </button>
+                        <button className="flex items-center group cursor-pointer hover:text-[#1d9bf0] bg-transparent border-none p-0 outline-none focus-visible:ring-2 ring-[#1d9bf0] rounded-full" aria-label={`${views} views`}>
                             <div className="p-2 rounded-full group-hover:bg-[#1d9bf015]">
                                 <BarChart3 className="w-[18px] h-[18px]" />
                             </div>
-                            <span className="text-[13px]">{views}</span>
-                        </div>
-                        <div className="flex items-center">
-                            <div className="p-2 rounded-full hover:bg-[#1d9bf015] hover:text-[#1d9bf0] cursor-pointer">
+                            <span className="text-[13px] tabular-nums">{views}</span>
+                        </button>
+                        <div className="flex items-center gap-1">
+                            <button className="p-2 rounded-full hover:bg-[#1d9bf015] hover:text-[#1d9bf0] cursor-pointer transition-colors" aria-label="Bookmark">
                                 <Bookmark className="w-[18px] h-[18px]" />
-                            </div>
-                            <div className="p-2 rounded-full hover:bg-[#1d9bf015] hover:text-[#1d9bf0] cursor-pointer">
+                            </button>
+                            <button className="p-2 rounded-full hover:bg-[#1d9bf015] hover:text-[#1d9bf0] cursor-pointer transition-colors" aria-label="Share">
                                 <Share className="w-[18px] h-[18px]" />
-                            </div>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -283,128 +377,50 @@ export default function XPreviewTool() {
             </div>
 
             <div className="flex items-center justify-between text-[#71767b] pt-2">
-                <div className="flex items-center group cursor-pointer hover:text-[#1d9bf0]">
+                <button className="flex items-center group cursor-pointer hover:text-[#1d9bf0] bg-transparent border-none p-0 outline-none focus-visible:ring-2 ring-[#1d9bf0] rounded-full" aria-label={`${replies} replies`}>
                     <div className="p-2 rounded-full group-hover:bg-[#1d9bf015]">
                         <MessageCircle className="w-[18px] h-[18px]" />
                     </div>
                     <span className="text-[13px] tabular-nums">{replies}</span>
-                </div>
-                <div className="flex items-center group cursor-pointer hover:text-[#00ba7c]">
+                </button>
+                <button className="flex items-center group cursor-pointer hover:text-[#00ba7c] bg-transparent border-none p-0 outline-none focus-visible:ring-2 ring-[#00ba7c] rounded-full" aria-label={`${reposts} reposts`}>
                     <div className="p-2 rounded-full group-hover:bg-[#00ba7c15]">
                         <Repeat2 className="w-[18px] h-[18px]" />
                     </div>
                     <span className="text-[13px] tabular-nums">{reposts}</span>
-                </div>
-                <div className="flex items-center group cursor-pointer hover:text-[#f91880]">
+                </button>
+                <button className="flex items-center group cursor-pointer hover:text-[#f91880] bg-transparent border-none p-0 outline-none focus-visible:ring-2 ring-[#f91880] rounded-full" aria-label={`${likes} likes`}>
                     <div className="p-2 rounded-full group-hover:bg-[#f9188015]">
                         <Heart className="w-[18px] h-[18px]" />
                     </div>
                     <span className="text-[13px] tabular-nums">{likes}</span>
-                </div>
-                <div className="flex items-center group cursor-pointer hover:text-[#1d9bf0]">
+                </button>
+                <button className="flex items-center group cursor-pointer hover:text-[#1d9bf0] bg-transparent border-none p-0 outline-none focus-visible:ring-2 ring-[#1d9bf0] rounded-full" aria-label={`${views} views`}>
                     <div className="p-2 rounded-full group-hover:bg-[#1d9bf015]">
                         <BarChart3 className="w-[18px] h-[18px]" />
                     </div>
                     <span className="text-[13px] tabular-nums">{views}</span>
-                </div>
-                <div className="flex items-center">
-                    <div className="p-2 rounded-full hover:bg-[#1d9bf015] hover:text-[#1d9bf0] cursor-pointer" aria-label="Bookmark">
+                </button>
+                <div className="flex items-center gap-1">
+                    <button className="p-2 rounded-full hover:bg-[#1d9bf015] hover:text-[#1d9bf0] cursor-pointer" aria-label="Bookmark">
                         <Bookmark className="w-[18px] h-[18px]" />
-                    </div>
-                    <div className="p-2 rounded-full hover:bg-[#1d9bf015] hover:text-[#1d9bf0] cursor-pointer" aria-label="Share">
+                    </button>
+                    <button className="p-2 rounded-full hover:bg-[#1d9bf015] hover:text-[#1d9bf0] cursor-pointer" aria-label="Share">
                         <Share className="w-[18px] h-[18px]" />
-                    </div>
+                    </button>
                 </div>
             </div>
         </div>
     );
 
-    const renderComposeView = () => (
-        <div className="bg-black text-[#e7e9ea] p-4 max-w-[600px] w-full border border-[#2f3336] rounded-2xl font-sans relative">
-            <div className="flex items-center justify-between mb-4">
-                <XIcon className="w-5 h-5 cursor-pointer" aria-label="Close" role="button" />
-                <span className="text-[#1d9bf0] font-bold text-sm">Drafts</span>
-            </div>
-
-            <div className="flex gap-3">
-                <img src={avatar} className="w-10 h-10 rounded-full object-cover" alt="Avatar" />
-                <div className="flex-1 flex flex-col">
-                    <div className="h-10 flex items-center mb-1">
-                        <span className="text-[#1d9bf0] border border-[#2f3336] rounded-full px-3 py-0.5 text-xs font-bold leading-relaxed flex items-center gap-1">
-                            Everyone <XIcon className="w-3 h-3" />
-                        </span>
-                    </div>
-
-                    <div className="text-[20px] text-[#71767b] py-2 mb-2 font-light">
-                        {content || "What's happening?"}
-                    </div>
-
-                    {/* Slices in Composer */}
-                    {slices.length === 4 ? (
-                        <div className="relative mb-4 group/composer">
-                            {/* Layout Toggle Mock */}
-                            <div className="absolute top-2 left-2 z-10 flex gap-2">
-                                <div className="bg-black/60 backdrop-blur-sm p-1.5 rounded-full border border-white/20">
-                                    <Grid className="w-3.5 h-3.5 text-white" />
-                                </div>
-                                <div className="bg-black/60 backdrop-blur-sm px-3 py-1 rounded-full border border-white/20 text-xs font-bold">
-                                    Edit
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-2 rounded-2xl overflow-hidden border border-[#2f3336]">
-                                {slices.map((slice, i) => (
-                                    <div key={slice.id} className="aspect-square relative bg-[#16181c]">
-                                        <img src={slice.url} className="w-full h-full object-cover" alt={`Composer slice ${i + 1}`} />
-                                        <div className="absolute top-1 right-1 bg-black/60 rounded-full p-1 border border-white/20 cursor-pointer" aria-label="Remove image">
-                                            <XIcon className="w-3 h-3 text-white" />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="aspect-video bg-[#16181c] rounded-2xl flex flex-col items-center justify-center border border-dashed border-[#2f3336] gap-2 p-4 text-center mb-4 cursor-pointer hover:bg-[#1d9cf005]" onClick={() => fileInputRef.current?.click()}>
-                            <ImageIcon className="w-10 h-10 opacity-20" />
-                            <p className="text-[#71767b] text-sm">Add photos to preview alignment in composer</p>
-                        </div>
-                    )}
-
-                    <div className="flex items-center text-[#1d9bf0] text-sm font-bold gap-1 mb-4">
-                        <Share className="w-4 h-4" /> <span>Everyone can reply</span>
-                    </div>
-
-                    <div className="pt-3 border-t border-[#2f3336] flex items-center justify-between">
-                        <div className="flex gap-2">
-                            <ImageIcon className="w-5 h-5 text-[#1d9bf0]" />
-                            <div className="w-5 h-5 rounded border border-[#1d9bf0] flex items-center justify-center text-[8px] font-bold">GIF</div>
-                            <Repeat2 className="w-5 h-5 text-[#1d9bf0]" />
-                            <Smile className="w-5 h-5 text-[#1d9bf0]" />
-                            <Calendar className="w-5 h-5 text-[#1d9bf0]" />
-                            <MapPin className="w-5 h-5 text-[#1d9bf0] opacity-50" />
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <div className="w-5 h-5 rounded-full border-2 border-[#2f3336]" />
-                            <div className="w-[1px] h-6 bg-[#2f3336]" />
-                            <div className="w-6 h-6 rounded-full border border-[#2f3336] flex items-center justify-center text-[#1d9bf0]">
-                                <Plus className="w-4 h-4" />
-                            </div>
-                            <Button className="bg-[#eff3f4] text-black hover:bg-[#d7dbdc] rounded-full px-5 py-0 h-9 font-bold text-[15px]">
-                                Post
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
+    const renderComposeView = () => null;
 
     return (
-        <PageShell contentClassName="bg-[#0f172a]/20">
-            <div className="min-h-dvh pt-24 pb-20 px-6 max-w-7xl mx-auto">
+        <PageShell contentClassName="bg-transparent">
+            <div className="min-h-dvh pt-16 pb-12 px-6 max-w-7xl mx-auto">
 
                 {/* Header Block */}
-                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
                     <div className="space-y-3">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-primary/10 rounded-xl" aria-hidden="true">
@@ -413,7 +429,7 @@ export default function XPreviewTool() {
                             <h1 className="text-4xl font-vt323 tracking-tight text-primary uppercase text-balance">X // Multi-Image Laboratory</h1>
                         </div>
                         <p className="font-lato text-muted-foreground text-lg italic opacity-80 max-w-2xl text-pretty">
-                            Upload a vertical image and slice it perfectly for X. Preview how it looks in the timeline, composer, and expanded view to ensure pixel-perfect alignment.
+                            Upload a vertical image and slice it perfectly for X. Preview how it looks in the timeline and expanded view to ensure pixel-perfect alignment. (Max 20MB)
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -426,8 +442,18 @@ export default function XPreviewTool() {
                             <Trash2 className="w-4 h-4 mr-2" aria-hidden="true" />
                             Reset
                         </Button>
+                        {slices.length > 0 && (
+                            <Button
+                                variant="outline"
+                                className="rounded-full font-vt323 text-lg h-11 border-primary/20 bg-primary/5 hover:bg-primary/10"
+                                onClick={downloadAll}
+                            >
+                                <Download className="w-4 h-4 mr-2" />
+                                Save All
+                            </Button>
+                        )}
                         <Button
-                            className="rounded-full font-vt323 text-lg h-11 px-8 shadow-lg shadow-primary/20"
+                            className="rounded-full font-vt323 text-lg h-11 px-8"
                             onClick={() => fileInputRef.current?.click()}
                             disabled={isSlicing}
                         >
@@ -452,7 +478,7 @@ export default function XPreviewTool() {
                     <div className="lg:col-span-4 space-y-8">
 
                         {/* Post Details Form */}
-                        <div className="p-6 rounded-[2rem] bg-card border border-border/50 shadow-xl space-y-6">
+                        <div className="p-6 rounded-[2rem] bg-card border border-border/50 space-y-6">
                             <h2 className="font-vt323 text-xl text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                                 <Settings2 className="w-5 h-5" /> Identity & Metadata
                             </h2>
@@ -508,7 +534,7 @@ export default function XPreviewTool() {
 
                         {/* Slices Gallery */}
                         {slices.length > 0 && (
-                            <div className="p-6 rounded-[2rem] bg-card border border-border/50 shadow-xl space-y-4">
+                            <div className="p-6 rounded-[2rem] bg-card border border-border/50 space-y-4">
                                 <div className="flex items-center justify-between">
                                     <h2 className="font-vt323 text-xl text-muted-foreground uppercase tracking-wider">
                                         Slices Generated
@@ -550,18 +576,17 @@ export default function XPreviewTool() {
                     <div className="lg:col-span-8 space-y-8">
                         <div className="relative">
                             {/* Custom Tab Switcher */}
-                            <div className="flex p-1.5 bg-card border border-border/50 rounded-2xl w-fit mx-auto mb-10 shadow-2xl relative z-20">
+                            <div className="flex p-1.5 bg-card border border-border/50 rounded-2xl w-fit mx-auto mb-10 relative z-20">
                                 {[
                                     { id: 'timeline', icon: Grid, label: 'Timeline' },
-                                    { id: 'open', icon: List, label: 'Open Post' },
-                                    { id: 'compose', icon: Plus, label: 'Compose' }
+                                    { id: 'open', icon: List, label: 'Open Post' }
                                 ].map((tab) => (
                                     <button
                                         key={tab.id}
                                         onClick={() => setPreviewTab(tab.id as any)}
                                         className={cn(
                                             "flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-[0.1em] transition-all duration-300",
-                                            previewTab === tab.id ? "bg-primary text-primary-foreground shadow-[0_8px_16px_-4px_rgba(var(--primary),0.3)]" : "text-muted-foreground hover:bg-primary/5 hover:text-foreground"
+                                            previewTab === tab.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-primary/5 hover:text-foreground"
                                         )}
                                     >
                                         <tab.icon className="w-3.5 h-3.5" /> {tab.label}
@@ -589,18 +614,53 @@ export default function XPreviewTool() {
                         </div>
 
                         {/* Explanation / Footer */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
                             <div className="p-6 rounded-[2rem] bg-primary/[0.03] border border-primary/10 space-y-3">
                                 <h3 className="font-vt323 text-[22px] text-primary uppercase leading-tight">Timeline Strategy</h3>
                                 <p className="font-lato text-sm text-muted-foreground leading-relaxed">
                                     X defaults to a 2x2 grid for 4 images. If you use horizontal slices, the timeline will look fragmented. This is often used for "surprise" reveals where the full image is only visible when opened.
                                 </p>
                             </div>
-                            <div className="p-6 rounded-[2rem] bg-primary/[0.03] border border-primary/10 space-y-3">
-                                <h3 className="font-vt323 text-[22px] text-primary uppercase leading-tight">Infinite Alignment</h3>
-                                <p className="font-lato text-sm text-muted-foreground leading-relaxed">
-                                    In the "Open Post" view, images can be stacked vertically. Use this preview to ensure your horizontal slices align perfectly at the seams, creating a seamless high-definition vertical scroll.
-                                </p>
+
+                            {/* History Section */}
+                            <div className="p-6 rounded-[2rem] bg-card border border-border/50 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <h3 className="font-vt323 text-xl text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                                        <Timer className="w-5 h-5" /> Laboratory Archives
+                                    </h3>
+                                    {history.length > 0 && (
+                                        <Button variant="ghost" size="sm" onClick={clearHistory} className="text-destructive hover:text-destructive/80 text-xs uppercase font-bold tracking-widest">
+                                            Purge
+                                        </Button>
+                                    )}
+                                </div>
+                                <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                    {history.length === 0 ? (
+                                        <p className="text-xs text-muted-foreground italic opacity-50 text-center py-8">No records found in local memory</p>
+                                    ) : (
+                                        history.map((item) => (
+                                            <button
+                                                key={item.id}
+                                                onClick={() => restoreFromHistory(item)}
+                                                className="w-full group flex items-center gap-3 p-2 rounded-xl border border-border/50 bg-background/50 hover:bg-primary/5 hover:border-primary/20 cursor-pointer transition-all text-left outline-none focus-visible:ring-2 ring-primary/30"
+                                                aria-label={`Restore archive: ${item.originalName}`}
+                                            >
+                                                <div className="grid grid-cols-2 gap-0.5 w-10 h-10 rounded-md overflow-hidden bg-black/5 flex-shrink-0" aria-hidden="true">
+                                                    {item.slices.slice(0, 4).map((s, idx) => (
+                                                        <img key={idx} src={s.url} className="w-full h-full object-cover" alt="" />
+                                                    ))}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-bold truncate opacity-80">{item.originalName}</p>
+                                                    <p className="text-[10px] opacity-40 uppercase tracking-tighter">
+                                                        {new Date(item.timestamp).toLocaleDateString()} · {new Date(item.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                    </p>
+                                                </div>
+                                                <Repeat2 className="w-4 h-4 opacity-0 group-hover:opacity-40 transition-opacity" aria-hidden="true" />
+                                            </button>
+                                        ))
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -2,6 +2,12 @@ import { PageShell } from "@/components/layout/page-shell";
 import { ImagineTopNav } from "@/components/imagine/imagine-top-nav";
 import { ImagineInput } from "@/components/imagine/imagine-input";
 import { ContentGrid } from "@/components/imagine/content-grid";
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+    title: 'Imagine // AI Creation Lab',
+    description: 'Create and generate beautiful content with Avalansa AI. Save, share, and remix prompts.',
+};
 
 function ImagineLayout() {
     return (

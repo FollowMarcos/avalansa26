@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, VT323, Lato } from "next/font/google";
 import "./globals.css";
 
@@ -73,6 +73,13 @@ export const metadata: Metadata = {
     shortcut: "/favicon.ico",
     apple: "/ab.svg",
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#09090b" },
+  ],
 };
 
 import { ThemeProvider } from "@/components/theme-provider";

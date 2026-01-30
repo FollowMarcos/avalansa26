@@ -228,7 +228,7 @@ export function SiteDock() {
                                     <DraggableIcon key={item.id} item={item}>
                                         <div className="relative group/imagine">
                                             <div className="absolute -inset-1 bg-gradient-to-br from-[#5856D6] to-[#AF52DE] blur-lg opacity-0 group-hover/imagine:opacity-60 transition-opacity rounded-xl pointer-events-none" />
-                                            <div
+                                            <button
                                                 onClick={() => {
                                                     if (isDragging) return;
                                                     if (isImaginePage) {
@@ -238,12 +238,11 @@ export function SiteDock() {
                                                         router.push('/imagine');
                                                     }
                                                 }}
-                                                className={getItemStyle(item)}
-                                                role="button"
+                                                className={cn(getItemStyle(item), "cursor-pointer")}
                                                 aria-label={item.label}
                                             >
-                                                <IconComponent name={item.icon} className={cn("w-5 h-5 pointer-events-none", item.text_color || "text-white")} strokeWidth={1.5} />
-                                            </div>
+                                                <IconComponent name={item.icon} className={cn("w-5 h-5 pointer-events-none", item.text_color || "text-white")} strokeWidth={1.5} aria-hidden="true" />
+                                            </button>
                                         </div>
                                     </DraggableIcon>
                                 );
@@ -255,13 +254,12 @@ export function SiteDock() {
                                     <DraggableIcon key={item.id} item={item}>
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild disabled={isDragging}>
-                                                <div
-                                                    className={getItemStyle(item)}
-                                                    role="button"
+                                                <button
+                                                    className={cn(getItemStyle(item), "cursor-pointer")}
                                                     aria-label={item.label}
                                                 >
-                                                    <IconComponent name={item.icon} className={cn("w-5 h-5 pointer-events-none", item.text_color || "text-white")} strokeWidth={1.5} />
-                                                </div>
+                                                    <IconComponent name={item.icon} className={cn("w-5 h-5 pointer-events-none", item.text_color || "text-white")} strokeWidth={1.5} aria-hidden="true" />
+                                                </button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent
                                                 side="top"
@@ -294,14 +292,13 @@ export function SiteDock() {
                             // Standard Link Items
                             return (
                                 <DraggableIcon key={item.id} item={item}>
-                                    <div
+                                    <button
                                         onClick={() => handleNavigation(item.href || '/')}
-                                        className={getItemStyle(item)}
-                                        role="button"
+                                        className={cn(getItemStyle(item), "cursor-pointer")}
                                         aria-label={item.label}
                                     >
-                                        <IconComponent name={item.icon} className={cn("w-5 h-5 pointer-events-none", item.text_color || "text-white")} strokeWidth={1.5} />
-                                    </div>
+                                        <IconComponent name={item.icon} className={cn("w-5 h-5 pointer-events-none", item.text_color || "text-white")} strokeWidth={1.5} aria-hidden="true" />
+                                    </button>
                                 </DraggableIcon>
                             );
                         })}

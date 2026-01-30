@@ -40,10 +40,11 @@ export function ImagineTopNav() {
 
             {/* Center: Search Bar */}
             <div className="flex-1 max-w-xl mx-auto relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
                 <Input
                     placeholder="Search your library..."
                     className="pl-10 h-10 bg-secondary/30 border-transparent focus:border-border transition-colors rounded-full"
+                    aria-label="Search your library"
                 />
             </div>
 
@@ -53,7 +54,7 @@ export function ImagineTopNav() {
                 {/* View Options */}
                 <Popover>
                     <PopoverTrigger asChild>
-                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
+                        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground" aria-label="Grid settings">
                             {galleryColumns > 4 ? <LayoutGrid className="w-5 h-5" /> : <LayoutTemplate className="w-5 h-5" />}
                         </Button>
                     </PopoverTrigger>
