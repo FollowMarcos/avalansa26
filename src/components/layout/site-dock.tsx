@@ -85,9 +85,6 @@ export function SiteDock() {
                             )}
                         />
                     </div>
-                    <span className="absolute -top-10 text-[10px] font-medium text-foreground bg-background/80 px-2 py-0.5 rounded-full border opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none whitespace-nowrap">
-                        Home
-                    </span>
                 </Link>
 
                 {/* Other Nav Items */}
@@ -109,9 +106,6 @@ export function SiteDock() {
                             aria-label={item.label}
                         >
                             {item.icon && <item.icon className="w-5 h-5" />}
-                            <span className="absolute -top-10 text-[10px] font-medium text-foreground bg-background/80 px-2 py-0.5 rounded-full border opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none whitespace-nowrap">
-                                {item.label}
-                            </span>
                         </Link>
                     );
                 })}
@@ -127,9 +121,6 @@ export function SiteDock() {
                             aria-label="Tools"
                         >
                             <Hammer className="w-5 h-5" />
-                            <span className="absolute -top-10 text-[10px] font-medium text-foreground bg-background/80 px-2 py-0.5 rounded-full border opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none whitespace-nowrap">
-                                Tools
-                            </span>
                         </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent side="top" align="center" className="mb-2 min-w-[160px] p-2 bg-background/80 backdrop-blur-xl border-border rounded-2xl shadow-2xl">
@@ -160,27 +151,27 @@ export function SiteDock() {
                     href={username ? `/u/${username}` : "/onboarding"}
                     className={cn(
                         "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 group",
-                        pathname.startsWith("/u/")
+                        pathname === `/u/${username}`
                             ? "bg-foreground text-background shadow-md scale-110"
                             : "text-muted-foreground hover:bg-muted hover:text-foreground"
                     )}
                     aria-label="Profile"
                 >
                     <User className="w-5 h-5" />
-                    <span className="absolute -top-10 text-[10px] font-medium text-foreground bg-background/80 px-2 py-0.5 rounded-full border opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none whitespace-nowrap">
-                        Profile
-                    </span>
                 </Link>
 
-                {/* Settings button */}
-                <button className="flex items-center justify-center w-10 h-10 rounded-full text-muted-foreground hover:bg-muted hover:text-foreground transition-colors group relative">
+                {/* Settings link */}
+                <Link
+                    href={username ? `/u/${username}/settings` : "/onboarding"}
+                    className={cn(
+                        "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 group text-muted-foreground hover:bg-muted hover:text-foreground",
+                        username && pathname === `/u/${username}/settings` && "bg-foreground text-background shadow-md scale-110"
+                    )}
+                    aria-label="Settings"
+                >
                     <Settings className="w-5 h-5" />
-                    <span className="absolute -top-10 text-[10px] font-medium text-foreground bg-background/80 px-2 py-0.5 rounded-full border opacity-0 transition-opacity group-hover:opacity-100 pointer-events-none whitespace-nowrap">
-                        Settings
-                    </span>
-                </button>
+                </Link>
             </div>
         </div>
     );
 }
-
