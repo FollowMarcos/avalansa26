@@ -96,7 +96,7 @@ export async function updateIconPositions(positions: DockIconPosition[]): Promis
  */
 export function getDefaultDockPreferences(): Omit<DockPreferences, 'id' | 'user_id' | 'created_at' | 'updated_at'> {
     return {
-        dock_type: 'milky_dream_light',
+        dock_type: 'floating_islands_light',
         icon_positions: DEFAULT_ICON_ORDER,
     };
 }

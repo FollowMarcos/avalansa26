@@ -4,11 +4,11 @@ import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { Library, Sparkles, FlaskConical, Settings, User, ExternalLink, Hammer, LayoutDashboard, LogOut, ChevronUp } from "lucide-react";
+import { Library, Sparkles, FlaskConical, Settings, User, Hammer, LayoutDashboard, LogOut, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useImagine } from "@/components/imagine/imagine-context";
 import { createClient } from "@/utils/supabase/client";
-import { motion, Reorder } from "motion/react";
+import { Reorder } from "motion/react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -18,27 +18,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { DockType, DockIconPosition, UserRole } from "@/types/database";
 import { getDockPreferences, saveDockPreferences } from "@/utils/supabase/dock-preferences.client";
+import { useTheme } from "next-themes";
 
 // Draggable items config (Home, Dashboard, and User Avatar are fixed)
 const DRAGGABLE_DOCK_ITEMS = ['library', 'imagine', 'labs', 'tools'] as const;
 type DockItemId = typeof DRAGGABLE_DOCK_ITEMS[number];
-
-// Wavy lines SVG pattern for Milky Dream style
-const WavyPattern = ({ dark = false }: { dark?: boolean }) => (
-    <svg className="absolute inset-0 w-full h-full opacity-30" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-            <pattern id={`wavy-dock-${dark ? 'dark' : 'light'}`} x="0" y="0" width="40" height="20" patternUnits="userSpaceOnUse">
-                <path
-                    d="M0 10 Q10 5, 20 10 T40 10"
-                    fill="none"
-                    stroke={dark ? '#3f3f46' : '#d1d5db'}
-                    strokeWidth="0.5"
-                />
-            </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill={`url(#wavy-dock-${dark ? 'dark' : 'light'})`} />
-    </svg>
-);
 
 interface UserProfile {
     username: string | null;
@@ -50,11 +34,13 @@ interface UserProfile {
 export function SiteDock() {
     const pathname = usePathname();
     const router = useRouter();
+    const { theme, setTheme } = useTheme();
     const { isInputVisible, toggleInputVisibility, setActiveTab } = useImagine();
     const [profile, setProfile] = React.useState<UserProfile | null>(null);
     const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null);
-    const [dockType, setDockType] = React.useState<DockType>('milky_dream_light');
+    const [dockType, setDockType] = React.useState<DockType>('floating_islands_light');
     const [items, setItems] = React.useState<DockItemId[]>([...DRAGGABLE_DOCK_ITEMS]);
+    const [isDragging, setIsDragging] = React.useState(false);
 
     React.useEffect(() => {
         async function fetchProfileAndPreferences() {
@@ -74,7 +60,8 @@ export function SiteDock() {
                 // Load dock preferences
                 const prefs = await getDockPreferences();
                 if (prefs) {
-                    if (prefs.dock_type) {
+                    // Only accept floating islands variants
+                    if (prefs.dock_type?.includes('floating_islands')) {
                         setDockType(prefs.dock_type);
                     }
                     if (prefs.icon_positions && prefs.icon_positions.length > 0) {
@@ -113,287 +100,297 @@ export function SiteDock() {
     };
 
     const isImaginePage = pathname === "/imagine";
-    const isDark = dockType.includes('dark');
-    const isFloating = dockType.includes('floating');
+    const isDark = dockType === 'floating_islands_dark';
     const isAdmin = profile?.role === 'admin';
 
-    const handleImagineClick = (e: React.MouseEvent) => {
-        if (isImaginePage) {
-            e.preventDefault();
-            toggleInputVisibility();
-        } else {
-            setActiveTab("imagine");
-        }
+    // Navigation handler that respects drag state
+    const handleNavigation = (path: string, callback?: () => void) => {
+        if (isDragging) return;
+        if (callback) callback();
+        router.push(path);
     };
 
     // Don't render dock for unauthenticated users or while checking auth
     if (isAuthenticated === null || isAuthenticated === false) return null;
     if (isInputVisible && isImaginePage) return null;
 
-    // Helper to render specific items by ID - returns both the visual element and its click handler
-    const renderDockItem = (id: DockItemId) => {
-        const baseIconClass = "relative flex items-center justify-center w-12 h-12 rounded-[12px] transition-all duration-300 shadow-lg";
+    const containerClass = isDark
+        ? "bg-zinc-900/90 border-zinc-700/50"
+        : "bg-white/90 border-zinc-200/50";
 
-        switch (id) {
-            case 'library':
-                return (
-                    <div
-                        onClick={() => router.push('/library')}
-                        className={cn(
-                            baseIconClass,
-                            "bg-gradient-to-br from-blue-400 to-blue-600 cursor-pointer",
-                            pathname === "/library" ? "scale-110 shadow-xl" : "hover:scale-105 active:scale-95"
-                        )}
-                        role="link"
-                        aria-label="Library"
-                    >
-                        <Library className="w-6 h-6 text-white pointer-events-none" strokeWidth={1.5} />
-                    </div>
-                );
-            case 'imagine':
-                return (
-                    <div className="relative group/imagine">
-                        <div className="absolute inset-0 bg-gradient-to-br from-[#5856D6] to-[#AF52DE] blur-md opacity-40 group-hover/imagine:opacity-80 transition-opacity rounded-[12px] pointer-events-none" />
-                        <div
-                            onClick={(e) => {
-                                if (isImaginePage) {
-                                    toggleInputVisibility();
-                                } else {
-                                    setActiveTab("imagine");
-                                    router.push('/imagine');
-                                }
-                            }}
-                            className={cn(
-                                baseIconClass,
-                                "bg-gradient-to-br from-[#5856D6] to-[#AF52DE] cursor-pointer",
-                                pathname === "/imagine" ? "scale-110 shadow-xl" : "hover:scale-105 active:scale-95"
-                            )}
-                            role="link"
-                            aria-label="Imagine"
-                        >
-                            <motion.div
-                                animate={{ x: ['-100%', '100%'] }}
-                                transition={{ duration: 2, repeat: Infinity, ease: "linear", repeatDelay: 3 }}
-                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 rounded-[12px] pointer-events-none"
-                            />
-                            <Sparkles className="w-6 h-6 text-white relative z-10 pointer-events-none" strokeWidth={1.5} />
-                        </div>
-                    </div>
-                );
-            case 'labs':
-                return (
-                    <div
-                        onClick={() => router.push('/labs')}
-                        className={cn(
-                            baseIconClass,
-                            "bg-gradient-to-br from-orange-400 to-orange-600 cursor-pointer",
-                            pathname === "/labs" ? "scale-110 shadow-xl" : "hover:scale-105 active:scale-95"
-                        )}
-                        role="link"
-                        aria-label="Labs"
-                    >
-                        <FlaskConical className="w-6 h-6 text-white pointer-events-none" strokeWidth={1.5} />
-                    </div>
-                );
-            case 'tools':
-                return (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <div
-                                className={cn(
-                                    baseIconClass,
-                                    "bg-gradient-to-br from-pink-500 to-rose-600 cursor-pointer",
-                                    pathname.startsWith("/tools") ? "scale-110 shadow-xl" : "hover:scale-105 active:scale-95"
-                                )}
-                                role="button"
-                                aria-label="Tools"
-                            >
-                                <Hammer className="w-6 h-6 text-white pointer-events-none" strokeWidth={1.5} />
-                            </div>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent side="top" align="center" className="mb-2 min-w-[170px] p-1.5 bg-background/80 backdrop-blur-3xl border-border rounded-2xl shadow-2xl">
-                            <DropdownMenuItem asChild className="rounded-[12px] cursor-pointer focus:bg-primary/10">
-                                <Link href="/tools/x-preview" className="flex items-center justify-between w-full group/item py-2 px-3">
-                                    <span className="flex items-center gap-2.5 font-medium">
-                                        <div className="w-6 h-6 rounded-[7px] bg-[#5856D6] flex items-center justify-center shadow-sm">
-                                            <Sparkles className="w-3.5 h-3.5 text-white" />
-                                        </div>
-                                        X Preview
-                                    </span>
-                                    <button
-                                        onClick={(e) => { e.preventDefault(); window.open("/tools/x-preview", "_blank"); }}
-                                        className="opacity-0 group-hover/item:opacity-100 hover:text-primary transition-opacity p-1"
-                                    >
-                                        <ExternalLink className="w-3.5 h-3.5" />
-                                    </button>
-                                </Link>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
-                );
-            default:
-                return null;
-        }
-    };
-
-    const containerClass = isFloating
-        ? isDark ? "bg-zinc-900/90 border-zinc-700/50" : "bg-white/90 border-zinc-200/50"
-        : isDark ? "bg-[#111111]" : "bg-gradient-to-br from-[#fefefe] via-[#f8f8f8] to-[#fefefe]";
-
-    const wrapperClass = isFloating
-        ? "flex items-center gap-2 p-3 rounded-2xl backdrop-blur-xl border shadow-lg"
-        : "relative flex items-center gap-2 p-3 rounded-[20px] overflow-hidden shadow-2xl";
-
-    // Display name for the user
     const displayName = profile?.name || profile?.username || 'User';
     const avatarUrl = profile?.avatar_url;
+    const initials = displayName.slice(0, 2).toUpperCase();
+
+    // Draggable icon component
+    const DraggableIcon = ({ id, children }: { id: DockItemId; children: React.ReactNode }) => (
+        <Reorder.Item
+            value={id}
+            onDragStart={() => setIsDragging(true)}
+            onDragEnd={() => setTimeout(() => setIsDragging(false), 100)}
+            whileDrag={{ scale: 1.15, zIndex: 100 }}
+            className="cursor-grab active:cursor-grabbing"
+        >
+            {children}
+        </Reorder.Item>
+    );
+
+    // Base icon styles
+    const iconBase = "relative flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-200 shadow-md";
+    const iconHover = "hover:scale-105 hover:shadow-lg active:scale-95";
 
     return (
         <div className="flex items-center justify-center pointer-events-auto">
-            <div className={cn(wrapperClass, containerClass)}>
-                {!isFloating && <WavyPattern dark={isDark} />}
-
-                <div className="relative z-10 flex items-center gap-2">
-                    {/* Fixed Home Button */}
+            <div className="flex items-center gap-2">
+                {/* Home Button - Fixed */}
+                <div className={cn("flex items-center p-2 rounded-2xl backdrop-blur-xl border shadow-lg", containerClass)}>
                     <Link
                         href="/"
                         className={cn(
-                            "relative flex items-center justify-center w-12 h-12 rounded-[12px] transition-all duration-300 shadow-lg",
+                            iconBase,
                             "bg-white dark:bg-zinc-100",
-                            pathname === "/" ? "scale-110 shadow-xl" : "hover:scale-105 active:scale-95"
+                            pathname === "/" ? "ring-2 ring-primary/50 scale-105" : iconHover
                         )}
                         aria-label="Home"
                     >
-                        <div className="relative w-6 h-6">
+                        <div className="relative w-5 h-5">
                             <Image src="/ab.svg" alt="Logo" fill className="object-contain" />
                         </div>
                     </Link>
+                </div>
 
-                    {/* Separator 1 */}
-                    <div className={cn("w-px h-10 mx-1", isDark ? "bg-zinc-700/50" : "bg-gray-200/50")} />
-
-                    {/* Draggable Zone */}
-                    <Reorder.Group axis="x" values={items} onReorder={handleReorder} className="flex items-center gap-2">
-                        {items.map((id) => (
-                            <Reorder.Item
-                                key={id}
-                                value={id}
-                                className="cursor-grab active:cursor-grabbing"
-                                whileDrag={{ scale: 1.1, zIndex: 50 }}
-                                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                            >
-                                {renderDockItem(id)}
-                            </Reorder.Item>
-                        ))}
+                {/* Main Nav - Draggable */}
+                <div className={cn("flex items-center p-2 rounded-2xl backdrop-blur-xl border shadow-lg", containerClass)}>
+                    <Reorder.Group
+                        axis="x"
+                        values={items}
+                        onReorder={handleReorder}
+                        className="flex items-center gap-1"
+                    >
+                        {items.map((id) => {
+                            switch (id) {
+                                case 'library':
+                                    return (
+                                        <DraggableIcon key={id} id={id}>
+                                            <div
+                                                onClick={() => handleNavigation('/library')}
+                                                className={cn(
+                                                    iconBase,
+                                                    "bg-gradient-to-br from-blue-400 to-blue-600",
+                                                    pathname === "/library" ? "ring-2 ring-blue-400/50 scale-105" : iconHover
+                                                )}
+                                                role="button"
+                                                aria-label="Library"
+                                            >
+                                                <Library className="w-5 h-5 text-white pointer-events-none" strokeWidth={1.5} />
+                                            </div>
+                                        </DraggableIcon>
+                                    );
+                                case 'imagine':
+                                    return (
+                                        <DraggableIcon key={id} id={id}>
+                                            <div className="relative group/imagine">
+                                                <div className="absolute -inset-1 bg-gradient-to-br from-[#5856D6] to-[#AF52DE] blur-lg opacity-0 group-hover/imagine:opacity-60 transition-opacity rounded-xl pointer-events-none" />
+                                                <div
+                                                    onClick={() => {
+                                                        if (isDragging) return;
+                                                        if (isImaginePage) {
+                                                            toggleInputVisibility();
+                                                        } else {
+                                                            setActiveTab("imagine");
+                                                            router.push('/imagine');
+                                                        }
+                                                    }}
+                                                    className={cn(
+                                                        iconBase,
+                                                        "bg-gradient-to-br from-[#5856D6] to-[#AF52DE]",
+                                                        pathname === "/imagine" ? "ring-2 ring-purple-400/50 scale-105" : iconHover
+                                                    )}
+                                                    role="button"
+                                                    aria-label="Imagine"
+                                                >
+                                                    <Sparkles className="w-5 h-5 text-white pointer-events-none" strokeWidth={1.5} />
+                                                </div>
+                                            </div>
+                                        </DraggableIcon>
+                                    );
+                                case 'labs':
+                                    return (
+                                        <DraggableIcon key={id} id={id}>
+                                            <div
+                                                onClick={() => handleNavigation('/labs')}
+                                                className={cn(
+                                                    iconBase,
+                                                    "bg-gradient-to-br from-orange-400 to-orange-600",
+                                                    pathname === "/labs" ? "ring-2 ring-orange-400/50 scale-105" : iconHover
+                                                )}
+                                                role="button"
+                                                aria-label="Labs"
+                                            >
+                                                <FlaskConical className="w-5 h-5 text-white pointer-events-none" strokeWidth={1.5} />
+                                            </div>
+                                        </DraggableIcon>
+                                    );
+                                case 'tools':
+                                    return (
+                                        <DraggableIcon key={id} id={id}>
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild disabled={isDragging}>
+                                                    <div
+                                                        className={cn(
+                                                            iconBase,
+                                                            "bg-gradient-to-br from-pink-500 to-rose-600",
+                                                            pathname.startsWith("/tools") ? "ring-2 ring-pink-400/50 scale-105" : iconHover
+                                                        )}
+                                                        role="button"
+                                                        aria-label="Tools"
+                                                    >
+                                                        <Hammer className="w-5 h-5 text-white pointer-events-none" strokeWidth={1.5} />
+                                                    </div>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent side="top" align="center" className="mb-2 min-w-[160px] p-1 bg-background/95 backdrop-blur-xl border-border rounded-xl shadow-2xl">
+                                                    <DropdownMenuItem asChild className="rounded-lg cursor-pointer">
+                                                        <Link href="/tools/x-preview" className="flex items-center gap-2 py-2 px-3">
+                                                            <div className="w-5 h-5 rounded-md bg-[#5856D6] flex items-center justify-center">
+                                                                <Sparkles className="w-3 h-3 text-white" />
+                                                            </div>
+                                                            <span className="text-sm font-medium">X Preview</span>
+                                                        </Link>
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </DraggableIcon>
+                                    );
+                                default:
+                                    return null;
+                            }
+                        })}
                     </Reorder.Group>
+                </div>
 
-                    {/* Separator 2 */}
-                    <div className={cn("w-px h-10 mx-1", isDark ? "bg-zinc-700/50" : "bg-gray-200/50")} />
+                {/* Right Section - Dashboard (admin) + User */}
+                <div className={cn("flex items-center gap-1 p-2 rounded-2xl backdrop-blur-xl border shadow-lg", containerClass)}>
+                    {/* Dashboard - Admin Only */}
+                    {isAdmin && (
+                        <Link
+                            href="/dashboard"
+                            className={cn(
+                                iconBase,
+                                "bg-gradient-to-br from-amber-400 to-amber-600",
+                                pathname === "/dashboard" ? "ring-2 ring-amber-400/50 scale-105" : iconHover
+                            )}
+                            aria-label="Dashboard"
+                        >
+                            <LayoutDashboard className="w-5 h-5 text-white" strokeWidth={1.5} />
+                        </Link>
+                    )}
 
-                    {/* Fixed End Group */}
-                    <div className="flex items-center gap-2">
-                        {/* Dashboard - Admin Only */}
-                        {isAdmin && (
-                            <Link
-                                href="/dashboard"
-                                className={cn(
-                                    "relative flex items-center justify-center w-12 h-12 rounded-[12px] transition-all duration-300 shadow-lg bg-gradient-to-br from-amber-400 to-amber-600",
-                                    pathname === "/dashboard" ? "scale-110 shadow-xl" : "hover:scale-105 active:scale-95"
-                                )}
-                                aria-label="Dashboard"
-                            >
-                                <LayoutDashboard className="w-6 h-6 text-white" strokeWidth={1.5} />
-                            </Link>
+                    {/* Theme Toggle */}
+                    <button
+                        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                        className={cn(
+                            iconBase,
+                            isDark ? "bg-zinc-700 hover:bg-zinc-600" : "bg-zinc-100 hover:bg-zinc-200",
+                            iconHover
                         )}
+                        aria-label="Toggle theme"
+                    >
+                        {theme === 'dark' ? (
+                            <Sun className="w-5 h-5 text-amber-400" strokeWidth={1.5} />
+                        ) : (
+                            <Moon className="w-5 h-5 text-zinc-600" strokeWidth={1.5} />
+                        )}
+                    </button>
 
-                        {/* User Avatar with Dropdown */}
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <button
-                                    className={cn(
-                                        "relative flex items-center gap-2 h-12 pl-2 pr-3 rounded-[12px] transition-all duration-300 shadow-lg",
-                                        "bg-gradient-to-br from-green-400 to-green-600",
-                                        "hover:scale-105 active:scale-95"
-                                    )}
-                                    aria-label="User menu"
-                                >
-                                    {/* Avatar */}
-                                    <div className="relative w-8 h-8 rounded-full overflow-hidden bg-white/20 flex items-center justify-center">
-                                        {avatarUrl ? (
-                                            <Image
-                                                src={avatarUrl}
-                                                alt={displayName}
-                                                fill
-                                                className="object-cover"
-                                            />
-                                        ) : (
-                                            <User className="w-4 h-4 text-white" strokeWidth={1.5} />
-                                        )}
-                                    </div>
-                                    {/* Username */}
-                                    <span className="text-sm font-medium text-white max-w-[80px] truncate">
-                                        {displayName}
-                                    </span>
-                                    <ChevronUp className="w-3.5 h-3.5 text-white/70" />
-                                </button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                                side="top"
-                                align="end"
-                                className="mb-2 min-w-[200px] p-1.5 bg-background/80 backdrop-blur-3xl border-border rounded-2xl shadow-2xl"
+                    {/* User Avatar with Dropdown */}
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <button
+                                className={cn(
+                                    "relative flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-200",
+                                    "ring-2 ring-transparent hover:ring-primary/30",
+                                    iconHover
+                                )}
+                                aria-label="User menu"
                             >
-                                {/* User Info Header */}
-                                <div className="px-3 py-2 mb-1">
-                                    <p className="text-sm font-medium truncate">{displayName}</p>
-                                    {profile?.username && (
-                                        <p className="text-xs text-muted-foreground">@{profile.username}</p>
+                                {avatarUrl ? (
+                                    <Image
+                                        src={avatarUrl}
+                                        alt={displayName}
+                                        fill
+                                        className="object-cover rounded-xl"
+                                    />
+                                ) : (
+                                    <div className="w-full h-full rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
+                                        <span className="text-sm font-semibold text-white">{initials}</span>
+                                    </div>
+                                )}
+                                {/* Online indicator */}
+                                <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-zinc-900" />
+                            </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent
+                            side="top"
+                            align="end"
+                            className="mb-2 w-56 p-1.5 bg-background/95 backdrop-blur-xl border-border rounded-xl shadow-2xl"
+                        >
+                            {/* User Header */}
+                            <div className="flex items-center gap-3 px-2 py-2.5 mb-1">
+                                <div className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
+                                    {avatarUrl ? (
+                                        <Image src={avatarUrl} alt={displayName} fill className="object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
+                                            <span className="text-sm font-semibold text-white">{initials}</span>
+                                        </div>
                                     )}
                                 </div>
-                                <DropdownMenuSeparator />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold truncate">{displayName}</p>
+                                    {profile?.username && (
+                                        <p className="text-xs text-muted-foreground truncate">@{profile.username}</p>
+                                    )}
+                                </div>
+                            </div>
 
-                                {/* Profile Link */}
-                                <DropdownMenuItem asChild className="rounded-[12px] cursor-pointer focus:bg-primary/10">
-                                    <Link
-                                        href={profile?.username ? `/u/${profile.username}` : "/onboarding"}
-                                        className="flex items-center gap-2.5 py-2 px-3"
-                                    >
-                                        <div className="w-6 h-6 rounded-[7px] bg-green-500 flex items-center justify-center shadow-sm">
-                                            <User className="w-3.5 h-3.5 text-white" />
-                                        </div>
-                                        <span className="font-medium">Profile</span>
-                                    </Link>
-                                </DropdownMenuItem>
+                            <DropdownMenuSeparator className="my-1" />
 
-                                {/* Settings Link */}
-                                <DropdownMenuItem asChild className="rounded-[12px] cursor-pointer focus:bg-primary/10">
-                                    <Link
-                                        href={profile?.username ? `/u/${profile.username}/settings` : "/onboarding"}
-                                        className="flex items-center gap-2.5 py-2 px-3"
-                                    >
-                                        <div className="w-6 h-6 rounded-[7px] bg-gray-500 flex items-center justify-center shadow-sm">
-                                            <Settings className="w-3.5 h-3.5 text-white" />
-                                        </div>
-                                        <span className="font-medium">Settings</span>
-                                    </Link>
-                                </DropdownMenuItem>
-
-                                <DropdownMenuSeparator />
-
-                                {/* Logout */}
-                                <DropdownMenuItem
-                                    onClick={handleLogout}
-                                    className="rounded-[12px] cursor-pointer focus:bg-red-500/10 text-red-500 focus:text-red-500"
+                            {/* Profile */}
+                            <DropdownMenuItem asChild className="rounded-lg cursor-pointer">
+                                <Link
+                                    href={profile?.username ? `/u/${profile.username}` : "/onboarding"}
+                                    className="flex items-center gap-2.5 py-2 px-2"
                                 >
-                                    <div className="flex items-center gap-2.5 py-2 px-3">
-                                        <div className="w-6 h-6 rounded-[7px] bg-red-500 flex items-center justify-center shadow-sm">
-                                            <LogOut className="w-3.5 h-3.5 text-white" />
-                                        </div>
-                                        <span className="font-medium">Log out</span>
-                                    </div>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                    </div>
+                                    <User className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
+                                    <span className="text-sm">Profile</span>
+                                </Link>
+                            </DropdownMenuItem>
+
+                            {/* Settings */}
+                            <DropdownMenuItem asChild className="rounded-lg cursor-pointer">
+                                <Link
+                                    href={profile?.username ? `/u/${profile.username}/settings` : "/onboarding"}
+                                    className="flex items-center gap-2.5 py-2 px-2"
+                                >
+                                    <Settings className="w-4 h-4 text-muted-foreground" strokeWidth={1.5} />
+                                    <span className="text-sm">Settings</span>
+                                </Link>
+                            </DropdownMenuItem>
+
+                            <DropdownMenuSeparator className="my-1" />
+
+                            {/* Logout */}
+                            <DropdownMenuItem
+                                onClick={handleLogout}
+                                className="rounded-lg cursor-pointer text-red-500 focus:text-red-500 focus:bg-red-500/10"
+                            >
+                                <div className="flex items-center gap-2.5 py-2 px-2">
+                                    <LogOut className="w-4 h-4" strokeWidth={1.5} />
+                                    <span className="text-sm">Log out</span>
+                                </div>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
             </div>
         </div>

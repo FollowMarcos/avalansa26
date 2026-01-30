@@ -134,7 +134,7 @@ export interface PaginatedProfiles {
 // ============================================
 
 /** Dock type enum matching database dock_type */
-export type DockType = 'milky_dream_light' | 'milky_dream_dark' | 'floating_islands_light' | 'floating_islands_dark';
+export type DockType = 'floating_islands_light' | 'floating_islands_dark';
 
 /** Position of a single dock icon */
 export interface DockIconPosition {

@@ -7,43 +7,18 @@ import { cn } from '@/lib/utils';
 import type { DockType } from '@/types/database';
 import { getDockPreferences, saveDockPreferences } from '@/utils/supabase/dock-preferences.client';
 
-// Wavy lines SVG pattern
-const WavyPattern = ({ dark = false }: { dark?: boolean }) => (
-    <svg className="absolute inset-0 w-full h-full opacity-30" xmlns="http://www.w3.org/2000/svg">
-        <defs>
-            <pattern id={`wavy-lines-${dark ? 'dark' : 'light'}`} x="0" y="0" width="40" height="20" patternUnits="userSpaceOnUse">
-                <path
-                    d="M0 10 Q10 5, 20 10 T40 10"
-                    fill="none"
-                    stroke={dark ? '#3f3f46' : '#d1d5db'}
-                    strokeWidth="0.5"
-                />
-            </pattern>
-        </defs>
-        <rect width="100%" height="100%" fill={`url(#wavy-lines-${dark ? 'dark' : 'light'})`} />
-    </svg>
-);
-
 // Dock type configurations
 const DOCK_CONFIGS: Record<DockType, {
     label: string;
     description: string;
 }> = {
-    milky_dream_light: {
-        label: 'Milky Dream (Light)',
-        description: 'Milky white with wavy lines',
-    },
-    milky_dream_dark: {
-        label: 'Milky Dream (Dark)',
-        description: 'Dark with subtle wavy lines',
-    },
     floating_islands_light: {
-        label: 'Floating Islands (Light)',
-        description: 'Separated groups, light theme',
+        label: 'Light',
+        description: 'Light theme with glass effect',
     },
     floating_islands_dark: {
-        label: 'Floating Islands (Dark)',
-        description: 'Separated groups, dark theme',
+        label: 'Dark',
+        description: 'Dark theme with glass effect',
     },
 };
 
@@ -51,7 +26,7 @@ const DOCK_CONFIGS: Record<DockType, {
 const PreviewIcon = ({ gradient, children }: { gradient: string; children: React.ReactNode }) => (
     <motion.div
         className={cn(
-            "w-12 h-12 rounded-[12px] flex items-center justify-center shadow-lg",
+            "w-11 h-11 rounded-xl flex items-center justify-center shadow-md",
             gradient
         )}
         whileHover={{ scale: 1.05 }}
@@ -68,7 +43,7 @@ export function InteractiveDock({ className }: InteractiveDockProps) {
     const [isLoading, setIsLoading] = React.useState(true);
     const [isSaving, setIsSaving] = React.useState(false);
     const [isAuthenticated, setIsAuthenticated] = React.useState(false);
-    const [dockType, setDockType] = React.useState<DockType>('milky_dream_light');
+    const [dockType, setDockType] = React.useState<DockType>('floating_islands_light');
 
     // Load preferences on mount
     React.useEffect(() => {
@@ -108,8 +83,7 @@ export function InteractiveDock({ className }: InteractiveDockProps) {
         }
     };
 
-    const isDark = dockType.includes('dark');
-    const isFloating = dockType.includes('floating');
+    const isDark = dockType === 'floating_islands_dark';
 
     if (isLoading) {
         return (
@@ -146,50 +120,29 @@ export function InteractiveDock({ className }: InteractiveDockProps) {
 
     // Render the dock preview based on current style
     const renderDockPreview = () => {
-        const containerClass = isFloating
-            ? isDark ? "bg-zinc-900/90 border-zinc-700/50" : "bg-white/90 border-zinc-200/50"
-            : isDark ? "bg-[#111111]" : "bg-gradient-to-br from-[#fefefe] via-[#f8f8f8] to-[#fefefe]";
-
-        const icons = (
-            <>
-                <PreviewIcon gradient="bg-gradient-to-br from-blue-400 to-blue-600">
-                    <Library className="w-6 h-6 text-white" strokeWidth={1.5} />
-                </PreviewIcon>
-                <PreviewIcon gradient="bg-gradient-to-br from-[#5856D6] to-[#AF52DE]">
-                    <Sparkles className="w-6 h-6 text-white" strokeWidth={1.5} />
-                </PreviewIcon>
-                <PreviewIcon gradient="bg-gradient-to-br from-orange-400 to-orange-600">
-                    <FlaskConical className="w-6 h-6 text-white" strokeWidth={1.5} />
-                </PreviewIcon>
-                <PreviewIcon gradient="bg-gradient-to-br from-pink-500 to-rose-600">
-                    <Hammer className="w-6 h-6 text-white" strokeWidth={1.5} />
-                </PreviewIcon>
-            </>
-        );
-
-        if (isFloating) {
-            return (
-                <div className="flex items-center gap-3">
-                    <div className={cn("flex items-center gap-2 p-3 rounded-2xl backdrop-blur-xl border shadow-lg", containerClass)}>
-                        {icons}
-                    </div>
-                    <div className={cn("flex items-center p-3 rounded-2xl backdrop-blur-xl border shadow-lg", containerClass)}>
-                        <PreviewIcon gradient="bg-gradient-to-br from-gray-600 to-gray-800">
-                            <Settings className="w-6 h-6 text-white" strokeWidth={1.5} />
-                        </PreviewIcon>
-                    </div>
-                </div>
-            );
-        }
+        const containerClass = isDark
+            ? "bg-zinc-900/90 border-zinc-700/50"
+            : "bg-white/90 border-zinc-200/50";
 
         return (
-            <div className={cn("relative flex items-center gap-2 p-3 rounded-[20px] overflow-hidden shadow-2xl", containerClass)}>
-                <WavyPattern dark={isDark} />
-                <div className="relative z-10 flex items-center gap-2">
-                    {icons}
-                    <div className={cn("w-px h-10 mx-1", isDark ? "bg-zinc-700/50" : "bg-gray-200/50")} />
+            <div className="flex items-center gap-2">
+                <div className={cn("flex items-center gap-1.5 p-2 rounded-2xl backdrop-blur-xl border shadow-lg", containerClass)}>
+                    <PreviewIcon gradient="bg-gradient-to-br from-blue-400 to-blue-600">
+                        <Library className="w-5 h-5 text-white" strokeWidth={1.5} />
+                    </PreviewIcon>
+                    <PreviewIcon gradient="bg-gradient-to-br from-[#5856D6] to-[#AF52DE]">
+                        <Sparkles className="w-5 h-5 text-white" strokeWidth={1.5} />
+                    </PreviewIcon>
+                    <PreviewIcon gradient="bg-gradient-to-br from-orange-400 to-orange-600">
+                        <FlaskConical className="w-5 h-5 text-white" strokeWidth={1.5} />
+                    </PreviewIcon>
+                    <PreviewIcon gradient="bg-gradient-to-br from-pink-500 to-rose-600">
+                        <Hammer className="w-5 h-5 text-white" strokeWidth={1.5} />
+                    </PreviewIcon>
+                </div>
+                <div className={cn("flex items-center p-2 rounded-2xl backdrop-blur-xl border shadow-lg", containerClass)}>
                     <PreviewIcon gradient="bg-gradient-to-br from-gray-600 to-gray-800">
-                        <Settings className="w-6 h-6 text-white" strokeWidth={1.5} />
+                        <Settings className="w-5 h-5 text-white" strokeWidth={1.5} />
                     </PreviewIcon>
                 </div>
             </div>
