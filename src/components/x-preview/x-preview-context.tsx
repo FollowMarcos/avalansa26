@@ -8,9 +8,6 @@ interface XPreviewContextType {
   setPost: React.Dispatch<React.SetStateAction<PostData>>;
   previewMode: PreviewMode;
   setPreviewMode: (mode: PreviewMode) => void;
-  updateAuthor: (field: keyof PostData["author"], value: string | boolean) => void;
-  updateContent: (content: string) => void;
-  updateStats: (field: keyof PostData["stats"], value: number) => void;
   addImages: (files: FileList) => void;
   removeImage: (id: string) => void;
   moveImage: (id: string, direction: "left" | "right") => void;
@@ -23,30 +20,6 @@ const XPreviewContext = React.createContext<XPreviewContextType | undefined>(
 export function XPreviewProvider({ children }: { children: React.ReactNode }) {
   const [post, setPost] = React.useState<PostData>(DEFAULT_POST);
   const [previewMode, setPreviewMode] = React.useState<PreviewMode>("timeline");
-
-  const updateAuthor = React.useCallback(
-    (field: keyof PostData["author"], value: string | boolean) => {
-      setPost((prev) => ({
-        ...prev,
-        author: { ...prev.author, [field]: value },
-      }));
-    },
-    []
-  );
-
-  const updateContent = React.useCallback((content: string) => {
-    setPost((prev) => ({ ...prev, content }));
-  }, []);
-
-  const updateStats = React.useCallback(
-    (field: keyof PostData["stats"], value: number) => {
-      setPost((prev) => ({
-        ...prev,
-        stats: { ...prev.stats, [field]: value },
-      }));
-    },
-    []
-  );
 
   const addImages = React.useCallback((files: FileList) => {
     const newImages: PostImage[] = [];
@@ -112,9 +85,6 @@ export function XPreviewProvider({ children }: { children: React.ReactNode }) {
       setPost,
       previewMode,
       setPreviewMode,
-      updateAuthor,
-      updateContent,
-      updateStats,
       addImages,
       removeImage,
       moveImage,
@@ -122,9 +92,6 @@ export function XPreviewProvider({ children }: { children: React.ReactNode }) {
     [
       post,
       previewMode,
-      updateAuthor,
-      updateContent,
-      updateStats,
       addImages,
       removeImage,
       moveImage,

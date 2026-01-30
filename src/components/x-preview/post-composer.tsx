@@ -3,10 +3,6 @@
 import * as React from "react";
 import { useXPreview } from "./x-preview-context";
 import { cn } from "@/lib/utils";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { ImageIcon } from "./icons";
 import { X, ChevronLeft, ChevronRight, Upload } from "lucide-react";
@@ -14,9 +10,6 @@ import { X, ChevronLeft, ChevronRight, Upload } from "lucide-react";
 export function PostComposer() {
   const {
     post,
-    updateAuthor,
-    updateContent,
-    updateStats,
     addImages,
     removeImage,
     moveImage,
@@ -33,66 +26,13 @@ export function PostComposer() {
     }
   };
 
-  const formatNumber = (num: number): string => {
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + "M";
-    if (num >= 1000) return (num / 1000).toFixed(1) + "K";
-    return num.toString();
-  };
+
 
   return (
     <div className="flex flex-col gap-6 p-6">
-      <div className="space-y-4">
-        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-          Author
-        </h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Display Name</Label>
-            <Input
-              id="name"
-              value={post.author.name}
-              onChange={(e) => updateAuthor("name", e.target.value)}
-              placeholder="Your Name"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="handle">Handle</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                @
-              </span>
-              <Input
-                id="handle"
-                value={post.author.handle}
-                onChange={(e) => updateAuthor("handle", e.target.value)}
-                placeholder="handle"
-                className="pl-7"
-              />
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center justify-between">
-          <Label htmlFor="verified">Verified Badge</Label>
-          <Switch
-            id="verified"
-            checked={post.author.verified}
-            onCheckedChange={(checked) => updateAuthor("verified", checked)}
-          />
-        </div>
-      </div>
 
-      <div className="space-y-4">
-        <Label htmlFor="content" className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-          Content
-        </Label>
-        <Textarea
-          id="content"
-          value={post.content}
-          onChange={(e) => updateContent(e.target.value)}
-          placeholder="What's happening?"
-          className="min-h-[120px] resize-none"
-        />
-      </div>
+
+
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -185,73 +125,7 @@ export function PostComposer() {
         )}
       </div>
 
-      <div className="space-y-4">
-        <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-          Engagement Stats
-        </h3>
-        <div className="grid grid-cols-3 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="views">Views</Label>
-            <Input
-              id="views"
-              type="number"
-              min={0}
-              value={post.stats.views}
-              onChange={(e) =>
-                updateStats("views", parseInt(e.target.value) || 0)
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="likes">Likes</Label>
-            <Input
-              id="likes"
-              type="number"
-              min={0}
-              value={post.stats.likes}
-              onChange={(e) =>
-                updateStats("likes", parseInt(e.target.value) || 0)
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="reposts">Reposts</Label>
-            <Input
-              id="reposts"
-              type="number"
-              min={0}
-              value={post.stats.reposts}
-              onChange={(e) =>
-                updateStats("reposts", parseInt(e.target.value) || 0)
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="replies">Replies</Label>
-            <Input
-              id="replies"
-              type="number"
-              min={0}
-              value={post.stats.replies}
-              onChange={(e) =>
-                updateStats("replies", parseInt(e.target.value) || 0)
-              }
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="bookmarks">Bookmarks</Label>
-            <Input
-              id="bookmarks"
-              type="number"
-              min={0}
-              value={post.stats.bookmarks}
-              onChange={(e) =>
-                updateStats("bookmarks", parseInt(e.target.value) || 0)
-              }
-            />
-          </div>
-        </div>
-      </div>
+
     </div>
   );
 }

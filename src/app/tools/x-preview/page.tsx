@@ -3,13 +3,14 @@
 import * as React from "react";
 import { motion } from "motion/react";
 import { XPreviewProvider, useXPreview } from "@/components/x-preview/x-preview-context";
+import { ImagineProvider } from "@/components/imagine/imagine-context";
+import { ImagineDock } from "@/components/imagine/imagine-dock";
 import { PostComposer } from "@/components/x-preview/post-composer";
 import { PreviewFrame } from "@/components/x-preview/preview-frame";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, Monitor, Smartphone } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { cn } from "@/lib/utils";
 
 function ModeToggle() {
   const { previewMode, setPreviewMode } = useXPreview();
@@ -29,7 +30,7 @@ function ModeToggle() {
 
 function XPreviewContent() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-32">
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -58,9 +59,9 @@ function XPreviewContent() {
             style={{ willChange: "opacity, transform" }}
             {...(typeof window !== "undefined" &&
               window.matchMedia("(prefers-reduced-motion: reduce)").matches && {
-                initial: { opacity: 1, y: 0 },
-                animate: { opacity: 1, y: 0 },
-              })}
+              initial: { opacity: 1, y: 0 },
+              animate: { opacity: 1, y: 0 },
+            })}
           >
             <div className="rounded-2xl border border-border bg-card overflow-hidden">
               <div className="px-6 py-4 border-b border-border">
@@ -78,9 +79,9 @@ function XPreviewContent() {
             style={{ willChange: "opacity, transform" }}
             {...(typeof window !== "undefined" &&
               window.matchMedia("(prefers-reduced-motion: reduce)").matches && {
-                initial: { opacity: 1, y: 0 },
-                animate: { opacity: 1, y: 0 },
-              })}
+              initial: { opacity: 1, y: 0 },
+              animate: { opacity: 1, y: 0 },
+            })}
           >
             <div className="rounded-2xl border border-border bg-card overflow-hidden">
               <div className="px-6 py-4 border-b border-border">
@@ -93,14 +94,22 @@ function XPreviewContent() {
           </motion.div>
         </div>
       </main>
+
+      {/* Dock at Bottom */}
+      <div className="fixed bottom-0 left-0 right-0 z-50 p-6 pointer-events-none">
+        <ImagineDock />
+      </div>
     </div>
   );
 }
 
 export default function XPreviewPage() {
   return (
-    <XPreviewProvider>
-      <XPreviewContent />
-    </XPreviewProvider>
+    <ImagineProvider>
+      <XPreviewProvider>
+        <XPreviewContent />
+      </XPreviewProvider>
+    </ImagineProvider>
   );
 }
+
