@@ -154,89 +154,135 @@ function ExpandedView() {
   const { author, content, images, stats } = post;
 
   return (
-    <div className="p-4 border-b border-[#2f3336]">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-[#2f3336] overflow-hidden">
-          {author.avatar ? (
-            <img
-              src={author.avatar}
-              alt={author.name}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-[#71767b] text-lg font-semibold">
-              {author.name.charAt(0).toUpperCase()}
+    <div className="flex flex-col">
+      {/* Top nav area for expanded view */}
+      <div className="flex items-center gap-8 p-4 border-b border-[#2f3336]">
+        <button className="text-[#e7e9ea] hover:bg-[#eff3f41a] p-2 rounded-full transition-colors" aria-label="Back">
+          <svg viewBox="0 0 24 24" aria-hidden="true" className="w-5 h-5 fill-current">
+            <path d="M7.414 13l5.043 5.04-1.414 1.42L3.586 12l7.457-7.46 1.414 1.42L7.414 11H21v2H7.414z" />
+          </svg>
+        </button>
+        <h2 className="text-xl font-bold text-[#e7e9ea]">Post</h2>
+      </div>
+
+      <div className="p-4">
+        {/* Author info */}
+        <div className="flex gap-3 mb-3">
+          <div className="w-10 h-10 rounded-full bg-[#2f3336] overflow-hidden flex-shrink-0">
+            {author.avatar ? (
+              <img
+                src={author.avatar}
+                alt={author.name}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-[#71767b] text-lg font-semibold">
+                {author.name.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col leading-tight">
+            <div className="flex items-center gap-1">
+              <span className="font-bold text-[#e7e9ea] hover:underline cursor-pointer">
+                {author.name || "Your Name"}
+              </span>
+              {author.verified && <VerifiedIcon size={18} />}
             </div>
+            <div className="text-[#71767b]">@{author.handle || "handle"}</div>
+          </div>
+        </div>
+
+        {/* Content */}
+        {content && (
+          <div className="text-[17px] leading-6 text-[#e7e9ea] mb-3 whitespace-pre-wrap break-words">
+            {content}
+          </div>
+        )}
+
+        {/* Images - stacked vertically in expanded view */}
+        {images.length > 0 && (
+          <div className="flex flex-col gap-2 mb-4">
+            {images.map((image) => (
+              <div
+                key={image.id}
+                className="rounded-2xl overflow-hidden border border-[#2f3336]"
+              >
+                <img
+                  src={image.url}
+                  alt={image.alt}
+                  className="w-full h-auto block"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Timestamp and views */}
+        <div className="py-4 border-b border-[#2f3336] text-[#71767b] text-[15px]">
+          {formatDate()}
+          {stats.views > 0 && (
+            <>
+              {" · "}
+              <span className="text-[#e7e9ea] font-bold">
+                {formatNumber(stats.views)}
+              </span>{" "}
+              <span className="text-[#71767b]">Views</span>
+            </>
           )}
         </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-1">
-            <span className="font-bold text-[#e7e9ea]">
-              {author.name || "Your Name"}
-            </span>
-            {author.verified && <VerifiedIcon size={18} />}
+
+        {/* Stats row */}
+        {(stats.reposts > 0 || stats.likes > 0 || stats.bookmarks > 0) && (
+          <div className="py-4 border-b border-[#2f3336] flex gap-5 text-[15px]">
+            {stats.reposts > 0 && (
+              <span className="text-[#e7e9ea] hover:underline cursor-pointer">
+                <strong>{formatNumber(stats.reposts)}</strong>{" "}
+                <span className="text-[#71767b]">Reposts</span>
+              </span>
+            )}
+            {stats.likes > 0 && (
+              <span className="text-[#e7e9ea] hover:underline cursor-pointer">
+                <strong>{formatNumber(stats.likes)}</strong>{" "}
+                <span className="text-[#71767b]">Likes</span>
+              </span>
+            )}
+            {stats.bookmarks > 0 && (
+              <span className="text-[#e7e9ea] hover:underline cursor-pointer">
+                <strong>{formatNumber(stats.bookmarks)}</strong>{" "}
+                <span className="text-[#71767b]">Bookmarks</span>
+              </span>
+            )}
           </div>
-          <div className="text-[#71767b] text-[15px]">
-            @{author.handle || "handle"}
-          </div>
+        )}
+
+        {/* Action buttons */}
+        <div className="py-2 border-b border-[#2f3336] flex items-center justify-around">
+          <ActionButton
+            icon={<ReplyIcon size={22} />}
+            hoverColor="hover:text-[#1d9bf0]"
+            label="Reply"
+          />
+          <ActionButton
+            icon={<RepostIcon size={22} />}
+            hoverColor="hover:text-[#00ba7c]"
+            label="Repost"
+          />
+          <ActionButton
+            icon={<LikeIcon size={22} />}
+            hoverColor="hover:text-[#f91880]"
+            label="Like"
+          />
+          <ActionButton
+            icon={<BookmarkIcon size={22} />}
+            hoverColor="hover:text-[#1d9bf0]"
+            label="Bookmark"
+          />
+          <ActionButton
+            icon={<ShareIcon size={22} />}
+            hoverColor="hover:text-[#1d9bf0]"
+            label="Share"
+          />
         </div>
-      </div>
-
-      {content && (
-        <div className="mt-4 text-[17px] text-[#e7e9ea] whitespace-pre-wrap break-words leading-relaxed">
-          {content}
-        </div>
-      )}
-
-      {images.length > 0 && (
-        <div className="mt-4">
-          <ImageGrid images={images} variant="expanded" />
-        </div>
-      )}
-
-      <div className="mt-4 text-[#71767b] text-[15px]">{formatDate()}</div>
-
-      <div className="mt-4 py-4 border-t border-[#2f3336] flex gap-5 text-[15px]">
-        <span className="text-[#e7e9ea]">
-          <strong>{formatNumber(stats.reposts)}</strong>{" "}
-          <span className="text-[#71767b]">Reposts</span>
-        </span>
-        <span className="text-[#e7e9ea]">
-          <strong>{formatNumber(stats.likes)}</strong>{" "}
-          <span className="text-[#71767b]">Likes</span>
-        </span>
-        <span className="text-[#e7e9ea]">
-          <strong>{formatNumber(stats.bookmarks)}</strong>{" "}
-          <span className="text-[#71767b]">Bookmarks</span>
-        </span>
-      </div>
-
-      <div className="py-3 border-t border-[#2f3336] flex items-center justify-around">
-        <ActionButton
-          icon={<ReplyIcon size={22} />}
-          hoverColor="hover:text-[#1d9bf0]"
-          label="Reply"
-        />
-        <ActionButton
-          icon={<RepostIcon size={22} />}
-          hoverColor="hover:text-[#00ba7c]"
-          label="Repost"
-        />
-        <ActionButton
-          icon={<LikeIcon size={22} />}
-          hoverColor="hover:text-[#f91880]"
-          label="Like"
-        />
-        <ActionButton
-          icon={<BookmarkIcon size={22} />}
-          hoverColor="hover:text-[#1d9bf0]"
-          label="Bookmark"
-        />
-        <ActionButton
-          icon={<ShareIcon size={22} />}
-          hoverColor="hover:text-[#1d9bf0]"
-          label="Share"
-        />
       </div>
     </div>
   );
