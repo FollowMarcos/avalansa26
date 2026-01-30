@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Camera, Loader2, X } from 'lucide-react';
+import { Camera, Loader2, X, Cat } from 'lucide-react';
+import { DefaultAvatar } from '@/components/ui/default-avatar';
 import { toast } from 'sonner';
 
 interface AvatarUploadProps {
@@ -126,6 +127,37 @@ export function AvatarUpload({
         }
     };
 
+    const handleSetCatAvatar = async () => {
+        setIsUploading(true);
+        const supabase = createClient();
+
+        try {
+            // We'll use a string identifier or a Data URI. 
+            // Since our system expects a URL, let's use a special string or just the Data URI of the cat SVG.
+            // For simplicity and since it's small, a Data URI is fine, or we could just set it to 'DEFAULT_CAT'
+            // and handle it in the components. But 'avatar_url' in profiles table might be limited.
+            // Let's use the actual SVG converted to Data URI to ensure it works everywhere without special logic.
+
+            const catSvg = `data:image/svg+xml;base64,${btoa('<svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" style="image-rendering: pixelated"><rect width="16" height="16" fill="#f4f4f5" /><rect x="2" y="1" width="2" height="3" fill="#18181b" /><rect x="3" y="1" width="1" height="1" fill="#18181b" /><rect x="12" y="1" width="2" height="3" fill="#18181b" /><rect x="12" y="1" width="1" height="1" fill="#18181b" /><rect x="3" y="2" width="1" height="1" fill="#fda4af" /><rect x="12" y="2" width="1" height="1" fill="#fda4af" /><rect x="1" y="4" width="1" height="6" fill="#18181b" /><rect x="14" y="4" width="1" height="6" fill="#18181b" /><rect x="2" y="3" width="1" height="1" fill="#18181b" /><rect x="13" y="3" width="1" height="1" fill="#18181b" /><rect x="2" y="10" width="1" height="1" fill="#18181b" /><rect x="13" y="10" width="1" height="1" fill="#18181b" /><rect x="3" y="11" width="2" height="1" fill="#18181b" /><rect x="11" y="11" width="2" height="1" fill="#18181b" /><rect x="5" y="12" width="6" height="1" fill="#18181b" /><rect x="2" y="4" width="12" height="6" fill="#fafafa" /><rect x="3" y="10" width="10" height="1" fill="#fafafa" /><rect x="5" y="11" width="6" height="1" fill="#fafafa" /><rect x="2" y="4" width="3" height="2" fill="#18181b" /><rect x="11" y="4" width="3" height="2" fill="#18181b" /><rect x="6" y="3" width="4" height="2" fill="#18181b" /><rect x="4" y="6" width="2" height="2" fill="#22c55e" /><rect x="10" y="6" width="2" height="2" fill="#22c55e" /><rect x="5" y="6" width="1" height="1" fill="#18181b" /><rect x="10" y="6" width="1" height="1" fill="#18181b" /><rect x="4" y="6" width="1" height="1" fill="#bbf7d0" /><rect x="11" y="7" width="1" height="1" fill="#bbf7d0" /><rect x="7" y="8" width="2" height="1" fill="#fda4af" /><rect x="7" y="9" width="1" height="1" fill="#18181b" /><rect x="8" y="9" width="1" height="1" fill="#18181b" /><rect x="6" y="10" width="1" height="1" fill="#18181b" /><rect x="9" y="10" width="1" height="1" fill="#18181b" /><rect x="1" y="7" width="2" height="1" fill="#a1a1aa" /><rect x="1" y="9" width="2" height="1" fill="#a1a1aa" /><rect x="13" y="7" width="2" height="1" fill="#a1a1aa" /><rect x="13" y="9" width="2" height="1" fill="#a1a1aa" /></svg>')} `;
+
+            const { error } = await supabase
+                .from('profiles')
+                .update({ avatar_url: catSvg })
+                .eq('id', userId);
+
+            if (error) throw error;
+
+            onAvatarUpdate(catSvg);
+            router.refresh();
+            toast.success('Changed to Cat avatar!');
+        } catch (error) {
+            console.error('Error setting cat avatar:', error);
+            toast.error('Failed to set cat avatar.');
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
     return (
         <div className={`flex flex-col gap-6 ${className}`}>
             <div className="flex items-center gap-6">
@@ -170,6 +202,16 @@ export function AvatarUpload({
                             disabled={isUploading}
                         >
                             Upload
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="rounded-full font-lato h-8 text-primary"
+                            onClick={handleSetCatAvatar}
+                            disabled={isUploading}
+                        >
+                            <Cat className="h-3.5 w-3.5 mr-1.5" />
+                            Use Cat
                         </Button>
                         <Button
                             variant="ghost"
