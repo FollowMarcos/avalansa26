@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useCreate } from "./create-context";
 import { CanvasViewport } from "./canvas-viewport";
-import { SettingsPanel } from "./settings-panel";
+import { HistoryIsland } from "./history-island";
 import { PromptComposer } from "./prompt-composer";
 import { QuickToolbar } from "./quick-toolbar";
 import { ThinkingDisplay } from "./thinking-display";
@@ -40,10 +40,10 @@ export function StudioLayout() {
 
           {/* Prompt Composer */}
           <PromptComposer />
-        </div>
 
-        {/* Right Sidebar - Settings */}
-        <SettingsPanel />
+          {/* Floating History Island */}
+          <HistoryIsland />
+        </div>
       </div>
 
       {/* Drag overlay for file uploads */}

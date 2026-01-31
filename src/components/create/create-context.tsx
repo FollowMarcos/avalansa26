@@ -11,6 +11,8 @@ export type AspectRatio =
   | "4:5" | "5:4"
   | "9:16" | "16:9"
   | "21:9";
+export type GenerationSpeed = "fast" | "relaxed";
+export type ModelId = "nano-banana-pro";
 
 export interface ImageFile {
   id: string;
@@ -33,18 +35,21 @@ export interface ThinkingStep {
 }
 
 export interface CreateSettings {
+  model: ModelId;
   imageSize: ImageSize;
   aspectRatio: AspectRatio;
   outputCount: number;
+  generationSpeed: GenerationSpeed;
   styleStrength: number;
   negativePrompt: string;
-  seed: string;
 }
 
 interface CreateContextType {
   // Prompt state
   prompt: string;
   setPrompt: (prompt: string) => void;
+  isPromptExpanded: boolean;
+  setIsPromptExpanded: (expanded: boolean) => void;
 
   // Settings
   settings: CreateSettings;
@@ -65,8 +70,8 @@ interface CreateContextType {
   // UI state
   viewMode: "canvas" | "gallery";
   setViewMode: (mode: "canvas" | "gallery") => void;
-  settingsPanelOpen: boolean;
-  toggleSettingsPanel: () => void;
+  historyPanelOpen: boolean;
+  toggleHistoryPanel: () => void;
   isInputVisible: boolean;
   toggleInputVisibility: () => void;
   activeTab: string;
@@ -87,15 +92,19 @@ interface CreateContextType {
   thinkingSteps: ThinkingStep[];
   generate: () => Promise<void>;
   cancelGeneration: () => void;
+
+  // Helper to build final prompt with negative injection
+  buildFinalPrompt: () => string;
 }
 
 const defaultSettings: CreateSettings = {
+  model: "nano-banana-pro",
   imageSize: "2K",
   aspectRatio: "1:1",
   outputCount: 1,
+  generationSpeed: "fast",
   styleStrength: 75,
   negativePrompt: "",
-  seed: "",
 };
 
 const CreateContext = React.createContext<CreateContextType | undefined>(undefined);
@@ -105,12 +114,13 @@ const MAX_REFERENCE_IMAGES = 14;
 
 export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [prompt, setPrompt] = React.useState("");
+  const [isPromptExpanded, setIsPromptExpanded] = React.useState(false);
   const [settings, setSettings] = React.useState<CreateSettings>(defaultSettings);
   const [referenceImages, setReferenceImages] = React.useState<ImageFile[]>([]);
   const [history, setHistory] = React.useState<GeneratedImage[]>([]);
   const [selectedImage, setSelectedImage] = React.useState<GeneratedImage | null>(null);
   const [viewMode, setViewMode] = React.useState<"canvas" | "gallery">("canvas");
-  const [settingsPanelOpen, setSettingsPanelOpen] = React.useState(true);
+  const [historyPanelOpen, setHistoryPanelOpen] = React.useState(true);
   const [isInputVisible, setIsInputVisible] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState("create");
   const [zoom, setZoom] = React.useState(100);
@@ -158,13 +168,22 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     setHistoryIndex(-1);
   }, []);
 
-  const toggleSettingsPanel = React.useCallback(() => {
-    setSettingsPanelOpen(prev => !prev);
+  const toggleHistoryPanel = React.useCallback(() => {
+    setHistoryPanelOpen(prev => !prev);
   }, []);
 
   const toggleInputVisibility = React.useCallback(() => {
     setIsInputVisible(prev => !prev);
   }, []);
+
+  // Build final prompt with negative injection
+  const buildFinalPrompt = React.useCallback(() => {
+    let finalPrompt = prompt.trim();
+    if (settings.negativePrompt.trim()) {
+      finalPrompt += `\n\nNegative: ${settings.negativePrompt.trim()}`;
+    }
+    return finalPrompt;
+  }, [prompt, settings.negativePrompt]);
 
   // Dynamic thinking steps based on context
   const getThinkingSteps = React.useCallback((): ThinkingStep[] => {
@@ -183,10 +202,14 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       steps.push({ id: "4", text: "Aligning text elements...", completed: false });
     }
 
-    steps.push({ id: "5", text: `Generating ${settings.imageSize} output...`, completed: false });
+    if (settings.generationSpeed === "relaxed") {
+      steps.push({ id: "5", text: "Queuing batch job...", completed: false });
+    }
+
+    steps.push({ id: "6", text: `Generating ${settings.imageSize} output...`, completed: false });
 
     return steps;
-  }, [referenceImages.length, prompt, settings.imageSize]);
+  }, [referenceImages.length, prompt, settings.imageSize, settings.generationSpeed]);
 
   const generate = React.useCallback(async () => {
     if (!prompt.trim() && referenceImages.length === 0) return;
@@ -211,8 +234,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         );
       }
 
-      // Simulate generation delay
-      await new Promise(resolve => setTimeout(resolve, 800 + Math.random() * 700));
+      // Simulate generation delay (longer for relaxed mode)
+      const delay = settings.generationSpeed === "relaxed" ? 1500 : 800;
+      await new Promise(resolve => setTimeout(resolve, delay + Math.random() * 700));
 
       if (abortControllerRef.current?.signal.aborted) return;
 
@@ -248,14 +272,17 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
       const { width, height } = getDimensions();
 
+      // Build the final prompt with negative injection
+      const finalPrompt = buildFinalPrompt();
+
       // Generate mock images (will be replaced with actual API call)
       const newImages: GeneratedImage[] = [];
       for (let i = 0; i < settings.outputCount; i++) {
-        const seed = settings.seed || Math.floor(Math.random() * 1000000);
+        const seed = Math.floor(Math.random() * 1000000);
         newImages.push({
           id: `gen-${Date.now()}-${i}`,
           url: `https://picsum.photos/seed/${seed}${i}/${Math.min(width, 800)}/${Math.min(height, 800)}`,
-          prompt,
+          prompt: finalPrompt,
           timestamp: Date.now(),
           settings: { ...settings },
         });
@@ -276,7 +303,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       setIsGenerating(false);
       setThinkingSteps([]);
     }
-  }, [prompt, referenceImages.length, settings, history, historyIndex, getThinkingSteps]);
+  }, [prompt, referenceImages.length, settings, history, historyIndex, getThinkingSteps, buildFinalPrompt]);
 
   const cancelGeneration = React.useCallback(() => {
     abortControllerRef.current?.abort();
@@ -308,6 +335,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const value = React.useMemo(() => ({
     prompt,
     setPrompt,
+    isPromptExpanded,
+    setIsPromptExpanded,
     settings,
     updateSettings,
     referenceImages,
@@ -320,8 +349,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     clearHistory,
     viewMode,
     setViewMode,
-    settingsPanelOpen,
-    toggleSettingsPanel,
+    historyPanelOpen,
+    toggleHistoryPanel,
     isInputVisible,
     toggleInputVisibility,
     activeTab,
@@ -336,12 +365,13 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     thinkingSteps,
     generate,
     cancelGeneration,
+    buildFinalPrompt,
   }), [
-    prompt, settings, referenceImages, history, selectedImage,
-    viewMode, settingsPanelOpen, isInputVisible, activeTab, zoom, canUndo, canRedo,
+    prompt, isPromptExpanded, settings, referenceImages, history, selectedImage,
+    viewMode, historyPanelOpen, isInputVisible, activeTab, zoom, canUndo, canRedo,
     isGenerating, thinkingSteps,
     updateSettings, addReferenceImages, removeReferenceImage, clearReferenceImages,
-    selectImage, clearHistory, toggleSettingsPanel, toggleInputVisibility, undo, redo, generate, cancelGeneration,
+    selectImage, clearHistory, toggleHistoryPanel, toggleInputVisibility, undo, redo, generate, cancelGeneration, buildFinalPrompt,
   ]);
 
   return (

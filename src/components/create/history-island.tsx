@@ -1,0 +1,209 @@
+"use client";
+
+import * as React from "react";
+import Image from "next/image";
+import { cn } from "@/lib/utils";
+import { useCreate } from "./create-context";
+import { Layers, Trash2, X, ChevronLeft, ChevronRight, Download, Copy } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+export function HistoryIsland() {
+  const { history, selectedImage, selectImage, clearHistory, historyPanelOpen, toggleHistoryPanel } = useCreate();
+
+  const formatTime = (timestamp: number) => {
+    const diff = Date.now() - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return "Now";
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h`;
+    return `${Math.floor(hours / 24)}d`;
+  };
+
+  const handleDownload = async (e: React.MouseEvent, url: string, id: string) => {
+    e.stopPropagation();
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = downloadUrl;
+      a.download = `generation-${id}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error("Download failed:", error);
+    }
+  };
+
+  const handleCopyPrompt = async (e: React.MouseEvent, prompt: string) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(prompt);
+    } catch (error) {
+      console.error("Copy failed:", error);
+    }
+  };
+
+  return (
+    <TooltipProvider delayDuration={300}>
+      <div className="absolute top-4 right-4 z-20">
+        <AnimatePresence initial={false} mode="wait">
+          {historyPanelOpen ? (
+            <motion.div
+              key="panel"
+              initial={{ opacity: 0, scale: 0.95, x: 20 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              exit={{ opacity: 0, scale: 0.95, x: 20 }}
+              transition={{ duration: 0.2 }}
+              className="w-64 bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-lg overflow-hidden"
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <Layers className="size-4 text-muted-foreground" />
+                  <span className="text-sm font-mono font-medium">History</span>
+                  {history.length > 0 && (
+                    <span className="text-xs text-muted-foreground font-mono">
+                      ({history.length})
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-1">
+                  {history.length > 0 && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={clearHistory}
+                          className="size-7 rounded-lg text-muted-foreground hover:text-destructive"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Clear history</TooltipContent>
+                    </Tooltip>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={toggleHistoryPanel}
+                    className="size-7 rounded-lg"
+                  >
+                    <X className="size-3.5" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Content */}
+              <ScrollArea className="h-[280px]">
+                {history.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-full text-center p-6">
+                    <Layers className="size-8 text-muted-foreground/30 mb-2" />
+                    <p className="text-xs text-muted-foreground font-mono">No generations yet</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2 p-2">
+                    {history.map((image) => (
+                      <motion.button
+                        key={image.id}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        onClick={() => selectImage(image)}
+                        className={cn(
+                          "relative aspect-square rounded-lg overflow-hidden group",
+                          "border border-border hover:border-foreground/30 transition-colors",
+                          selectedImage?.id === image.id && "ring-2 ring-foreground"
+                        )}
+                      >
+                        <Image
+                          src={image.url}
+                          alt={image.prompt || "Generated"}
+                          fill
+                          className="object-cover"
+                          unoptimized
+                        />
+
+                        {/* Hover overlay */}
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors">
+                          <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={(e) => handleDownload(e, image.url, image.id)}
+                                  className="size-7 rounded-md bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
+                                >
+                                  <Download className="size-3.5 text-zinc-900" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>Download</TooltipContent>
+                            </Tooltip>
+                            {image.prompt && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    onClick={(e) => handleCopyPrompt(e, image.prompt)}
+                                    className="size-7 rounded-md bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
+                                  >
+                                    <Copy className="size-3.5 text-zinc-900" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>Copy prompt</TooltipContent>
+                              </Tooltip>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Time badge */}
+                        <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/60 text-[10px] font-mono text-white">
+                          {formatTime(image.timestamp)}
+                        </div>
+                      </motion.button>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="button"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+            >
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={toggleHistoryPanel}
+                    className="size-10 rounded-xl bg-background/95 backdrop-blur-xl border-border shadow-lg"
+                  >
+                    <Layers className="size-4" />
+                    {history.length > 0 && (
+                      <span className="absolute -top-1 -right-1 size-4 rounded-full bg-foreground text-background text-[10px] font-mono flex items-center justify-center">
+                        {history.length > 9 ? "9+" : history.length}
+                      </span>
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="left">History</TooltipContent>
+              </Tooltip>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </TooltipProvider>
+  );
+}
