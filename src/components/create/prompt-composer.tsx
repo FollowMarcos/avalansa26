@@ -7,7 +7,7 @@ import { useCreate, AspectRatio, ImageSize } from "./create-context";
 import { FileUpload, FileUploadTrigger } from "@/components/ui/file-upload";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
-import { BananaIcon } from "./banana-icon";
+import { ApiSelector } from "./api-selector";
 import {
   ImagePlus,
   Sparkles,
@@ -67,6 +67,10 @@ export function PromptComposer() {
     generate,
     settings,
     updateSettings,
+    availableApis,
+    selectedApiId,
+    setSelectedApiId,
+    isLoadingApis,
   } = useCreate();
 
   const [showNegative, setShowNegative] = React.useState(false);
@@ -147,32 +151,13 @@ export function PromptComposer() {
 
               {/* Settings Row */}
               <div className="flex items-center gap-1 px-2 py-1.5 border-b border-border overflow-x-auto">
-                {/* Model Selector */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 px-2 gap-1.5 rounded-lg font-mono text-xs"
-                    >
-                      <BananaIcon size={14} />
-                      <span className="hidden sm:inline">Nano Banana Pro</span>
-                      <ChevronUp className="size-3 text-muted-foreground" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" side="top" className="min-w-[200px]">
-                    <DropdownMenuLabel className="text-xs font-mono text-muted-foreground">
-                      Model
-                    </DropdownMenuLabel>
-                    <DropdownMenuItem className="gap-2">
-                      <BananaIcon size={16} />
-                      <div className="flex flex-col">
-                        <span className="font-medium">Nano Banana Pro</span>
-                        <span className="text-xs text-muted-foreground">Gemini 3 Pro Image</span>
-                      </div>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {/* API Selector */}
+                <ApiSelector
+                  apis={availableApis}
+                  selectedApiId={selectedApiId}
+                  onSelect={setSelectedApiId}
+                  disabled={isGenerating || isLoadingApis}
+                />
 
                 <div className="w-px h-5 bg-border" />
 

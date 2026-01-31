@@ -1,6 +1,17 @@
 "use client";
 
 import * as React from "react";
+import type { ApiConfig } from "@/types/api-config";
+
+// Helper function to convert File to base64
+async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+  });
+}
 
 // Gemini 3 Pro Image Preview API types
 export type ImageSize = "1K" | "2K" | "4K";
@@ -45,6 +56,12 @@ export interface CreateSettings {
 }
 
 interface CreateContextType {
+  // API selection
+  availableApis: ApiConfig[];
+  selectedApiId: string | null;
+  setSelectedApiId: (id: string | null) => void;
+  isLoadingApis: boolean;
+
   // Prompt state
   prompt: string;
   setPrompt: (prompt: string) => void;
@@ -113,6 +130,11 @@ const CreateContext = React.createContext<CreateContextType | undefined>(undefin
 const MAX_REFERENCE_IMAGES = 14;
 
 export function CreateProvider({ children }: { children: React.ReactNode }) {
+  // API selection state
+  const [availableApis, setAvailableApis] = React.useState<ApiConfig[]>([]);
+  const [selectedApiId, setSelectedApiId] = React.useState<string | null>(null);
+  const [isLoadingApis, setIsLoadingApis] = React.useState(true);
+
   const [prompt, setPrompt] = React.useState("");
   const [isPromptExpanded, setIsPromptExpanded] = React.useState(false);
   const [settings, setSettings] = React.useState<CreateSettings>(defaultSettings);
@@ -129,6 +151,26 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [historyIndex, setHistoryIndex] = React.useState(-1);
   const [historyStack, setHistoryStack] = React.useState<GeneratedImage[][]>([]);
   const abortControllerRef = React.useRef<AbortController | null>(null);
+
+  // Fetch available APIs on mount
+  React.useEffect(() => {
+    async function fetchApis() {
+      try {
+        const { getAccessibleApiConfigs } = await import("@/utils/supabase/api-configs.server");
+        const apis = await getAccessibleApiConfigs();
+        setAvailableApis(apis);
+        // Auto-select the first API if available
+        if (apis.length > 0 && !selectedApiId) {
+          setSelectedApiId(apis[0].id);
+        }
+      } catch (error) {
+        console.error("Failed to fetch APIs:", error);
+      } finally {
+        setIsLoadingApis(false);
+      }
+    }
+    fetchApis();
+  }, []);
 
   const updateSettings = React.useCallback((newSettings: Partial<CreateSettings>) => {
     setSettings(prev => ({ ...prev, ...newSettings }));
@@ -213,20 +255,24 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
   const generate = React.useCallback(async () => {
     if (!prompt.trim() && referenceImages.length === 0) return;
+    if (!selectedApiId) {
+      console.error("No API selected");
+      return;
+    }
 
     setIsGenerating(true);
     abortControllerRef.current = new AbortController();
 
-    // Initialize thinking steps (always enabled for Gemini 3 Pro)
+    // Initialize thinking steps
     const steps = getThinkingSteps();
     setThinkingSteps(steps);
 
     try {
-      // Simulate thinking process
-      for (let i = 0; i < steps.length; i++) {
+      // Show thinking steps animation
+      for (let i = 0; i < steps.length - 1; i++) {
         if (abortControllerRef.current?.signal.aborted) break;
 
-        await new Promise(resolve => setTimeout(resolve, 400 + Math.random() * 300));
+        await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 200));
         setThinkingSteps(prev =>
           prev.map((step, idx) =>
             idx === i ? { ...step, completed: true } : step
@@ -234,59 +280,62 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         );
       }
 
-      // Simulate generation delay (longer for relaxed mode)
-      const delay = settings.generationSpeed === "relaxed" ? 1500 : 800;
-      await new Promise(resolve => setTimeout(resolve, delay + Math.random() * 700));
-
       if (abortControllerRef.current?.signal.aborted) return;
 
-      // Get dimensions based on settings
-      const getDimensions = () => {
-        const sizeMap: Record<ImageSize, number> = {
-          "1K": 1024,
-          "2K": 2048,
-          "4K": 4096,
-        };
+      // Convert reference images to base64
+      const referenceImagesBase64: string[] = [];
+      for (const img of referenceImages) {
+        const base64 = await fileToBase64(img.file);
+        referenceImagesBase64.push(base64);
+      }
 
-        const aspectRatios: Record<AspectRatio, [number, number]> = {
-          "1:1": [1, 1],
-          "2:3": [2, 3],
-          "3:2": [3, 2],
-          "3:4": [3, 4],
-          "4:3": [4, 3],
-          "4:5": [4, 5],
-          "5:4": [5, 4],
-          "9:16": [9, 16],
-          "16:9": [16, 9],
-          "21:9": [21, 9],
-        };
-
-        const baseSize = sizeMap[settings.imageSize];
-        const [wRatio, hRatio] = aspectRatios[settings.aspectRatio];
-        const scale = Math.sqrt((baseSize * baseSize) / (wRatio * hRatio));
-        return {
-          width: Math.round(wRatio * scale),
-          height: Math.round(hRatio * scale),
-        };
-      };
-
-      const { width, height } = getDimensions();
-
-      // Build the final prompt with negative injection
+      // Build the final prompt
       const finalPrompt = buildFinalPrompt();
 
-      // Generate mock images (will be replaced with actual API call)
-      const newImages: GeneratedImage[] = [];
-      for (let i = 0; i < settings.outputCount; i++) {
-        const seed = Math.floor(Math.random() * 1000000);
-        newImages.push({
-          id: `gen-${Date.now()}-${i}`,
-          url: `https://picsum.photos/seed/${seed}${i}/${Math.min(width, 800)}/${Math.min(height, 800)}`,
+      // Call the generation API
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          apiId: selectedApiId,
           prompt: finalPrompt,
-          timestamp: Date.now(),
-          settings: { ...settings },
-        });
+          negativePrompt: settings.negativePrompt,
+          aspectRatio: settings.aspectRatio,
+          imageSize: settings.imageSize,
+          outputCount: settings.outputCount,
+          referenceImages: referenceImagesBase64,
+        }),
+        signal: abortControllerRef.current.signal,
+      });
+
+      // Mark final step as completed
+      setThinkingSteps(prev =>
+        prev.map((step, idx) =>
+          idx === prev.length - 1 ? { ...step, completed: true } : step
+        )
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Generation failed');
       }
+
+      const data = await response.json();
+
+      if (!data.success || !data.images || data.images.length === 0) {
+        throw new Error(data.error || 'No images generated');
+      }
+
+      // Convert API response to GeneratedImage format
+      const newImages: GeneratedImage[] = data.images.map((img: { url: string }, i: number) => ({
+        id: `gen-${Date.now()}-${i}`,
+        url: img.url,
+        prompt: finalPrompt,
+        timestamp: Date.now(),
+        settings: { ...settings },
+      }));
 
       // Save to history for undo
       setHistoryStack(prev => [...prev.slice(0, historyIndex + 1), history]);
@@ -298,12 +347,17 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       setViewMode("canvas");
 
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        // Generation was cancelled
+        return;
+      }
       console.error("Generation error:", error);
+      // Could add toast notification here
     } finally {
       setIsGenerating(false);
       setThinkingSteps([]);
     }
-  }, [prompt, referenceImages.length, settings, history, historyIndex, getThinkingSteps, buildFinalPrompt]);
+  }, [prompt, referenceImages, settings, history, historyIndex, selectedApiId, getThinkingSteps, buildFinalPrompt]);
 
   const cancelGeneration = React.useCallback(() => {
     abortControllerRef.current?.abort();
@@ -333,6 +387,12 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   }, [canRedo, historyIndex, historyStack]);
 
   const value = React.useMemo(() => ({
+    // API selection
+    availableApis,
+    selectedApiId,
+    setSelectedApiId,
+    isLoadingApis,
+    // Prompt state
     prompt,
     setPrompt,
     isPromptExpanded,
@@ -367,6 +427,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     cancelGeneration,
     buildFinalPrompt,
   }), [
+    availableApis, selectedApiId, isLoadingApis,
     prompt, isPromptExpanded, settings, referenceImages, history, selectedImage,
     viewMode, historyPanelOpen, isInputVisible, activeTab, zoom, canUndo, canRedo,
     isGenerating, thinkingSteps,

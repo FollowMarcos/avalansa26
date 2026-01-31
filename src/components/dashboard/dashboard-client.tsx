@@ -52,6 +52,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { Profile, AdminStats, UserRole } from '@/types/database';
 import { getAllProfiles, updateUserRole } from '@/utils/supabase/admin';
 import { DockManager } from './dock-manager';
+import { ApiManager } from './api-manager';
 
 interface DashboardClientProps {
   initialProfiles: Profile[];
@@ -118,20 +119,20 @@ export function DashboardClient({
   const tabParam = searchParams.get('tab');
 
   // Use local state for instant switching, initialized from URL
-  const [activeTab, setActiveTabState] = useState<'users' | 'dock'>(
-    tabParam === 'dock' ? 'dock' : 'users'
+  const [activeTab, setActiveTabState] = useState<'users' | 'dock' | 'apis'>(
+    tabParam === 'dock' ? 'dock' : tabParam === 'apis' ? 'apis' : 'users'
   );
 
   // Sync URL changes to local state (for sidebar navigation)
   useEffect(() => {
-    const newTab = tabParam === 'dock' ? 'dock' : 'users';
+    const newTab = tabParam === 'dock' ? 'dock' : tabParam === 'apis' ? 'apis' : 'users';
     if (newTab !== activeTab) {
       setActiveTabState(newTab);
     }
   }, [tabParam]);
 
   // Update URL shallowly without triggering navigation
-  const setActiveTab = (tab: 'users' | 'dock') => {
+  const setActiveTab = (tab: 'users' | 'dock' | 'apis') => {
     setActiveTabState(tab);
     const url = new URL(window.location.href);
     url.searchParams.set('tab', tab);
@@ -286,12 +287,18 @@ export function DashboardClient({
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <CardTitle className="text-xl">
-                {activeTab === 'users' ? 'User Management' : 'Site Dock Management'}
+                {activeTab === 'users'
+                  ? 'User Management'
+                  : activeTab === 'dock'
+                  ? 'Site Dock Management'
+                  : 'API Configuration'}
               </CardTitle>
               <CardDescription>
                 {activeTab === 'users'
                   ? 'A complete directory of all registered users and their current status.'
-                  : 'Manage the navigation dock, rearrange icons, and configure dropdowns.'}
+                  : activeTab === 'dock'
+                  ? 'Manage the navigation dock, rearrange icons, and configure dropdowns.'
+                  : 'Manage AI APIs for image generation and other features.'}
               </CardDescription>
             </div>
 
@@ -313,6 +320,15 @@ export function DashboardClient({
                 )}
               >
                 Site Dock
+              </button>
+              <button
+                onClick={() => setActiveTab('apis')}
+                className={cn(
+                  "px-4 py-1.5 text-sm font-medium rounded-md transition-all",
+                  activeTab === 'apis' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                APIs
               </button>
             </div>
 
@@ -503,6 +519,11 @@ export function DashboardClient({
         {/* Dock Tab - Keep mounted, toggle visibility */}
         <div className={activeTab === 'dock' ? 'block p-6' : 'hidden'}>
           <DockManager />
+        </div>
+
+        {/* APIs Tab - Keep mounted, toggle visibility */}
+        <div className={activeTab === 'apis' ? 'block p-6' : 'hidden'}>
+          <ApiManager />
         </div>
 
         {/* Pagination Footer - Only show if in Users tab */}

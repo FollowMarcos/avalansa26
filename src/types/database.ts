@@ -10,6 +10,7 @@
 // ============================================
 
 import type { ProfileVisibility } from './visibility';
+import type { ApiConfig, ApiConfigInsert, ApiConfigUpdate, ApiAccessLevel } from './api-config';
 
 export type UserRole = 'user' | 'admin';
 
@@ -31,16 +32,29 @@ export interface Database {
         Insert: DockItemInsert;
         Update: DockItemUpdate;
       };
+      api_configs: {
+        Row: ApiConfig;
+        Insert: ApiConfigInsert;
+        Update: ApiConfigUpdate;
+      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      encrypt_api_key: {
+        Args: { plain_key: string; encryption_key: string };
+        Returns: string;
+      };
+      decrypt_api_key: {
+        Args: { encrypted_key: string; encryption_key: string };
+        Returns: string;
+      };
     };
     Enums: {
       user_role: UserRole;
       dock_type: DockType;
+      api_access_level: ApiAccessLevel;
     };
   };
 }
@@ -259,3 +273,12 @@ export interface DockItemUpdate {
 // ============================================
 
 export type { User, Session } from '@supabase/supabase-js';
+export type {
+  ApiConfig,
+  ApiConfigInsert,
+  ApiConfigUpdate,
+  ApiAccessLevel,
+  ApiModelInfo,
+  ApiProvider,
+} from './api-config';
+export { API_PROVIDERS, API_ACCESS_LEVELS } from './api-config';

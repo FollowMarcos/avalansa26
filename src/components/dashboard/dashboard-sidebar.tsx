@@ -15,6 +15,7 @@ import {
   ChevronRight,
   X,
   Menu,
+  Server,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -29,6 +30,7 @@ const NAV_ITEMS: NavItem[] = [
   { icon: LayoutDashboard, label: 'Overview', href: '/dashboard' },
   { icon: Users, label: 'Users', href: '/dashboard', tab: 'users' },
   { icon: Dock, label: 'Site Dock', href: '/dashboard', tab: 'dock' },
+  { icon: Server, label: 'APIs', href: '/dashboard', tab: 'apis' },
   { icon: Settings, label: 'Settings', href: '/dashboard/settings' },
   { icon: BarChart3, label: 'Analytics', href: '/dashboard/analytics' },
 ];

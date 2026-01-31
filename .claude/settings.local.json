@@ -6,7 +6,11 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:prompt-kit.com)",
       "Bash(npx shadcn@latest add:*)",
-      "WebFetch(domain:ai.google.dev)"
+      "WebFetch(domain:ai.google.dev)",
+      "Bash(ls -la \"c:\\\\Users\\\\world\\\\OneDrive\\\\Desktop\\\\newos\\\\src\\\\app\\\\dashboard\"\" 2>nul || echo \"No dashboard dir \")",
+      "Bash(npx tsc:*)",
+      "Bash(findstr:*)",
+      "Bash(git add:*)"
     ]
   }
 }
