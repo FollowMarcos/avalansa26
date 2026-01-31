@@ -183,8 +183,7 @@ export async function submitGeminiBatchJob(
         request: {
           contents: [{ parts }],
           generationConfig: {
-            responseModalities: ['image', 'text'],
-            responseMimeType: 'image/png',
+            responseModalities: ['IMAGE', 'TEXT'],
           },
         },
       };
@@ -271,8 +270,7 @@ async function processGeminiBatchInBackground(
         const requestBody = {
           contents: [{ parts }],
           generationConfig: {
-            responseModalities: ['image', 'text'],
-            responseMimeType: 'image/png',
+            responseModalities: ['IMAGE', 'TEXT'],
           },
         };
 

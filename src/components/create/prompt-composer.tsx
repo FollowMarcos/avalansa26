@@ -327,26 +327,28 @@ export function PromptComposer() {
               {/* Main Input Area */}
               <div className="flex items-end gap-2 p-2">
                 {/* Image Upload Button */}
-                <FileUploadTrigger asChild>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className={cn(
-                          "h-10 w-10 rounded-xl flex-shrink-0",
-                          hasReferences
-                            ? "text-foreground bg-muted"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                        disabled={isGenerating || referenceImages.length >= 14}
-                      >
-                        <ImagePlus className="w-5 h-5" strokeWidth={1.5} />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">Add reference images (up to 14)</TooltipContent>
-                  </Tooltip>
-                </FileUploadTrigger>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span>
+                      <FileUploadTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className={cn(
+                            "h-10 w-10 rounded-xl flex-shrink-0",
+                            hasReferences
+                              ? "text-foreground bg-muted"
+                              : "text-muted-foreground hover:text-foreground"
+                          )}
+                          disabled={isGenerating || referenceImages.length >= 14}
+                        >
+                          <ImagePlus className="w-5 h-5" strokeWidth={1.5} />
+                        </Button>
+                      </FileUploadTrigger>
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">Add reference images (up to 14)</TooltipContent>
+                </Tooltip>
 
                 {/* Textarea */}
                 <div className="flex-1 relative">

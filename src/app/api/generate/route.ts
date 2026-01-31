@@ -273,8 +273,7 @@ async function generateWithGemini(params: ProviderParams): Promise<GeneratedImag
       },
     ],
     generationConfig: {
-      responseModalities: ['image', 'text'],
-      responseMimeType: 'image/png',
+      responseModalities: ['IMAGE', 'TEXT'],
     },
   };
 
