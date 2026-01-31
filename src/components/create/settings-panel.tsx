@@ -36,7 +36,7 @@ export function SettingsPanel() {
           animate={{ width: 280, opacity: 1 }}
           exit={{ width: 0, opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="relative flex flex-col bg-zinc-900/80 backdrop-blur-xl border-l border-zinc-800 overflow-hidden"
+          className="relative flex flex-col bg-zinc-900 border-l border-zinc-800 overflow-hidden"
         >
           <Tabs defaultValue="settings" className="flex flex-col h-full">
             <TabsList className="grid grid-cols-3 m-2 bg-zinc-800/50">
@@ -70,9 +70,11 @@ export function SettingsPanel() {
           {/* Collapse button */}
           <button
             onClick={toggleRightSidebar}
-            className="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-12 rounded-l-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-colors"
+            aria-label={rightSidebarOpen ? "Collapse settings" : "Expand settings"}
+            aria-expanded={rightSidebarOpen}
+            className="absolute -left-3 top-1/2 -translate-y-1/2 size-6 h-12 rounded-l-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-colors"
           >
-            <ChevronRight className="w-4 h-4 text-zinc-400" />
+            <ChevronRight className="size-4 text-zinc-400" />
           </button>
         </motion.div>
       ) : (
@@ -81,9 +83,11 @@ export function SettingsPanel() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={toggleRightSidebar}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-6 h-12 rounded-l-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-colors"
+          aria-label="Expand settings"
+          aria-expanded={false}
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-20 size-6 h-12 rounded-l-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-colors"
         >
-          <ChevronLeft className="w-4 h-4 text-zinc-400" />
+          <ChevronLeft className="size-4 text-zinc-400" />
         </motion.button>
       )}
     </AnimatePresence>
@@ -119,14 +123,14 @@ function SettingsTab() {
       <div className="space-y-6">
         {/* Resolution */}
         <div className="space-y-2">
-          <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+          <label htmlFor="settings-resolution" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
             Resolution
           </label>
           <Select
             value={settings.resolution}
             onValueChange={(value: Resolution) => updateSettings({ resolution: value })}
           >
-            <SelectTrigger className="bg-zinc-800 border-zinc-700">
+            <SelectTrigger id="settings-resolution" className="bg-zinc-800 border-zinc-700">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -141,14 +145,14 @@ function SettingsTab() {
 
         {/* Aspect Ratio */}
         <div className="space-y-2">
-          <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+          <label htmlFor="settings-aspect-ratio" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
             Aspect Ratio
           </label>
           <Select
             value={settings.aspectRatio}
             onValueChange={(value: AspectRatio) => updateSettings({ aspectRatio: value })}
           >
-            <SelectTrigger className="bg-zinc-800 border-zinc-700">
+            <SelectTrigger id="settings-aspect-ratio" className="bg-zinc-800 border-zinc-700">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -163,14 +167,14 @@ function SettingsTab() {
 
         {/* Quality */}
         <div className="space-y-2">
-          <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+          <label htmlFor="settings-quality" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
             Quality
           </label>
           <Select
             value={settings.quality}
             onValueChange={(value: Quality) => updateSettings({ quality: value })}
           >
-            <SelectTrigger className="bg-zinc-800 border-zinc-700">
+            <SelectTrigger id="settings-quality" className="bg-zinc-800 border-zinc-700">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -196,7 +200,7 @@ function SettingsTab() {
                 className={cn(
                   "flex-1 py-2 rounded-lg text-sm font-medium transition-colors",
                   settings.outputCount === count
-                    ? "bg-violet-600 text-white"
+                    ? "bg-zinc-100 text-zinc-900"
                     : "bg-zinc-800 text-zinc-400 hover:text-zinc-200"
                 )}
               >
@@ -216,7 +220,7 @@ function SettingsTab() {
             className={cn(
               "w-full py-2 rounded-lg text-sm font-medium transition-colors",
               settings.thinking
-                ? "bg-violet-600 text-white"
+                ? "bg-zinc-100 text-zinc-900"
                 : "bg-zinc-800 text-zinc-400 hover:text-zinc-200"
             )}
           >
@@ -229,15 +233,13 @@ function SettingsTab() {
 
         {/* Seed */}
         <div className="space-y-2">
-          <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-            Seed (Optional)
-          </label>
           <input
+            id="settings-seed"
             type="text"
             value={settings.seed}
             onChange={(e) => updateSettings({ seed: e.target.value })}
             placeholder="Random"
-            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-violet-500"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-400"
           />
         </div>
       </div>
@@ -259,11 +261,12 @@ function ReferenceTab() {
       <div className="space-y-6">
         {/* Style Reference */}
         <div className="space-y-2">
-          <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+          <label htmlFor="style-ref-upload" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
             Style Reference
           </label>
 
           <input
+            id="style-ref-upload"
             ref={inputRef}
             type="file"
             accept="image/*"
@@ -283,9 +286,10 @@ function ReferenceTab() {
               </div>
               <button
                 onClick={() => setStyleReference(null)}
-                className="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                aria-label="Remove style reference"
+                className="absolute top-2 right-2 size-6 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
               >
-                <X className="w-4 h-4 text-white" />
+                <X className="size-4 text-white" />
               </button>
             </div>
           ) : (
@@ -316,22 +320,23 @@ function ReferenceTab() {
               max={100}
               value={settings.styleStrength}
               onChange={(e) => updateSettings({ styleStrength: parseInt(e.target.value) })}
-              className="w-full accent-violet-500"
+              className="w-full accent-zinc-400"
             />
           </div>
         )}
 
         {/* Negative Prompt */}
         <div className="space-y-2">
-          <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+          <label htmlFor="settings-negative-prompt" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
             Negative Prompt
           </label>
           <textarea
+            id="settings-negative-prompt"
             value={settings.negativePrompt}
             onChange={(e) => updateSettings({ negativePrompt: e.target.value })}
-            placeholder="Elements to avoid..."
+            placeholder="Elements to avoid…"
             rows={3}
-            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-violet-500 resize-none"
+            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-400 resize-none"
           />
         </div>
       </div>
@@ -369,9 +374,10 @@ function HistoryTab() {
               <button
                 key={image.id}
                 onClick={() => selectImage(image)}
+                aria-label={image.prompt || "Select generation from history"}
                 className={cn(
                   "relative aspect-square rounded-lg overflow-hidden group",
-                  selectedImage?.id === image.id && "ring-2 ring-violet-500"
+                  selectedImage?.id === image.id && "ring-1 ring-zinc-400"
                 )}
               >
                 <Image

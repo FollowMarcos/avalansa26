@@ -100,9 +100,9 @@ function GalleryItem({ image, isSelected, onSelect, index }: GalleryItemProps) {
       transition={{ delay: index * 0.05 }}
       className={cn(
         "relative group rounded-xl overflow-hidden cursor-pointer",
-        "bg-zinc-900 border-2 transition-all duration-200",
+        "bg-zinc-900 border transition-all duration-200",
         isSelected
-          ? "border-violet-500 shadow-lg shadow-violet-500/20"
+          ? "border-zinc-100 ring-1 ring-zinc-100"
           : "border-transparent hover:border-zinc-700"
       )}
       onMouseEnter={() => setIsHovered(true)}
@@ -137,15 +137,17 @@ function GalleryItem({ image, isSelected, onSelect, index }: GalleryItemProps) {
         >
           <button
             onClick={handleDownload}
-            className="w-8 h-8 rounded-lg bg-black/60 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/80 transition-colors"
+            aria-label="Download image"
+            className="size-8 rounded-lg bg-black/60 flex items-center justify-center text-white hover:bg-black/80 transition-colors"
           >
-            <Download className="w-4 h-4" />
+            <Download className="size-4" />
           </button>
           <button
             onClick={handleCopyPrompt}
-            className="w-8 h-8 rounded-lg bg-black/60 backdrop-blur-sm flex items-center justify-center text-white hover:bg-black/80 transition-colors"
+            aria-label="Copy prompt"
+            className="size-8 rounded-lg bg-black/60 flex items-center justify-center text-white hover:bg-black/80 transition-colors"
           >
-            <Copy className="w-4 h-4" />
+            <Copy className="size-4" />
           </button>
         </div>
 
@@ -170,8 +172,8 @@ function GalleryItem({ image, isSelected, onSelect, index }: GalleryItemProps) {
 
       {/* Selection indicator */}
       {isSelected && (
-        <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-violet-500 flex items-center justify-center">
-          <Maximize2 className="w-3 h-3 text-white" />
+        <div className="absolute top-2 left-2 size-6 rounded-full bg-zinc-100 flex items-center justify-center">
+          <Maximize2 className="size-3 text-zinc-900" />
         </div>
       )}
     </motion.div>

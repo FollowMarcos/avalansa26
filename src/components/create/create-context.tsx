@@ -213,12 +213,12 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
   // Mock thinking steps for visual reasoning
   const mockThinkingSteps: ThinkingStep[] = [
-    { id: "1", text: "Analyzing prompt structure...", completed: false },
-    { id: "2", text: "Planning composition and layout...", completed: false },
-    { id: "3", text: "Determining color palette...", completed: false },
-    { id: "4", text: "Rendering initial shapes...", completed: false },
-    { id: "5", text: "Adding fine details...", completed: false },
-    { id: "6", text: "Finalizing output...", completed: false },
+    { id: "1", text: "Analyzing prompt structure…", completed: false },
+    { id: "2", text: "Planning composition and layout…", completed: false },
+    { id: "3", text: "Determining color palette…", completed: false },
+    { id: "4", text: "Rendering initial shapes…", completed: false },
+    { id: "5", text: "Adding fine details…", completed: false },
+    { id: "6", text: "Finalizing output…", completed: false },
   ];
 
   const generate = React.useCallback(async () => {

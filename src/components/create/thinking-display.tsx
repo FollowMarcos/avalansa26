@@ -21,14 +21,14 @@ export function ThinkingDisplay() {
         exit={{ opacity: 0, x: -20 }}
         className="absolute left-4 top-1/2 -translate-y-1/2 z-20"
       >
-        <div className="bg-zinc-900/90 backdrop-blur-xl rounded-xl border border-zinc-800 p-4 shadow-xl max-w-xs">
+        <div className="bg-zinc-900 rounded-xl border border-zinc-800 p-4 max-w-xs">
           <div className="flex items-center gap-2 mb-3 pb-3 border-b border-zinc-800">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-              <Brain className="w-4 h-4 text-white" />
+            <div className="size-8 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center">
+              <Brain className="size-4 text-zinc-300" />
             </div>
             <div>
               <h4 className="text-sm font-medium text-zinc-200">Visual Reasoning</h4>
-              <p className="text-xs text-zinc-500">AI is thinking...</p>
+              <p className="text-xs text-zinc-500">AI is thinking…</p>
             </div>
           </div>
 
@@ -46,16 +46,16 @@ export function ThinkingDisplay() {
               >
                 <div
                   className={cn(
-                    "w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0",
+                    "size-4 rounded-full flex items-center justify-center flex-shrink-0",
                     step.completed
-                      ? "bg-green-500/20 text-green-400"
-                      : "bg-zinc-800"
+                      ? "bg-zinc-100 text-zinc-900"
+                      : "bg-zinc-800 border border-zinc-700"
                   )}
                 >
                   {step.completed ? (
-                    <Check className="w-2.5 h-2.5" />
+                    <Check className="size-2.5" />
                   ) : (
-                    <div className="w-1.5 h-1.5 rounded-full bg-zinc-600 animate-pulse" />
+                    <div className="size-1.5 rounded-full bg-zinc-600 animate-pulse" />
                   )}
                 </div>
                 <span className={cn(step.completed && "line-through opacity-60")}>
@@ -65,11 +65,10 @@ export function ThinkingDisplay() {
             ))}
           </div>
 
-          {/* Progress bar */}
           <div className="mt-4 pt-3 border-t border-zinc-800">
             <div className="h-1 bg-zinc-800 rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-gradient-to-r from-violet-500 to-purple-500"
+                className="h-full bg-zinc-100"
                 initial={{ width: "0%" }}
                 animate={{
                   width: `${(thinkingSteps.filter(s => s.completed).length / thinkingSteps.length) * 100}%`

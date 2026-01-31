@@ -97,12 +97,11 @@ function EmptyState({ hasInputImages }: { hasInputImages: boolean }) {
         />
 
         <div className="relative mb-6">
-          <div className="absolute inset-0 bg-gradient-to-br from-violet-500 to-purple-600 blur-xl opacity-30 group-hover:opacity-50 transition-opacity" />
-          <div className="relative w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+          <div className="size-20 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center">
             {hasInputImages ? (
-              <Sparkles className="w-10 h-10 text-white" strokeWidth={1.5} />
+              <Sparkles className="size-10 text-zinc-300" strokeWidth={1.5} />
             ) : (
-              <ImagePlus className="w-10 h-10 text-white" strokeWidth={1.5} />
+              <ImagePlus className="size-10 text-zinc-300" strokeWidth={1.5} />
             )}
           </div>
         </div>
@@ -136,49 +135,44 @@ function GeneratingState() {
       exit={{ opacity: 0 }}
       className="relative z-10 flex flex-col items-center justify-center text-center p-8"
     >
-      {/* Pulsing gradient background */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <div className="w-96 h-96 rounded-full bg-gradient-to-br from-violet-500/20 to-purple-600/20 blur-3xl animate-pulse" />
-      </div>
 
-      <div className="relative">
-        {/* Spinner */}
-        <div className="w-24 h-24 rounded-full border-4 border-zinc-800 border-t-violet-500 animate-spin mb-8" />
 
-        {settings.thinking && thinkingSteps.length > 0 && (
-          <div className="space-y-2 mb-6">
-            {thinkingSteps.map((step) => (
-              <motion.div
-                key={step.id}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
+      {/* Spinner */}
+      <div className="size-24 rounded-full border border-zinc-900 border-t-zinc-100 animate-spin mb-8 mx-auto" />
+
+      {settings.thinking && thinkingSteps.length > 0 && (
+        <div className="space-y-2 mb-6">
+          {thinkingSteps.map((step) => (
+            <motion.div
+              key={step.id}
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              className={cn(
+                "flex items-center gap-2 text-sm",
+                step.completed ? "text-zinc-400" : "text-zinc-600"
+              )}
+            >
+              <div
                 className={cn(
-                  "flex items-center gap-2 text-sm",
-                  step.completed ? "text-zinc-400" : "text-zinc-600"
+                  "size-2 rounded-full",
+                  step.completed ? "bg-green-500" : "bg-zinc-600 animate-pulse"
                 )}
-              >
-                <div
-                  className={cn(
-                    "w-2 h-2 rounded-full",
-                    step.completed ? "bg-green-500" : "bg-zinc-600 animate-pulse"
-                  )}
-                />
-                <span>{step.text}</span>
-                {step.completed && <span className="text-green-500">✓</span>}
-              </motion.div>
-            ))}
-          </div>
-        )}
+              />
+              <span>{step.text}</span>
+              {step.completed && <span className="text-green-500">✓</span>}
+            </motion.div>
+          ))}
+        </div>
+      )}
 
-        <p className="text-sm text-zinc-500 mb-4">Generating your image...</p>
+      <p className="text-sm text-zinc-500 mb-4">Generating your image…</p>
 
-        <button
-          onClick={cancelGeneration}
-          className="px-4 py-2 text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
-        >
-          Cancel
-        </button>
-      </div>
+      <button
+        onClick={cancelGeneration}
+        className="px-4 py-2 text-sm text-zinc-400 hover:text-zinc-200 transition-colors"
+      >
+        Cancel
+      </button>
     </motion.div>
   );
 }
@@ -198,7 +192,7 @@ function ImageDisplay({ zoom }: { zoom: number }) {
       className="relative z-10 flex items-center justify-center p-8"
       style={{ transform: `scale(${scale})` }}
     >
-      <div className="relative rounded-lg overflow-hidden shadow-2xl shadow-black/50">
+      <div className="relative rounded-lg overflow-hidden border border-zinc-800">
         <Image
           src={selectedImage.url}
           alt={selectedImage.prompt || "Generated image"}
@@ -210,7 +204,7 @@ function ImageDisplay({ zoom }: { zoom: number }) {
       </div>
 
       {/* Image info overlay */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-black/60 backdrop-blur-sm text-xs text-zinc-300">
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-zinc-950 border border-zinc-800 text-xs text-zinc-400">
         {selectedImage.settings.resolution}px • {selectedImage.settings.aspectRatio} • {selectedImage.mode}
       </div>
     </motion.div>

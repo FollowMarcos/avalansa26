@@ -41,7 +41,7 @@ export function StudioLayout() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="relative h-screen flex flex-col bg-zinc-950 overflow-hidden"
+      className="relative h-dvh flex flex-col bg-zinc-950 overflow-hidden"
     >
       {/* Main content area */}
       <div className="flex-1 flex overflow-hidden">
@@ -136,10 +136,10 @@ function DragOverlay() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="absolute inset-0 z-50 flex items-center justify-center bg-zinc-950/90 backdrop-blur-sm"
+      className="absolute inset-0 z-50 flex items-center justify-center bg-zinc-950/95"
     >
       <div className="text-center">
-        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mx-auto mb-4">
+        <div className="size-20 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto mb-4">
           <svg
             className="w-10 h-10 text-white"
             fill="none"

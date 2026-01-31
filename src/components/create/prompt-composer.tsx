@@ -72,7 +72,7 @@ export function PromptComposer() {
             isLoading={isGenerating}
             disabled={isGenerating}
             className={cn(
-              "bg-zinc-900/95 backdrop-blur-xl border-zinc-700/50 shadow-2xl",
+              "bg-zinc-900 border-zinc-800",
               "rounded-2xl transition-all",
               inputImages.length > 0 && "rounded-t-none"
             )}
@@ -103,9 +103,10 @@ export function PromptComposer() {
                         </div>
                         <button
                           onClick={() => removeImage(img.id)}
-                          className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          aria-label="Remove image"
+                          className="absolute -top-1 -right-1 size-4 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                         >
-                          <X className="w-2.5 h-2.5 text-zinc-400" />
+                          <X className="size-2.5 text-zinc-400" />
                         </button>
                       </div>
                     ))}
@@ -149,17 +150,19 @@ export function PromptComposer() {
                     variant="ghost"
                     size="icon"
                     onClick={() => setShowNegative(!showNegative)}
+                    aria-label={showNegative ? "Hide negative prompt" : "Show negative prompt"}
+                    aria-expanded={showNegative}
                     className={cn(
-                      "h-10 w-10 rounded-xl",
+                      "size-10 rounded-xl",
                       showNegative
-                        ? "text-violet-400"
+                        ? "text-zinc-200 bg-zinc-800"
                         : "text-zinc-400 hover:text-zinc-200"
                     )}
                   >
                     {showNegative ? (
-                      <ChevronDown className="w-5 h-5" strokeWidth={1.5} />
+                      <ChevronDown className="size-5" strokeWidth={1.5} />
                     ) : (
-                      <ChevronUp className="w-5 h-5" strokeWidth={1.5} />
+                      <ChevronUp className="size-5" strokeWidth={1.5} />
                     )}
                   </Button>
                 </PromptInputAction>
@@ -171,16 +174,15 @@ export function PromptComposer() {
                     disabled={isGenerating || (!prompt.trim() && inputImages.length === 0)}
                     className={cn(
                       "h-10 px-4 rounded-xl font-medium",
-                      "bg-gradient-to-r from-violet-600 to-purple-600",
-                      "hover:from-violet-500 hover:to-purple-500",
+                      "bg-zinc-100 text-zinc-900 hover:bg-white",
                       "disabled:opacity-50 disabled:cursor-not-allowed"
                     )}
                   >
                     {isGenerating ? (
-                      <Loader variant="circular" size="sm" className="border-white" />
+                      <Loader variant="circular" size="sm" className="border-zinc-900" />
                     ) : (
                       <>
-                        <Sparkles className="w-4 h-4 mr-2" strokeWidth={1.5} />
+                        <Sparkles className="size-4 mr-2" strokeWidth={1.5} />
                         {modeLabels[mode]}
                       </>
                     )}
@@ -203,10 +205,11 @@ export function PromptComposer() {
                       Negative prompt (elements to avoid)
                     </label>
                     <input
+                      id="negative-prompt-input"
                       type="text"
                       value={settings.negativePrompt}
-                      onChange={(e) => {/* handled by context */}}
-                      placeholder="blurry, low quality, distorted..."
+                      onChange={(e) => {/* handled by context */ }}
+                      placeholder="blurry, low quality, distorted…"
                       className="w-full bg-transparent text-sm text-zinc-300 placeholder:text-zinc-600 outline-none"
                     />
                   </div>
@@ -242,8 +245,8 @@ function getPlaceholder(mode: GenerationMode): string {
     case "infographic":
       return "Describe your infographic or chart...";
     case "consistency":
-      return "Describe a scene with your character/subject...";
+      return "Describe a scene with your character/subject…";
     default:
-      return "Enter your prompt...";
+      return "Enter your prompt…";
   }
 }

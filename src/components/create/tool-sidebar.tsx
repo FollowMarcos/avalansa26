@@ -87,7 +87,7 @@ export function ToolSidebar() {
             animate={{ width: 64, opacity: 1 }}
             exit={{ width: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="relative flex flex-col items-center py-4 bg-zinc-900/80 backdrop-blur-xl border-r border-zinc-800"
+            className="relative flex flex-col items-center py-4 bg-zinc-900 border-r border-zinc-800"
           >
             {/* Tools */}
             <div className="flex flex-col gap-2">
@@ -126,9 +126,11 @@ export function ToolSidebar() {
             {/* Collapse button */}
             <button
               onClick={toggleLeftSidebar}
-              className="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-12 rounded-r-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-colors"
+              aria-label={leftSidebarOpen ? "Collapse tools" : "Expand tools"}
+              aria-expanded={leftSidebarOpen}
+              className="absolute -right-3 top-1/2 -translate-y-1/2 size-6 h-12 rounded-r-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-colors"
             >
-              <ChevronLeft className="w-4 h-4 text-zinc-400" />
+              <ChevronLeft className="size-4 text-zinc-400" />
             </button>
           </motion.div>
         ) : (
@@ -137,9 +139,11 @@ export function ToolSidebar() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={toggleLeftSidebar}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-6 h-12 rounded-r-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-colors"
+            aria-label="Expand tools"
+            aria-expanded={false}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-20 size-6 h-12 rounded-r-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-colors"
           >
-            <ChevronRight className="w-4 h-4 text-zinc-400" />
+            <ChevronRight className="size-4 text-zinc-400" />
           </motion.button>
         )}
       </AnimatePresence>
@@ -163,32 +167,19 @@ function ToolButton({
       <TooltipTrigger asChild>
         <button
           onClick={onClick}
+          aria-label={tool.label}
           className={cn(
-            "relative w-11 h-11 rounded-xl flex items-center justify-center transition-all duration-200",
+            "relative size-11 rounded-xl flex items-center justify-center transition-all duration-200",
             isActive
-              ? "bg-gradient-to-br text-white shadow-lg"
+              ? "bg-zinc-100 text-zinc-900 shadow-sm"
               : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800"
           )}
-          style={
-            isActive
-              ? {
-                  backgroundImage: `linear-gradient(to bottom right, var(--tw-gradient-stops))`,
-                }
-              : undefined
-          }
         >
-          {isActive && (
-            <div
-              className={cn(
-                "absolute inset-0 rounded-xl bg-gradient-to-br opacity-100",
-                tool.color
-              )}
-            />
-          )}
+
           <Icon
             className={cn(
-              "relative z-10 w-5 h-5",
-              isActive ? "text-white" : ""
+              "relative z-10 size-5",
+              isActive ? "text-zinc-900" : ""
             )}
             strokeWidth={1.5}
           />

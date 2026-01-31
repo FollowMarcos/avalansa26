@@ -63,7 +63,7 @@ export function QuickToolbar() {
         animate={{ opacity: 1, y: 0 }}
         className="absolute top-4 left-1/2 -translate-x-1/2 z-20"
       >
-        <div className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-zinc-900/80 backdrop-blur-xl border border-zinc-800 shadow-xl">
+        <div className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800">
           {/* Undo/Redo */}
           <div className="flex items-center gap-0.5 pr-2 border-r border-zinc-700">
             <ToolbarButton
@@ -90,6 +90,7 @@ export function QuickToolbar() {
             />
             <button
               onClick={handleZoomReset}
+              aria-label="Reset zoom to 100%"
               className="px-2 py-1 text-xs font-medium text-zinc-400 hover:text-zinc-200 tabular-nums transition-colors"
             >
               {zoom}%
@@ -152,15 +153,16 @@ function ToolbarButton({
         <button
           onClick={onClick}
           disabled={disabled}
+          aria-label={tooltip}
           className={cn(
-            "w-8 h-8 rounded-lg flex items-center justify-center transition-colors",
+            "size-8 rounded-lg flex items-center justify-center transition-colors",
             active
-              ? "bg-zinc-700 text-white"
+              ? "bg-zinc-800 text-white border border-zinc-700"
               : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800",
             disabled && "opacity-40 cursor-not-allowed hover:bg-transparent hover:text-zinc-400"
           )}
         >
-          <Icon className="w-4 h-4" strokeWidth={1.5} />
+          <Icon className="size-4" strokeWidth={1.5} />
         </button>
       </TooltipTrigger>
       <TooltipContent side="bottom">{tooltip}</TooltipContent>
