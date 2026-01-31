@@ -17,7 +17,7 @@ export function StudioLayout() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="relative h-[calc(100dvh-6rem)] lg:h-[calc(100dvh-8rem)] flex flex-col bg-background text-foreground overflow-hidden"
+      className="relative h-dvh flex flex-col bg-background text-foreground overflow-hidden"
     >
       {/* Grain texture overlay */}
       <div className="pointer-events-none fixed inset-0 z-50 bg-noise opacity-[0.03]" />

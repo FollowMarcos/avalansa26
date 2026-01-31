@@ -10,9 +10,12 @@ interface PageShellProps {
     className?: string; // Classes for the root container
     contentClassName?: string; // Classes for the internal main element
     showDock?: boolean;
+    dockPosition?: "bottom" | "top-left";
 }
 
-export function PageShell({ children, className, contentClassName, showDock = true }: PageShellProps) {
+export function PageShell({ children, className, contentClassName, showDock = true, dockPosition = "bottom" }: PageShellProps) {
+    const isTopLeft = dockPosition === "top-left";
+
     return (
         <CreateProvider>
             <div className={cn("relative min-h-screen bg-background text-foreground flex flex-col antialiased", className)}>
@@ -23,14 +26,19 @@ export function PageShell({ children, className, contentClassName, showDock = tr
 
                 <main className={cn(
                     "flex-1 flex flex-col relative z-10 w-full",
-                    showDock && "pb-24 lg:pb-32",
+                    showDock && !isTopLeft && "pb-24 lg:pb-32",
                     contentClassName
                 )}>
                     {children}
                 </main>
 
                 {showDock && (
-                    <div className="fixed bottom-0 left-0 right-0 z-[60] p-6 pointer-events-none">
+                    <div className={cn(
+                        "fixed z-[60] pointer-events-none",
+                        isTopLeft
+                            ? "top-0 left-0 p-4"
+                            : "bottom-0 left-0 right-0 p-6 flex justify-center"
+                    )}>
                         <SiteDock />
                     </div>
                 )}

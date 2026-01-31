@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 
 export default function CreatePage() {
   return (
-    <PageShell showDock={true} className="p-0">
+    <PageShell showDock={true} dockPosition="top-left" className="p-0">
       <StudioLayout />
     </PageShell>
   );
