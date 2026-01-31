@@ -19,6 +19,10 @@ import {
   Zap,
   Clock,
   Ban,
+  Bookmark,
+  BookmarkCheck,
+  Library,
+  Trash2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -63,6 +67,10 @@ export function PromptComposer() {
     referenceImages,
     addReferenceImages,
     removeReferenceImage,
+    savedReferences,
+    saveReferenceImage,
+    removeSavedReference,
+    addSavedReferenceToActive,
     isGenerating,
     generate,
     settings,
@@ -109,7 +117,7 @@ export function PromptComposer() {
             <div className="bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-lg overflow-hidden">
               {/* Reference Images Row */}
               <AnimatePresence>
-                {hasReferences && (
+                {(hasReferences || savedReferences.length > 0) && (
                   <motion.div
                     initial={{ height: 0, opacity: 0 }}
                     animate={{ height: "auto", opacity: 1 }}
@@ -119,8 +127,62 @@ export function PromptComposer() {
                     <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/30">
                       <div className="flex items-center gap-1 text-xs text-muted-foreground mr-2 flex-shrink-0">
                         <Images className="size-3.5" />
-                        <span>Image Reference</span>
+                        <span>References</span>
                       </div>
+
+                      {/* Saved references library picker */}
+                      {savedReferences.length > 0 && (
+                        <DropdownMenu>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <DropdownMenuTrigger asChild>
+                                <button
+                                  className="w-10 h-10 rounded-lg border border-dashed border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-foreground/50 transition-colors flex-shrink-0"
+                                  aria-label="Add from saved library"
+                                >
+                                  <Library className="size-4" />
+                                </button>
+                              </DropdownMenuTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent>Saved library ({savedReferences.length})</TooltipContent>
+                          </Tooltip>
+                          <DropdownMenuContent align="start" side="top" className="w-64 max-h-64 overflow-auto">
+                            <DropdownMenuLabel className="text-xs font-mono">Saved References</DropdownMenuLabel>
+                            <div className="grid grid-cols-4 gap-1 p-2">
+                              {savedReferences.map((saved) => (
+                                <div key={saved.id} className="relative group">
+                                  <button
+                                    onClick={() => addSavedReferenceToActive(saved)}
+                                    className="w-12 h-12 rounded-lg overflow-hidden border border-border hover:border-foreground/50 transition-colors"
+                                    aria-label={`Add ${saved.name}`}
+                                  >
+                                    <Image
+                                      src={saved.url}
+                                      alt={saved.name}
+                                      width={48}
+                                      height={48}
+                                      className="w-full h-full object-cover"
+                                      unoptimized
+                                    />
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      removeSavedReference(saved.id);
+                                    }}
+                                    aria-label="Remove from library"
+                                    className="absolute -top-1 -right-1 size-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <Trash2 className="size-2.5" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
+
+                      {/* Active reference images */}
                       {referenceImages.map((img) => (
                         <div key={img.id} className="relative flex-shrink-0 group">
                           <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted border border-border">
@@ -131,7 +193,28 @@ export function PromptComposer() {
                               height={40}
                               className="w-full h-full object-cover"
                             />
+                            {img.isUploading && (
+                              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                <Loader className="size-4 text-white" />
+                              </div>
+                            )}
                           </div>
+                          {/* Save to library button */}
+                          {img.storagePath && !img.isUploading && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={() => saveReferenceImage(img)}
+                                  aria-label="Save to library"
+                                  className="absolute -top-1 -left-1 size-4 rounded-full bg-background border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary hover:text-primary-foreground hover:border-primary"
+                                >
+                                  <Bookmark className="size-2.5" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>Save to library</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {/* Remove button */}
                           <button
                             onClick={() => removeReferenceImage(img.id)}
                             aria-label="Remove reference image"

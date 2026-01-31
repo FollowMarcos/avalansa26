@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils';
 import { nodeTypes } from './nodes';
 import { useCreate } from './create-context';
 import type { ImageNodeData } from '@/types/canvas';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 interface FlowCanvasProps {
   className?: string;
@@ -61,49 +62,51 @@ export function FlowCanvas({ className }: FlowCanvasProps) {
   }, [nodes.length, fitView]);
 
   return (
-    <div className={cn('h-full w-full', className)}>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onSelectionChange={handleSelectionChange}
-        nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.2 }}
-        minZoom={0.1}
-        maxZoom={2}
-        defaultEdgeOptions={{
-          type: 'smoothstep',
-          animated: true,
-        }}
-        proOptions={{ hideAttribution: true }}
-        className="bg-transparent"
-      >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={20}
-          size={1}
-          className="opacity-30"
-        />
-        <Controls
-          showZoom
-          showFitView
-          showInteractive={false}
-          className="!bg-background !border-border !shadow-md"
-        />
-        <MiniMap
-          nodeColor={(node) => {
-            if (node.selected) return 'hsl(var(--primary))';
-            return 'hsl(var(--muted-foreground))';
+    <TooltipProvider delayDuration={300}>
+      <div className={cn('h-full w-full', className)}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onSelectionChange={handleSelectionChange}
+          nodeTypes={nodeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.2 }}
+          minZoom={0.1}
+          maxZoom={2}
+          defaultEdgeOptions={{
+            type: 'smoothstep',
+            animated: true,
           }}
-          maskColor="hsl(var(--background) / 0.8)"
-          className="!bg-background !border-border"
-          pannable
-          zoomable
-        />
-      </ReactFlow>
-    </div>
+          proOptions={{ hideAttribution: true }}
+          className="bg-transparent"
+        >
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={20}
+            size={1}
+            className="opacity-30"
+          />
+          <Controls
+            showZoom
+            showFitView
+            showInteractive={false}
+            className="!bg-background !border-border !shadow-md"
+          />
+          <MiniMap
+            nodeColor={(node) => {
+              if (node.selected) return 'hsl(var(--primary))';
+              return 'hsl(var(--muted-foreground))';
+            }}
+            maskColor="hsl(var(--background) / 0.8)"
+            className="!bg-background !border-border"
+            pannable
+            zoomable
+          />
+        </ReactFlow>
+      </div>
+    </TooltipProvider>
   );
 }

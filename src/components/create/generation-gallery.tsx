@@ -3,13 +3,13 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useCreate } from "./create-context";
-import { Download, Copy, X } from "lucide-react";
+import { Download, Copy, X, ImagePlus } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export function GenerationGallery() {
-  const { viewMode, setViewMode, history, selectedImage, selectImage } = useCreate();
+  const { viewMode, setViewMode, history, selectedImage, selectImage, addReferenceImageFromUrl } = useCreate();
 
   if (viewMode !== "gallery") return null;
 
@@ -36,6 +36,11 @@ export function GenerationGallery() {
     } catch (error) {
       console.error("Copy failed:", error);
     }
+  };
+
+  const handleUseAsReference = async (e: React.MouseEvent, url: string) => {
+    e.stopPropagation();
+    await addReferenceImageFromUrl(url);
   };
 
   const formatTime = (timestamp: number) => {
@@ -123,6 +128,16 @@ export function GenerationGallery() {
                         variant="secondary"
                         size="icon"
                         className="size-8 rounded-lg"
+                        aria-label="Use as reference image"
+                        onClick={(e) => handleUseAsReference(e, image.url)}
+                      >
+                        <ImagePlus className="size-4" />
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className="size-8 rounded-lg"
+                        aria-label="Download image"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDownload(image.url, image.id);
@@ -135,6 +150,7 @@ export function GenerationGallery() {
                           variant="secondary"
                           size="icon"
                           className="size-8 rounded-lg"
+                          aria-label="Copy prompt"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleCopyPrompt(image.prompt);

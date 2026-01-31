@@ -4,7 +4,7 @@ import * as React from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useCreate } from "./create-context";
-import { Layers, Trash2, X, ChevronLeft, ChevronRight, Download, Copy } from "lucide-react";
+import { Layers, Trash2, X, ChevronLeft, ChevronRight, Download, Copy, ImagePlus } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/tooltip";
 
 export function HistoryIsland() {
-  const { history, selectedImage, selectImage, clearHistory, historyPanelOpen, toggleHistoryPanel } = useCreate();
+  const { history, selectedImage, selectImage, clearHistory, historyPanelOpen, toggleHistoryPanel, addReferenceImageFromUrl } = useCreate();
 
   const formatTime = (timestamp: number) => {
     const diff = Date.now() - timestamp;
@@ -53,6 +53,11 @@ export function HistoryIsland() {
     } catch (error) {
       console.error("Copy failed:", error);
     }
+  };
+
+  const handleUseAsReference = async (e: React.MouseEvent, url: string) => {
+    e.stopPropagation();
+    await addReferenceImageFromUrl(url);
   };
 
   return (
@@ -139,6 +144,18 @@ export function HistoryIsland() {
                         {/* Hover overlay */}
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors">
                           <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <button
+                                  onClick={(e) => handleUseAsReference(e, image.url)}
+                                  aria-label="Use as reference image"
+                                  className="size-7 rounded-md bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
+                                >
+                                  <ImagePlus className="size-3.5 text-zinc-900" aria-hidden="true" />
+                                </button>
+                              </TooltipTrigger>
+                              <TooltipContent>Use as reference</TooltipContent>
+                            </Tooltip>
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <button

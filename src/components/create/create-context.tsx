@@ -37,6 +37,14 @@ export interface ImageFile {
   isUploading?: boolean;
 }
 
+export interface SavedReferenceImage {
+  id: string;
+  url: string; // Public URL from storage
+  storagePath: string; // Path in Supabase Storage
+  name: string;
+  savedAt: number;
+}
+
 export interface GeneratedImage {
   id: string;
   url: string;
@@ -81,8 +89,15 @@ interface CreateContextType {
   // Reference images (up to 14, 6 objects max, 5 human faces)
   referenceImages: ImageFile[];
   addReferenceImages: (files: File[]) => void;
+  addReferenceImageFromUrl: (url: string) => Promise<void>;
   removeReferenceImage: (id: string) => void;
   clearReferenceImages: () => void;
+
+  // Saved reference images library
+  savedReferences: SavedReferenceImage[];
+  saveReferenceImage: (image: ImageFile) => void;
+  removeSavedReference: (id: string) => void;
+  addSavedReferenceToActive: (saved: SavedReferenceImage) => Promise<void>;
 
   // Generation history
   history: GeneratedImage[];
@@ -211,6 +226,13 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [isPromptExpanded, setIsPromptExpanded] = React.useState(false);
   const [settings, setSettings] = React.useState<CreateSettings>(defaultSettings);
   const [referenceImages, setReferenceImages] = React.useState<ImageFile[]>([]);
+  const [savedReferences, setSavedReferences] = React.useState<SavedReferenceImage[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('savedReferenceImages');
+      return stored ? JSON.parse(stored) : [];
+    }
+    return [];
+  });
   const [history, setHistory] = React.useState<GeneratedImage[]>([]);
   const [selectedImage, setSelectedImage] = React.useState<GeneratedImage | null>(null);
   const [viewMode, setViewMode] = React.useState<"canvas" | "gallery">("canvas");
@@ -441,6 +463,120 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     referenceImages.forEach(img => URL.revokeObjectURL(img.preview));
     setReferenceImages([]);
   }, [referenceImages]);
+
+  /**
+   * Add a reference image from a URL (for using generated images as references)
+   */
+  const addReferenceImageFromUrl = React.useCallback(async (url: string) => {
+    if (referenceImages.length >= MAX_REFERENCE_IMAGES) {
+      console.warn('Maximum reference images reached');
+      return;
+    }
+
+    try {
+      // Get current user
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('User not authenticated');
+        return;
+      }
+
+      // Fetch the image from URL
+      const response = await fetch(url);
+      const blob = await response.blob();
+
+      // Create a File object from the blob
+      const filename = `reference-${Date.now()}.${blob.type.split('/')[1] || 'png'}`;
+      const file = new File([blob], filename, { type: blob.type });
+
+      // Create preview URL
+      const preview = URL.createObjectURL(blob);
+      const id = `ref-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+      // Add to state with loading indicator
+      const newImage: ImageFile = {
+        id,
+        file,
+        preview,
+        isUploading: true,
+      };
+      setReferenceImages(prev => [...prev, newImage].slice(0, MAX_REFERENCE_IMAGES));
+
+      // Upload to storage
+      const { path, error } = await uploadReferenceImage(file, user.id);
+
+      if (error || !path) {
+        console.error('Failed to upload reference image:', error);
+        setReferenceImages(prev => prev.filter(i => i.id !== id));
+        URL.revokeObjectURL(preview);
+        return;
+      }
+
+      // Update with storage path
+      setReferenceImages(prev =>
+        prev.map(img =>
+          img.id === id ? { ...img, storagePath: path, isUploading: false } : img
+        )
+      );
+    } catch (error) {
+      console.error('Failed to add reference image from URL:', error);
+    }
+  }, [referenceImages.length]);
+
+  /**
+   * Save a reference image to the library for later reuse
+   */
+  const saveReferenceImage = React.useCallback((image: ImageFile) => {
+    if (!image.storagePath) {
+      console.warn('Cannot save image without storage path');
+      return;
+    }
+
+    // Get public URL from storage path
+    const supabase = createClient();
+    const { data } = supabase.storage
+      .from('reference-images')
+      .getPublicUrl(image.storagePath);
+
+    const savedImage: SavedReferenceImage = {
+      id: `saved-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      url: data.publicUrl,
+      storagePath: image.storagePath,
+      name: `Reference ${new Date().toLocaleDateString()}`,
+      savedAt: Date.now(),
+    };
+
+    setSavedReferences(prev => {
+      const updated = [...prev, savedImage];
+      localStorage.setItem('savedReferenceImages', JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  /**
+   * Remove a saved reference from the library
+   */
+  const removeSavedReference = React.useCallback((id: string) => {
+    setSavedReferences(prev => {
+      const updated = prev.filter(ref => ref.id !== id);
+      localStorage.setItem('savedReferenceImages', JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
+
+  /**
+   * Add a saved reference image to the active references
+   */
+  const addSavedReferenceToActive = React.useCallback(async (saved: SavedReferenceImage) => {
+    if (referenceImages.length >= MAX_REFERENCE_IMAGES) {
+      console.warn('Maximum reference images reached');
+      return;
+    }
+
+    // Use the existing function to add from URL
+    await addReferenceImageFromUrl(saved.url);
+  }, [referenceImages.length, addReferenceImageFromUrl]);
 
   const selectImage = React.useCallback((image: GeneratedImage | null) => {
     setSelectedImage(image);
@@ -1082,8 +1218,14 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     updateSettings,
     referenceImages,
     addReferenceImages,
+    addReferenceImageFromUrl,
     removeReferenceImage,
     clearReferenceImages,
+    // Saved references
+    savedReferences,
+    saveReferenceImage,
+    removeSavedReference,
+    addSavedReferenceToActive,
     history,
     selectedImage,
     selectImage,
@@ -1133,7 +1275,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     currentCanvasId, canvasList, isSaving, lastSaved, createNewCanvas, switchCanvas, renameCanvas, deleteCanvasById,
     viewMode, historyPanelOpen, isInputVisible, activeTab, zoom, canUndo, canRedo,
     isGenerating, thinkingSteps,
-    updateSettings, addReferenceImages, removeReferenceImage, clearReferenceImages,
+    updateSettings, addReferenceImages, addReferenceImageFromUrl, removeReferenceImage, clearReferenceImages,
+    savedReferences, saveReferenceImage, removeSavedReference, addSavedReferenceToActive,
     selectImage, clearHistory, toggleHistoryPanel, toggleInputVisibility, undo, redo, generate, cancelGeneration, buildFinalPrompt,
   ]);
 
