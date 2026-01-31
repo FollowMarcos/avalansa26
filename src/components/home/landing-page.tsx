@@ -16,9 +16,10 @@ import { PageShell } from "@/components/layout/page-shell";
 
 interface LandingPageProps {
     user: User | null;
+    isAdmin?: boolean;
 }
 
-export function LandingPage({ user }: LandingPageProps) {
+export function LandingPage({ user, isAdmin = false }: LandingPageProps) {
     const router = useRouter();
     const [mounted, setMounted] = useState(false);
 
@@ -109,11 +110,19 @@ export function LandingPage({ user }: LandingPageProps) {
                             className="flex flex-col sm:flex-row gap-4 w-full max-w-sm"
                         >
                             <Button asChild size="lg" className="rounded-full gap-2 text-base h-12 flex-1">
-                                <Link href="/dashboard">
-                                    <LayoutDashboard className="w-4 h-4" />
-                                    Enter Dashboard
+                                <Link href="/create">
+                                    <Sparkles className="w-4 h-4" />
+                                    Start Creating
                                 </Link>
                             </Button>
+                            {isAdmin && (
+                                <Button asChild size="lg" variant="outline" className="rounded-full gap-2 text-base h-12 flex-1">
+                                    <Link href="/dashboard">
+                                        <LayoutDashboard className="w-4 h-4" />
+                                        Dashboard
+                                    </Link>
+                                </Button>
+                            )}
                         </motion.div>
 
                         <motion.div

@@ -57,7 +57,7 @@ export function CompletionCard({ name, username }: CompletionCardProps) {
               onClick={() => router.push('/')}
               className="text-sm font-medium underline underline-offset-4 hover:text-primary transition-colors"
             >
-              Go to dashboard now
+              Continue now
             </button>
           </div>
         </CardContent>

@@ -5,5 +5,16 @@ export default async function Home() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  return <LandingPage user={user} />;
+  // Check if user is admin
+  let isAdmin = false;
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+    isAdmin = profile?.role === 'admin';
+  }
+
+  return <LandingPage user={user} isAdmin={isAdmin} />;
 }

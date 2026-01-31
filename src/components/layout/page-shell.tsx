@@ -11,9 +11,10 @@ interface PageShellProps {
     contentClassName?: string; // Classes for the internal main element
     showDock?: boolean;
     dockPosition?: "bottom" | "left" | "top-left";
+    noDockPadding?: boolean; // Skip automatic dock padding
 }
 
-export function PageShell({ children, className, contentClassName, showDock = true, dockPosition = "bottom" }: PageShellProps) {
+export function PageShell({ children, className, contentClassName, showDock = true, dockPosition = "bottom", noDockPadding = false }: PageShellProps) {
     const isLeft = dockPosition === "left";
     const isTopLeft = dockPosition === "top-left";
 
@@ -27,8 +28,8 @@ export function PageShell({ children, className, contentClassName, showDock = tr
 
                 <main className={cn(
                     "flex-1 flex flex-col relative z-10 w-full",
-                    showDock && !isTopLeft && !isLeft && "pb-24 lg:pb-32",
-                    showDock && isLeft && "pl-20",
+                    !noDockPadding && showDock && !isTopLeft && !isLeft && "pb-24 lg:pb-32",
+                    !noDockPadding && showDock && isLeft && "pl-20",
                     contentClassName
                 )}>
                     {children}
