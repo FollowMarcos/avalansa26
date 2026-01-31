@@ -55,12 +55,20 @@ export function ThinkingDisplay() {
                     "text-xs font-mono flex items-center gap-2",
                     step.completed ? "text-muted-foreground" : "text-foreground"
                   )}
+                  role="status"
+                  aria-live="polite"
                 >
-                  <span className={cn(
-                    "size-1.5 rounded-full",
-                    step.completed ? "bg-muted-foreground" : "bg-foreground animate-pulse"
-                  )} />
-                  {step.text}
+                  <span
+                    className={cn(
+                      "size-1.5 rounded-full",
+                      step.completed ? "bg-muted-foreground" : "bg-foreground animate-pulse"
+                    )}
+                    aria-hidden="true"
+                  />
+                  <span>{step.text}</span>
+                  <span className="sr-only">
+                    {step.completed ? "completed" : "in progress"}
+                  </span>
                 </motion.div>
               );
             })}

@@ -13,7 +13,7 @@ interface PageShellProps {
     dockPosition?: "bottom" | "left" | "top-left";
 }
 
-export function PageShell({ children, className, contentClassName, showDock = true, dockPosition = "left" }: PageShellProps) {
+export function PageShell({ children, className, contentClassName, showDock = true, dockPosition = "bottom" }: PageShellProps) {
     const isLeft = dockPosition === "left";
     const isTopLeft = dockPosition === "top-left";
 

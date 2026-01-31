@@ -99,9 +99,10 @@ export function HistoryIsland() {
                     variant="ghost"
                     size="icon"
                     onClick={toggleHistoryPanel}
+                    aria-label="Close history panel"
                     className="size-7 rounded-lg"
                   >
-                    <X className="size-3.5" />
+                    <X className="size-3.5" aria-hidden="true" />
                   </Button>
                 </div>
               </div>
@@ -142,9 +143,10 @@ export function HistoryIsland() {
                               <TooltipTrigger asChild>
                                 <button
                                   onClick={(e) => handleDownload(e, image.url, image.id)}
+                                  aria-label="Download image"
                                   className="size-7 rounded-md bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
                                 >
-                                  <Download className="size-3.5 text-zinc-900" />
+                                  <Download className="size-3.5 text-zinc-900" aria-hidden="true" />
                                 </button>
                               </TooltipTrigger>
                               <TooltipContent>Download</TooltipContent>
@@ -154,9 +156,10 @@ export function HistoryIsland() {
                                 <TooltipTrigger asChild>
                                   <button
                                     onClick={(e) => handleCopyPrompt(e, image.prompt)}
+                                    aria-label="Copy prompt"
                                     className="size-7 rounded-md bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
                                   >
-                                    <Copy className="size-3.5 text-zinc-900" />
+                                    <Copy className="size-3.5 text-zinc-900" aria-hidden="true" />
                                   </button>
                                 </TooltipTrigger>
                                 <TooltipContent>Copy prompt</TooltipContent>

@@ -117,6 +117,7 @@ export function QuickToolbar() {
             <button
               onClick={handleFitView}
               disabled={nodes.length === 0}
+              aria-label={`Current zoom ${currentZoom}%, click to fit view`}
               className="px-2 py-1 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors min-w-[3rem] text-center disabled:opacity-50"
             >
               {currentZoom}%

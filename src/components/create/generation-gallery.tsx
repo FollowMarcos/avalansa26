@@ -63,9 +63,10 @@ export function GenerationGallery() {
             variant="ghost"
             size="icon"
             onClick={() => setViewMode("canvas")}
+            aria-label="Close gallery"
             className="size-8 rounded-lg"
           >
-            <X className="size-4" strokeWidth={1.5} />
+            <X className="size-4" strokeWidth={1.5} aria-hidden="true" />
           </Button>
         </div>
 
@@ -85,13 +86,24 @@ export function GenerationGallery() {
                   key={image.id}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Select image: ${image.prompt || "Generated image"}`}
                   className={cn(
                     "relative group rounded-lg overflow-hidden bg-muted border border-border cursor-pointer",
+                    "focus:outline-none focus:ring-2 focus:ring-ring",
                     selectedImage?.id === image.id && "ring-2 ring-foreground"
                   )}
                   onClick={() => {
                     selectImage(image);
                     setViewMode("canvas");
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      selectImage(image);
+                      setViewMode("canvas");
+                    }
                   }}
                 >
                   <div className="aspect-square relative">

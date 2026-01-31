@@ -130,9 +130,10 @@ export function CanvasList() {
                     variant="ghost"
                     size="icon"
                     onClick={() => setIsOpen(false)}
+                    aria-label="Close canvas list"
                     className="size-7 rounded-lg"
                   >
-                    <X className="size-3.5" />
+                    <X className="size-3.5" aria-hidden="true" />
                   </Button>
                 </div>
               </div>
@@ -162,13 +163,22 @@ export function CanvasList() {
                         key={canvas.id}
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Switch to canvas: ${canvas.name}`}
+                        aria-current={currentCanvasId === canvas.id ? "true" : undefined}
                         className={cn(
                           "group relative flex items-center gap-2 px-2 py-2 rounded-lg cursor-pointer",
-                          "hover:bg-muted/50 transition-colors",
+                          "hover:bg-muted/50 transition-colors focus:outline-none focus:ring-2 focus:ring-ring",
                           currentCanvasId === canvas.id && "bg-muted"
                         )}
                         onClick={() => {
                           if (editingId !== canvas.id) {
+                            switchCanvas(canvas.id);
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && editingId !== canvas.id) {
                             switchCanvas(canvas.id);
                           }
                         }}

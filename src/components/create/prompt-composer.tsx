@@ -198,11 +198,18 @@ export function PromptComposer() {
                 <div className="w-px h-5 bg-border" />
 
                 {/* Quality / Image Size */}
-                <div className="flex items-center gap-0.5 bg-muted rounded-lg p-0.5">
+                <div
+                  role="radiogroup"
+                  aria-label="Image quality"
+                  className="flex items-center gap-0.5 bg-muted rounded-lg p-0.5"
+                >
                   {imageSizeOptions.map((size) => (
                     <button
                       key={size.value}
                       onClick={() => updateSettings({ imageSize: size.value })}
+                      role="radio"
+                      aria-checked={settings.imageSize === size.value}
+                      aria-label={`${size.label} quality`}
                       className={cn(
                         "px-2 py-1 rounded-md text-xs font-mono transition-colors",
                         settings.imageSize === size.value
@@ -218,11 +225,18 @@ export function PromptComposer() {
                 <div className="w-px h-5 bg-border" />
 
                 {/* Output Count */}
-                <div className="flex items-center gap-0.5 bg-muted rounded-lg p-0.5">
+                <div
+                  role="radiogroup"
+                  aria-label="Number of images to generate"
+                  className="flex items-center gap-0.5 bg-muted rounded-lg p-0.5"
+                >
                   {[1, 2, 3, 4].map((count) => (
                     <button
                       key={count}
                       onClick={() => updateSettings({ outputCount: count })}
+                      role="radio"
+                      aria-checked={settings.outputCount === count}
+                      aria-label={`Generate ${count} image${count > 1 ? "s" : ""}`}
                       className={cn(
                         "w-6 h-6 rounded-md text-xs font-mono transition-colors flex items-center justify-center",
                         settings.outputCount === count
@@ -240,9 +254,16 @@ export function PromptComposer() {
                 {/* Generation Speed */}
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div className="flex items-center gap-0.5 bg-muted rounded-lg p-0.5">
+                    <div
+                      role="radiogroup"
+                      aria-label="Generation speed"
+                      className="flex items-center gap-0.5 bg-muted rounded-lg p-0.5"
+                    >
                       <button
                         onClick={() => updateSettings({ generationSpeed: "fast" })}
+                        role="radio"
+                        aria-checked={settings.generationSpeed === "fast"}
+                        aria-label="Fast generation"
                         className={cn(
                           "h-6 px-2 rounded-md text-xs font-mono transition-colors flex items-center gap-1",
                           settings.generationSpeed === "fast"
@@ -250,11 +271,14 @@ export function PromptComposer() {
                             : "text-muted-foreground hover:text-foreground"
                         )}
                       >
-                        <Zap className="size-3" />
+                        <Zap className="size-3" aria-hidden="true" />
                         <span className="hidden sm:inline">Fast</span>
                       </button>
                       <button
                         onClick={() => updateSettings({ generationSpeed: "relaxed" })}
+                        role="radio"
+                        aria-checked={settings.generationSpeed === "relaxed"}
+                        aria-label="Relaxed generation"
                         className={cn(
                           "h-6 px-2 rounded-md text-xs font-mono transition-colors flex items-center gap-1",
                           settings.generationSpeed === "relaxed"
@@ -262,7 +286,7 @@ export function PromptComposer() {
                             : "text-muted-foreground hover:text-foreground"
                         )}
                       >
-                        <Clock className="size-3" />
+                        <Clock className="size-3" aria-hidden="true" />
                         <span className="hidden sm:inline">Relaxed</span>
                       </button>
                     </div>
@@ -380,7 +404,10 @@ export function PromptComposer() {
                   {/* Character Count */}
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button className="px-1.5 py-1 text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors">
+                      <button
+                        aria-label={`Prompt length: ${promptLength} characters`}
+                        className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors"
+                      >
                         {promptLength}
                       </button>
                     </TooltipTrigger>

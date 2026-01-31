@@ -49,9 +49,16 @@ function GeneratingOverlay() {
       exit={{ opacity: 0, y: 20 }}
       className="absolute bottom-24 left-1/2 -translate-x-1/2 z-20"
     >
-      <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-background/95 backdrop-blur-xl border border-border shadow-lg">
+      <div
+        className="flex items-center gap-3 px-4 py-3 rounded-xl bg-background/95 backdrop-blur-xl border border-border shadow-lg"
+        role="status"
+        aria-live="polite"
+      >
         {/* Spinner */}
-        <div className="size-5 rounded-full border-2 border-border border-t-foreground animate-spin flex-shrink-0" />
+        <div
+          className="size-5 rounded-full border-2 border-border border-t-foreground animate-spin flex-shrink-0"
+          aria-hidden="true"
+        />
 
         {/* Current step */}
         <div className="flex flex-col">
@@ -68,6 +75,7 @@ function GeneratingOverlay() {
         {/* Cancel button */}
         <button
           onClick={cancelGeneration}
+          aria-label="Cancel image generation"
           className="ml-2 px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors font-mono rounded hover:bg-muted"
         >
           Cancel
@@ -106,12 +114,22 @@ function EmptyState({ hasReferenceImages }: { hasReferenceImages: boolean }) {
       className="relative z-10 flex flex-col items-center justify-center text-center p-8"
     >
       <div
+        role="button"
+        tabIndex={0}
+        aria-label="Upload reference images - drop images here or click to browse"
         className={cn(
           "flex flex-col items-center justify-center p-12 rounded-2xl",
           "border-2 border-dashed border-border hover:border-muted-foreground",
-          "transition-colors cursor-pointer group bg-background/50"
+          "transition-colors cursor-pointer group bg-background/50",
+          "focus:outline-none focus:ring-2 focus:ring-ring focus:border-muted-foreground"
         )}
         onClick={handleClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
       >
@@ -172,7 +190,13 @@ function GeneratingState() {
       className="relative z-10 flex flex-col items-center justify-center text-center p-8"
     >
       {/* Spinner */}
-      <div className="size-20 rounded-full border-2 border-border border-t-foreground animate-spin mb-8 mx-auto" />
+      <div
+        className="size-20 rounded-full border-2 border-border border-t-foreground animate-spin mb-8 mx-auto"
+        role="status"
+        aria-label="Generating image"
+      >
+        <span className="sr-only">Loading...</span>
+      </div>
 
       {thinkingSteps.length > 0 && (
         <div className="space-y-2 mb-6 max-w-sm">
@@ -185,15 +209,21 @@ function GeneratingState() {
                 "flex items-center gap-2 text-sm font-mono",
                 step.completed ? "text-foreground" : "text-muted-foreground"
               )}
+              role="status"
+              aria-live="polite"
             >
               <div
                 className={cn(
                   "size-2 rounded-full flex-shrink-0",
                   step.completed ? "bg-foreground" : "bg-muted-foreground animate-pulse"
                 )}
+                aria-hidden="true"
               />
               <span className="text-left">{step.text}</span>
-              {step.completed && <span className="text-foreground ml-auto">+</span>}
+              {step.completed && <span className="text-foreground ml-auto" aria-hidden="true">+</span>}
+              <span className="sr-only">
+                {step.completed ? "completed" : "in progress"}
+              </span>
             </motion.div>
           ))}
         </div>
@@ -205,6 +235,7 @@ function GeneratingState() {
 
       <button
         onClick={cancelGeneration}
+        aria-label="Cancel image generation"
         className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors font-mono"
       >
         Cancel
