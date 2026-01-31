@@ -112,10 +112,10 @@ function SettingsTab() {
   ];
 
   const qualities: { value: Quality; label: string }[] = [
-    { value: "draft", label: "Draft (Fast)" },
-    { value: "standard", label: "Standard" },
-    { value: "high", label: "High Quality" },
-    { value: "4k", label: "4K Ultra" },
+    { value: "draft", label: "Draft (Banana Nano)" },
+    { value: "standard", label: "Standard (Banana)" },
+    { value: "high", label: "High Fidelity (Banana Pro)" },
+    { value: "4k", label: "Ultra 4k (Banana Max)" },
   ];
 
   return (
@@ -208,6 +208,66 @@ function SettingsTab() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Prompt Fidelity */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+              Prompt Fidelity
+            </label>
+            <span className="text-xs text-zinc-500 tabular-nums">
+              {settings.promptFidelity}%
+            </span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={settings.promptFidelity}
+            onChange={(e) => updateSettings({ promptFidelity: parseInt(e.target.value) })}
+            className="w-full accent-zinc-100"
+          />
+        </div>
+
+        {/* Spatial Precision */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+              Spatial Precision
+            </label>
+            <span className="text-xs text-zinc-500 tabular-nums">
+              {settings.spatialPrecision}%
+            </span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={settings.spatialPrecision}
+            onChange={(e) => updateSettings({ spatialPrecision: parseInt(e.target.value) })}
+            className="w-full accent-zinc-100"
+          />
+        </div>
+
+        {/* Text Fidelity */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+              Text Fidelity
+            </label>
+            <span className="text-xs text-zinc-500 tabular-nums">
+              {settings.textFidelity}%
+            </span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={100}
+            value={settings.textFidelity}
+            onChange={(e) => updateSettings({ textFidelity: parseInt(e.target.value) })}
+            className="w-full accent-zinc-100"
+          />
         </div>
 
         {/* Thinking Mode */}
@@ -303,8 +363,8 @@ function ReferenceTab() {
           )}
         </div>
 
-        {/* Style Strength */}
-        {(mode === "style-transfer" || styleReference) && (
+        {/* Style Strength - only for img2img mode or when reference is present */}
+        {(mode === "img2img" || styleReference) && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">

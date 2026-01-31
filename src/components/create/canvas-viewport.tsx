@@ -111,8 +111,8 @@ function EmptyState({ hasInputImages }: { hasInputImages: boolean }) {
         </h3>
         <p className="text-sm text-zinc-500 max-w-xs">
           {hasInputImages
-            ? "Enter a prompt below and click Generate"
-            : "Drop images here or click to upload, then describe what you want to create"}
+            ? "Enter a prompt below and Magic Create"
+            : "Drop images here to Re-imagine or click to upload"}
         </p>
 
         <div className="mt-6 flex items-center gap-2 text-xs text-zinc-600">
@@ -165,7 +165,7 @@ function GeneratingState() {
         </div>
       )}
 
-      <p className="text-sm text-zinc-500 mb-4">Generating your image…</p>
+      <p className="text-sm text-zinc-500 mb-4">Banana Pro is generating your image…</p>
 
       <button
         onClick={cancelGeneration}

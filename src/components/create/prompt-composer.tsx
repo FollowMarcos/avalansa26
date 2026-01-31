@@ -23,12 +23,12 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 
 const modeLabels: Record<GenerationMode, string> = {
-  generate: "Generate",
-  edit: "Edit",
-  "style-transfer": "Style Transfer",
-  "text-render": "Text",
-  infographic: "Infographic",
-  consistency: "Consistency",
+  text2img: "Magic Create",
+  img2img: "Re-imagine",
+  "text-fidelity": "Perfect Text",
+  upscale: "Upscale 4K",
+  inpainting: "Modify",
+  outpainting: "Expand",
 };
 
 export function PromptComposer() {
@@ -234,19 +234,19 @@ export function PromptComposer() {
 
 function getPlaceholder(mode: GenerationMode): string {
   switch (mode) {
-    case "generate":
-      return "Describe what you want to create...";
-    case "edit":
-      return "Describe the changes you want to make...";
-    case "style-transfer":
-      return "Describe the style you want to apply...";
-    case "text-render":
-      return "Describe an image with text (e.g., 'a sign that says Hello World')...";
-    case "infographic":
-      return "Describe your infographic or chart...";
-    case "consistency":
-      return "Describe a scene with your character/subject…";
+    case "text2img":
+      return "Describe the scene for Magic Create…";
+    case "img2img":
+      return "Describe how to re-imagine this image…";
+    case "text-fidelity":
+      return "Enter text to render with perfect alignment (e.g., 'A store sign saying OPEN')…";
+    case "upscale":
+      return "Confirm to upscale to 4K Banana Pro resolution…";
+    case "inpainting":
+      return "Describe the area to fill or erase…";
+    case "outpainting":
+      return "Describe the content to expand into…";
     default:
-      return "Enter your prompt…";
+      return "Prompt the Banana Pro…";
   }
 }

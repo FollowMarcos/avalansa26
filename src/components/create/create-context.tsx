@@ -3,12 +3,12 @@
 import * as React from "react";
 
 export type GenerationMode =
-  | "generate"
-  | "edit"
-  | "style-transfer"
-  | "text-render"
-  | "infographic"
-  | "consistency";
+  | "text2img"        // Text to image (Nano Banana Pro optimized)
+  | "img2img"         // Image to image / Variations
+  | "upscale"         // High-fidelity upscaling
+  | "inpainting"      // Editing / Masking
+  | "outpainting"     // Expansion
+  | "text-fidelity";  // Specialized text rendering focus
 
 export type Resolution = "1024" | "2048" | "4096" | "custom";
 export type AspectRatio = "1:1" | "16:9" | "9:16" | "21:9" | "4:5" | "custom";
@@ -46,6 +46,9 @@ export interface CreateSettings {
   seed: string;
   thinking: boolean;
   styleStrength: number;
+  promptFidelity: number;    // 0-100: How strictly to follow prompt
+  spatialPrecision: number;  // 0-100: For complex compositions
+  textFidelity: number;     // 0-100: For specialized text rendering
 }
 
 interface CreateContextType {
@@ -119,6 +122,9 @@ const defaultSettings: CreateSettings = {
   seed: "",
   thinking: true,
   styleStrength: 75,
+  promptFidelity: 80,
+  spatialPrecision: 50,
+  textFidelity: 90,
 };
 
 const CreateContext = React.createContext<CreateContextType | undefined>(undefined);
@@ -128,7 +134,7 @@ const MAX_INPUT_IMAGES = 14;
 
 export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [prompt, setPrompt] = React.useState("");
-  const [mode, setMode] = React.useState<GenerationMode>("generate");
+  const [mode, setMode] = React.useState<GenerationMode>("text2img");
   const [settings, setSettings] = React.useState<CreateSettings>(defaultSettings);
   const [inputImages, setInputImages] = React.useState<ImageFile[]>([]);
   const [styleReference, setStyleReferenceState] = React.useState<ImageFile | null>(null);
@@ -213,12 +219,12 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
   // Mock thinking steps for visual reasoning
   const mockThinkingSteps: ThinkingStep[] = [
-    { id: "1", text: "Analyzing prompt structure…", completed: false },
-    { id: "2", text: "Planning composition and layout…", completed: false },
-    { id: "3", text: "Determining color palette…", completed: false },
-    { id: "4", text: "Rendering initial shapes…", completed: false },
-    { id: "5", text: "Adding fine details…", completed: false },
-    { id: "6", text: "Finalizing output…", completed: false },
+    { id: "1", text: "Analyzing multimodal prompt intent…", completed: false },
+    { id: "2", text: "Nano-fast spatial mapping…", completed: false },
+    { id: "3", text: "Banana Pro text fidelity alignment…", completed: false },
+    { id: "4", text: "Synthesizing cross-attention layers…", completed: false },
+    { id: "5", text: "Applying high-precision denoiser…", completed: false },
+    { id: "6", text: "Finalizing 4K Banana Pro output…", completed: false },
   ];
 
   const generate = React.useCallback(async () => {

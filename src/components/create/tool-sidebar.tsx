@@ -6,11 +6,11 @@ import { useCreate, GenerationMode } from "./create-context";
 import { VerticalSlider } from "./vertical-slider";
 import {
   Sparkles,
-  Brush,
-  Palette,
+  Camera,
+  Maximize,
+  Eraser,
+  Expand,
   Type,
-  BarChart3,
-  Users,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -32,46 +32,46 @@ interface ToolConfig {
 
 const tools: ToolConfig[] = [
   {
-    id: "generate",
+    id: "text2img",
     icon: Sparkles,
-    label: "Generate",
-    description: "Create new images from text prompts",
-    color: "from-violet-500 to-purple-600",
+    label: "Magic Create",
+    description: "Nano-fast high-fidelity image generation",
+    color: "from-zinc-100 to-zinc-400",
   },
   {
-    id: "edit",
-    icon: Brush,
-    label: "Edit",
-    description: "Modify existing images with natural language",
-    color: "from-blue-500 to-cyan-600",
+    id: "img2img",
+    icon: Camera,
+    label: "Re-imagine",
+    description: "Create variations or transformations of images",
+    color: "from-zinc-200 to-zinc-500",
   },
   {
-    id: "style-transfer",
-    icon: Palette,
-    label: "Style",
-    description: "Apply artistic styles to images",
-    color: "from-pink-500 to-rose-600",
-  },
-  {
-    id: "text-render",
+    id: "text-fidelity",
     icon: Type,
-    label: "Text",
-    description: "Generate images with accurate text rendering",
-    color: "from-amber-500 to-orange-600",
+    label: "Perfect Text",
+    description: "Specialized high-precision text rendering",
+    color: "from-zinc-300 to-zinc-600",
   },
   {
-    id: "infographic",
-    icon: BarChart3,
-    label: "Infographic",
-    description: "Create charts, diagrams, and slide decks",
-    color: "from-emerald-500 to-teal-600",
+    id: "upscale",
+    icon: Maximize,
+    label: "Upscale",
+    description: "4K Banana Pro super-resolution",
+    color: "from-zinc-400 to-zinc-700",
   },
   {
-    id: "consistency",
-    icon: Users,
-    label: "Consistency",
-    description: "Maintain character/subject consistency across images",
-    color: "from-indigo-500 to-blue-600",
+    id: "inpainting",
+    icon: Eraser,
+    label: "Fill/Erase",
+    description: "Seamless object modification",
+    color: "from-zinc-500 to-zinc-800",
+  },
+  {
+    id: "outpainting",
+    icon: Expand,
+    label: "Expand",
+    description: "Generative canvas expansion",
+    color: "from-zinc-600 to-zinc-900",
   },
 ];
 
@@ -104,8 +104,8 @@ export function ToolSidebar() {
             {/* Separator */}
             <div className="w-8 h-px bg-zinc-700 my-4" />
 
-            {/* Style Strength Slider (for style-transfer mode) */}
-            {mode === "style-transfer" && (
+            {/* Mode Indicator Slider (optional feedback) */}
+            {mode === "img2img" && (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
