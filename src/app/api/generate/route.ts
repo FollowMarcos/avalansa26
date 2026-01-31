@@ -262,9 +262,9 @@ interface ProviderParams {
  * Generate images using Google Gemini API
  */
 async function generateWithGemini(params: ProviderParams): Promise<GeneratedImage[]> {
-  const { apiKey, endpoint, modelId, prompt, negativePrompt, aspectRatio, outputCount, referenceImages } = params;
+  const { apiKey, endpoint, modelId, prompt, negativePrompt, aspectRatio, imageSize, outputCount, referenceImages } = params;
 
-  // Build the request for Gemini 3 Pro Image
+  // Build the request for Gemini image generation
   const fullPrompt = negativePrompt
     ? `${prompt}\n\nAvoid: ${negativePrompt}`
     : prompt;
@@ -291,15 +291,43 @@ async function generateWithGemini(params: ProviderParams): Promise<GeneratedImag
     }
   }
 
+  // Map aspect ratio to Gemini format (e.g., "1:1" -> "1:1")
+  // Gemini supports: "1:1", "3:4", "4:3", "9:16", "16:9"
+  const geminiAspectRatio = mapToGeminiAspectRatio(aspectRatio);
+
+  // Map image size to Gemini personImageGeneration or use for prompt enhancement
+  // Gemini 2.0 Flash doesn't directly support resolution, but Imagen does
+  // For now, we'll include size hints in the prompt if needed
+  const sizeHint = imageSize === '4K' ? 'high resolution, 4K quality, extremely detailed' :
+                   imageSize === '2K' ? 'high resolution, detailed' : '';
+
+  const enhancedPrompt = sizeHint ? `${fullPrompt}\n\n${sizeHint}` : fullPrompt;
+
+  // Update parts with enhanced prompt
+  parts[0] = { text: enhancedPrompt };
+
+  // Build generation config
+  const generationConfig: Record<string, unknown> = {
+    responseModalities: ['IMAGE', 'TEXT'],
+  };
+
+  // Add aspect ratio if supported by the model
+  if (geminiAspectRatio) {
+    generationConfig.aspectRatio = geminiAspectRatio;
+  }
+
+  // Add number of images if outputCount > 1
+  if (outputCount > 1) {
+    generationConfig.numberOfImages = Math.min(outputCount, 4); // Gemini typically supports max 4
+  }
+
   const requestBody = {
     contents: [
       {
         parts,
       },
     ],
-    generationConfig: {
-      responseModalities: ['IMAGE', 'TEXT'],
-    },
+    generationConfig,
   };
 
   // Use the configured endpoint or default to Gemini API
@@ -334,6 +362,31 @@ async function generateWithGemini(params: ProviderParams): Promise<GeneratedImag
   }
 
   return images;
+}
+
+/**
+ * Map aspect ratio to Gemini-supported format
+ * Gemini supports: "1:1", "3:4", "4:3", "9:16", "16:9"
+ */
+function mapToGeminiAspectRatio(aspectRatio?: string): string | undefined {
+  if (!aspectRatio) return undefined;
+
+  // Direct mappings for supported ratios
+  const supportedRatios = ['1:1', '3:4', '4:3', '9:16', '16:9'];
+  if (supportedRatios.includes(aspectRatio)) {
+    return aspectRatio;
+  }
+
+  // Map similar ratios to closest supported
+  const ratioMap: Record<string, string> = {
+    '2:3': '3:4',    // Close to 3:4
+    '3:2': '4:3',    // Close to 4:3
+    '4:5': '3:4',    // Close to 3:4
+    '5:4': '4:3',    // Close to 4:3
+    '21:9': '16:9',  // Ultrawide -> widescreen
+  };
+
+  return ratioMap[aspectRatio] || '1:1';
 }
 
 /**

@@ -155,6 +155,52 @@ const CreateContext = React.createContext<CreateContextType | undefined>(undefin
 // Maximum images for reference input (Gemini 3 Pro supports up to 14)
 const MAX_REFERENCE_IMAGES = 14;
 
+// localStorage key for persisting state
+const STORAGE_KEY = "create-studio-state";
+
+// Interface for persisted state (subset of full state)
+interface PersistedState {
+  prompt: string;
+  settings: CreateSettings;
+  currentCanvasId: string | null;
+  selectedApiId: string | null;
+  nodes: Node<ImageNodeData>[];
+  edges: Edge[];
+  viewport: CanvasViewport;
+  viewMode: "canvas" | "gallery";
+  historyPanelOpen: boolean;
+  timestamp: number; // For cache invalidation
+}
+
+// Load persisted state from localStorage
+function loadPersistedState(): Partial<PersistedState> | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return null;
+    const parsed = JSON.parse(stored) as PersistedState;
+    // Invalidate cache after 24 hours
+    if (Date.now() - parsed.timestamp > 24 * 60 * 60 * 1000) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+// Save state to localStorage (call this with debounce)
+function savePersistedState(state: PersistedState): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (error) {
+    // localStorage might be full or disabled
+    console.warn("Failed to save state to localStorage:", error);
+  }
+}
+
 export function CreateProvider({ children }: { children: React.ReactNode }) {
   // API selection state
   const [availableApis, setAvailableApis] = React.useState<ApiConfig[]>([]);
@@ -191,6 +237,10 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [lastSaved, setLastSaved] = React.useState<Date | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
   const saveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // localStorage persistence refs
+  const persistTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const hasLoadedPersistedState = React.useRef(false);
 
   // Poll for batch job completion
   const pollBatchJob = React.useCallback(async (
@@ -822,21 +872,67 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     async function loadCanvases() {
       try {
-        const { getUserCanvases, getLatestCanvas, createCanvas } = await import(
+        const { getUserCanvases, getLatestCanvas, getCanvas, createCanvas } = await import(
           "@/utils/supabase/canvases.server"
         );
 
         const canvases = await getUserCanvases();
         setCanvasList(canvases);
 
+        // Check if we have a persisted canvas ID to restore
+        const persisted = loadPersistedState();
+        const persistedCanvasId = persisted?.currentCanvasId;
+
         if (canvases.length > 0) {
-          // Load the most recent canvas
-          const latest = await getLatestCanvas();
-          if (latest) {
-            setCurrentCanvasId(latest.id);
-            setNodes(latest.nodes || []);
-            setEdges(latest.edges || []);
-            setViewport(latest.viewport || { x: 0, y: 0, zoom: 1 });
+          let canvasToLoad = null;
+
+          // Try to load the persisted canvas if it exists
+          if (persistedCanvasId) {
+            const matchingCanvas = canvases.find(c => c.id === persistedCanvasId);
+            if (matchingCanvas) {
+              canvasToLoad = await getCanvas(persistedCanvasId);
+            }
+          }
+
+          // Fall back to most recent canvas
+          if (!canvasToLoad) {
+            canvasToLoad = await getLatestCanvas();
+          }
+
+          if (canvasToLoad) {
+            setCurrentCanvasId(canvasToLoad.id);
+            setNodes(canvasToLoad.nodes || []);
+            setEdges(canvasToLoad.edges || []);
+            setViewport(canvasToLoad.viewport || { x: 0, y: 0, zoom: 1 });
+
+            // Check for pending nodes from localStorage (unsaved before refresh)
+            const pendingNodesStr = sessionStorage.getItem("pending-nodes");
+            const pendingEdgesStr = sessionStorage.getItem("pending-edges");
+
+            if (pendingNodesStr && persistedCanvasId === canvasToLoad.id) {
+              try {
+                const pendingNodes = JSON.parse(pendingNodesStr) as Node<ImageNodeData>[];
+                const pendingEdges = pendingEdgesStr ? JSON.parse(pendingEdgesStr) as Edge[] : [];
+
+                // Merge pending nodes that don't exist in loaded canvas
+                const existingNodeIds = new Set((canvasToLoad.nodes || []).map((n: Node) => n.id));
+                const newNodes = pendingNodes.filter(n => !existingNodeIds.has(n.id));
+
+                if (newNodes.length > 0) {
+                  setNodes(prev => [...prev, ...newNodes]);
+                  setEdges(prev => [...prev, ...pendingEdges.filter(e =>
+                    !prev.some(existing => existing.id === e.id)
+                  )]);
+                  setHasUnsavedChanges(true);
+                }
+              } catch {
+                // Invalid JSON, ignore
+              }
+
+              // Clear pending data
+              sessionStorage.removeItem("pending-nodes");
+              sessionStorage.removeItem("pending-edges");
+            }
           }
         } else {
           // Create a new canvas if none exist
@@ -876,6 +972,93 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     }
     prevHistoryLength.current = history.length;
   }, [history, nodes, addImageNode]);
+
+  // Load persisted state from localStorage on mount
+  React.useEffect(() => {
+    if (hasLoadedPersistedState.current) return;
+    hasLoadedPersistedState.current = true;
+
+    const persisted = loadPersistedState();
+    if (persisted) {
+      // Restore prompt and settings
+      if (persisted.prompt) setPrompt(persisted.prompt);
+      if (persisted.settings) setSettings(persisted.settings);
+      if (persisted.selectedApiId) setSelectedApiId(persisted.selectedApiId);
+      if (persisted.viewMode) setViewMode(persisted.viewMode);
+      if (persisted.historyPanelOpen !== undefined) setHistoryPanelOpen(persisted.historyPanelOpen);
+
+      // Note: nodes/edges/viewport are loaded from the database via loadCanvases
+      // but we keep the persisted currentCanvasId to ensure we load the right canvas
+      if (persisted.currentCanvasId) {
+        // This will be used by loadCanvases if it matches
+        setCurrentCanvasId(persisted.currentCanvasId);
+      }
+
+      // If there are unsaved nodes in localStorage (user closed before auto-save)
+      // we'll merge them after canvas loads
+      if (persisted.nodes && persisted.nodes.length > 0) {
+        // Store for potential merge after canvas load
+        sessionStorage.setItem("pending-nodes", JSON.stringify(persisted.nodes));
+        sessionStorage.setItem("pending-edges", JSON.stringify(persisted.edges || []));
+      }
+    }
+  }, []);
+
+  // Persist state to localStorage on changes (debounced)
+  React.useEffect(() => {
+    // Skip during initial load
+    if (!hasLoadedPersistedState.current) return;
+
+    // Clear existing timeout
+    if (persistTimeoutRef.current) {
+      clearTimeout(persistTimeoutRef.current);
+    }
+
+    // Debounce the save (1 second)
+    persistTimeoutRef.current = setTimeout(() => {
+      const stateToSave: PersistedState = {
+        prompt,
+        settings,
+        currentCanvasId,
+        selectedApiId,
+        nodes,
+        edges,
+        viewport,
+        viewMode,
+        historyPanelOpen,
+        timestamp: Date.now(),
+      };
+      savePersistedState(stateToSave);
+    }, 1000);
+
+    return () => {
+      if (persistTimeoutRef.current) {
+        clearTimeout(persistTimeoutRef.current);
+      }
+    };
+  }, [prompt, settings, currentCanvasId, selectedApiId, nodes, edges, viewport, viewMode, historyPanelOpen]);
+
+  // Save state immediately before page unload
+  React.useEffect(() => {
+    const handleBeforeUnload = () => {
+      const stateToSave: PersistedState = {
+        prompt,
+        settings,
+        currentCanvasId,
+        selectedApiId,
+        nodes,
+        edges,
+        viewport,
+        viewMode,
+        historyPanelOpen,
+        timestamp: Date.now(),
+      };
+      savePersistedState(stateToSave);
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [prompt, settings, currentCanvasId, selectedApiId, nodes, edges, viewport, viewMode, historyPanelOpen]);
 
   const value = React.useMemo(() => ({
     // API selection

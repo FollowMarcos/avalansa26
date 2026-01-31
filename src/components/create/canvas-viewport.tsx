@@ -18,24 +18,62 @@ export function CanvasViewport() {
 
   return (
     <div className="relative flex-1 flex items-center justify-center overflow-hidden bg-muted/30">
+      {/* Show FlowCanvas when we have nodes (even during generation) */}
+      {hasNodes && (
+        <div className="absolute inset-0">
+          <FlowCanvas />
+        </div>
+      )}
+
+      {/* Overlay for generating state or empty state */}
       <AnimatePresence mode="wait">
-        {isGenerating ? (
+        {isGenerating && !hasNodes ? (
           <GeneratingState key="generating" />
-        ) : hasNodes ? (
-          <motion.div
-            key="flow-canvas"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0"
-          >
-            <FlowCanvas />
-          </motion.div>
-        ) : (
+        ) : isGenerating && hasNodes ? (
+          <GeneratingOverlay key="generating-overlay" />
+        ) : !hasNodes ? (
           <EmptyState key="empty" hasReferenceImages={referenceImages.length > 0} />
-        )}
+        ) : null}
       </AnimatePresence>
     </div>
+  );
+}
+
+function GeneratingOverlay() {
+  const { thinkingSteps, cancelGeneration } = useCreate();
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      className="absolute bottom-24 left-1/2 -translate-x-1/2 z-20"
+    >
+      <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-background/95 backdrop-blur-xl border border-border shadow-lg">
+        {/* Spinner */}
+        <div className="size-5 rounded-full border-2 border-border border-t-foreground animate-spin flex-shrink-0" />
+
+        {/* Current step */}
+        <div className="flex flex-col">
+          {thinkingSteps.length > 0 && (
+            <span className="text-sm font-mono text-foreground">
+              {thinkingSteps.find(s => !s.completed)?.text || "Finalizing..."}
+            </span>
+          )}
+          <span className="text-xs text-muted-foreground font-mono">
+            Generating new image...
+          </span>
+        </div>
+
+        {/* Cancel button */}
+        <button
+          onClick={cancelGeneration}
+          className="ml-2 px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors font-mono rounded hover:bg-muted"
+        >
+          Cancel
+        </button>
+      </div>
+    </motion.div>
   );
 }
 

@@ -69,7 +69,11 @@ const DraggableIcon = ({ item, children, onDragStart, onDragEnd }: DraggableIcon
     </Reorder.Item>
 );
 
-export function SiteDock() {
+interface SiteDockProps {
+    vertical?: boolean;
+}
+
+export function SiteDock({ vertical = false }: SiteDockProps) {
     const pathname = usePathname();
     const router = useRouter();
     const { theme, setTheme } = useTheme();
@@ -202,12 +206,15 @@ export function SiteDock() {
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, x: vertical ? -20 : 0, y: vertical ? 0 : 20 }}
+            animate={{ opacity: 1, x: 0, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="flex items-center justify-center pointer-events-auto"
+            className={cn(
+                "flex justify-center pointer-events-auto",
+                vertical ? "flex-col items-center" : "items-center"
+            )}
         >
-            <div className="flex items-center gap-2">
+            <div className={cn("flex gap-2", vertical ? "flex-col" : "items-center")}>
                 {/* Home Button - Fixed */}
                 <Link
                     href="/"
@@ -225,14 +232,21 @@ export function SiteDock() {
                 </Link>
 
                 {/* Main Nav - Draggable */}
-                <div className={cn("relative flex items-center p-1.5 rounded-2xl border shadow-lg h-14", containerClass)}>
+                <div className={cn(
+                    "relative flex p-1.5 rounded-2xl border shadow-lg",
+                    vertical ? "flex-col w-14" : "items-center h-14",
+                    containerClass
+                )}>
                     <PortugalTopo dark={isDockDark} className="opacity-50 rounded-2xl pointer-events-none" />
                     <Reorder.Group
-                        axis="x"
+                        axis={vertical ? "y" : "x"}
                         values={items}
                         onReorder={handleReorder}
-                        className="relative z-10 flex items-center gap-1.5"
-                        style={{ touchAction: 'pan-y' }}
+                        className={cn(
+                            "relative z-10 flex gap-1.5",
+                            vertical ? "flex-col items-center" : "items-center"
+                        )}
+                        style={{ touchAction: vertical ? 'pan-x' : 'pan-y' }}
                     >
                         {items.map((item) => {
                             // Special case for Create to handle overlay
@@ -287,10 +301,11 @@ export function SiteDock() {
                                                 </button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent
-                                                side="top"
+                                                side={vertical ? "right" : "top"}
                                                 align="center"
                                                 className={cn(
-                                                    "mb-2 min-w-[160px] p-1 backdrop-blur-xl rounded-xl shadow-2xl",
+                                                    "min-w-[160px] p-1 backdrop-blur-xl rounded-xl shadow-2xl",
+                                                    vertical ? "ml-2" : "mb-2",
                                                     isDockDark
                                                         ? "bg-zinc-900/95 border-zinc-700/50 text-zinc-100"
                                                         : "bg-white/95 border-zinc-200/50 text-zinc-900"
@@ -336,8 +351,12 @@ export function SiteDock() {
                     </Reorder.Group>
                 </div>
 
-                {/* Right Section - Dashboard (admin) + User */}
-                <div className={cn("relative flex items-center gap-1.5 p-1.5 rounded-2xl border shadow-lg overflow-hidden h-14", containerClass)}>
+                {/* User Section */}
+                <div className={cn(
+                    "relative flex gap-1.5 p-1.5 rounded-2xl border shadow-lg overflow-hidden",
+                    vertical ? "flex-col w-14" : "items-center h-14",
+                    containerClass
+                )}>
                     <PortugalTopo dark={isDockDark} className="opacity-50" />
 
                     <div className="flex items-center gap-1">
@@ -367,10 +386,11 @@ export function SiteDock() {
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
-                                side="top"
-                                align="end"
+                                side={vertical ? "right" : "top"}
+                                align={vertical ? "center" : "end"}
                                 className={cn(
-                                    "mb-2 w-60 p-1.5 backdrop-blur-xl rounded-xl shadow-2xl",
+                                    "w-60 p-1.5 backdrop-blur-xl rounded-xl shadow-2xl",
+                                    vertical ? "ml-2" : "mb-2",
                                     isDockDark
                                         ? "bg-zinc-900/95 border-zinc-700/50 text-zinc-100"
                                         : "bg-white/95 border-zinc-200/50 text-zinc-900"

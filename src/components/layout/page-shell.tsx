@@ -10,10 +10,11 @@ interface PageShellProps {
     className?: string; // Classes for the root container
     contentClassName?: string; // Classes for the internal main element
     showDock?: boolean;
-    dockPosition?: "bottom" | "top-left";
+    dockPosition?: "bottom" | "left" | "top-left";
 }
 
-export function PageShell({ children, className, contentClassName, showDock = true, dockPosition = "bottom" }: PageShellProps) {
+export function PageShell({ children, className, contentClassName, showDock = true, dockPosition = "left" }: PageShellProps) {
+    const isLeft = dockPosition === "left";
     const isTopLeft = dockPosition === "top-left";
 
     return (
@@ -26,7 +27,8 @@ export function PageShell({ children, className, contentClassName, showDock = tr
 
                 <main className={cn(
                     "flex-1 flex flex-col relative z-10 w-full",
-                    showDock && !isTopLeft && "pb-24 lg:pb-32",
+                    showDock && !isTopLeft && !isLeft && "pb-24 lg:pb-32",
+                    showDock && isLeft && "pl-20",
                     contentClassName
                 )}>
                     {children}
@@ -35,11 +37,13 @@ export function PageShell({ children, className, contentClassName, showDock = tr
                 {showDock && (
                     <div className={cn(
                         "fixed z-[60] pointer-events-none",
-                        isTopLeft
-                            ? "top-0 left-0 p-4"
-                            : "bottom-0 left-0 right-0 p-6 flex justify-center"
+                        isLeft
+                            ? "top-0 left-0 bottom-0 p-3 flex items-center"
+                            : isTopLeft
+                                ? "top-0 left-0 p-4"
+                                : "bottom-0 left-0 right-0 p-6 flex justify-center"
                     )}>
-                        <SiteDock />
+                        <SiteDock vertical={isLeft} />
                     </div>
                 )}
             </div>
