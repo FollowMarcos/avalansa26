@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { getDecryptedApiKey, getApiConfig } from '@/utils/supabase/api-configs.server';
 import { createBatchJob, submitGeminiBatchJob } from '@/utils/supabase/batch-jobs.server';
-import { getImagesAsBase64 } from '@/utils/supabase/storage.server';
+import { getImagesAsBase64, uploadGeneratedImage } from '@/utils/supabase/storage.server';
 import { saveGeneration } from '@/utils/supabase/generations.server';
 import type { BatchJobRequest } from '@/types/batch-job';
 
@@ -217,14 +217,38 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
         });
     }
 
-    // Save each generated image to user's history
+    // Upload base64 images to storage and get public URLs
+    const processedImages: GeneratedImage[] = [];
     for (const image of images) {
+      let imageUrl = image.url;
+
+      // Check if the URL is a base64 data URL
+      if (image.url.startsWith('data:') || image.base64) {
+        const base64Data = image.base64 || image.url;
+        // Extract mime type from data URL
+        const mimeMatch = base64Data.match(/^data:([^;]+);base64,/);
+        const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
+
+        // Upload to storage
+        const { url, error } = await uploadGeneratedImage(base64Data, user.id, mimeType);
+        if (error) {
+          console.error('Failed to upload generated image:', error);
+          // Fall back to base64 URL (will be large but still works)
+          imageUrl = image.url;
+        } else {
+          imageUrl = url;
+        }
+      }
+
+      processedImages.push({ url: imageUrl });
+
+      // Save to generation history
       await saveGeneration({
         user_id: user.id,
         api_config_id: apiId,
         prompt: prompt || '',
         negative_prompt: negativePrompt,
-        image_url: image.url,
+        image_url: imageUrl,
         settings: {
           aspectRatio,
           imageSize,
@@ -234,7 +258,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
       });
     }
 
-    return NextResponse.json({ success: true, images, mode: 'fast' });
+    return NextResponse.json({ success: true, images: processedImages, mode: 'fast' });
   } catch (error) {
     console.error('Generation error:', error);
     return NextResponse.json(
