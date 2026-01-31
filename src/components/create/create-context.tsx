@@ -541,22 +541,29 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       // Build the final prompt
       const finalPrompt = buildFinalPrompt();
 
+      // Debug: Log the exact parameters being sent
+      const requestParams = {
+        apiId: selectedApiId,
+        prompt: finalPrompt,
+        negativePrompt: settings.negativePrompt,
+        aspectRatio: settings.aspectRatio,
+        imageSize: settings.imageSize,
+        outputCount: settings.outputCount,
+        referenceImagePaths, // Storage paths instead of base64
+        mode: settings.generationSpeed, // 'fast' or 'relaxed'
+      };
+      console.log('[Generate] Sending request with params:', {
+        ...requestParams,
+        prompt: requestParams.prompt.slice(0, 100) + '...', // Truncate for readability
+      });
+
       // Call the generation API with storage paths (not base64)
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          apiId: selectedApiId,
-          prompt: finalPrompt,
-          negativePrompt: settings.negativePrompt,
-          aspectRatio: settings.aspectRatio,
-          imageSize: settings.imageSize,
-          outputCount: settings.outputCount,
-          referenceImagePaths, // Storage paths instead of base64
-          mode: settings.generationSpeed, // 'fast' or 'relaxed'
-        }),
+        body: JSON.stringify(requestParams),
         signal: abortControllerRef.current.signal,
       });
 

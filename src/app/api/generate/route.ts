@@ -55,6 +55,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
     const body: GenerateRequest = await request.json();
     const { apiId, prompt, negativePrompt, aspectRatio, imageSize, outputCount = 1, referenceImagePaths, mode = 'fast' } = body;
 
+    // Debug: Log received parameters
+    console.log('[API /generate] Received params:', {
+      apiId,
+      aspectRatio,
+      imageSize,
+      outputCount,
+      mode,
+      promptLength: prompt?.length,
+      hasReferenceImages: referenceImagePaths?.length || 0,
+    });
+
     if (!apiId) {
       return NextResponse.json(
         { success: false, error: 'API ID is required' },
@@ -288,6 +299,14 @@ interface ProviderParams {
 async function generateWithGemini(params: ProviderParams): Promise<GeneratedImage[]> {
   const { apiKey, endpoint, modelId, prompt, negativePrompt, aspectRatio, imageSize, outputCount, referenceImages } = params;
 
+  // Debug: Log Gemini-specific params
+  console.log('[Gemini] Generating with params:', {
+    aspectRatio,
+    imageSize,
+    outputCount,
+    hasReferenceImages: referenceImages?.length || 0,
+  });
+
   // Build the request for Gemini image generation
   const fullPrompt = negativePrompt
     ? `${prompt}\n\nAvoid: ${negativePrompt}`
@@ -327,6 +346,13 @@ async function generateWithGemini(params: ProviderParams): Promise<GeneratedImag
   // Combine all hints
   const hints = [aspectHint, sizeHint].filter(Boolean).join(', ');
   const enhancedPrompt = hints ? `${fullPrompt}\n\nImage specifications: ${hints}` : fullPrompt;
+
+  // Debug: Log the prompt enhancement
+  console.log('[Gemini] Prompt hints:', {
+    aspectHint,
+    sizeHint,
+    combinedHints: hints,
+  });
 
   // Update parts with enhanced prompt
   parts[0] = { text: enhancedPrompt };
