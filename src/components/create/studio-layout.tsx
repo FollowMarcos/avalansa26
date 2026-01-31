@@ -1,10 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { cn } from "@/lib/utils";
 import { useCreate } from "./create-context";
 import { CanvasViewport } from "./canvas-viewport";
-import { ToolSidebar } from "./tool-sidebar";
 import { SettingsPanel } from "./settings-panel";
 import { PromptComposer } from "./prompt-composer";
 import { QuickToolbar } from "./quick-toolbar";
@@ -13,41 +11,19 @@ import { GenerationGallery } from "./generation-gallery";
 import { motion } from "motion/react";
 
 export function StudioLayout() {
-  const { viewMode } = useCreate();
-
-  // Handle keyboard shortcuts
-  React.useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl/Cmd + Z for undo
-      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
-        // Undo - handled in context
-      }
-      // Ctrl/Cmd + Shift + Z for redo
-      if ((e.ctrlKey || e.metaKey) && e.key === "z" && e.shiftKey) {
-        // Redo - handled in context
-      }
-      // Ctrl/Cmd + G for generate
-      if ((e.ctrlKey || e.metaKey) && e.key === "g") {
-        e.preventDefault();
-        // Generate - would need to be triggered from context
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  const { addReferenceImages } = useCreate();
 
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="relative h-dvh flex flex-col bg-zinc-950 overflow-hidden"
+      className="relative h-[calc(100dvh-6rem)] lg:h-[calc(100dvh-8rem)] flex flex-col bg-background text-foreground overflow-hidden"
     >
+      {/* Grain texture overlay */}
+      <div className="pointer-events-none fixed inset-0 z-50 bg-noise opacity-[0.03]" />
+
       {/* Main content area */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Tools */}
-        <ToolSidebar />
-
         {/* Center - Canvas/Gallery */}
         <div className="relative flex-1 flex flex-col overflow-hidden">
           {/* Quick Toolbar */}
@@ -71,14 +47,13 @@ export function StudioLayout() {
       </div>
 
       {/* Drag overlay for file uploads */}
-      <DragOverlay />
+      <DragOverlay onDrop={addReferenceImages} />
     </motion.div>
   );
 }
 
-function DragOverlay() {
+function DragOverlay({ onDrop }: { onDrop: (files: File[]) => void }) {
   const [isDragging, setIsDragging] = React.useState(false);
-  const { addImages } = useCreate();
 
   React.useEffect(() => {
     let dragCounter = 0;
@@ -112,7 +87,7 @@ function DragOverlay() {
         f.type.startsWith("image/")
       );
       if (files.length > 0) {
-        addImages(files);
+        onDrop(files);
       }
     };
 
@@ -127,7 +102,7 @@ function DragOverlay() {
       window.removeEventListener("dragover", handleDragOver);
       window.removeEventListener("drop", handleDrop);
     };
-  }, [addImages]);
+  }, [onDrop]);
 
   if (!isDragging) return null;
 
@@ -136,12 +111,12 @@ function DragOverlay() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="absolute inset-0 z-50 flex items-center justify-center bg-zinc-950/95"
+      className="absolute inset-0 z-40 flex items-center justify-center bg-background/95"
     >
       <div className="text-center">
-        <div className="size-20 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto mb-4">
+        <div className="size-20 rounded-2xl bg-muted border border-border flex items-center justify-center mx-auto mb-4">
           <svg
-            className="w-10 h-10 text-white"
+            className="w-10 h-10 text-foreground"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -154,8 +129,12 @@ function DragOverlay() {
             />
           </svg>
         </div>
-        <h3 className="text-xl font-semibold text-white mb-2">Drop images here</h3>
-        <p className="text-sm text-zinc-400">Add up to 14 reference images</p>
+        <h3 className="text-xl font-semibold text-foreground mb-2 font-mono">
+          Drop images here
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Add up to 14 reference images
+        </p>
       </div>
     </motion.div>
   );

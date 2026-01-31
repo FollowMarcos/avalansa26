@@ -5,7 +5,8 @@
       "WebFetch(domain:www.prompt-kit.com)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:prompt-kit.com)",
-      "Bash(npx shadcn@latest add:*)"
+      "Bash(npx shadcn@latest add:*)",
+      "WebFetch(domain:ai.google.dev)"
     ]
   }
 }

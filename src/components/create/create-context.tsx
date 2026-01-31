@@ -2,17 +2,15 @@
 
 import * as React from "react";
 
-export type GenerationMode =
-  | "text2img"        // Text to image (Nano Banana Pro optimized)
-  | "img2img"         // Image to image / Variations
-  | "upscale"         // High-fidelity upscaling
-  | "inpainting"      // Editing / Masking
-  | "outpainting"     // Expansion
-  | "text-fidelity";  // Specialized text rendering focus
-
-export type Resolution = "1024" | "2048" | "4096" | "custom";
-export type AspectRatio = "1:1" | "16:9" | "9:16" | "21:9" | "4:5" | "custom";
-export type Quality = "draft" | "standard" | "high" | "4k";
+// Gemini 3 Pro Image Preview API types
+export type ImageSize = "1K" | "2K" | "4K";
+export type AspectRatio =
+  | "1:1"
+  | "2:3" | "3:2"
+  | "3:4" | "4:3"
+  | "4:5" | "5:4"
+  | "9:16" | "16:9"
+  | "21:9";
 
 export interface ImageFile {
   id: string;
@@ -24,7 +22,6 @@ export interface GeneratedImage {
   id: string;
   url: string;
   prompt: string;
-  mode: GenerationMode;
   timestamp: number;
   settings: CreateSettings;
 }
@@ -36,19 +33,12 @@ export interface ThinkingStep {
 }
 
 export interface CreateSettings {
-  resolution: Resolution;
-  customWidth: number;
-  customHeight: number;
+  imageSize: ImageSize;
   aspectRatio: AspectRatio;
-  quality: Quality;
   outputCount: number;
+  styleStrength: number;
   negativePrompt: string;
   seed: string;
-  thinking: boolean;
-  styleStrength: number;
-  promptFidelity: number;    // 0-100: How strictly to follow prompt
-  spatialPrecision: number;  // 0-100: For complex compositions
-  textFidelity: number;     // 0-100: For specialized text rendering
 }
 
 interface CreateContextType {
@@ -56,23 +46,15 @@ interface CreateContextType {
   prompt: string;
   setPrompt: (prompt: string) => void;
 
-  // Generation mode
-  mode: GenerationMode;
-  setMode: (mode: GenerationMode) => void;
-
   // Settings
   settings: CreateSettings;
   updateSettings: (settings: Partial<CreateSettings>) => void;
 
-  // Multi-image input
-  inputImages: ImageFile[];
-  addImages: (files: File[]) => void;
-  removeImage: (id: string) => void;
-  clearImages: () => void;
-
-  // Style reference
-  styleReference: ImageFile | null;
-  setStyleReference: (file: File | null) => void;
+  // Reference images (up to 14, 6 objects max, 5 human faces)
+  referenceImages: ImageFile[];
+  addReferenceImages: (files: File[]) => void;
+  removeReferenceImage: (id: string) => void;
+  clearReferenceImages: () => void;
 
   // Generation history
   history: GeneratedImage[];
@@ -83,12 +65,12 @@ interface CreateContextType {
   // UI state
   viewMode: "canvas" | "gallery";
   setViewMode: (mode: "canvas" | "gallery") => void;
-  leftSidebarOpen: boolean;
-  rightSidebarOpen: boolean;
-  toggleLeftSidebar: () => void;
-  toggleRightSidebar: () => void;
+  settingsPanelOpen: boolean;
+  toggleSettingsPanel: () => void;
   isInputVisible: boolean;
   toggleInputVisibility: () => void;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
 
   // Zoom
   zoom: number;
@@ -105,93 +87,64 @@ interface CreateContextType {
   thinkingSteps: ThinkingStep[];
   generate: () => Promise<void>;
   cancelGeneration: () => void;
-
-  // Active tab for compatibility
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
 }
 
 const defaultSettings: CreateSettings = {
-  resolution: "1024",
-  customWidth: 1024,
-  customHeight: 1024,
+  imageSize: "2K",
   aspectRatio: "1:1",
-  quality: "high",
   outputCount: 1,
+  styleStrength: 75,
   negativePrompt: "",
   seed: "",
-  thinking: true,
-  styleStrength: 75,
-  promptFidelity: 80,
-  spatialPrecision: 50,
-  textFidelity: 90,
 };
 
 const CreateContext = React.createContext<CreateContextType | undefined>(undefined);
 
-// Maximum images for multi-image input (Gemini 3 Pro supports up to 14)
-const MAX_INPUT_IMAGES = 14;
+// Maximum images for reference input (Gemini 3 Pro supports up to 14)
+const MAX_REFERENCE_IMAGES = 14;
 
 export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [prompt, setPrompt] = React.useState("");
-  const [mode, setMode] = React.useState<GenerationMode>("text2img");
   const [settings, setSettings] = React.useState<CreateSettings>(defaultSettings);
-  const [inputImages, setInputImages] = React.useState<ImageFile[]>([]);
-  const [styleReference, setStyleReferenceState] = React.useState<ImageFile | null>(null);
+  const [referenceImages, setReferenceImages] = React.useState<ImageFile[]>([]);
   const [history, setHistory] = React.useState<GeneratedImage[]>([]);
   const [selectedImage, setSelectedImage] = React.useState<GeneratedImage | null>(null);
   const [viewMode, setViewMode] = React.useState<"canvas" | "gallery">("canvas");
-  const [leftSidebarOpen, setLeftSidebarOpen] = React.useState(true);
-  const [rightSidebarOpen, setRightSidebarOpen] = React.useState(true);
+  const [settingsPanelOpen, setSettingsPanelOpen] = React.useState(true);
   const [isInputVisible, setIsInputVisible] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState("create");
   const [zoom, setZoom] = React.useState(100);
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [thinkingSteps, setThinkingSteps] = React.useState<ThinkingStep[]>([]);
   const [historyIndex, setHistoryIndex] = React.useState(-1);
   const [historyStack, setHistoryStack] = React.useState<GeneratedImage[][]>([]);
-  const [activeTab, setActiveTab] = React.useState("create");
   const abortControllerRef = React.useRef<AbortController | null>(null);
 
   const updateSettings = React.useCallback((newSettings: Partial<CreateSettings>) => {
     setSettings(prev => ({ ...prev, ...newSettings }));
   }, []);
 
-  const addImages = React.useCallback((files: File[]) => {
-    const newImages: ImageFile[] = files.slice(0, MAX_INPUT_IMAGES - inputImages.length).map(file => ({
-      id: `img-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+  const addReferenceImages = React.useCallback((files: File[]) => {
+    const newImages: ImageFile[] = files.slice(0, MAX_REFERENCE_IMAGES - referenceImages.length).map(file => ({
+      id: `ref-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       file,
       preview: URL.createObjectURL(file),
     }));
-    setInputImages(prev => [...prev, ...newImages].slice(0, MAX_INPUT_IMAGES));
-  }, [inputImages.length]);
+    setReferenceImages(prev => [...prev, ...newImages].slice(0, MAX_REFERENCE_IMAGES));
+  }, [referenceImages.length]);
 
-  const removeImage = React.useCallback((id: string) => {
-    setInputImages(prev => {
+  const removeReferenceImage = React.useCallback((id: string) => {
+    setReferenceImages(prev => {
       const img = prev.find(i => i.id === id);
       if (img) URL.revokeObjectURL(img.preview);
       return prev.filter(i => i.id !== id);
     });
   }, []);
 
-  const clearImages = React.useCallback(() => {
-    inputImages.forEach(img => URL.revokeObjectURL(img.preview));
-    setInputImages([]);
-  }, [inputImages]);
-
-  const setStyleReference = React.useCallback((file: File | null) => {
-    if (styleReference) {
-      URL.revokeObjectURL(styleReference.preview);
-    }
-    if (file) {
-      setStyleReferenceState({
-        id: `style-${Date.now()}`,
-        file,
-        preview: URL.createObjectURL(file),
-      });
-    } else {
-      setStyleReferenceState(null);
-    }
-  }, [styleReference]);
+  const clearReferenceImages = React.useCallback(() => {
+    referenceImages.forEach(img => URL.revokeObjectURL(img.preview));
+    setReferenceImages([]);
+  }, [referenceImages]);
 
   const selectImage = React.useCallback((image: GeneratedImage | null) => {
     setSelectedImage(image);
@@ -205,52 +158,57 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     setHistoryIndex(-1);
   }, []);
 
-  const toggleLeftSidebar = React.useCallback(() => {
-    setLeftSidebarOpen(prev => !prev);
-  }, []);
-
-  const toggleRightSidebar = React.useCallback(() => {
-    setRightSidebarOpen(prev => !prev);
+  const toggleSettingsPanel = React.useCallback(() => {
+    setSettingsPanelOpen(prev => !prev);
   }, []);
 
   const toggleInputVisibility = React.useCallback(() => {
     setIsInputVisible(prev => !prev);
   }, []);
 
-  // Mock thinking steps for visual reasoning
-  const mockThinkingSteps: ThinkingStep[] = [
-    { id: "1", text: "Analyzing multimodal prompt intent…", completed: false },
-    { id: "2", text: "Nano-fast spatial mapping…", completed: false },
-    { id: "3", text: "Banana Pro text fidelity alignment…", completed: false },
-    { id: "4", text: "Synthesizing cross-attention layers…", completed: false },
-    { id: "5", text: "Applying high-precision denoiser…", completed: false },
-    { id: "6", text: "Finalizing 4K Banana Pro output…", completed: false },
-  ];
+  // Dynamic thinking steps based on context
+  const getThinkingSteps = React.useCallback((): ThinkingStep[] => {
+    const steps: ThinkingStep[] = [
+      { id: "1", text: "Analyzing prompt intent...", completed: false },
+      { id: "2", text: "Planning scene composition...", completed: false },
+    ];
+
+    if (referenceImages.length > 0) {
+      steps.push({ id: "3", text: `Processing ${referenceImages.length} reference image${referenceImages.length > 1 ? 's' : ''}...`, completed: false });
+    }
+
+    // Check if prompt likely contains text to render
+    const hasTextContent = /["']|say|text|sign|label|title|headline|word/i.test(prompt);
+    if (hasTextContent) {
+      steps.push({ id: "4", text: "Aligning text elements...", completed: false });
+    }
+
+    steps.push({ id: "5", text: `Generating ${settings.imageSize} output...`, completed: false });
+
+    return steps;
+  }, [referenceImages.length, prompt, settings.imageSize]);
 
   const generate = React.useCallback(async () => {
-    if (!prompt.trim() && inputImages.length === 0) return;
+    if (!prompt.trim() && referenceImages.length === 0) return;
 
     setIsGenerating(true);
     abortControllerRef.current = new AbortController();
 
-    // Initialize thinking steps if enabled
-    if (settings.thinking) {
-      setThinkingSteps(mockThinkingSteps);
-    }
+    // Initialize thinking steps (always enabled for Gemini 3 Pro)
+    const steps = getThinkingSteps();
+    setThinkingSteps(steps);
 
     try {
       // Simulate thinking process
-      if (settings.thinking) {
-        for (let i = 0; i < mockThinkingSteps.length; i++) {
-          if (abortControllerRef.current?.signal.aborted) break;
+      for (let i = 0; i < steps.length; i++) {
+        if (abortControllerRef.current?.signal.aborted) break;
 
-          await new Promise(resolve => setTimeout(resolve, 400 + Math.random() * 300));
-          setThinkingSteps(prev =>
-            prev.map((step, idx) =>
-              idx === i ? { ...step, completed: true } : step
-            )
-          );
-        }
+        await new Promise(resolve => setTimeout(resolve, 400 + Math.random() * 300));
+        setThinkingSteps(prev =>
+          prev.map((step, idx) =>
+            idx === i ? { ...step, completed: true } : step
+          )
+        );
       }
 
       // Simulate generation delay
@@ -260,16 +218,26 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
       // Get dimensions based on settings
       const getDimensions = () => {
-        const aspectRatios: Record<AspectRatio, [number, number]> = {
-          "1:1": [1, 1],
-          "16:9": [16, 9],
-          "9:16": [9, 16],
-          "21:9": [21, 9],
-          "4:5": [4, 5],
-          "custom": [settings.customWidth / settings.customHeight, 1],
+        const sizeMap: Record<ImageSize, number> = {
+          "1K": 1024,
+          "2K": 2048,
+          "4K": 4096,
         };
 
-        const baseSize = parseInt(settings.resolution) || 1024;
+        const aspectRatios: Record<AspectRatio, [number, number]> = {
+          "1:1": [1, 1],
+          "2:3": [2, 3],
+          "3:2": [3, 2],
+          "3:4": [3, 4],
+          "4:3": [4, 3],
+          "4:5": [4, 5],
+          "5:4": [5, 4],
+          "9:16": [9, 16],
+          "16:9": [16, 9],
+          "21:9": [21, 9],
+        };
+
+        const baseSize = sizeMap[settings.imageSize];
         const [wRatio, hRatio] = aspectRatios[settings.aspectRatio];
         const scale = Math.sqrt((baseSize * baseSize) / (wRatio * hRatio));
         return {
@@ -280,15 +248,14 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
       const { width, height } = getDimensions();
 
-      // Generate mock images
+      // Generate mock images (will be replaced with actual API call)
       const newImages: GeneratedImage[] = [];
       for (let i = 0; i < settings.outputCount; i++) {
         const seed = settings.seed || Math.floor(Math.random() * 1000000);
         newImages.push({
           id: `gen-${Date.now()}-${i}`,
-          url: `https://picsum.photos/seed/${seed}${i}/${width}/${height}`,
+          url: `https://picsum.photos/seed/${seed}${i}/${Math.min(width, 800)}/${Math.min(height, 800)}`,
           prompt,
-          mode,
           timestamp: Date.now(),
           settings: { ...settings },
         });
@@ -309,7 +276,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       setIsGenerating(false);
       setThinkingSteps([]);
     }
-  }, [prompt, inputImages.length, settings, mode, history, historyIndex]);
+  }, [prompt, referenceImages.length, settings, history, historyIndex, getThinkingSteps]);
 
   const cancelGeneration = React.useCallback(() => {
     abortControllerRef.current?.abort();
@@ -341,28 +308,24 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const value = React.useMemo(() => ({
     prompt,
     setPrompt,
-    mode,
-    setMode,
     settings,
     updateSettings,
-    inputImages,
-    addImages,
-    removeImage,
-    clearImages,
-    styleReference,
-    setStyleReference,
+    referenceImages,
+    addReferenceImages,
+    removeReferenceImage,
+    clearReferenceImages,
     history,
     selectedImage,
     selectImage,
     clearHistory,
     viewMode,
     setViewMode,
-    leftSidebarOpen,
-    rightSidebarOpen,
-    toggleLeftSidebar,
-    toggleRightSidebar,
+    settingsPanelOpen,
+    toggleSettingsPanel,
     isInputVisible,
     toggleInputVisibility,
+    activeTab,
+    setActiveTab,
     zoom,
     setZoom,
     canUndo,
@@ -373,15 +336,12 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     thinkingSteps,
     generate,
     cancelGeneration,
-    activeTab,
-    setActiveTab,
   }), [
-    prompt, mode, settings, inputImages, styleReference, history, selectedImage,
-    viewMode, leftSidebarOpen, rightSidebarOpen, isInputVisible, zoom,
-    canUndo, canRedo, isGenerating, thinkingSteps, activeTab,
-    updateSettings, addImages, removeImage, clearImages, setStyleReference,
-    selectImage, clearHistory, toggleLeftSidebar, toggleRightSidebar,
-    toggleInputVisibility, undo, redo, generate, cancelGeneration,
+    prompt, settings, referenceImages, history, selectedImage,
+    viewMode, settingsPanelOpen, isInputVisible, activeTab, zoom, canUndo, canRedo,
+    isGenerating, thinkingSteps,
+    updateSettings, addReferenceImages, removeReferenceImage, clearReferenceImages,
+    selectImage, clearHistory, toggleSettingsPanel, toggleInputVisibility, undo, redo, generate, cancelGeneration,
   ]);
 
   return (

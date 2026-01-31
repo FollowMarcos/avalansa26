@@ -3,8 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { useCreate, Resolution, AspectRatio, Quality } from "./create-context";
-import { VerticalSlider } from "./vertical-slider";
+import { useCreate, ImageSize, AspectRatio } from "./create-context";
 import {
   ChevronLeft,
   ChevronRight,
@@ -13,6 +12,7 @@ import {
   Image as ImageIcon,
   X,
   Trash2,
+  Info,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -24,163 +24,157 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export function SettingsPanel() {
-  const { rightSidebarOpen, toggleRightSidebar } = useCreate();
+  const { settingsPanelOpen, toggleSettingsPanel } = useCreate();
 
   return (
-    <AnimatePresence initial={false}>
-      {rightSidebarOpen ? (
-        <motion.div
-          initial={{ width: 0, opacity: 0 }}
-          animate={{ width: 280, opacity: 1 }}
-          exit={{ width: 0, opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="relative flex flex-col bg-zinc-900 border-l border-zinc-800 overflow-hidden"
-        >
-          <Tabs defaultValue="settings" className="flex flex-col h-full">
-            <TabsList className="grid grid-cols-3 m-2 bg-zinc-800/50">
-              <TabsTrigger value="settings" className="text-xs">
-                <Settings className="w-3.5 h-3.5 mr-1" />
-                Settings
-              </TabsTrigger>
-              <TabsTrigger value="reference" className="text-xs">
-                <ImageIcon className="w-3.5 h-3.5 mr-1" />
-                Reference
-              </TabsTrigger>
-              <TabsTrigger value="history" className="text-xs">
-                <Layers className="w-3.5 h-3.5 mr-1" />
-                History
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="settings" className="flex-1 p-4 mt-0 overflow-hidden">
-              <SettingsTab />
-            </TabsContent>
-
-            <TabsContent value="reference" className="flex-1 p-4 mt-0 overflow-hidden">
-              <ReferenceTab />
-            </TabsContent>
-
-            <TabsContent value="history" className="flex-1 p-4 mt-0 overflow-hidden">
-              <HistoryTab />
-            </TabsContent>
-          </Tabs>
-
-          {/* Collapse button */}
-          <button
-            onClick={toggleRightSidebar}
-            aria-label={rightSidebarOpen ? "Collapse settings" : "Expand settings"}
-            aria-expanded={rightSidebarOpen}
-            className="absolute -left-3 top-1/2 -translate-y-1/2 size-6 h-12 rounded-l-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-colors"
+    <TooltipProvider delayDuration={300}>
+      <AnimatePresence initial={false}>
+        {settingsPanelOpen ? (
+          <motion.div
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 280, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="relative flex flex-col bg-background border-l border-border overflow-hidden"
           >
-            <ChevronRight className="size-4 text-zinc-400" />
-          </button>
-        </motion.div>
-      ) : (
-        <motion.button
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={toggleRightSidebar}
-          aria-label="Expand settings"
-          aria-expanded={false}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-20 size-6 h-12 rounded-l-lg bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-colors"
-        >
-          <ChevronLeft className="size-4 text-zinc-400" />
-        </motion.button>
-      )}
-    </AnimatePresence>
+            <Tabs defaultValue="settings" className="flex flex-col h-full">
+              <TabsList className="grid grid-cols-3 m-2 bg-muted">
+                <TabsTrigger value="settings" className="text-xs font-mono">
+                  <Settings className="w-3.5 h-3.5 mr-1" />
+                  Settings
+                </TabsTrigger>
+                <TabsTrigger value="reference" className="text-xs font-mono">
+                  <ImageIcon className="w-3.5 h-3.5 mr-1" />
+                  Reference
+                </TabsTrigger>
+                <TabsTrigger value="history" className="text-xs font-mono">
+                  <Layers className="w-3.5 h-3.5 mr-1" />
+                  History
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="settings" className="flex-1 p-4 mt-0 overflow-hidden">
+                <SettingsTab />
+              </TabsContent>
+
+              <TabsContent value="reference" className="flex-1 p-4 mt-0 overflow-hidden">
+                <ReferenceTab />
+              </TabsContent>
+
+              <TabsContent value="history" className="flex-1 p-4 mt-0 overflow-hidden">
+                <HistoryTab />
+              </TabsContent>
+            </Tabs>
+
+            {/* Collapse button */}
+            <button
+              onClick={toggleSettingsPanel}
+              aria-label="Collapse settings"
+              aria-expanded={true}
+              className="absolute -left-3 top-1/2 -translate-y-1/2 size-6 h-12 rounded-l-lg bg-muted hover:bg-muted/80 flex items-center justify-center transition-colors border border-r-0 border-border"
+            >
+              <ChevronRight className="size-4 text-muted-foreground" />
+            </button>
+          </motion.div>
+        ) : (
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={toggleSettingsPanel}
+            aria-label="Expand settings"
+            aria-expanded={false}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-20 size-6 h-12 rounded-l-lg bg-muted hover:bg-muted/80 flex items-center justify-center transition-colors border border-r-0 border-border"
+          >
+            <ChevronLeft className="size-4 text-muted-foreground" />
+          </motion.button>
+        )}
+      </AnimatePresence>
+    </TooltipProvider>
   );
 }
 
 function SettingsTab() {
   const { settings, updateSettings } = useCreate();
 
-  const resolutions: { value: Resolution; label: string }[] = [
-    { value: "1024", label: "1024px (Standard)" },
-    { value: "2048", label: "2048px (HD)" },
-    { value: "4096", label: "4096px (4K)" },
+  const imageSizes: { value: ImageSize; label: string; description: string }[] = [
+    { value: "1K", label: "1K", description: "1024px - Fast" },
+    { value: "2K", label: "2K", description: "2048px - Balanced" },
+    { value: "4K", label: "4K", description: "4096px - Maximum" },
   ];
 
-  const aspectRatios: { value: AspectRatio; label: string }[] = [
-    { value: "1:1", label: "1:1 (Square)" },
-    { value: "16:9", label: "16:9 (Landscape)" },
-    { value: "9:16", label: "9:16 (Portrait)" },
-    { value: "21:9", label: "21:9 (Ultrawide)" },
-    { value: "4:5", label: "4:5 (Instagram)" },
-  ];
-
-  const qualities: { value: Quality; label: string }[] = [
-    { value: "draft", label: "Draft (Banana Nano)" },
-    { value: "standard", label: "Standard (Banana)" },
-    { value: "high", label: "High Fidelity (Banana Pro)" },
-    { value: "4k", label: "Ultra 4k (Banana Max)" },
+  const aspectRatios: { value: AspectRatio; label: string; category: string }[] = [
+    { value: "1:1", label: "1:1", category: "Square" },
+    { value: "4:3", label: "4:3", category: "Standard" },
+    { value: "3:4", label: "3:4", category: "Portrait" },
+    { value: "3:2", label: "3:2", category: "Photo" },
+    { value: "2:3", label: "2:3", category: "Portrait" },
+    { value: "16:9", label: "16:9", category: "Wide" },
+    { value: "9:16", label: "9:16", category: "Tall" },
+    { value: "5:4", label: "5:4", category: "Photo" },
+    { value: "4:5", label: "4:5", category: "Social" },
+    { value: "21:9", label: "21:9", category: "Ultrawide" },
   ];
 
   return (
     <ScrollArea className="h-full pr-4 -mr-4">
       <div className="space-y-6">
-        {/* Resolution */}
+        {/* Image Size */}
         <div className="space-y-2">
-          <label htmlFor="settings-resolution" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-            Resolution
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider font-mono">
+            Image Size
           </label>
-          <Select
-            value={settings.resolution}
-            onValueChange={(value: Resolution) => updateSettings({ resolution: value })}
-          >
-            <SelectTrigger id="settings-resolution" className="bg-zinc-800 border-zinc-700">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {resolutions.map((res) => (
-                <SelectItem key={res.value} value={res.value}>
-                  {res.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="grid grid-cols-3 gap-2">
+            {imageSizes.map((size) => (
+              <Tooltip key={size.value}>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => updateSettings({ imageSize: size.value })}
+                    className={cn(
+                      "py-2 px-3 rounded-lg text-sm font-mono font-medium transition-colors",
+                      settings.imageSize === size.value
+                        ? "bg-foreground text-background"
+                        : "bg-muted text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {size.label}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{size.description}</p>
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </div>
         </div>
 
         {/* Aspect Ratio */}
         <div className="space-y-2">
-          <label htmlFor="settings-aspect-ratio" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+          <label htmlFor="settings-aspect-ratio" className="text-xs font-medium text-muted-foreground uppercase tracking-wider font-mono">
             Aspect Ratio
           </label>
           <Select
             value={settings.aspectRatio}
             onValueChange={(value: AspectRatio) => updateSettings({ aspectRatio: value })}
           >
-            <SelectTrigger id="settings-aspect-ratio" className="bg-zinc-800 border-zinc-700">
+            <SelectTrigger id="settings-aspect-ratio" className="bg-muted border-border font-mono">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {aspectRatios.map((ratio) => (
-                <SelectItem key={ratio.value} value={ratio.value}>
-                  {ratio.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Quality */}
-        <div className="space-y-2">
-          <label htmlFor="settings-quality" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-            Quality
-          </label>
-          <Select
-            value={settings.quality}
-            onValueChange={(value: Quality) => updateSettings({ quality: value })}
-          >
-            <SelectTrigger id="settings-quality" className="bg-zinc-800 border-zinc-700">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {qualities.map((q) => (
-                <SelectItem key={q.value} value={q.value}>
-                  {q.label}
+                <SelectItem key={ratio.value} value={ratio.value} className="font-mono">
+                  <span className="flex items-center gap-2">
+                    <span>{ratio.label}</span>
+                    <span className="text-muted-foreground text-xs">({ratio.category})</span>
+                  </span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -189,7 +183,7 @@ function SettingsTab() {
 
         {/* Output Count */}
         <div className="space-y-2">
-          <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider font-mono">
             Output Count
           </label>
           <div className="flex items-center gap-2">
@@ -198,10 +192,10 @@ function SettingsTab() {
                 key={count}
                 onClick={() => updateSettings({ outputCount: count })}
                 className={cn(
-                  "flex-1 py-2 rounded-lg text-sm font-medium transition-colors",
+                  "flex-1 py-2 rounded-lg text-sm font-mono font-medium transition-colors",
                   settings.outputCount === count
-                    ? "bg-zinc-100 text-zinc-900"
-                    : "bg-zinc-800 text-zinc-400 hover:text-zinc-200"
+                    ? "bg-foreground text-background"
+                    : "bg-muted text-muted-foreground hover:text-foreground"
                 )}
               >
                 {count}
@@ -210,97 +204,33 @@ function SettingsTab() {
           </div>
         </div>
 
-        {/* Prompt Fidelity */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-              Prompt Fidelity
-            </label>
-            <span className="text-xs text-zinc-500 tabular-nums">
-              {settings.promptFidelity}%
-            </span>
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={settings.promptFidelity}
-            onChange={(e) => updateSettings({ promptFidelity: parseInt(e.target.value) })}
-            className="w-full accent-zinc-100"
-          />
-        </div>
-
-        {/* Spatial Precision */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-              Spatial Precision
-            </label>
-            <span className="text-xs text-zinc-500 tabular-nums">
-              {settings.spatialPrecision}%
-            </span>
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={settings.spatialPrecision}
-            onChange={(e) => updateSettings({ spatialPrecision: parseInt(e.target.value) })}
-            className="w-full accent-zinc-100"
-          />
-        </div>
-
-        {/* Text Fidelity */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-              Text Fidelity
-            </label>
-            <span className="text-xs text-zinc-500 tabular-nums">
-              {settings.textFidelity}%
-            </span>
-          </div>
-          <input
-            type="range"
-            min={0}
-            max={100}
-            value={settings.textFidelity}
-            onChange={(e) => updateSettings({ textFidelity: parseInt(e.target.value) })}
-            className="w-full accent-zinc-100"
-          />
-        </div>
-
-        {/* Thinking Mode */}
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-            Visual Reasoning
-          </label>
-          <button
-            onClick={() => updateSettings({ thinking: !settings.thinking })}
-            className={cn(
-              "w-full py-2 rounded-lg text-sm font-medium transition-colors",
-              settings.thinking
-                ? "bg-zinc-100 text-zinc-900"
-                : "bg-zinc-800 text-zinc-400 hover:text-zinc-200"
-            )}
-          >
-            {settings.thinking ? "Enabled" : "Disabled"}
-          </button>
-          <p className="text-xs text-zinc-500">
-            Shows AI thinking process during generation
-          </p>
-        </div>
-
         {/* Seed */}
         <div className="space-y-2">
+          <label htmlFor="settings-seed" className="text-xs font-medium text-muted-foreground uppercase tracking-wider font-mono">
+            Seed
+          </label>
           <input
             id="settings-seed"
             type="text"
             value={settings.seed}
             onChange={(e) => updateSettings({ seed: e.target.value })}
             placeholder="Random"
-            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-400"
+            className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-sm font-mono placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
           />
+          <p className="text-xs text-muted-foreground">
+            Use a seed for reproducible results
+          </p>
+        </div>
+
+        {/* Model Info */}
+        <div className="pt-4 border-t border-border">
+          <div className="flex items-start gap-2 text-xs text-muted-foreground">
+            <Info className="size-3.5 mt-0.5 flex-shrink-0" />
+            <div className="space-y-1">
+              <p className="font-mono font-medium">Nano Banana Pro Preview</p>
+              <p>Gemini 3 Pro Image with advanced reasoning and text rendering.</p>
+            </div>
+          </div>
         </div>
       </div>
     </ScrollArea>
@@ -308,69 +238,89 @@ function SettingsTab() {
 }
 
 function ReferenceTab() {
-  const { styleReference, setStyleReference, settings, updateSettings, mode } = useCreate();
+  const { referenceImages, addReferenceImages, removeReferenceImage, settings, updateSettings } = useCreate();
   const inputRef = React.useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setStyleReference(file);
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) addReferenceImages(files);
+    if (inputRef.current) inputRef.current.value = "";
   };
+
+  const hasReferences = referenceImages.length > 0;
 
   return (
     <ScrollArea className="h-full pr-4 -mr-4">
       <div className="space-y-6">
-        {/* Style Reference */}
+        {/* Reference Images */}
         <div className="space-y-2">
-          <label htmlFor="style-ref-upload" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-            Style Reference
-          </label>
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider font-mono">
+              Reference Images
+            </label>
+            <span className="text-xs text-muted-foreground font-mono">
+              {referenceImages.length}/14
+            </span>
+          </div>
 
           <input
-            id="style-ref-upload"
             ref={inputRef}
             type="file"
             accept="image/*"
+            multiple
             className="hidden"
             onChange={handleFileSelect}
           />
 
-          {styleReference ? (
-            <div className="relative group">
-              <div className="aspect-square rounded-lg overflow-hidden bg-zinc-800">
-                <Image
-                  src={styleReference.preview}
-                  alt="Style reference"
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <button
-                onClick={() => setStyleReference(null)}
-                aria-label="Remove style reference"
-                className="absolute top-2 right-2 size-6 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                <X className="size-4 text-white" />
-              </button>
+          {hasReferences ? (
+            <div className="grid grid-cols-3 gap-2">
+              {referenceImages.map((img) => (
+                <div key={img.id} className="relative group aspect-square">
+                  <div className="w-full h-full rounded-lg overflow-hidden bg-muted border border-border">
+                    <Image
+                      src={img.preview}
+                      alt="Reference"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  <button
+                    onClick={() => removeReferenceImage(img.id)}
+                    aria-label="Remove reference"
+                    className="absolute top-1 right-1 size-5 rounded-full bg-background/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="size-3 text-foreground" />
+                  </button>
+                </div>
+              ))}
+              {referenceImages.length < 14 && (
+                <button
+                  onClick={() => inputRef.current?.click()}
+                  className="aspect-square rounded-lg border-2 border-dashed border-border hover:border-muted-foreground flex items-center justify-center transition-colors"
+                >
+                  <ImageIcon className="size-5 text-muted-foreground" />
+                </button>
+              )}
             </div>
           ) : (
             <button
               onClick={() => inputRef.current?.click()}
-              className="w-full aspect-square rounded-lg border-2 border-dashed border-zinc-700 hover:border-zinc-600 flex flex-col items-center justify-center transition-colors"
+              className="w-full aspect-video rounded-lg border-2 border-dashed border-border hover:border-muted-foreground flex flex-col items-center justify-center transition-colors"
             >
-              <ImageIcon className="w-8 h-8 text-zinc-600 mb-2" />
-              <span className="text-xs text-zinc-500">Upload reference</span>
+              <ImageIcon className="w-8 h-8 text-muted-foreground mb-2" />
+              <span className="text-xs text-muted-foreground">Add reference images</span>
             </button>
           )}
         </div>
 
-        {/* Style Strength - only for img2img mode or when reference is present */}
-        {(mode === "img2img" || styleReference) && (
+        {/* Style Strength - only when references present */}
+        {hasReferences && (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider font-mono">
                 Style Strength
               </label>
-              <span className="text-xs text-zinc-500 tabular-nums">
+              <span className="text-xs text-muted-foreground font-mono tabular-nums">
                 {settings.styleStrength}%
               </span>
             </div>
@@ -380,23 +330,41 @@ function ReferenceTab() {
               max={100}
               value={settings.styleStrength}
               onChange={(e) => updateSettings({ styleStrength: parseInt(e.target.value) })}
-              className="w-full accent-zinc-400"
+              className="w-full accent-foreground"
             />
+            <p className="text-xs text-muted-foreground">
+              How strongly to apply the reference style
+            </p>
           </div>
         )}
 
+        {/* Reference Tips */}
+        <div className="pt-4 border-t border-border">
+          <div className="flex items-start gap-2 text-xs text-muted-foreground">
+            <Info className="size-3.5 mt-0.5 flex-shrink-0" />
+            <div className="space-y-1">
+              <p className="font-medium">Reference Guidelines</p>
+              <ul className="list-disc list-inside space-y-0.5">
+                <li>Up to 6 objects for consistency</li>
+                <li>Up to 5 human faces for identity</li>
+                <li>Mix styles from multiple images</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
         {/* Negative Prompt */}
         <div className="space-y-2">
-          <label htmlFor="settings-negative-prompt" className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
+          <label htmlFor="settings-negative-prompt" className="text-xs font-medium text-muted-foreground uppercase tracking-wider font-mono">
             Negative Prompt
           </label>
           <textarea
             id="settings-negative-prompt"
             value={settings.negativePrompt}
             onChange={(e) => updateSettings({ negativePrompt: e.target.value })}
-            placeholder="Elements to avoid…"
+            placeholder="Elements to avoid..."
             rows={3}
-            className="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-zinc-400 resize-none"
+            className="w-full px-3 py-2 bg-muted border border-border rounded-lg text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
           />
         </div>
       </div>
@@ -411,10 +379,10 @@ function HistoryTab() {
     <div className="h-full flex flex-col">
       {history.length > 0 && (
         <div className="flex items-center justify-between mb-4">
-          <span className="text-xs text-zinc-500">{history.length} images</span>
+          <span className="text-xs text-muted-foreground font-mono">{history.length} images</span>
           <button
             onClick={clearHistory}
-            className="text-xs text-zinc-500 hover:text-red-400 flex items-center gap-1 transition-colors"
+            className="text-xs text-muted-foreground hover:text-destructive flex items-center gap-1 transition-colors font-mono"
           >
             <Trash2 className="w-3 h-3" />
             Clear
@@ -425,8 +393,8 @@ function HistoryTab() {
       <ScrollArea className="flex-1 pr-4 -mr-4">
         {history.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 text-center">
-            <Layers className="w-8 h-8 text-zinc-700 mb-2" />
-            <p className="text-xs text-zinc-600">No generations yet</p>
+            <Layers className="w-8 h-8 text-muted-foreground/50 mb-2" />
+            <p className="text-xs text-muted-foreground">No generations yet</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-2">
@@ -437,7 +405,7 @@ function HistoryTab() {
                 aria-label={image.prompt || "Select generation from history"}
                 className={cn(
                   "relative aspect-square rounded-lg overflow-hidden group",
-                  selectedImage?.id === image.id && "ring-1 ring-zinc-400"
+                  selectedImage?.id === image.id && "ring-2 ring-foreground"
                 )}
               >
                 <Image
@@ -448,6 +416,9 @@ function HistoryTab() {
                   unoptimized
                 />
                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors" />
+                <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono opacity-0 group-hover:opacity-100 transition-opacity">
+                  {image.settings.imageSize}
+                </div>
               </button>
             ))}
           </div>

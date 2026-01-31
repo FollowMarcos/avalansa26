@@ -1,18 +1,17 @@
 "use client";
 
-import * as React from "react";
 import { cn } from "@/lib/utils";
 import { useCreate } from "./create-context";
+import { Button } from "@/components/ui/button";
 import {
   Undo2,
   Redo2,
   ZoomIn,
   ZoomOut,
-  LayoutGrid,
-  Maximize2,
   Download,
+  LayoutGrid,
+  Square,
 } from "lucide-react";
-import { motion } from "motion/react";
 import {
   Tooltip,
   TooltipContent,
@@ -39,14 +38,13 @@ export function QuickToolbar() {
 
   const handleDownload = async () => {
     if (!selectedImage) return;
-
     try {
       const response = await fetch(selectedImage.url);
       const blob = await response.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `create-${selectedImage.id}.png`;
+      a.download = `generation-${selectedImage.id}.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -58,114 +56,141 @@ export function QuickToolbar() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="absolute top-4 left-1/2 -translate-x-1/2 z-20"
-      >
-        <div className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800">
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
+        <div className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-background border border-border shadow-sm">
           {/* Undo/Redo */}
-          <div className="flex items-center gap-0.5 pr-2 border-r border-zinc-700">
-            <ToolbarButton
-              icon={Undo2}
-              tooltip="Undo (Ctrl+Z)"
-              onClick={undo}
-              disabled={!canUndo}
-            />
-            <ToolbarButton
-              icon={Redo2}
-              tooltip="Redo (Ctrl+Shift+Z)"
-              onClick={redo}
-              disabled={!canRedo}
-            />
+          <div className="flex items-center">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={undo}
+                  disabled={!canUndo}
+                  className="size-8 rounded-lg"
+                >
+                  <Undo2 className="size-4" strokeWidth={1.5} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Undo</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={redo}
+                  disabled={!canRedo}
+                  className="size-8 rounded-lg"
+                >
+                  <Redo2 className="size-4" strokeWidth={1.5} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Redo</TooltipContent>
+            </Tooltip>
           </div>
 
-          {/* Zoom Controls */}
-          <div className="flex items-center gap-0.5 px-2 border-r border-zinc-700">
-            <ToolbarButton
-              icon={ZoomOut}
-              tooltip="Zoom Out"
-              onClick={handleZoomOut}
-              disabled={zoom <= 25}
-            />
+          <div className="w-px h-5 bg-border mx-1" />
+
+          {/* Zoom */}
+          <div className="flex items-center">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleZoomOut}
+                  disabled={zoom <= 25}
+                  className="size-8 rounded-lg"
+                >
+                  <ZoomOut className="size-4" strokeWidth={1.5} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Zoom Out</TooltipContent>
+            </Tooltip>
+
             <button
               onClick={handleZoomReset}
-              aria-label="Reset zoom to 100%"
-              className="px-2 py-1 text-xs font-medium text-zinc-400 hover:text-zinc-200 tabular-nums transition-colors"
+              className="px-2 py-1 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors min-w-[3rem] text-center"
             >
               {zoom}%
             </button>
-            <ToolbarButton
-              icon={ZoomIn}
-              tooltip="Zoom In"
-              onClick={handleZoomIn}
-              disabled={zoom >= 200}
-            />
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleZoomIn}
+                  disabled={zoom >= 200}
+                  className="size-8 rounded-lg"
+                >
+                  <ZoomIn className="size-4" strokeWidth={1.5} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Zoom In</TooltipContent>
+            </Tooltip>
           </div>
+
+          <div className="w-px h-5 bg-border mx-1" />
 
           {/* View Mode */}
-          <div className="flex items-center gap-0.5 px-2 border-r border-zinc-700">
-            <ToolbarButton
-              icon={Maximize2}
-              tooltip="Canvas View"
-              onClick={() => setViewMode("canvas")}
-              active={viewMode === "canvas"}
-            />
-            <ToolbarButton
-              icon={LayoutGrid}
-              tooltip="Gallery View"
-              onClick={() => setViewMode("gallery")}
-              active={viewMode === "gallery"}
-            />
+          <div className="flex items-center">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setViewMode("canvas")}
+                  className={cn(
+                    "size-8 rounded-lg",
+                    viewMode === "canvas" && "bg-muted"
+                  )}
+                >
+                  <Square className="size-4" strokeWidth={1.5} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Canvas View</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setViewMode("gallery")}
+                  className={cn(
+                    "size-8 rounded-lg",
+                    viewMode === "gallery" && "bg-muted"
+                  )}
+                >
+                  <LayoutGrid className="size-4" strokeWidth={1.5} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Gallery View</TooltipContent>
+            </Tooltip>
           </div>
+
+          <div className="w-px h-5 bg-border mx-1" />
 
           {/* Download */}
-          <div className="flex items-center gap-0.5 pl-2">
-            <ToolbarButton
-              icon={Download}
-              tooltip="Download Image"
-              onClick={handleDownload}
-              disabled={!selectedImage}
-            />
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleDownload}
+                disabled={!selectedImage}
+                className="size-8 rounded-lg"
+              >
+                <Download className="size-4" strokeWidth={1.5} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Download</TooltipContent>
+          </Tooltip>
         </div>
-      </motion.div>
+      </div>
     </TooltipProvider>
-  );
-}
-
-function ToolbarButton({
-  icon: Icon,
-  tooltip,
-  onClick,
-  disabled,
-  active,
-}: {
-  icon: React.ElementType;
-  tooltip: string;
-  onClick: () => void;
-  disabled?: boolean;
-  active?: boolean;
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          onClick={onClick}
-          disabled={disabled}
-          aria-label={tooltip}
-          className={cn(
-            "size-8 rounded-lg flex items-center justify-center transition-colors",
-            active
-              ? "bg-zinc-800 text-white border border-zinc-700"
-              : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800",
-            disabled && "opacity-40 cursor-not-allowed hover:bg-transparent hover:text-zinc-400"
-          )}
-        >
-          <Icon className="size-4" strokeWidth={1.5} />
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="bottom">{tooltip}</TooltipContent>
-    </Tooltip>
   );
 }

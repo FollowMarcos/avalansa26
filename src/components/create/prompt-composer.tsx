@@ -1,9 +1,8 @@
 "use client";
 
-import * as React from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { useCreate, GenerationMode } from "./create-context";
+import { useCreate } from "./create-context";
 import {
   PromptInput,
   PromptInputTextarea,
@@ -17,40 +16,29 @@ import {
   ImagePlus,
   Sparkles,
   X,
-  ChevronUp,
-  ChevronDown,
+  Images,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
-
-const modeLabels: Record<GenerationMode, string> = {
-  text2img: "Magic Create",
-  img2img: "Re-imagine",
-  "text-fidelity": "Perfect Text",
-  upscale: "Upscale 4K",
-  inpainting: "Modify",
-  outpainting: "Expand",
-};
 
 export function PromptComposer() {
   const {
     prompt,
     setPrompt,
-    inputImages,
-    addImages,
-    removeImage,
+    referenceImages,
+    addReferenceImages,
+    removeReferenceImage,
     isGenerating,
     generate,
-    mode,
     settings,
   } = useCreate();
 
-  const [showNegative, setShowNegative] = React.useState(false);
-
   const handleSubmit = () => {
-    if (!isGenerating && (prompt.trim() || inputImages.length > 0)) {
+    if (!isGenerating && (prompt.trim() || referenceImages.length > 0)) {
       generate();
     }
   };
+
+  const hasReferences = referenceImages.length > 0;
 
   return (
     <motion.div
@@ -60,7 +48,7 @@ export function PromptComposer() {
     >
       <div className="max-w-3xl mx-auto">
         <FileUpload
-          onFilesAdded={addImages}
+          onFilesAdded={addReferenceImages}
           multiple
           accept="image/*"
           disabled={isGenerating}
@@ -72,46 +60,50 @@ export function PromptComposer() {
             isLoading={isGenerating}
             disabled={isGenerating}
             className={cn(
-              "bg-zinc-900 border-zinc-800",
-              "rounded-2xl transition-all",
-              inputImages.length > 0 && "rounded-t-none"
+              "bg-background border-border",
+              "rounded-2xl transition-all shadow-sm",
+              hasReferences && "rounded-t-none"
             )}
           >
-            {/* Attached Images */}
+            {/* Attached Reference Images */}
             <AnimatePresence>
-              {inputImages.length > 0 && (
+              {hasReferences && (
                 <motion.div
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: "auto", opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
                   className="overflow-hidden"
                 >
-                  <div className="flex items-center gap-2 px-3 py-2 border-b border-zinc-700/50 overflow-x-auto">
-                    {inputImages.map((img) => (
+                  <div className="flex items-center gap-2 px-3 py-2 border-b border-border overflow-x-auto bg-muted/30">
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mr-2 flex-shrink-0">
+                      <Images className="size-3.5" />
+                      <span>Style Transfer</span>
+                    </div>
+                    {referenceImages.map((img) => (
                       <div
                         key={img.id}
                         className="relative flex-shrink-0 group"
                       >
-                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-zinc-800">
+                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted border border-border">
                           <Image
                             src={img.preview}
-                            alt="Attached"
+                            alt="Reference"
                             width={48}
                             height={48}
                             className="w-full h-full object-cover"
                           />
                         </div>
                         <button
-                          onClick={() => removeImage(img.id)}
-                          aria-label="Remove image"
-                          className="absolute -top-1 -right-1 size-4 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => removeReferenceImage(img.id)}
+                          aria-label="Remove reference image"
+                          className="absolute -top-1 -right-1 size-4 rounded-full bg-background border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                         >
-                          <X className="size-2.5 text-zinc-400" />
+                          <X className="size-2.5 text-muted-foreground" />
                         </button>
                       </div>
                     ))}
-                    <span className="text-xs text-zinc-500 flex-shrink-0">
-                      {inputImages.length}/14
+                    <span className="text-xs text-muted-foreground flex-shrink-0 ml-auto">
+                      {referenceImages.length}/14
                     </span>
                   </div>
                 </motion.div>
@@ -122,12 +114,17 @@ export function PromptComposer() {
             <div className="flex items-end gap-2 p-2">
               {/* Image Upload Button */}
               <FileUploadTrigger asChild>
-                <PromptInputAction tooltip="Add images (up to 14)">
+                <PromptInputAction tooltip="Add reference images (up to 14)">
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-10 w-10 rounded-xl text-zinc-400 hover:text-zinc-200"
-                    disabled={isGenerating || inputImages.length >= 14}
+                    className={cn(
+                      "h-10 w-10 rounded-xl",
+                      hasReferences
+                        ? "text-foreground bg-muted"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                    disabled={isGenerating || referenceImages.length >= 14}
                   >
                     <ImagePlus className="w-5 h-5" strokeWidth={1.5} />
                   </Button>
@@ -137,116 +134,51 @@ export function PromptComposer() {
               {/* Textarea */}
               <div className="flex-1">
                 <PromptInputTextarea
-                  placeholder={getPlaceholder(mode)}
-                  className="text-zinc-100 placeholder:text-zinc-500 text-sm"
+                  placeholder={
+                    hasReferences
+                      ? "Describe how to transform or style your images..."
+                      : "Describe the image you want to create..."
+                  }
+                  className="text-foreground placeholder:text-muted-foreground text-sm"
                 />
               </div>
 
-              {/* Actions */}
+              {/* Generate Button */}
               <PromptInputActions className="flex-shrink-0">
-                {/* Negative Prompt Toggle */}
-                <PromptInputAction tooltip="Negative prompt">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setShowNegative(!showNegative)}
-                    aria-label={showNegative ? "Hide negative prompt" : "Show negative prompt"}
-                    aria-expanded={showNegative}
-                    className={cn(
-                      "size-10 rounded-xl",
-                      showNegative
-                        ? "text-zinc-200 bg-zinc-800"
-                        : "text-zinc-400 hover:text-zinc-200"
-                    )}
-                  >
-                    {showNegative ? (
-                      <ChevronDown className="size-5" strokeWidth={1.5} />
-                    ) : (
-                      <ChevronUp className="size-5" strokeWidth={1.5} />
-                    )}
-                  </Button>
-                </PromptInputAction>
-
-                {/* Generate Button */}
                 <PromptInputAction tooltip="Generate (Enter)">
                   <Button
                     onClick={handleSubmit}
-                    disabled={isGenerating || (!prompt.trim() && inputImages.length === 0)}
+                    disabled={isGenerating || (!prompt.trim() && referenceImages.length === 0)}
                     className={cn(
                       "h-10 px-4 rounded-xl font-medium",
-                      "bg-zinc-100 text-zinc-900 hover:bg-white",
+                      "bg-foreground text-background hover:bg-foreground/90",
                       "disabled:opacity-50 disabled:cursor-not-allowed"
                     )}
                   >
                     {isGenerating ? (
-                      <Loader variant="circular" size="sm" className="border-zinc-900" />
+                      <Loader variant="circular" size="sm" className="border-background" />
                     ) : (
                       <>
                         <Sparkles className="size-4 mr-2" strokeWidth={1.5} />
-                        {modeLabels[mode]}
+                        Generate
                       </>
                     )}
                   </Button>
                 </PromptInputAction>
               </PromptInputActions>
             </div>
-
-            {/* Negative Prompt Expansion */}
-            <AnimatePresence>
-              {showNegative && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: "auto", opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="overflow-hidden border-t border-zinc-700/50"
-                >
-                  <div className="p-3">
-                    <label className="text-xs text-zinc-500 mb-1 block">
-                      Negative prompt (elements to avoid)
-                    </label>
-                    <input
-                      id="negative-prompt-input"
-                      type="text"
-                      value={settings.negativePrompt}
-                      onChange={(e) => {/* handled by context */ }}
-                      placeholder="blurry, low quality, distorted…"
-                      className="w-full bg-transparent text-sm text-zinc-300 placeholder:text-zinc-600 outline-none"
-                    />
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
           </PromptInput>
         </FileUpload>
 
         {/* Quick info */}
-        <div className="flex items-center justify-center gap-3 mt-2 text-xs text-zinc-600">
-          <span>{settings.resolution}px</span>
-          <span>•</span>
+        <div className="flex items-center justify-center gap-3 mt-2 text-xs text-muted-foreground font-mono">
+          <span>{settings.imageSize}</span>
+          <span className="opacity-50">|</span>
           <span>{settings.aspectRatio}</span>
-          <span>•</span>
+          <span className="opacity-50">|</span>
           <span>{settings.outputCount} {settings.outputCount === 1 ? "image" : "images"}</span>
         </div>
       </div>
     </motion.div>
   );
-}
-
-function getPlaceholder(mode: GenerationMode): string {
-  switch (mode) {
-    case "text2img":
-      return "Describe the scene for Magic Create…";
-    case "img2img":
-      return "Describe how to re-imagine this image…";
-    case "text-fidelity":
-      return "Enter text to render with perfect alignment (e.g., 'A store sign saying OPEN')…";
-    case "upscale":
-      return "Confirm to upscale to 4K Banana Pro resolution…";
-    case "inpainting":
-      return "Describe the area to fill or erase…";
-    case "outpainting":
-      return "Describe the content to expand into…";
-    default:
-      return "Prompt the Banana Pro…";
-  }
 }
