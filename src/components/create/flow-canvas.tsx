@@ -93,7 +93,9 @@ export function FlowCanvas({ className }: FlowCanvasProps) {
             showZoom
             showFitView
             showInteractive={false}
-            className="!bg-background !border-border !shadow-md"
+            position="bottom-left"
+            style={{ left: '5rem' }}
+            className="!bg-background/95 !backdrop-blur-xl !border-border !shadow-lg !rounded-xl !mb-4 [&>button]:!bg-transparent [&>button]:!border-0 [&>button]:!rounded-lg [&>button:hover]:!bg-muted [&>button]:!w-9 [&>button]:!h-9 [&>button]:!cursor-pointer [&>button]:transition-colors [&>button>svg]:!fill-foreground [&>button>svg]:!max-w-4 [&>button>svg]:!max-h-4"
           />
           <MiniMap
             nodeColor={(node) => {

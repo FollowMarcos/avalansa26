@@ -233,7 +233,7 @@ export function PromptComposer() {
               </AnimatePresence>
 
               {/* Settings Row */}
-              <div className="flex items-center gap-2 px-3 py-2 border-b border-border overflow-x-auto">
+              <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border overflow-x-auto">
                 {/* API Selector */}
                 <ApiSelector
                   apis={availableApis}
@@ -242,21 +242,26 @@ export function PromptComposer() {
                   disabled={isGenerating || isLoadingApis}
                 />
 
-                <div className="w-px h-5 bg-border" />
+                <div className="w-px h-5 bg-border mx-1" />
 
-                {/* Aspect Ratio */}
+                {/* Aspect Ratio - Compact Dropdown */}
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-9 px-3 gap-1.5 rounded-lg font-mono text-sm"
-                    >
-                      <span>{settings.aspectRatio}</span>
-                      <ChevronUp className="size-3.5 text-muted-foreground" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" side="top" className="min-w-[160px]">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2.5 gap-1 rounded-lg font-mono text-xs"
+                        >
+                          <span>{settings.aspectRatio}</span>
+                          <ChevronUp className="size-3 text-muted-foreground" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Aspect Ratio</TooltipContent>
+                  </Tooltip>
+                  <DropdownMenuContent align="start" side="top" className="min-w-[140px]">
                     <DropdownMenuLabel className="text-xs font-mono text-muted-foreground">
                       Aspect Ratio
                     </DropdownMenuLabel>
@@ -265,12 +270,12 @@ export function PromptComposer() {
                         key={ratio.value}
                         onClick={() => updateSettings({ aspectRatio: ratio.value })}
                         className={cn(
-                          "font-mono text-sm",
+                          "font-mono text-xs",
                           settings.aspectRatio === ratio.value && "bg-muted"
                         )}
                       >
                         <span className="font-medium">{ratio.label}</span>
-                        <span className="text-xs text-muted-foreground ml-auto">
+                        <span className="text-[10px] text-muted-foreground ml-auto">
                           {ratio.category}
                         </span>
                       </DropdownMenuItem>
@@ -278,111 +283,112 @@ export function PromptComposer() {
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <div className="w-px h-5 bg-border" />
+                {/* Quality - Compact Dropdown */}
+                <DropdownMenu>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2.5 gap-1 rounded-lg font-mono text-xs"
+                        >
+                          <span>{settings.imageSize}</span>
+                          <ChevronUp className="size-3 text-muted-foreground" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Quality</TooltipContent>
+                  </Tooltip>
+                  <DropdownMenuContent align="start" side="top" className="min-w-[100px]">
+                    <DropdownMenuLabel className="text-xs font-mono text-muted-foreground">
+                      Quality
+                    </DropdownMenuLabel>
+                    {imageSizeOptions.map((size) => (
+                      <DropdownMenuItem
+                        key={size.value}
+                        onClick={() => updateSettings({ imageSize: size.value })}
+                        className={cn(
+                          "font-mono text-xs",
+                          settings.imageSize === size.value && "bg-muted"
+                        )}
+                      >
+                        {size.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
-                {/* Quality / Image Size */}
-                <div
-                  role="radiogroup"
-                  aria-label="Image quality"
-                  className="flex items-center gap-0.5 bg-muted rounded-lg p-1"
-                >
-                  {imageSizeOptions.map((size) => (
-                    <button
-                      key={size.value}
-                      onClick={() => updateSettings({ imageSize: size.value })}
-                      role="radio"
-                      aria-checked={settings.imageSize === size.value}
-                      aria-label={`${size.label} quality`}
-                      className={cn(
-                        "px-3 py-1.5 rounded-md text-sm font-mono transition-colors",
-                        settings.imageSize === size.value
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {size.label}
-                    </button>
-                  ))}
-                </div>
+                {/* Output Count - Compact Dropdown */}
+                <DropdownMenu>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2.5 gap-1 rounded-lg font-mono text-xs"
+                        >
+                          <span>×{settings.outputCount}</span>
+                          <ChevronUp className="size-3 text-muted-foreground" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Images per batch</TooltipContent>
+                  </Tooltip>
+                  <DropdownMenuContent align="start" side="top" className="min-w-[100px]">
+                    <DropdownMenuLabel className="text-xs font-mono text-muted-foreground">
+                      Count
+                    </DropdownMenuLabel>
+                    {[1, 2, 3, 4].map((count) => (
+                      <DropdownMenuItem
+                        key={count}
+                        onClick={() => updateSettings({ outputCount: count })}
+                        className={cn(
+                          "font-mono text-xs",
+                          settings.outputCount === count && "bg-muted"
+                        )}
+                      >
+                        {count} image{count > 1 ? "s" : ""}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
 
-                <div className="w-px h-5 bg-border" />
-
-                {/* Output Count */}
-                <div
-                  role="radiogroup"
-                  aria-label="Number of images to generate"
-                  className="flex items-center gap-0.5 bg-muted rounded-lg p-1"
-                >
-                  {[1, 2, 3, 4].map((count) => (
-                    <button
-                      key={count}
-                      onClick={() => updateSettings({ outputCount: count })}
-                      role="radio"
-                      aria-checked={settings.outputCount === count}
-                      aria-label={`Generate ${count} image${count > 1 ? "s" : ""}`}
-                      className={cn(
-                        "size-8 rounded-md text-sm font-mono transition-colors flex items-center justify-center",
-                        settings.outputCount === count
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {count}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="w-px h-5 bg-border" />
-
-                {/* Generation Speed */}
+                {/* Generation Speed - Toggle Button */}
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div
-                      role="radiogroup"
-                      aria-label="Generation speed"
-                      className="flex items-center gap-0.5 bg-muted rounded-lg p-1"
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => updateSettings({
+                        generationSpeed: settings.generationSpeed === "fast" ? "relaxed" : "fast"
+                      })}
+                      aria-label={settings.generationSpeed === "fast" ? "Fast mode" : "Relaxed mode"}
+                      className="h-8 px-2.5 gap-1.5 rounded-lg font-mono text-xs"
                     >
-                      <button
-                        onClick={() => updateSettings({ generationSpeed: "fast" })}
-                        role="radio"
-                        aria-checked={settings.generationSpeed === "fast"}
-                        aria-label="Fast generation"
-                        className={cn(
-                          "h-8 px-3 rounded-md text-sm font-mono transition-colors flex items-center gap-1.5",
-                          settings.generationSpeed === "fast"
-                            ? "bg-background text-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        <Zap className="size-3.5" aria-hidden="true" />
-                        <span className="hidden sm:inline">Fast</span>
-                      </button>
-                      <button
-                        onClick={() => updateSettings({ generationSpeed: "relaxed" })}
-                        role="radio"
-                        aria-checked={settings.generationSpeed === "relaxed"}
-                        aria-label="Relaxed generation"
-                        className={cn(
-                          "h-8 px-3 rounded-md text-sm font-mono transition-colors flex items-center gap-1.5",
-                          settings.generationSpeed === "relaxed"
-                            ? "bg-background text-foreground shadow-sm"
-                            : "text-muted-foreground hover:text-foreground"
-                        )}
-                      >
-                        <Clock className="size-3.5" aria-hidden="true" />
-                        <span className="hidden sm:inline">Relaxed</span>
-                      </button>
-                    </div>
+                      {settings.generationSpeed === "fast" ? (
+                        <>
+                          <Zap className="size-3.5" aria-hidden="true" />
+                          <span className="hidden sm:inline">Fast</span>
+                        </>
+                      ) : (
+                        <>
+                          <Clock className="size-3.5" aria-hidden="true" />
+                          <span className="hidden sm:inline">Batch</span>
+                        </>
+                      )}
+                    </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top">
-                    <p className="font-medium">Generation Speed</p>
+                    <p className="font-medium">{settings.generationSpeed === "fast" ? "Fast Mode" : "Batch Mode"}</p>
                     <p className="text-xs text-muted-foreground">
-                      Relaxed uses batch API for lower cost
+                      {settings.generationSpeed === "fast"
+                        ? "Immediate generation"
+                        : "Lower cost, queued processing"}
                     </p>
                   </TooltipContent>
                 </Tooltip>
-
-                <div className="flex-1" />
 
                 {/* Negative Prompt Toggle */}
                 <Tooltip>
@@ -394,15 +400,37 @@ export function PromptComposer() {
                       aria-label="Toggle negative prompt"
                       aria-expanded={showNegative}
                       className={cn(
-                        "size-9 rounded-lg",
+                        "size-8 rounded-lg",
                         showNegative && "bg-muted"
                       )}
                     >
-                      <Ban className="size-4" aria-hidden="true" />
+                      <Ban className="size-3.5" aria-hidden="true" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top">Negative prompt</TooltipContent>
                 </Tooltip>
+
+                <div className="flex-1" />
+
+                {/* Generate Button - Now in settings row */}
+                <Button
+                  onClick={handleSubmit}
+                  disabled={isGenerating || (!prompt.trim() && referenceImages.length === 0)}
+                  className={cn(
+                    "h-8 px-4 rounded-lg font-medium text-sm gap-1.5",
+                    "bg-foreground text-background hover:bg-foreground/90",
+                    "disabled:opacity-50 disabled:cursor-not-allowed"
+                  )}
+                >
+                  {isGenerating ? (
+                    <Loader variant="circular" size="sm" className="border-background" />
+                  ) : (
+                    <>
+                      <Sparkles className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
+                      <span>Generate</span>
+                    </>
+                  )}
+                </Button>
               </div>
 
               {/* Negative Prompt Expansion */}
@@ -487,21 +515,14 @@ export function PromptComposer() {
                 </div>
 
                 {/* Right Actions */}
-                <div className="flex items-center gap-2 flex-shrink-0">
+                <div className="flex items-center gap-1 flex-shrink-0">
                   {/* Character Count */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        aria-label={`Prompt length: ${promptLength} characters`}
-                        className="min-w-[44px] min-h-[44px] flex items-center justify-center text-xs font-mono text-muted-foreground hover:text-foreground transition-colors tabular-nums"
-                      >
-                        {promptLength}
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      <p>Prompt length: {promptLength} characters</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  <span
+                    aria-label={`Prompt length: ${promptLength} characters`}
+                    className="px-2 py-1 text-xs font-mono text-muted-foreground tabular-nums"
+                  >
+                    {promptLength}
+                  </span>
 
                   {/* Expand/Collapse */}
                   <Tooltip>
@@ -511,7 +532,7 @@ export function PromptComposer() {
                         size="icon"
                         onClick={() => setIsPromptExpanded(!isPromptExpanded)}
                         aria-label={isPromptExpanded ? "Collapse prompt" : "Expand prompt"}
-                        className="size-9 rounded-lg"
+                        className="size-8 rounded-lg"
                       >
                         {isPromptExpanded ? (
                           <Minimize2 className="size-4" />
@@ -524,26 +545,6 @@ export function PromptComposer() {
                       {isPromptExpanded ? "Collapse" : "Expand"}
                     </TooltipContent>
                   </Tooltip>
-
-                  {/* Generate Button */}
-                  <Button
-                    onClick={handleSubmit}
-                    disabled={isGenerating || (!prompt.trim() && referenceImages.length === 0)}
-                    className={cn(
-                      "h-11 px-5 rounded-xl font-medium text-base",
-                      "bg-foreground text-background hover:bg-foreground/90",
-                      "disabled:opacity-50 disabled:cursor-not-allowed"
-                    )}
-                  >
-                    {isGenerating ? (
-                      <Loader variant="circular" size="sm" className="border-background" />
-                    ) : (
-                      <>
-                        <Sparkles className="size-4 mr-2" strokeWidth={1.5} />
-                        Generate
-                      </>
-                    )}
-                  </Button>
                 </div>
               </div>
             </div>

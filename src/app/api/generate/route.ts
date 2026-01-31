@@ -442,8 +442,8 @@ async function generateWithGemini(params: ProviderParams): Promise<GeneratedImag
 
   // Check if the response was filtered
   const finishReason = data.candidates?.[0]?.finishReason;
-  if (finishReason === 'SAFETY') {
-    throw new Error('Image generation blocked by safety filters. Try modifying your prompt.');
+  if (finishReason === 'SAFETY' || finishReason === 'IMAGE_SAFETY') {
+    throw new Error('Image generation blocked by safety filters. Try modifying your prompt or using a different reference image.');
   }
   if (finishReason === 'RECITATION') {
     throw new Error('Content blocked due to potential copyright issues.');
