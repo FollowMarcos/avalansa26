@@ -9,6 +9,7 @@ import type {
   BatchJobResult,
 } from '@/types/batch-job';
 import { getDecryptedApiKey, getApiConfig } from './api-configs.server';
+import { getImagesAsBase64 } from './storage.server';
 
 /**
  * Create a new batch job
@@ -168,15 +169,8 @@ export async function submitGeminiBatchJob(
       }
       parts.push({ text: promptText });
 
-      // Add reference images if any
-      if (req.referenceImages && req.referenceImages.length > 0) {
-        for (const base64Image of req.referenceImages) {
-          const mimeMatch = base64Image.match(/^data:([^;]+);base64,/);
-          const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
-          const data = mimeMatch ? base64Image.replace(/^data:[^;]+;base64,/, '') : base64Image;
-          parts.push({ inlineData: { mimeType, data } });
-        }
-      }
+      // Note: Reference images are fetched during processing, not here
+      // This JSONL is for documentation purposes only in this simplified implementation
 
       // Build request object
       const requestObj = {
@@ -257,9 +251,10 @@ async function processGeminiBatchInBackground(
         }
         parts.push({ text: promptText });
 
-        // Add reference images
-        if (req.referenceImages && req.referenceImages.length > 0) {
-          for (const base64Image of req.referenceImages) {
+        // Fetch reference images from storage
+        if (req.referenceImagePaths && req.referenceImagePaths.length > 0) {
+          const referenceImages = await getImagesAsBase64(req.referenceImagePaths);
+          for (const base64Image of referenceImages) {
             const mimeMatch = base64Image.match(/^data:([^;]+);base64,/);
             const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
             const data = mimeMatch ? base64Image.replace(/^data:[^;]+;base64,/, '') : base64Image;

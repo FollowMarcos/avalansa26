@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { getDecryptedApiKey, getApiConfig } from '@/utils/supabase/api-configs.server';
 import { createBatchJob, submitGeminiBatchJob } from '@/utils/supabase/batch-jobs.server';
+import { getImagesAsBase64 } from '@/utils/supabase/storage.server';
 import type { BatchJobRequest } from '@/types/batch-job';
 
 export interface GenerateRequest {
@@ -11,7 +12,7 @@ export interface GenerateRequest {
   aspectRatio?: string;
   imageSize?: string;
   outputCount?: number;
-  referenceImages?: string[]; // Base64 encoded images
+  referenceImagePaths?: string[]; // Storage paths (not base64)
   mode?: 'fast' | 'relaxed'; // Generation mode
 }
 
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
 
     // Parse request body
     const body: GenerateRequest = await request.json();
-    const { apiId, prompt, negativePrompt, aspectRatio, imageSize, outputCount = 1, referenceImages, mode = 'fast' } = body;
+    const { apiId, prompt, negativePrompt, aspectRatio, imageSize, outputCount = 1, referenceImagePaths, mode = 'fast' } = body;
 
     if (!apiId) {
       return NextResponse.json(
@@ -60,11 +61,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
       );
     }
 
-    if (!prompt && (!referenceImages || referenceImages.length === 0)) {
+    if (!prompt && (!referenceImagePaths || referenceImagePaths.length === 0)) {
       return NextResponse.json(
         { success: false, error: 'Prompt or reference images required' },
         { status: 400 }
       );
+    }
+
+    // Fetch reference images from storage (if any)
+    let referenceImages: string[] = [];
+    if (referenceImagePaths && referenceImagePaths.length > 0) {
+      referenceImages = await getImagesAsBase64(referenceImagePaths);
     }
 
     // Get API configuration
@@ -78,7 +85,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
 
     // Handle relaxed/batch mode for supported providers
     if (mode === 'relaxed' && apiConfig.provider === 'google') {
-      // Create batch job requests
+      // Create batch job requests (store paths, not base64)
       const batchRequests: BatchJobRequest[] = [];
       for (let i = 0; i < outputCount; i++) {
         batchRequests.push({
@@ -86,7 +93,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
           negativePrompt,
           aspectRatio,
           imageSize,
-          referenceImages,
+          referenceImagePaths, // Store paths for later fetching
         });
       }
 

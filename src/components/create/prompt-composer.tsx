@@ -119,7 +119,7 @@ export function PromptComposer() {
                     <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/30">
                       <div className="flex items-center gap-1 text-xs text-muted-foreground mr-2 flex-shrink-0">
                         <Images className="size-3.5" />
-                        <span>Style Transfer</span>
+                        <span>Image Reference</span>
                       </div>
                       {referenceImages.map((img) => (
                         <div key={img.id} className="relative flex-shrink-0 group">

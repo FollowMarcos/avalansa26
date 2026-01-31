@@ -2,16 +2,8 @@
 
 import * as React from "react";
 import type { ApiConfig } from "@/types/api-config";
-
-// Helper function to convert File to base64
-async function fileToBase64(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = error => reject(error);
-  });
-}
+import { uploadReferenceImage, deleteReferenceImages } from "@/utils/supabase/storage";
+import { createClient } from "@/utils/supabase/client";
 
 // Gemini 3 Pro Image Preview API types
 export type ImageSize = "1K" | "2K" | "4K";
@@ -29,6 +21,8 @@ export interface ImageFile {
   id: string;
   file: File;
   preview: string;
+  storagePath?: string; // Path in Supabase Storage
+  isUploading?: boolean;
 }
 
 export interface GeneratedImage {
@@ -246,24 +240,74 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     setSettings(prev => ({ ...prev, ...newSettings }));
   }, []);
 
-  const addReferenceImages = React.useCallback((files: File[]) => {
-    const newImages: ImageFile[] = files.slice(0, MAX_REFERENCE_IMAGES - referenceImages.length).map(file => ({
+  const addReferenceImages = React.useCallback(async (files: File[]) => {
+    // Get current user for storage path
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      console.error('User not authenticated');
+      return;
+    }
+
+    const filesToAdd = files.slice(0, MAX_REFERENCE_IMAGES - referenceImages.length);
+
+    // Add images immediately with uploading state
+    const newImages: ImageFile[] = filesToAdd.map(file => ({
       id: `ref-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
       file,
       preview: URL.createObjectURL(file),
+      isUploading: true,
     }));
+
     setReferenceImages(prev => [...prev, ...newImages].slice(0, MAX_REFERENCE_IMAGES));
+
+    // Upload each image to storage
+    for (const img of newImages) {
+      const { path, error } = await uploadReferenceImage(img.file, user.id);
+
+      if (error) {
+        console.error('Failed to upload image:', error);
+        // Remove failed upload from state
+        setReferenceImages(prev => prev.filter(i => i.id !== img.id));
+        URL.revokeObjectURL(img.preview);
+      } else {
+        // Update image with storage path
+        setReferenceImages(prev =>
+          prev.map(i =>
+            i.id === img.id
+              ? { ...i, storagePath: path, isUploading: false }
+              : i
+          )
+        );
+      }
+    }
   }, [referenceImages.length]);
 
   const removeReferenceImage = React.useCallback((id: string) => {
     setReferenceImages(prev => {
       const img = prev.find(i => i.id === id);
-      if (img) URL.revokeObjectURL(img.preview);
+      if (img) {
+        URL.revokeObjectURL(img.preview);
+        // Delete from storage if uploaded
+        if (img.storagePath) {
+          deleteReferenceImages([img.storagePath]).catch(console.error);
+        }
+      }
       return prev.filter(i => i.id !== id);
     });
   }, []);
 
   const clearReferenceImages = React.useCallback(() => {
+    // Delete all from storage
+    const pathsToDelete = referenceImages
+      .filter(img => img.storagePath)
+      .map(img => img.storagePath!);
+
+    if (pathsToDelete.length > 0) {
+      deleteReferenceImages(pathsToDelete).catch(console.error);
+    }
+
     referenceImages.forEach(img => URL.revokeObjectURL(img.preview));
     setReferenceImages([]);
   }, [referenceImages]);
@@ -352,17 +396,22 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
       if (abortControllerRef.current?.signal.aborted) return;
 
-      // Convert reference images to base64
-      const referenceImagesBase64: string[] = [];
-      for (const img of referenceImages) {
-        const base64 = await fileToBase64(img.file);
-        referenceImagesBase64.push(base64);
+      // Wait for any uploading images to complete
+      const uploadingImages = referenceImages.filter(img => img.isUploading);
+      if (uploadingImages.length > 0) {
+        // Wait a bit for uploads to complete
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
+
+      // Get storage paths for reference images (skip any still uploading)
+      const referenceImagePaths = referenceImages
+        .filter(img => img.storagePath && !img.isUploading)
+        .map(img => img.storagePath!);
 
       // Build the final prompt
       const finalPrompt = buildFinalPrompt();
 
-      // Call the generation API
+      // Call the generation API with storage paths (not base64)
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: {
@@ -375,7 +424,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
           aspectRatio: settings.aspectRatio,
           imageSize: settings.imageSize,
           outputCount: settings.outputCount,
-          referenceImages: referenceImagesBase64,
+          referenceImagePaths, // Storage paths instead of base64
           mode: settings.generationSpeed, // 'fast' or 'relaxed'
         }),
         signal: abortControllerRef.current.signal,
@@ -389,11 +438,26 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       );
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Generation failed');
+        // Try to parse error message from JSON, fallback to status text
+        let errorMessage = `Request failed with status ${response.status}`;
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch {
+          // Response wasn't JSON (e.g., HTML error page)
+          if (response.status === 413) {
+            errorMessage = 'Images are too large. Try using fewer or smaller reference images.';
+          }
+        }
+        throw new Error(errorMessage);
       }
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error('Invalid response from server. Please try again.');
+      }
 
       if (!data.success) {
         throw new Error(data.error || 'Generation failed');

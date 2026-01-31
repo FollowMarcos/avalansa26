@@ -17,7 +17,7 @@ export interface BatchJobRequest {
   negativePrompt?: string;
   aspectRatio?: string;
   imageSize?: string;
-  referenceImages?: string[]; // Base64 encoded
+  referenceImagePaths?: string[]; // Storage paths (fetched when processing)
 }
 
 export interface BatchJobResult {
