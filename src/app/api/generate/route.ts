@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server';
 import { getDecryptedApiKey, getApiConfig } from '@/utils/supabase/api-configs.server';
 import { createBatchJob, submitGeminiBatchJob } from '@/utils/supabase/batch-jobs.server';
 import { getImagesAsBase64 } from '@/utils/supabase/storage.server';
+import { saveGeneration } from '@/utils/supabase/generations.server';
 import type { BatchJobRequest } from '@/types/batch-job';
 
 export interface GenerateRequest {
@@ -214,6 +215,23 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
           outputCount,
           referenceImages,
         });
+    }
+
+    // Save each generated image to user's history
+    for (const image of images) {
+      await saveGeneration({
+        user_id: user.id,
+        api_config_id: apiId,
+        prompt: prompt || '',
+        negative_prompt: negativePrompt,
+        image_url: image.url,
+        settings: {
+          aspectRatio,
+          imageSize,
+          outputCount,
+          generationSpeed: mode,
+        },
+      });
     }
 
     return NextResponse.json({ success: true, images, mode: 'fast' });

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import type { ApiConfig } from "@/types/api-config";
+import type { Generation } from "@/types/generation";
 import { uploadReferenceImage, deleteReferenceImages } from "@/utils/supabase/storage";
 import { createClient } from "@/utils/supabase/client";
 
@@ -234,6 +235,42 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       }
     }
     fetchApis();
+  }, []);
+
+  // Load generation history from database on mount
+  React.useEffect(() => {
+    async function loadHistory() {
+      try {
+        const { getGenerationHistory } = await import("@/utils/supabase/generations.server");
+        const generations = await getGenerationHistory(50);
+
+        // Convert Generation to GeneratedImage format
+        const historyImages: GeneratedImage[] = generations.map((gen: Generation) => ({
+          id: gen.id,
+          url: gen.image_url,
+          prompt: gen.prompt,
+          timestamp: new Date(gen.created_at).getTime(),
+          settings: {
+            model: "nano-banana-pro" as ModelId,
+            imageSize: (gen.settings.imageSize as ImageSize) || "2K",
+            aspectRatio: (gen.settings.aspectRatio as AspectRatio) || "1:1",
+            outputCount: gen.settings.outputCount || 1,
+            generationSpeed: (gen.settings.generationSpeed as GenerationSpeed) || "fast",
+            styleStrength: 75,
+            negativePrompt: gen.negative_prompt || "",
+          },
+        }));
+
+        setHistory(historyImages);
+        // Select the most recent image if available
+        if (historyImages.length > 0) {
+          setSelectedImage(historyImages[0]);
+        }
+      } catch (error) {
+        console.error("Failed to load generation history:", error);
+      }
+    }
+    loadHistory();
   }, []);
 
   const updateSettings = React.useCallback((newSettings: Partial<CreateSettings>) => {

@@ -10,6 +10,7 @@ import type {
 } from '@/types/batch-job';
 import { getDecryptedApiKey, getApiConfig } from './api-configs.server';
 import { getImagesAsBase64 } from './storage.server';
+import { saveGeneration } from './generations.server';
 
 /**
  * Create a new batch job
@@ -233,6 +234,13 @@ async function processGeminiBatchInBackground(
   requests: BatchJobRequest[]
 ): Promise<void> {
   try {
+    // Get batch job to retrieve user_id and api_config_id
+    const batchJob = await getBatchJob(batchJobId);
+    if (!batchJob) {
+      console.error('Batch job not found:', batchJobId);
+      return;
+    }
+
     // Update to processing
     await updateBatchJob(batchJobId, { status: 'processing' });
 
@@ -300,6 +308,21 @@ async function processGeminiBatchInBackground(
                 imageUrl: dataUrl,
                 imageBase64: part.inlineData.data,
               });
+
+              // Save to user's generation history
+              await saveGeneration({
+                user_id: batchJob.user_id,
+                api_config_id: batchJob.api_config_id,
+                prompt: req.prompt,
+                negative_prompt: req.negativePrompt,
+                image_url: dataUrl,
+                settings: {
+                  aspectRatio: req.aspectRatio,
+                  imageSize: req.imageSize,
+                  generationSpeed: 'relaxed',
+                },
+              });
+
               break; // Only take first image per request
             }
           }
