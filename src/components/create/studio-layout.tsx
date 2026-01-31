@@ -10,6 +10,7 @@ import { PromptComposer } from "./prompt-composer";
 import { QuickToolbar } from "./quick-toolbar";
 import { ThinkingDisplay } from "./thinking-display";
 import { GenerationGallery } from "./generation-gallery";
+import { GenerationProgress } from "./generation-progress";
 import { motion } from "motion/react";
 
 export function StudioLayout() {
@@ -40,6 +41,9 @@ export function StudioLayout() {
 
             {/* Gallery View (overlay when active) */}
             <GenerationGallery />
+
+            {/* Generation Progress (shows during generation with 4 slots) */}
+            <GenerationProgress />
 
             {/* Prompt Composer */}
             <PromptComposer />

@@ -107,7 +107,7 @@ export function PromptComposer() {
         animate={{ opacity: 1, y: 0 }}
         className="absolute bottom-0 left-0 right-0 z-30 p-4"
       >
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           <FileUpload
             onFilesAdded={addReferenceImages}
             multiple
@@ -233,7 +233,7 @@ export function PromptComposer() {
               </AnimatePresence>
 
               {/* Settings Row */}
-              <div className="flex items-center gap-1 px-2 py-1.5 border-b border-border overflow-x-auto">
+              <div className="flex items-center gap-2 px-3 py-2 border-b border-border overflow-x-auto">
                 {/* API Selector */}
                 <ApiSelector
                   apis={availableApis}
@@ -250,13 +250,13 @@ export function PromptComposer() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 px-2 gap-1 rounded-lg font-mono text-xs"
+                      className="h-9 px-3 gap-1.5 rounded-lg font-mono text-sm"
                     >
                       <span>{settings.aspectRatio}</span>
-                      <ChevronUp className="size-3 text-muted-foreground" />
+                      <ChevronUp className="size-3.5 text-muted-foreground" />
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" side="top" className="min-w-[140px]">
+                  <DropdownMenuContent align="start" side="top" className="min-w-[160px]">
                     <DropdownMenuLabel className="text-xs font-mono text-muted-foreground">
                       Aspect Ratio
                     </DropdownMenuLabel>
@@ -265,7 +265,7 @@ export function PromptComposer() {
                         key={ratio.value}
                         onClick={() => updateSettings({ aspectRatio: ratio.value })}
                         className={cn(
-                          "font-mono",
+                          "font-mono text-sm",
                           settings.aspectRatio === ratio.value && "bg-muted"
                         )}
                       >
@@ -284,7 +284,7 @@ export function PromptComposer() {
                 <div
                   role="radiogroup"
                   aria-label="Image quality"
-                  className="flex items-center gap-0.5 bg-muted rounded-lg p-0.5"
+                  className="flex items-center gap-0.5 bg-muted rounded-lg p-1"
                 >
                   {imageSizeOptions.map((size) => (
                     <button
@@ -294,7 +294,7 @@ export function PromptComposer() {
                       aria-checked={settings.imageSize === size.value}
                       aria-label={`${size.label} quality`}
                       className={cn(
-                        "px-2 py-1 rounded-md text-xs font-mono transition-colors",
+                        "px-3 py-1.5 rounded-md text-sm font-mono transition-colors",
                         settings.imageSize === size.value
                           ? "bg-background text-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground"
@@ -311,7 +311,7 @@ export function PromptComposer() {
                 <div
                   role="radiogroup"
                   aria-label="Number of images to generate"
-                  className="flex items-center gap-0.5 bg-muted rounded-lg p-0.5"
+                  className="flex items-center gap-0.5 bg-muted rounded-lg p-1"
                 >
                   {[1, 2, 3, 4].map((count) => (
                     <button
@@ -321,7 +321,7 @@ export function PromptComposer() {
                       aria-checked={settings.outputCount === count}
                       aria-label={`Generate ${count} image${count > 1 ? "s" : ""}`}
                       className={cn(
-                        "w-6 h-6 rounded-md text-xs font-mono transition-colors flex items-center justify-center",
+                        "size-8 rounded-md text-sm font-mono transition-colors flex items-center justify-center",
                         settings.outputCount === count
                           ? "bg-background text-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground"
@@ -340,7 +340,7 @@ export function PromptComposer() {
                     <div
                       role="radiogroup"
                       aria-label="Generation speed"
-                      className="flex items-center gap-0.5 bg-muted rounded-lg p-0.5"
+                      className="flex items-center gap-0.5 bg-muted rounded-lg p-1"
                     >
                       <button
                         onClick={() => updateSettings({ generationSpeed: "fast" })}
@@ -348,13 +348,13 @@ export function PromptComposer() {
                         aria-checked={settings.generationSpeed === "fast"}
                         aria-label="Fast generation"
                         className={cn(
-                          "h-6 px-2 rounded-md text-xs font-mono transition-colors flex items-center gap-1",
+                          "h-8 px-3 rounded-md text-sm font-mono transition-colors flex items-center gap-1.5",
                           settings.generationSpeed === "fast"
                             ? "bg-background text-foreground shadow-sm"
                             : "text-muted-foreground hover:text-foreground"
                         )}
                       >
-                        <Zap className="size-3" aria-hidden="true" />
+                        <Zap className="size-3.5" aria-hidden="true" />
                         <span className="hidden sm:inline">Fast</span>
                       </button>
                       <button
@@ -363,13 +363,13 @@ export function PromptComposer() {
                         aria-checked={settings.generationSpeed === "relaxed"}
                         aria-label="Relaxed generation"
                         className={cn(
-                          "h-6 px-2 rounded-md text-xs font-mono transition-colors flex items-center gap-1",
+                          "h-8 px-3 rounded-md text-sm font-mono transition-colors flex items-center gap-1.5",
                           settings.generationSpeed === "relaxed"
                             ? "bg-background text-foreground shadow-sm"
                             : "text-muted-foreground hover:text-foreground"
                         )}
                       >
-                        <Clock className="size-3" aria-hidden="true" />
+                        <Clock className="size-3.5" aria-hidden="true" />
                         <span className="hidden sm:inline">Relaxed</span>
                       </button>
                     </div>
@@ -394,7 +394,7 @@ export function PromptComposer() {
                       aria-label="Toggle negative prompt"
                       aria-expanded={showNegative}
                       className={cn(
-                        "size-8 rounded-lg",
+                        "size-9 rounded-lg",
                         showNegative && "bg-muted"
                       )}
                     >
@@ -414,10 +414,10 @@ export function PromptComposer() {
                     exit={{ height: 0, opacity: 0 }}
                     className="overflow-hidden border-b border-border"
                   >
-                    <div className="px-3 py-2 bg-muted/30">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <Ban className="size-3.5 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground font-mono">
+                    <div className="px-4 py-3 bg-muted/30">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Ban className="size-4 text-muted-foreground" aria-hidden="true" />
+                        <span className="text-sm text-muted-foreground font-mono">
                           Negative (elements to avoid)
                         </span>
                       </div>
@@ -425,9 +425,9 @@ export function PromptComposer() {
                         type="text"
                         value={settings.negativePrompt}
                         onChange={(e) => updateSettings({ negativePrompt: e.target.value })}
-                        placeholder="blurry, low quality, distorted, watermark..."
+                        placeholder="blurry, low quality, distorted, watermark…"
                         aria-label="Negative prompt - elements to avoid in generation"
-                        className="w-full bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none font-mono"
+                        className="w-full bg-transparent text-base placeholder:text-muted-foreground focus:outline-none"
                       />
                     </div>
                   </motion.div>
@@ -435,7 +435,7 @@ export function PromptComposer() {
               </AnimatePresence>
 
               {/* Main Input Area */}
-              <div className="flex items-end gap-2 p-2">
+              <div className="flex items-end gap-3 p-3">
                 {/* Image Upload Button */}
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -445,14 +445,14 @@ export function PromptComposer() {
                           variant="ghost"
                           size="icon"
                           className={cn(
-                            "h-10 w-10 rounded-xl flex-shrink-0",
+                            "size-11 rounded-xl flex-shrink-0",
                             hasReferences
                               ? "text-foreground bg-muted"
                               : "text-muted-foreground hover:text-foreground"
                           )}
                           disabled={isGenerating || referenceImages.length >= 14}
                         >
-                          <ImagePlus className="w-5 h-5" strokeWidth={1.5} />
+                          <ImagePlus className="size-5" strokeWidth={1.5} />
                         </Button>
                       </FileUploadTrigger>
                     </span>
@@ -469,16 +469,16 @@ export function PromptComposer() {
                     onKeyDown={handleKeyDown}
                     placeholder={
                       hasReferences
-                        ? "Describe how to transform or style your images..."
-                        : "Describe the image you want to create..."
+                        ? "Describe how to transform or style your images…"
+                        : "Describe the image you want to create…"
                     }
                     aria-label="Image generation prompt"
                     disabled={isGenerating}
                     rows={isPromptExpanded ? 6 : 1}
                     className={cn(
-                      "w-full bg-transparent text-sm resize-none focus:outline-none",
+                      "w-full bg-transparent text-base resize-none focus:outline-none",
                       "placeholder:text-muted-foreground",
-                      isPromptExpanded ? "min-h-[144px]" : "min-h-[40px] py-2.5"
+                      isPromptExpanded ? "min-h-[160px]" : "min-h-[44px] py-3"
                     )}
                     style={{
                       height: isPromptExpanded ? "auto" : undefined,
@@ -487,13 +487,13 @@ export function PromptComposer() {
                 </div>
 
                 {/* Right Actions */}
-                <div className="flex items-center gap-1 flex-shrink-0">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   {/* Character Count */}
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <button
                         aria-label={`Prompt length: ${promptLength} characters`}
-                        className="min-w-[44px] min-h-[44px] flex items-center justify-center text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors"
+                        className="min-w-[44px] min-h-[44px] flex items-center justify-center text-xs font-mono text-muted-foreground hover:text-foreground transition-colors tabular-nums"
                       >
                         {promptLength}
                       </button>
@@ -510,7 +510,8 @@ export function PromptComposer() {
                         variant="ghost"
                         size="icon"
                         onClick={() => setIsPromptExpanded(!isPromptExpanded)}
-                        className="size-8 rounded-lg"
+                        aria-label={isPromptExpanded ? "Collapse prompt" : "Expand prompt"}
+                        className="size-9 rounded-lg"
                       >
                         {isPromptExpanded ? (
                           <Minimize2 className="size-4" />
@@ -529,7 +530,7 @@ export function PromptComposer() {
                     onClick={handleSubmit}
                     disabled={isGenerating || (!prompt.trim() && referenceImages.length === 0)}
                     className={cn(
-                      "h-10 px-4 rounded-xl font-medium",
+                      "h-11 px-5 rounded-xl font-medium text-base",
                       "bg-foreground text-background hover:bg-foreground/90",
                       "disabled:opacity-50 disabled:cursor-not-allowed"
                     )}

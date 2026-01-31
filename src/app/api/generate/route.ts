@@ -83,7 +83,17 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
     // Fetch reference images from storage (if any)
     let referenceImages: string[] = [];
     if (referenceImagePaths && referenceImagePaths.length > 0) {
+      console.log('[API /generate] Fetching reference images:', referenceImagePaths);
       referenceImages = await getImagesAsBase64(referenceImagePaths);
+      console.log('[API /generate] Fetched reference images:', {
+        requested: referenceImagePaths.length,
+        fetched: referenceImages.length,
+        sizes: referenceImages.map(img => `${Math.round(img.length / 1024)}KB`),
+      });
+
+      if (referenceImages.length === 0 && referenceImagePaths.length > 0) {
+        console.error('[API /generate] Failed to fetch any reference images');
+      }
     }
 
     // Get API configuration
@@ -413,6 +423,32 @@ async function generateWithGemini(params: ProviderParams): Promise<GeneratedImag
 
   const data = await response.json();
 
+  // Debug: Log the full Gemini response structure
+  console.log('[Gemini] Response structure:', {
+    hasCandidate: !!data.candidates?.[0],
+    finishReason: data.candidates?.[0]?.finishReason,
+    safetyRatings: data.candidates?.[0]?.safetyRatings,
+    partsCount: data.candidates?.[0]?.content?.parts?.length || 0,
+    partTypes: data.candidates?.[0]?.content?.parts?.map((p: Record<string, unknown>) =>
+      p.inlineData ? 'image' : p.text ? 'text' : 'unknown'
+    ),
+    promptFeedback: data.promptFeedback,
+  });
+
+  // Check for content blocked by safety filters
+  if (data.promptFeedback?.blockReason) {
+    throw new Error(`Content blocked: ${data.promptFeedback.blockReason}`);
+  }
+
+  // Check if the response was filtered
+  const finishReason = data.candidates?.[0]?.finishReason;
+  if (finishReason === 'SAFETY') {
+    throw new Error('Image generation blocked by safety filters. Try modifying your prompt.');
+  }
+  if (finishReason === 'RECITATION') {
+    throw new Error('Content blocked due to potential copyright issues.');
+  }
+
   // Extract images from response
   const images: GeneratedImage[] = [];
 
@@ -422,7 +458,19 @@ async function generateWithGemini(params: ProviderParams): Promise<GeneratedImag
         // Convert base64 to data URL
         const dataUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
         images.push({ url: dataUrl, base64: part.inlineData.data });
+      } else if (part.text) {
+        // Log any text response (model might be explaining why it can't generate)
+        console.log('[Gemini] Text response (no image):', part.text.slice(0, 500));
       }
+    }
+  }
+
+  // If no images but we have candidates, provide more context
+  if (images.length === 0 && data.candidates?.[0]) {
+    const textParts = data.candidates[0].content?.parts?.filter((p: Record<string, unknown>) => p.text) || [];
+    if (textParts.length > 0) {
+      const textContent = textParts.map((p: { text: string }) => p.text).join(' ').slice(0, 200);
+      throw new Error(`Gemini returned text instead of an image: "${textContent}...". Try rephrasing your prompt to request image generation explicitly.`);
     }
   }
 

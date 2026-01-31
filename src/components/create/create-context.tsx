@@ -59,6 +59,16 @@ export interface ThinkingStep {
   completed: boolean;
 }
 
+// Generation slot states for concurrent image generation (max 4)
+export type SlotStatus = "idle" | "generating" | "success" | "failed";
+
+export interface GenerationSlot {
+  id: string;
+  status: SlotStatus;
+  imageUrl?: string;
+  error?: string;
+}
+
 export interface CreateSettings {
   model: ModelId;
   imageSize: ImageSize;
@@ -150,6 +160,10 @@ interface CreateContextType {
   generate: () => Promise<void>;
   cancelGeneration: () => void;
   pendingBatchJobs: string[];
+
+  // Generation slots for concurrent image generation (max 4)
+  generationSlots: GenerationSlot[];
+  selectGeneratedImage: (slotId: string) => void;
 
   // Helper to build final prompt with negative injection
   buildFinalPrompt: () => string;
@@ -297,6 +311,14 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [historyStack, setHistoryStack] = React.useState<GeneratedImage[][]>([]);
   const [pendingBatchJobs, setPendingBatchJobs] = React.useState<string[]>([]);
   const abortControllerRef = React.useRef<AbortController | null>(null);
+
+  // Generation slots for tracking concurrent image generation (max 4)
+  const [generationSlots, setGenerationSlots] = React.useState<GenerationSlot[]>([
+    { id: "slot-0", status: "idle" },
+    { id: "slot-1", status: "idle" },
+    { id: "slot-2", status: "idle" },
+    { id: "slot-3", status: "idle" },
+  ]);
 
   // React Flow state
   const [nodes, setNodes] = React.useState<Node<ImageNodeData>[]>([]);
@@ -705,6 +727,17 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     const steps = getThinkingSteps();
     setThinkingSteps(steps);
 
+    // Determine how many images to generate (max 4 for Google API)
+    const outputCount = Math.min(settings.outputCount, 4);
+
+    // Initialize generation slots based on output count
+    setGenerationSlots(prev => prev.map((slot, idx) => ({
+      ...slot,
+      status: idx < outputCount ? "generating" : "idle",
+      imageUrl: undefined,
+      error: undefined,
+    })));
+
     try {
       // Show thinking steps animation
       for (let i = 0; i < steps.length - 1; i++) {
@@ -812,6 +845,12 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
       // Handle fast mode (immediate images)
       if (!data.images || data.images.length === 0) {
+        // Mark all generating slots as failed
+        setGenerationSlots(prev => prev.map(slot =>
+          slot.status === "generating"
+            ? { ...slot, status: "failed", error: data.error || 'No images generated' }
+            : slot
+        ));
         throw new Error(data.error || 'No images generated');
       }
 
@@ -822,6 +861,21 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         prompt: finalPrompt,
         timestamp: Date.now(),
         settings: { ...settings },
+      }));
+
+      // Update generation slots with results
+      setGenerationSlots(prev => prev.map((slot, idx) => {
+        if (idx < newImages.length) {
+          return {
+            ...slot,
+            status: "success" as SlotStatus,
+            imageUrl: newImages[idx].url,
+          };
+        } else if (slot.status === "generating") {
+          // Mark remaining slots as failed if fewer images returned
+          return { ...slot, status: "failed" as SlotStatus, error: "No image generated" };
+        }
+        return slot;
       }));
 
       // Save to history for undo
@@ -835,14 +889,20 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        // Generation was cancelled
+        // Generation was cancelled - slots already reset by cancelGeneration
         return;
       }
       console.error("Generation error:", error);
-      // Could add toast notification here
+      // Mark all generating slots as failed
+      setGenerationSlots(prev => prev.map(slot =>
+        slot.status === "generating"
+          ? { ...slot, status: "failed" as SlotStatus, error: error instanceof Error ? error.message : "Generation failed" }
+          : slot
+      ));
     } finally {
       setIsGenerating(false);
       setThinkingSteps([]);
+      // Note: Don't reset slots here - let user see results and select images
     }
   }, [prompt, referenceImages, settings, history, historyIndex, selectedApiId, getThinkingSteps, buildFinalPrompt]);
 
@@ -850,7 +910,34 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     abortControllerRef.current?.abort();
     setIsGenerating(false);
     setThinkingSteps([]);
+    // Reset all slots to idle
+    setGenerationSlots([
+      { id: "slot-0", status: "idle" },
+      { id: "slot-1", status: "idle" },
+      { id: "slot-2", status: "idle" },
+      { id: "slot-3", status: "idle" },
+    ]);
   }, []);
+
+  // Select a generated image from a slot and add to history
+  const selectGeneratedImage = React.useCallback((slotId: string) => {
+    const slot = generationSlots.find(s => s.id === slotId);
+    if (slot?.status === "success" && slot.imageUrl) {
+      // Find the corresponding image in history by URL
+      const image = history.find(h => h.url === slot.imageUrl);
+      if (image) {
+        setSelectedImage(image);
+        setViewMode("canvas");
+      }
+    }
+    // Reset slots after selection
+    setGenerationSlots([
+      { id: "slot-0", status: "idle" },
+      { id: "slot-1", status: "idle" },
+      { id: "slot-2", status: "idle" },
+      { id: "slot-3", status: "idle" },
+    ]);
+  }, [generationSlots, history]);
 
   const canUndo = historyIndex >= 0;
   const canRedo = historyIndex < historyStack.length - 1;
@@ -1345,6 +1432,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     generate,
     cancelGeneration,
     pendingBatchJobs,
+    generationSlots,
+    selectGeneratedImage,
     buildFinalPrompt,
   }), [
     availableApis, selectedApiId, isLoadingApis, pendingBatchJobs,
@@ -1352,10 +1441,10 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     nodes, edges, onNodesChange, onEdgesChange, onConnect, addImageNode, selectImageByNodeId,
     currentCanvasId, canvasList, isSaving, lastSaved, createNewCanvas, switchCanvas, renameCanvas, deleteCanvasById,
     viewMode, historyPanelOpen, isInputVisible, activeTab, zoom, canUndo, canRedo,
-    isGenerating, thinkingSteps,
+    isGenerating, thinkingSteps, generationSlots,
     updateSettings, addReferenceImages, addReferenceImageFromUrl, removeReferenceImage, clearReferenceImages,
     savedReferences, saveReferenceImage, removeSavedReference, addSavedReferenceToActive,
-    selectImage, clearHistory, toggleHistoryPanel, toggleInputVisibility, undo, redo, generate, cancelGeneration, buildFinalPrompt,
+    selectImage, clearHistory, toggleHistoryPanel, toggleInputVisibility, undo, redo, generate, cancelGeneration, selectGeneratedImage, buildFinalPrompt,
   ]);
 
   return (
