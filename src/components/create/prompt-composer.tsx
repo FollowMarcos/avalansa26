@@ -391,12 +391,14 @@ export function PromptComposer() {
                       variant="ghost"
                       size="icon"
                       onClick={() => setShowNegative(!showNegative)}
+                      aria-label="Toggle negative prompt"
+                      aria-expanded={showNegative}
                       className={cn(
                         "size-8 rounded-lg",
                         showNegative && "bg-muted"
                       )}
                     >
-                      <Ban className="size-4" />
+                      <Ban className="size-4" aria-hidden="true" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="top">Negative prompt</TooltipContent>
@@ -424,6 +426,7 @@ export function PromptComposer() {
                         value={settings.negativePrompt}
                         onChange={(e) => updateSettings({ negativePrompt: e.target.value })}
                         placeholder="blurry, low quality, distorted, watermark..."
+                        aria-label="Negative prompt - elements to avoid in generation"
                         className="w-full bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none font-mono"
                       />
                     </div>
@@ -469,6 +472,7 @@ export function PromptComposer() {
                         ? "Describe how to transform or style your images..."
                         : "Describe the image you want to create..."
                     }
+                    aria-label="Image generation prompt"
                     disabled={isGenerating}
                     rows={isPromptExpanded ? 6 : 1}
                     className={cn(

@@ -17,9 +17,11 @@ import { PageShell } from "@/components/layout/page-shell";
 interface LandingPageProps {
     user: User | null;
     isAdmin?: boolean;
+    profileAvatarUrl?: string | null;
+    profileName?: string | null;
 }
 
-export function LandingPage({ user, isAdmin = false }: LandingPageProps) {
+export function LandingPage({ user, isAdmin = false, profileAvatarUrl, profileName }: LandingPageProps) {
     const router = useRouter();
     const [mounted, setMounted] = useState(false);
 
@@ -69,10 +71,10 @@ export function LandingPage({ user, isAdmin = false }: LandingPageProps) {
                                 transition={{ delay: 0.1 }}
                                 className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-background ring-1 ring-primary/10"
                             >
-                                {user.user_metadata?.avatar_url ? (
+                                {(profileAvatarUrl || user.user_metadata?.avatar_url) ? (
                                     <Image
-                                        src={user.user_metadata.avatar_url}
-                                        alt={user.user_metadata.full_name || "User"}
+                                        src={profileAvatarUrl || user.user_metadata?.avatar_url}
+                                        alt={profileName || user.user_metadata?.full_name || "User"}
                                         fill
                                         className="object-cover"
                                     />
@@ -91,7 +93,7 @@ export function LandingPage({ user, isAdmin = false }: LandingPageProps) {
                                 transition={{ delay: 0.2 }}
                                 className="font-vt323 text-4xl md:text-5xl text-primary"
                             >
-                                Welcome back, {user.user_metadata?.full_name?.split(' ')[0] || 'User'}
+                                Welcome back, {(profileName || user.user_metadata?.full_name)?.split(' ')[0] || 'User'}
                             </motion.h1>
                             <motion.p
                                 initial={{ y: 20, opacity: 0 }}

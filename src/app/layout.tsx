@@ -43,7 +43,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/og-image.png", // Verify this exists or is generated
+        url: "/og-image.png",
         width: 1200,
         height: 630,
         alt: "Avalansa - AI Operation System",
@@ -54,8 +54,8 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Avalansa",
     description: "A secure, AI-curated operation system for your content. Save, share, and remix prompts.",
-    images: ["/og-image.png"], // Verify this exists or is generated
-    creator: "@avalansa", // Update if known
+    images: ["/og-image.png"],
+    creator: "@avalansa",
   },
   robots: {
     index: true,
@@ -69,8 +69,10 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: "/favicon.ico",
-    shortcut: "/favicon.ico",
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/ab.svg", type: "image/svg+xml" },
+    ],
     apple: "/ab.svg",
   },
 };

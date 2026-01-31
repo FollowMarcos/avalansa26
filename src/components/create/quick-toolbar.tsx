@@ -71,9 +71,10 @@ export function QuickToolbar() {
                   size="icon"
                   onClick={undo}
                   disabled={!canUndo}
+                  aria-label="Undo"
                   className="size-8 rounded-lg"
                 >
-                  <Undo2 className="size-4" strokeWidth={1.5} />
+                  <Undo2 className="size-4" strokeWidth={1.5} aria-hidden="true" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Undo</TooltipContent>
@@ -86,9 +87,10 @@ export function QuickToolbar() {
                   size="icon"
                   onClick={redo}
                   disabled={!canRedo}
+                  aria-label="Redo"
                   className="size-8 rounded-lg"
                 >
-                  <Redo2 className="size-4" strokeWidth={1.5} />
+                  <Redo2 className="size-4" strokeWidth={1.5} aria-hidden="true" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Redo</TooltipContent>
@@ -106,9 +108,10 @@ export function QuickToolbar() {
                   size="icon"
                   onClick={handleZoomOut}
                   disabled={nodes.length === 0}
+                  aria-label="Zoom out"
                   className="size-8 rounded-lg"
                 >
-                  <ZoomOut className="size-4" strokeWidth={1.5} />
+                  <ZoomOut className="size-4" strokeWidth={1.5} aria-hidden="true" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Zoom Out</TooltipContent>
@@ -130,9 +133,10 @@ export function QuickToolbar() {
                   size="icon"
                   onClick={handleZoomIn}
                   disabled={nodes.length === 0}
+                  aria-label="Zoom in"
                   className="size-8 rounded-lg"
                 >
-                  <ZoomIn className="size-4" strokeWidth={1.5} />
+                  <ZoomIn className="size-4" strokeWidth={1.5} aria-hidden="true" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Zoom In</TooltipContent>
@@ -145,9 +149,10 @@ export function QuickToolbar() {
                   size="icon"
                   onClick={handleFitView}
                   disabled={nodes.length === 0}
+                  aria-label="Fit view"
                   className="size-8 rounded-lg"
                 >
-                  <Maximize2 className="size-4" strokeWidth={1.5} />
+                  <Maximize2 className="size-4" strokeWidth={1.5} aria-hidden="true" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Fit View</TooltipContent>
@@ -157,19 +162,21 @@ export function QuickToolbar() {
           <div className="w-px h-5 bg-border mx-1" />
 
           {/* View Mode */}
-          <div className="flex items-center">
+          <div className="flex items-center" role="group" aria-label="View mode">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setViewMode("canvas")}
+                  aria-label="Canvas view"
+                  aria-pressed={viewMode === "canvas"}
                   className={cn(
                     "size-8 rounded-lg",
                     viewMode === "canvas" && "bg-muted"
                   )}
                 >
-                  <Square className="size-4" strokeWidth={1.5} />
+                  <Square className="size-4" strokeWidth={1.5} aria-hidden="true" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Canvas View</TooltipContent>
@@ -181,12 +188,14 @@ export function QuickToolbar() {
                   variant="ghost"
                   size="icon"
                   onClick={() => setViewMode("gallery")}
+                  aria-label="Gallery view"
+                  aria-pressed={viewMode === "gallery"}
                   className={cn(
                     "size-8 rounded-lg",
                     viewMode === "gallery" && "bg-muted"
                   )}
                 >
-                  <LayoutGrid className="size-4" strokeWidth={1.5} />
+                  <LayoutGrid className="size-4" strokeWidth={1.5} aria-hidden="true" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Gallery View</TooltipContent>
@@ -203,9 +212,10 @@ export function QuickToolbar() {
                 size="icon"
                 onClick={handleDownload}
                 disabled={!selectedImage}
+                aria-label="Download selected image"
                 className="size-8 rounded-lg"
               >
-                <Download className="size-4" strokeWidth={1.5} />
+                <Download className="size-4" strokeWidth={1.5} aria-hidden="true" />
               </Button>
             </TooltipTrigger>
             <TooltipContent>Download</TooltipContent>

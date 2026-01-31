@@ -14,9 +14,25 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export function HistoryIsland() {
   const { history, selectedImage, selectImage, clearHistory, historyPanelOpen, toggleHistoryPanel, addReferenceImageFromUrl } = useCreate();
+  const [showClearConfirm, setShowClearConfirm] = React.useState(false);
+
+  const handleClearHistory = () => {
+    clearHistory();
+    setShowClearConfirm(false);
+  };
 
   const formatTime = (timestamp: number) => {
     const diff = Date.now() - timestamp;
@@ -61,6 +77,23 @@ export function HistoryIsland() {
   };
 
   return (
+    <>
+    <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Clear History</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to clear all {history.length} generation{history.length !== 1 ? 's' : ''} from history? This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleClearHistory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            Clear History
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     <TooltipProvider delayDuration={300}>
       <div className="absolute top-4 right-4 z-20">
         <AnimatePresence initial={false} mode="wait">
@@ -76,7 +109,7 @@ export function HistoryIsland() {
               {/* Header */}
               <div className="flex items-center justify-between px-3 py-2 border-b border-border">
                 <div className="flex items-center gap-2">
-                  <Layers className="size-4 text-muted-foreground" />
+                  <Layers className="size-4 text-muted-foreground" aria-hidden="true" />
                   <span className="text-sm font-mono font-medium">History</span>
                   {history.length > 0 && (
                     <span className="text-xs text-muted-foreground font-mono">
@@ -91,10 +124,11 @@ export function HistoryIsland() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={clearHistory}
+                          onClick={() => setShowClearConfirm(true)}
+                          aria-label="Clear history"
                           className="size-7 rounded-lg text-muted-foreground hover:text-destructive"
                         >
-                          <Trash2 className="size-3.5" />
+                          <Trash2 className="size-3.5" aria-hidden="true" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>Clear history</TooltipContent>
@@ -116,7 +150,7 @@ export function HistoryIsland() {
               <ScrollArea className="h-[280px]">
                 {history.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center p-6">
-                    <Layers className="size-8 text-muted-foreground/30 mb-2" />
+                    <Layers className="size-8 text-muted-foreground/30 mb-2" aria-hidden="true" />
                     <p className="text-xs text-muted-foreground font-mono">No generations yet</p>
                   </div>
                 ) : (
@@ -208,9 +242,10 @@ export function HistoryIsland() {
                     variant="outline"
                     size="icon"
                     onClick={toggleHistoryPanel}
+                    aria-label="Open history"
                     className="size-10 rounded-xl bg-background/95 backdrop-blur-xl border-border shadow-lg"
                   >
-                    <Layers className="size-4" />
+                    <Layers className="size-4" aria-hidden="true" />
                     {history.length > 0 && (
                       <span className="absolute -top-1 -right-1 size-4 rounded-full bg-foreground text-background text-[10px] font-mono flex items-center justify-center">
                         {history.length > 9 ? "9+" : history.length}
@@ -225,5 +260,6 @@ export function HistoryIsland() {
         </AnimatePresence>
       </div>
     </TooltipProvider>
+    </>
   );
 }

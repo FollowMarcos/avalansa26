@@ -22,6 +22,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export function CanvasList() {
   const {
@@ -38,6 +48,7 @@ export function CanvasList() {
   const [isOpen, setIsOpen] = React.useState(false);
   const [editingId, setEditingId] = React.useState<string | null>(null);
   const [editName, setEditName] = React.useState("");
+  const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(null);
 
   const formatTime = (dateStr: string) => {
     const diff = Date.now() - new Date(dateStr).getTime();
@@ -75,11 +86,33 @@ export function CanvasList() {
     await createNewCanvas();
   };
 
-  const handleDelete = async (id: string) => {
-    await deleteCanvas(id);
+  const handleDeleteConfirm = async () => {
+    if (deleteConfirmId) {
+      await deleteCanvas(deleteConfirmId);
+      setDeleteConfirmId(null);
+    }
   };
 
+  const canvasToDelete = canvasList.find((c) => c.id === deleteConfirmId);
+
   return (
+    <>
+    <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete Canvas</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete "{canvasToDelete?.name}"? This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     <TooltipProvider delayDuration={300}>
       <div className="absolute top-4 left-4 z-20">
         <AnimatePresence initial={false} mode="wait">
@@ -95,7 +128,7 @@ export function CanvasList() {
               {/* Header */}
               <div className="flex items-center justify-between px-3 py-2 border-b border-border">
                 <div className="flex items-center gap-2">
-                  <Layers2 className="size-4 text-muted-foreground" />
+                  <Layers2 className="size-4 text-muted-foreground" aria-hidden="true" />
                   <span className="text-sm font-mono font-medium">Canvases</span>
                   <span className="text-xs text-muted-foreground font-mono">
                     ({canvasList.length})
@@ -105,7 +138,7 @@ export function CanvasList() {
                   {/* Save status */}
                   {isSaving ? (
                     <span className="text-[10px] text-muted-foreground font-mono flex items-center gap-1">
-                      <Loader2 className="size-3 animate-spin" />
+                      <Loader2 className="size-3 animate-spin" aria-hidden="true" />
                       Saving
                     </span>
                   ) : lastSaved ? (
@@ -119,9 +152,10 @@ export function CanvasList() {
                         variant="ghost"
                         size="icon"
                         onClick={handleCreateNew}
+                        aria-label="New canvas"
                         className="size-7 rounded-lg text-muted-foreground hover:text-foreground"
                       >
-                        <Plus className="size-3.5" />
+                        <Plus className="size-3.5" aria-hidden="true" />
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>New Canvas</TooltipContent>
@@ -142,7 +176,7 @@ export function CanvasList() {
               <ScrollArea className="h-[280px]">
                 {canvasList.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full text-center p-6">
-                    <Layers2 className="size-8 text-muted-foreground/30 mb-2" />
+                    <Layers2 className="size-8 text-muted-foreground/30 mb-2" aria-hidden="true" />
                     <p className="text-xs text-muted-foreground font-mono">
                       No canvases yet
                     </p>
@@ -152,7 +186,7 @@ export function CanvasList() {
                       onClick={handleCreateNew}
                       className="mt-3 text-xs"
                     >
-                      <Plus className="size-3 mr-1" />
+                      <Plus className="size-3 mr-1" aria-hidden="true" />
                       Create Canvas
                     </Button>
                   </div>
@@ -192,7 +226,7 @@ export function CanvasList() {
                               : "border-border bg-muted/50"
                           )}
                         >
-                          <Layers2 className="size-4 text-muted-foreground" />
+                          <Layers2 className="size-4 text-muted-foreground" aria-hidden="true" />
                         </div>
 
                         {/* Canvas info */}
@@ -205,6 +239,8 @@ export function CanvasList() {
                                 onKeyDown={handleKeyDown}
                                 onClick={(e) => e.stopPropagation()}
                                 className="h-6 text-xs px-1"
+                                autoComplete="off"
+                                aria-label="Canvas name"
                                 autoFocus
                               />
                               <Button
@@ -214,9 +250,10 @@ export function CanvasList() {
                                   e.stopPropagation();
                                   handleSaveEdit();
                                 }}
+                                aria-label="Save canvas name"
                                 className="size-6 rounded"
                               >
-                                <Check className="size-3" />
+                                <Check className="size-3" aria-hidden="true" />
                               </Button>
                             </div>
                           ) : (
@@ -244,9 +281,10 @@ export function CanvasList() {
                                     e.stopPropagation();
                                     handleStartEdit(canvas.id, canvas.name);
                                   }}
+                                  aria-label="Rename canvas"
                                   className="size-6 rounded"
                                 >
-                                  <Pencil className="size-3" />
+                                  <Pencil className="size-3" aria-hidden="true" />
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent>Rename</TooltipContent>
@@ -259,11 +297,12 @@ export function CanvasList() {
                                     size="icon"
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      handleDelete(canvas.id);
+                                      setDeleteConfirmId(canvas.id);
                                     }}
+                                    aria-label="Delete canvas"
                                     className="size-6 rounded text-muted-foreground hover:text-destructive"
                                   >
-                                    <Trash2 className="size-3" />
+                                    <Trash2 className="size-3" aria-hidden="true" />
                                   </Button>
                                 </TooltipTrigger>
                                 <TooltipContent>Delete</TooltipContent>
@@ -295,9 +334,10 @@ export function CanvasList() {
                     variant="outline"
                     size="icon"
                     onClick={() => setIsOpen(true)}
+                    aria-label="Open canvases"
                     className="size-10 rounded-xl bg-background/95 backdrop-blur-xl border-border shadow-lg"
                   >
-                    <Layers2 className="size-4" />
+                    <Layers2 className="size-4" aria-hidden="true" />
                     {canvasList.length > 1 && (
                       <span className="absolute -top-1 -right-1 size-4 rounded-full bg-foreground text-background text-[10px] font-mono flex items-center justify-center">
                         {canvasList.length > 9 ? "9+" : canvasList.length}
@@ -312,5 +352,6 @@ export function CanvasList() {
         </AnimatePresence>
       </div>
     </TooltipProvider>
+    </>
   );
 }

@@ -131,7 +131,7 @@ export function GenerationGallery() {
                         aria-label="Use as reference image"
                         onClick={(e) => handleUseAsReference(e, image.url)}
                       >
-                        <ImagePlus className="size-4" />
+                        <ImagePlus className="size-4" aria-hidden="true" />
                       </Button>
                       <Button
                         variant="secondary"
@@ -143,7 +143,7 @@ export function GenerationGallery() {
                           handleDownload(image.url, image.id);
                         }}
                       >
-                        <Download className="size-4" />
+                        <Download className="size-4" aria-hidden="true" />
                       </Button>
                       {image.prompt && (
                         <Button
@@ -156,7 +156,7 @@ export function GenerationGallery() {
                             handleCopyPrompt(image.prompt);
                           }}
                         >
-                          <Copy className="size-4" />
+                          <Copy className="size-4" aria-hidden="true" />
                         </Button>
                       )}
                     </div>

@@ -88,7 +88,7 @@ export function ApiSelector({
           className
         )}
       >
-        <Server className="w-4 h-4" />
+        <Server className="w-4 h-4" aria-hidden="true" />
         <span className="truncate">No APIs available</span>
       </Button>
     );
@@ -108,12 +108,12 @@ export function ApiSelector({
           )}
         >
           <div className="flex items-center gap-2 truncate">
-            <SelectedIcon className="w-4 h-4 shrink-0" />
+            <SelectedIcon className="w-4 h-4 shrink-0" aria-hidden="true" />
             <span className="truncate">
               {selectedApi?.name || 'Select API'}
             </span>
           </div>
-          <ChevronDown className="w-3 h-3 shrink-0 opacity-50" />
+          <ChevronDown className="w-3 h-3 shrink-0 opacity-50" aria-hidden="true" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-[220px]">
@@ -128,7 +128,7 @@ export function ApiSelector({
             <div key={provider}>
               {index > 0 && <DropdownMenuSeparator />}
               <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-2 py-1">
-                <Icon className="w-3 h-3" />
+                <Icon className="w-3 h-3" aria-hidden="true" />
                 {providerNames[provider] || provider}
               </DropdownMenuLabel>
               {providerApis.map((api) => {
@@ -148,7 +148,7 @@ export function ApiSelector({
                       )}
                     </div>
                     {isSelected && (
-                      <Check className="w-4 h-4 text-primary shrink-0" />
+                      <Check className="w-4 h-4 text-primary shrink-0" aria-hidden="true" />
                     )}
                   </DropdownMenuItem>
                 );

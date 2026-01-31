@@ -17,6 +17,7 @@ export function BananaIcon({ className, size = 16 }: BananaIconProps) {
       xmlns="http://www.w3.org/2000/svg"
       className={cn("flex-shrink-0", className)}
       style={{ imageRendering: "pixelated" }}
+      aria-hidden="true"
     >
       {/* 8-bit pixel art banana */}
       {/* Brown stem */}

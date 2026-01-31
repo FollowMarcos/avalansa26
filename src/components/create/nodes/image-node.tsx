@@ -58,7 +58,7 @@ export function ImageNode({ data, selected }: ImageNodeProps) {
   // Truncate prompt for display
   const truncatedPrompt = React.useMemo(() => {
     if (prompt.length <= 50) return prompt;
-    return prompt.slice(0, 47) + '...';
+    return prompt.slice(0, 47) + '…';
   }, [prompt]);
 
   const handleUseAsReference = async (e: React.MouseEvent) => {
@@ -127,7 +127,7 @@ export function ImageNode({ data, selected }: ImageNodeProps) {
                   aria-label="Use as reference image"
                   className="size-8 rounded-md bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
                 >
-                  <ImagePlus className="size-4 text-zinc-900" />
+                  <ImagePlus className="size-4 text-zinc-900" aria-hidden="true" />
                 </button>
               </TooltipTrigger>
               <TooltipContent>Use as reference</TooltipContent>
@@ -139,7 +139,7 @@ export function ImageNode({ data, selected }: ImageNodeProps) {
                   aria-label="Download image"
                   className="size-8 rounded-md bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
                 >
-                  <Download className="size-4 text-zinc-900" />
+                  <Download className="size-4 text-zinc-900" aria-hidden="true" />
                 </button>
               </TooltipTrigger>
               <TooltipContent>Download</TooltipContent>
@@ -151,7 +151,7 @@ export function ImageNode({ data, selected }: ImageNodeProps) {
                   aria-label="Copy prompt"
                   className="size-8 rounded-md bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
                 >
-                  <Copy className="size-4 text-zinc-900" />
+                  <Copy className="size-4 text-zinc-900" aria-hidden="true" />
                 </button>
               </TooltipTrigger>
               <TooltipContent>Copy prompt</TooltipContent>

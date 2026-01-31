@@ -145,9 +145,9 @@ function EmptyState({ hasReferenceImages }: { hasReferenceImages: boolean }) {
         <div className="relative mb-6">
           <div className="size-20 rounded-2xl bg-muted border border-border flex items-center justify-center">
             {hasReferenceImages ? (
-              <Sparkles className="size-10 text-foreground" strokeWidth={1.5} />
+              <Sparkles className="size-10 text-foreground" strokeWidth={1.5} aria-hidden="true" />
             ) : (
-              <ImagePlus className="size-10 text-foreground" strokeWidth={1.5} />
+              <ImagePlus className="size-10 text-foreground" strokeWidth={1.5} aria-hidden="true" />
             )}
           </div>
         </div>
@@ -163,14 +163,14 @@ function EmptyState({ hasReferenceImages }: { hasReferenceImages: boolean }) {
 
         <div className="mt-6 flex items-center gap-2 text-xs text-muted-foreground">
           <span className="px-2 py-1 rounded bg-muted border border-border flex items-center gap-1">
-            <Images className="size-3" />
+            <Images className="size-3" aria-hidden="true" />
             Up to 14 refs
           </span>
           <span className="px-2 py-1 rounded bg-muted border border-border">
             Native 4K
           </span>
           <span className="px-2 py-1 rounded bg-muted border border-border flex items-center gap-1">
-            <Type className="size-3" />
+            <Type className="size-3" aria-hidden="true" />
             94% text accuracy
           </span>
         </div>

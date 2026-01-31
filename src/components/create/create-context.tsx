@@ -170,8 +170,21 @@ const CreateContext = React.createContext<CreateContextType | undefined>(undefin
 // Maximum images for reference input (Gemini 3 Pro supports up to 14)
 const MAX_REFERENCE_IMAGES = 14;
 
-// localStorage key for persisting state
-const STORAGE_KEY = "create-studio-state";
+// Hoisted RegExp for text content detection (performance optimization)
+const TEXT_CONTENT_REGEX = /["']|say|text|sign|label|title|headline|word/i;
+
+// localStorage key prefix for persisting state (user ID will be appended)
+const STORAGE_KEY_PREFIX = "create-studio-state";
+const SAVED_REFS_KEY_PREFIX = "savedReferenceImages";
+
+// Get storage key for a specific user
+function getStorageKey(userId: string | null): string {
+  return userId ? `${STORAGE_KEY_PREFIX}-${userId}` : STORAGE_KEY_PREFIX;
+}
+
+function getSavedRefsKey(userId: string | null): string {
+  return userId ? `${SAVED_REFS_KEY_PREFIX}-${userId}` : SAVED_REFS_KEY_PREFIX;
+}
 
 // Interface for persisted state (subset of full state)
 interface PersistedState {
@@ -188,15 +201,16 @@ interface PersistedState {
 }
 
 // Load persisted state from localStorage
-function loadPersistedState(): Partial<PersistedState> | null {
+function loadPersistedState(userId: string | null): Partial<PersistedState> | null {
   if (typeof window === "undefined") return null;
   try {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const key = getStorageKey(userId);
+    const stored = localStorage.getItem(key);
     if (!stored) return null;
     const parsed = JSON.parse(stored) as PersistedState;
     // Invalidate cache after 24 hours
     if (Date.now() - parsed.timestamp > 24 * 60 * 60 * 1000) {
-      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(key);
       return null;
     }
     return parsed;
@@ -206,10 +220,11 @@ function loadPersistedState(): Partial<PersistedState> | null {
 }
 
 // Save state to localStorage (call this with debounce)
-function savePersistedState(state: PersistedState): void {
+function savePersistedState(state: PersistedState, userId: string | null): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    const key = getStorageKey(userId);
+    localStorage.setItem(key, JSON.stringify(state));
   } catch (error) {
     // localStorage might be full or disabled
     console.warn("Failed to save state to localStorage:", error);
@@ -217,6 +232,48 @@ function savePersistedState(state: PersistedState): void {
 }
 
 export function CreateProvider({ children }: { children: React.ReactNode }) {
+  // Current user ID for scoping localStorage
+  const [currentUserId, setCurrentUserId] = React.useState<string | null>(null);
+  const userIdLoadedRef = React.useRef(false);
+  const isInitialLoadRef = React.useRef(true);
+
+  // Fetch current user ID and listen for auth state changes
+  React.useEffect(() => {
+    const supabase = createClient();
+
+    // Get initial user
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setCurrentUserId(user?.id ?? null);
+      userIdLoadedRef.current = true;
+    });
+
+    // Listen for auth changes (login/logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const newUserId = session?.user?.id ?? null;
+
+      // Only handle actual user changes after initial load
+      if (userIdLoadedRef.current && newUserId !== currentUserId) {
+        // Clear in-memory state when user changes
+        setPrompt("");
+        setSettings(defaultSettings);
+        setNodes([]);
+        setEdges([]);
+        setViewport({ x: 0, y: 0, zoom: 1 });
+        setSavedReferences([]);
+        setCurrentCanvasId(null);
+        hasLoadedPersistedState.current = false;
+        isInitialLoadRef.current = true;
+      }
+
+      setCurrentUserId(newUserId);
+      userIdLoadedRef.current = true;
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [currentUserId]);
+
   // API selection state
   const [availableApis, setAvailableApis] = React.useState<ApiConfig[]>([]);
   const [selectedApiId, setSelectedApiId] = React.useState<string | null>(null);
@@ -226,13 +283,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [isPromptExpanded, setIsPromptExpanded] = React.useState(false);
   const [settings, setSettings] = React.useState<CreateSettings>(defaultSettings);
   const [referenceImages, setReferenceImages] = React.useState<ImageFile[]>([]);
-  const [savedReferences, setSavedReferences] = React.useState<SavedReferenceImage[]>(() => {
-    if (typeof window !== 'undefined') {
-      const stored = localStorage.getItem('savedReferenceImages');
-      return stored ? JSON.parse(stored) : [];
-    }
-    return [];
-  });
+  const [savedReferences, setSavedReferences] = React.useState<SavedReferenceImage[]>([]);
   const [history, setHistory] = React.useState<GeneratedImage[]>([]);
   const [selectedImage, setSelectedImage] = React.useState<GeneratedImage | null>(null);
   const [viewMode, setViewMode] = React.useState<"canvas" | "gallery">("canvas");
@@ -332,60 +383,59 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     }, 4 * 60 * 60 * 1000);
   }, []);
 
-  // Fetch available APIs on mount
+  // Fetch available APIs and load generation history in parallel on mount
   React.useEffect(() => {
-    async function fetchApis() {
-      try {
-        const { getAccessibleApiConfigs } = await import("@/utils/supabase/api-configs.server");
-        const apis = await getAccessibleApiConfigs();
-        setAvailableApis(apis);
-        // Auto-select the first API if available
-        if (apis.length > 0 && !selectedApiId) {
-          setSelectedApiId(apis[0].id);
-        }
-      } catch (error) {
-        console.error("Failed to fetch APIs:", error);
-      } finally {
-        setIsLoadingApis(false);
+    async function loadInitialData() {
+      // Start both fetches in parallel (async-parallel optimization)
+      const apisPromise = import("@/utils/supabase/api-configs.server")
+        .then(({ getAccessibleApiConfigs }) => getAccessibleApiConfigs())
+        .catch((error) => {
+          console.error("Failed to fetch APIs:", error);
+          return [] as ApiConfig[];
+        });
+
+      const historyPromise = import("@/utils/supabase/generations.server")
+        .then(({ getGenerationHistory }) => getGenerationHistory(50))
+        .catch((error) => {
+          console.error("Failed to load generation history:", error);
+          return [] as Generation[];
+        });
+
+      // Wait for both to complete in parallel
+      const [apis, generations] = await Promise.all([apisPromise, historyPromise]);
+
+      // Process APIs
+      setAvailableApis(apis);
+      if (apis.length > 0 && !selectedApiId) {
+        setSelectedApiId(apis[0].id);
+      }
+      setIsLoadingApis(false);
+
+      // Process history - convert Generation to GeneratedImage format
+      const historyImages: GeneratedImage[] = generations.map((gen: Generation) => ({
+        id: gen.id,
+        url: gen.image_url,
+        prompt: gen.prompt,
+        timestamp: new Date(gen.created_at).getTime(),
+        settings: {
+          model: "nano-banana-pro" as ModelId,
+          imageSize: (gen.settings.imageSize as ImageSize) || "2K",
+          aspectRatio: (gen.settings.aspectRatio as AspectRatio) || "1:1",
+          outputCount: gen.settings.outputCount || 1,
+          generationSpeed: (gen.settings.generationSpeed as GenerationSpeed) || "fast",
+          styleStrength: 75,
+          negativePrompt: gen.negative_prompt || "",
+        },
+      }));
+
+      setHistory(historyImages);
+      // Select the most recent image if available
+      if (historyImages.length > 0) {
+        setSelectedImage(historyImages[0]);
       }
     }
-    fetchApis();
-  }, []);
 
-  // Load generation history from database on mount
-  React.useEffect(() => {
-    async function loadHistory() {
-      try {
-        const { getGenerationHistory } = await import("@/utils/supabase/generations.server");
-        const generations = await getGenerationHistory(50);
-
-        // Convert Generation to GeneratedImage format
-        const historyImages: GeneratedImage[] = generations.map((gen: Generation) => ({
-          id: gen.id,
-          url: gen.image_url,
-          prompt: gen.prompt,
-          timestamp: new Date(gen.created_at).getTime(),
-          settings: {
-            model: "nano-banana-pro" as ModelId,
-            imageSize: (gen.settings.imageSize as ImageSize) || "2K",
-            aspectRatio: (gen.settings.aspectRatio as AspectRatio) || "1:1",
-            outputCount: gen.settings.outputCount || 1,
-            generationSpeed: (gen.settings.generationSpeed as GenerationSpeed) || "fast",
-            styleStrength: 75,
-            negativePrompt: gen.negative_prompt || "",
-          },
-        }));
-
-        setHistory(historyImages);
-        // Select the most recent image if available
-        if (historyImages.length > 0) {
-          setSelectedImage(historyImages[0]);
-        }
-      } catch (error) {
-        console.error("Failed to load generation history:", error);
-      }
-    }
-    loadHistory();
+    loadInitialData();
   }, []);
 
   const updateSettings = React.useCallback((newSettings: Partial<CreateSettings>) => {
@@ -482,8 +532,14 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Fetch the image from URL
-      const response = await fetch(url);
+      // Use proxy endpoint to bypass CORS restrictions for cross-origin images
+      const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(url)}`;
+      const response = await fetch(proxyUrl);
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.status}`);
+      }
+
       const blob = await response.blob();
 
       // Create a File object from the blob
@@ -549,10 +605,11 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
     setSavedReferences(prev => {
       const updated = [...prev, savedImage];
-      localStorage.setItem('savedReferenceImages', JSON.stringify(updated));
+      const key = getSavedRefsKey(currentUserId);
+      localStorage.setItem(key, JSON.stringify(updated));
       return updated;
     });
-  }, []);
+  }, [currentUserId]);
 
   /**
    * Remove a saved reference from the library
@@ -560,10 +617,11 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const removeSavedReference = React.useCallback((id: string) => {
     setSavedReferences(prev => {
       const updated = prev.filter(ref => ref.id !== id);
-      localStorage.setItem('savedReferenceImages', JSON.stringify(updated));
+      const key = getSavedRefsKey(currentUserId);
+      localStorage.setItem(key, JSON.stringify(updated));
       return updated;
     });
-  }, []);
+  }, [currentUserId]);
 
   /**
    * Add a saved reference image to the active references
@@ -618,8 +676,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       steps.push({ id: "3", text: `Processing ${referenceImages.length} reference image${referenceImages.length > 1 ? 's' : ''}...`, completed: false });
     }
 
-    // Check if prompt likely contains text to render
-    const hasTextContent = /["']|say|text|sign|label|title|headline|word/i.test(prompt);
+    // Check if prompt likely contains text to render (uses hoisted regex for performance)
+    const hasTextContent = TEXT_CONTENT_REGEX.test(prompt);
     if (hasTextContent) {
       steps.push({ id: "4", text: "Aligning text elements...", completed: false });
     }
@@ -1011,8 +1069,11 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     }
   }, [currentCanvasId, canvasList, switchCanvas, createNewCanvas]);
 
-  // Load canvases and initialize on mount
+  // Load canvases and initialize on mount (after userId is known)
   React.useEffect(() => {
+    // Wait for user ID to be loaded before loading canvases
+    if (!userIdLoadedRef.current) return;
+
     async function loadCanvases() {
       try {
         const { getUserCanvases, getLatestCanvas, getCanvas, createCanvas } = await import(
@@ -1023,7 +1084,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         setCanvasList(canvases);
 
         // Check if we have a persisted canvas ID to restore
-        const persisted = loadPersistedState();
+        const persisted = loadPersistedState(currentUserId);
         const persistedCanvasId = persisted?.currentCanvasId;
 
         if (canvases.length > 0) {
@@ -1097,7 +1158,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       }
     }
     loadCanvases();
-  }, []);
+  }, [currentUserId]);
 
   // Convert history to nodes when history changes (for new generations)
   const prevHistoryLength = React.useRef(history.length);
@@ -1116,12 +1177,15 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     prevHistoryLength.current = history.length;
   }, [history, nodes, addImageNode]);
 
-  // Load persisted state from localStorage on mount
+  // Load persisted state from localStorage on mount (after userId is known)
   React.useEffect(() => {
+    // Wait for user ID to be loaded before loading persisted state
+    if (!userIdLoadedRef.current) return;
     if (hasLoadedPersistedState.current) return;
     hasLoadedPersistedState.current = true;
+    isInitialLoadRef.current = false;
 
-    const persisted = loadPersistedState();
+    const persisted = loadPersistedState(currentUserId);
     if (persisted) {
       // Restore prompt and settings
       if (persisted.prompt) setPrompt(persisted.prompt);
@@ -1145,12 +1209,25 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         sessionStorage.setItem("pending-edges", JSON.stringify(persisted.edges || []));
       }
     }
-  }, []);
+
+    // Load saved reference images for this user
+    try {
+      const savedRefsKey = getSavedRefsKey(currentUserId);
+      const savedRefsData = localStorage.getItem(savedRefsKey);
+      if (savedRefsData) {
+        const parsed = JSON.parse(savedRefsData) as SavedReferenceImage[];
+        setSavedReferences(parsed);
+      }
+    } catch {
+      // Ignore parse errors
+    }
+  }, [currentUserId]);
 
   // Persist state to localStorage on changes (debounced)
   React.useEffect(() => {
-    // Skip during initial load
+    // Skip during initial load or if user ID not yet loaded
     if (!hasLoadedPersistedState.current) return;
+    if (!userIdLoadedRef.current) return;
 
     // Clear existing timeout
     if (persistTimeoutRef.current) {
@@ -1171,7 +1248,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         historyPanelOpen,
         timestamp: Date.now(),
       };
-      savePersistedState(stateToSave);
+      savePersistedState(stateToSave, currentUserId);
     }, 1000);
 
     return () => {
@@ -1179,11 +1256,12 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         clearTimeout(persistTimeoutRef.current);
       }
     };
-  }, [prompt, settings, currentCanvasId, selectedApiId, nodes, edges, viewport, viewMode, historyPanelOpen]);
+  }, [prompt, settings, currentCanvasId, selectedApiId, nodes, edges, viewport, viewMode, historyPanelOpen, currentUserId]);
 
   // Save state immediately before page unload
   React.useEffect(() => {
     const handleBeforeUnload = () => {
+      if (!userIdLoadedRef.current) return;
       const stateToSave: PersistedState = {
         prompt,
         settings,
@@ -1196,12 +1274,12 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         historyPanelOpen,
         timestamp: Date.now(),
       };
-      savePersistedState(stateToSave);
+      savePersistedState(stateToSave, currentUserId);
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [prompt, settings, currentCanvasId, selectedApiId, nodes, edges, viewport, viewMode, historyPanelOpen]);
+  }, [prompt, settings, currentCanvasId, selectedApiId, nodes, edges, viewport, viewMode, historyPanelOpen, currentUserId]);
 
   const value = React.useMemo(() => ({
     // API selection
