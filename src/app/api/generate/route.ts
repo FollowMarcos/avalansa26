@@ -295,12 +295,14 @@ interface ProviderParams {
 
 /**
  * Generate images using Google Gemini API
+ * Supports both Gemini 2.0 Flash and Gemini 3 Pro Image Preview models
  */
 async function generateWithGemini(params: ProviderParams): Promise<GeneratedImage[]> {
   const { apiKey, endpoint, modelId, prompt, negativePrompt, aspectRatio, imageSize, outputCount, referenceImages } = params;
 
   // Debug: Log Gemini-specific params
   console.log('[Gemini] Generating with params:', {
+    modelId,
     aspectRatio,
     imageSize,
     outputCount,
@@ -334,33 +336,48 @@ async function generateWithGemini(params: ProviderParams): Promise<GeneratedImag
     }
   }
 
-  // Map aspect ratio to a descriptive hint for the prompt
-  // Gemini generateContent API doesn't support aspectRatio in generationConfig
-  const aspectHint = aspectRatio ? getAspectRatioHint(aspectRatio) : '';
+  // Always use gemini-3-pro-image-preview for proper resolution control
+  const model = modelId || 'gemini-3-pro-image-preview';
 
-  // Map image size to prompt enhancement
-  // Gemini 2.0 Flash doesn't directly support resolution parameters
-  const sizeHint = imageSize === '4K' ? 'high resolution, 4K quality, extremely detailed' :
-                   imageSize === '2K' ? 'high resolution, detailed' : '';
+  // Check if this model supports image_config (Gemini 3 Pro Image Preview)
+  const supportsImageConfig = model.includes('gemini-3') || model.includes('image-preview');
 
-  // Combine all hints
-  const hints = [aspectHint, sizeHint].filter(Boolean).join(', ');
-  const enhancedPrompt = hints ? `${fullPrompt}\n\nImage specifications: ${hints}` : fullPrompt;
-
-  // Debug: Log the prompt enhancement
-  console.log('[Gemini] Prompt hints:', {
-    aspectHint,
-    sizeHint,
-    combinedHints: hints,
-  });
-
-  // Update parts with enhanced prompt
-  parts[0] = { text: enhancedPrompt };
-
-  // Build generation config - only use supported parameters
+  // Build generation config with image_config for supported models
   const generationConfig: Record<string, unknown> = {
     responseModalities: ['IMAGE', 'TEXT'],
   };
+
+  // Add image_config for models that support it (Gemini 3 Pro Image Preview)
+  if (supportsImageConfig) {
+    const imageConfig: Record<string, string> = {};
+
+    // Add aspect_ratio if specified (snake_case for API)
+    if (aspectRatio) {
+      imageConfig.aspect_ratio = aspectRatio;
+    }
+
+    // Add image_size if specified (supports "1K", "2K", "4K")
+    if (imageSize) {
+      imageConfig.image_size = imageSize;
+    }
+
+    if (Object.keys(imageConfig).length > 0) {
+      generationConfig.image_config = imageConfig;
+    }
+
+    console.log('[Gemini] Using image_config:', imageConfig);
+  } else {
+    // For older models without image_config support, add hints to the prompt
+    const aspectHint = aspectRatio ? getAspectRatioHint(aspectRatio) : '';
+    const sizeHint = imageSize === '4K' ? 'high resolution, 4K quality, extremely detailed' :
+                     imageSize === '2K' ? 'high resolution, detailed' : '';
+    const hints = [aspectHint, sizeHint].filter(Boolean).join(', ');
+
+    if (hints) {
+      parts[0] = { text: `${fullPrompt}\n\nImage specifications: ${hints}` };
+      console.log('[Gemini] Using prompt hints (model does not support image_config):', hints);
+    }
+  }
 
   const requestBody = {
     contents: [
@@ -371,8 +388,15 @@ async function generateWithGemini(params: ProviderParams): Promise<GeneratedImag
     generationConfig,
   };
 
+  // Debug: Log the full request config
+  console.log('[Gemini] Request config:', {
+    model,
+    supportsImageConfig,
+    generationConfig,
+  });
+
   // Use the configured endpoint or default to Gemini API
-  const apiEndpoint = endpoint || `https://generativelanguage.googleapis.com/v1beta/models/${modelId || 'gemini-2.0-flash-exp-image-generation'}:generateContent`;
+  const apiEndpoint = endpoint || `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
   const response = await fetch(`${apiEndpoint}?key=${apiKey}`, {
     method: 'POST',
