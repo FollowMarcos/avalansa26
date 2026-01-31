@@ -109,6 +109,7 @@ interface CreateContextType {
   thinkingSteps: ThinkingStep[];
   generate: () => Promise<void>;
   cancelGeneration: () => void;
+  pendingBatchJobs: string[];
 
   // Helper to build final prompt with negative injection
   buildFinalPrompt: () => string;
@@ -150,7 +151,76 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [thinkingSteps, setThinkingSteps] = React.useState<ThinkingStep[]>([]);
   const [historyIndex, setHistoryIndex] = React.useState(-1);
   const [historyStack, setHistoryStack] = React.useState<GeneratedImage[][]>([]);
+  const [pendingBatchJobs, setPendingBatchJobs] = React.useState<string[]>([]);
   const abortControllerRef = React.useRef<AbortController | null>(null);
+
+  // Poll for batch job completion
+  const pollBatchJob = React.useCallback(async (
+    batchJobId: string,
+    originalPrompt: string,
+    originalSettings: CreateSettings
+  ) => {
+    setPendingBatchJobs(prev => [...prev, batchJobId]);
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/batch-status?id=${batchJobId}`);
+        const data = await response.json();
+
+        if (!data.success || !data.job) {
+          clearInterval(pollInterval);
+          setPendingBatchJobs(prev => prev.filter(id => id !== batchJobId));
+          return;
+        }
+
+        const { status, results } = data.job;
+
+        if (status === 'completed' && results) {
+          clearInterval(pollInterval);
+          setPendingBatchJobs(prev => prev.filter(id => id !== batchJobId));
+
+          // Convert results to GeneratedImage format
+          const completedImages: GeneratedImage[] = results
+            .filter((r: { success: boolean }) => r.success)
+            .map((r: { imageUrl?: string }, i: number) => ({
+              id: `batch-result-${batchJobId}-${i}`,
+              url: r.imageUrl || '',
+              prompt: originalPrompt,
+              timestamp: Date.now(),
+              settings: originalSettings,
+            }));
+
+          if (completedImages.length > 0) {
+            // Replace the placeholder with actual images
+            setHistory(prev => {
+              const filtered = prev.filter(img => img.id !== `batch-${batchJobId}`);
+              return [...completedImages, ...filtered];
+            });
+            setSelectedImage(completedImages[0]);
+            setViewMode("canvas");
+          }
+        } else if (status === 'failed') {
+          clearInterval(pollInterval);
+          setPendingBatchJobs(prev => prev.filter(id => id !== batchJobId));
+          // Remove placeholder from history
+          setHistory(prev => prev.filter(img => img.id !== `batch-${batchJobId}`));
+          console.error('Batch job failed:', data.job.error);
+        } else if (status === 'cancelled') {
+          clearInterval(pollInterval);
+          setPendingBatchJobs(prev => prev.filter(id => id !== batchJobId));
+          setHistory(prev => prev.filter(img => img.id !== `batch-${batchJobId}`));
+        }
+      } catch (error) {
+        console.error('Error polling batch job:', error);
+      }
+    }, 5000); // Poll every 5 seconds
+
+    // Clean up after 4 hours (max batch time)
+    setTimeout(() => {
+      clearInterval(pollInterval);
+      setPendingBatchJobs(prev => prev.filter(id => id !== batchJobId));
+    }, 4 * 60 * 60 * 1000);
+  }, []);
 
   // Fetch available APIs on mount
   React.useEffect(() => {
@@ -306,6 +376,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
           imageSize: settings.imageSize,
           outputCount: settings.outputCount,
           referenceImages: referenceImagesBase64,
+          mode: settings.generationSpeed, // 'fast' or 'relaxed'
         }),
         signal: abortControllerRef.current.signal,
       });
@@ -324,7 +395,28 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
       const data = await response.json();
 
-      if (!data.success || !data.images || data.images.length === 0) {
+      if (!data.success) {
+        throw new Error(data.error || 'Generation failed');
+      }
+
+      // Handle batch/relaxed mode
+      if (data.mode === 'relaxed' && data.batchJobId) {
+        // Start polling for batch job completion
+        pollBatchJob(data.batchJobId, finalPrompt, { ...settings });
+        // Show a placeholder in history indicating batch job is processing
+        const pendingImage: GeneratedImage = {
+          id: `batch-${data.batchJobId}`,
+          url: '', // Will be filled when batch completes
+          prompt: finalPrompt,
+          timestamp: Date.now(),
+          settings: { ...settings },
+        };
+        setHistory(prev => [pendingImage, ...prev]);
+        return;
+      }
+
+      // Handle fast mode (immediate images)
+      if (!data.images || data.images.length === 0) {
         throw new Error(data.error || 'No images generated');
       }
 
@@ -425,9 +517,10 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     thinkingSteps,
     generate,
     cancelGeneration,
+    pendingBatchJobs,
     buildFinalPrompt,
   }), [
-    availableApis, selectedApiId, isLoadingApis,
+    availableApis, selectedApiId, isLoadingApis, pendingBatchJobs,
     prompt, isPromptExpanded, settings, referenceImages, history, selectedImage,
     viewMode, historyPanelOpen, isInputVisible, activeTab, zoom, canUndo, canRedo,
     isGenerating, thinkingSteps,

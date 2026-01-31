@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { getDecryptedApiKey, getApiConfig } from '@/utils/supabase/api-configs.server';
+import { createBatchJob, submitGeminiBatchJob } from '@/utils/supabase/batch-jobs.server';
+import type { BatchJobRequest } from '@/types/batch-job';
 
 export interface GenerateRequest {
   apiId: string;
@@ -10,6 +12,7 @@ export interface GenerateRequest {
   imageSize?: string;
   outputCount?: number;
   referenceImages?: string[]; // Base64 encoded images
+  mode?: 'fast' | 'relaxed'; // Generation mode
 }
 
 export interface GeneratedImage {
@@ -21,6 +24,10 @@ export interface GenerateResponse {
   success: boolean;
   images?: GeneratedImage[];
   error?: string;
+  // For batch/relaxed mode
+  batchJobId?: string;
+  mode?: 'fast' | 'relaxed';
+  estimatedCompletion?: string;
 }
 
 /**
@@ -44,7 +51,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
 
     // Parse request body
     const body: GenerateRequest = await request.json();
-    const { apiId, prompt, negativePrompt, aspectRatio, imageSize, outputCount = 1, referenceImages } = body;
+    const { apiId, prompt, negativePrompt, aspectRatio, imageSize, outputCount = 1, referenceImages, mode = 'fast' } = body;
 
     if (!apiId) {
       return NextResponse.json(
@@ -69,7 +76,58 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
       );
     }
 
-    // Get decrypted API key
+    // Handle relaxed/batch mode for supported providers
+    if (mode === 'relaxed' && apiConfig.provider === 'google') {
+      // Create batch job requests
+      const batchRequests: BatchJobRequest[] = [];
+      for (let i = 0; i < outputCount; i++) {
+        batchRequests.push({
+          prompt,
+          negativePrompt,
+          aspectRatio,
+          imageSize,
+          referenceImages,
+        });
+      }
+
+      // Create the batch job record
+      const batchJob = await createBatchJob({
+        user_id: user.id,
+        api_config_id: apiId,
+        requests: batchRequests,
+      });
+
+      if (!batchJob) {
+        return NextResponse.json(
+          { success: false, error: 'Failed to create batch job' },
+          { status: 500 }
+        );
+      }
+
+      // Submit to Gemini batch API
+      const submitResult = await submitGeminiBatchJob(
+        batchJob.id,
+        apiId,
+        batchRequests
+      );
+
+      if (!submitResult.success) {
+        return NextResponse.json(
+          { success: false, error: submitResult.error },
+          { status: 500 }
+        );
+      }
+
+      // Return batch job info (images will come later)
+      return NextResponse.json({
+        success: true,
+        mode: 'relaxed',
+        batchJobId: batchJob.id,
+        estimatedCompletion: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+      });
+    }
+
+    // Get decrypted API key for immediate generation
     const apiKey = await getDecryptedApiKey(apiId);
     if (!apiKey) {
       return NextResponse.json(
@@ -78,7 +136,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
       );
     }
 
-    // Route to appropriate provider
+    // Route to appropriate provider (fast mode)
     let images: GeneratedImage[];
 
     switch (apiConfig.provider) {
@@ -151,7 +209,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
         });
     }
 
-    return NextResponse.json({ success: true, images });
+    return NextResponse.json({ success: true, images, mode: 'fast' });
   } catch (error) {
     console.error('Generation error:', error);
     return NextResponse.json(
