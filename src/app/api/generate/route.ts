@@ -291,35 +291,26 @@ async function generateWithGemini(params: ProviderParams): Promise<GeneratedImag
     }
   }
 
-  // Map aspect ratio to Gemini format (e.g., "1:1" -> "1:1")
-  // Gemini supports: "1:1", "3:4", "4:3", "9:16", "16:9"
-  const geminiAspectRatio = mapToGeminiAspectRatio(aspectRatio);
+  // Map aspect ratio to a descriptive hint for the prompt
+  // Gemini generateContent API doesn't support aspectRatio in generationConfig
+  const aspectHint = aspectRatio ? getAspectRatioHint(aspectRatio) : '';
 
-  // Map image size to Gemini personImageGeneration or use for prompt enhancement
-  // Gemini 2.0 Flash doesn't directly support resolution, but Imagen does
-  // For now, we'll include size hints in the prompt if needed
+  // Map image size to prompt enhancement
+  // Gemini 2.0 Flash doesn't directly support resolution parameters
   const sizeHint = imageSize === '4K' ? 'high resolution, 4K quality, extremely detailed' :
                    imageSize === '2K' ? 'high resolution, detailed' : '';
 
-  const enhancedPrompt = sizeHint ? `${fullPrompt}\n\n${sizeHint}` : fullPrompt;
+  // Combine all hints
+  const hints = [aspectHint, sizeHint].filter(Boolean).join(', ');
+  const enhancedPrompt = hints ? `${fullPrompt}\n\nImage specifications: ${hints}` : fullPrompt;
 
   // Update parts with enhanced prompt
   parts[0] = { text: enhancedPrompt };
 
-  // Build generation config
+  // Build generation config - only use supported parameters
   const generationConfig: Record<string, unknown> = {
     responseModalities: ['IMAGE', 'TEXT'],
   };
-
-  // Add aspect ratio if supported by the model
-  if (geminiAspectRatio) {
-    generationConfig.aspectRatio = geminiAspectRatio;
-  }
-
-  // Add number of images if outputCount > 1
-  if (outputCount > 1) {
-    generationConfig.numberOfImages = Math.min(outputCount, 4); // Gemini typically supports max 4
-  }
 
   const requestBody = {
     contents: [
@@ -365,28 +356,25 @@ async function generateWithGemini(params: ProviderParams): Promise<GeneratedImag
 }
 
 /**
- * Map aspect ratio to Gemini-supported format
- * Gemini supports: "1:1", "3:4", "4:3", "9:16", "16:9"
+ * Get a descriptive hint for aspect ratio to include in the prompt
+ * Since Gemini generateContent API doesn't support aspectRatio in generationConfig,
+ * we describe the desired format in the prompt itself
  */
-function mapToGeminiAspectRatio(aspectRatio?: string): string | undefined {
-  if (!aspectRatio) return undefined;
-
-  // Direct mappings for supported ratios
-  const supportedRatios = ['1:1', '3:4', '4:3', '9:16', '16:9'];
-  if (supportedRatios.includes(aspectRatio)) {
-    return aspectRatio;
-  }
-
-  // Map similar ratios to closest supported
-  const ratioMap: Record<string, string> = {
-    '2:3': '3:4',    // Close to 3:4
-    '3:2': '4:3',    // Close to 4:3
-    '4:5': '3:4',    // Close to 3:4
-    '5:4': '4:3',    // Close to 4:3
-    '21:9': '16:9',  // Ultrawide -> widescreen
+function getAspectRatioHint(aspectRatio: string): string {
+  const ratioDescriptions: Record<string, string> = {
+    '1:1': 'square format (1:1 aspect ratio)',
+    '4:3': 'standard landscape format (4:3 aspect ratio)',
+    '3:4': 'standard portrait format (3:4 aspect ratio)',
+    '16:9': 'widescreen landscape format (16:9 aspect ratio)',
+    '9:16': 'tall portrait format (9:16 aspect ratio, like a phone screen)',
+    '3:2': 'classic photo landscape format (3:2 aspect ratio)',
+    '2:3': 'classic photo portrait format (2:3 aspect ratio)',
+    '5:4': 'photo landscape format (5:4 aspect ratio)',
+    '4:5': 'social media portrait format (4:5 aspect ratio)',
+    '21:9': 'ultra-wide cinematic format (21:9 aspect ratio)',
   };
 
-  return ratioMap[aspectRatio] || '1:1';
+  return ratioDescriptions[aspectRatio] || `${aspectRatio} aspect ratio`;
 }
 
 /**
