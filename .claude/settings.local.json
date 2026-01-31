@@ -10,7 +10,8 @@
       "Bash(ls -la \"c:\\\\Users\\\\world\\\\OneDrive\\\\Desktop\\\\newos\\\\src\\\\app\\\\dashboard\"\" 2>nul || echo \"No dashboard dir \")",
       "Bash(npx tsc:*)",
       "Bash(findstr:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(npm install:*)"
     ]
   }
 }

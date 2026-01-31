@@ -11,6 +11,7 @@ import {
   Download,
   LayoutGrid,
   Square,
+  Maximize2,
 } from "lucide-react";
 import {
   Tooltip,
@@ -18,6 +19,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useReactFlow } from "@xyflow/react";
 
 export function QuickToolbar() {
   const {
@@ -25,16 +27,18 @@ export function QuickToolbar() {
     canRedo,
     undo,
     redo,
-    zoom,
-    setZoom,
     viewMode,
     setViewMode,
     selectedImage,
+    nodes,
   } = useCreate();
 
-  const handleZoomIn = () => setZoom(Math.min(200, zoom + 25));
-  const handleZoomOut = () => setZoom(Math.max(25, zoom - 25));
-  const handleZoomReset = () => setZoom(100);
+  const { zoomIn, zoomOut, fitView, getZoom } = useReactFlow();
+  const currentZoom = Math.round(getZoom() * 100);
+
+  const handleZoomIn = () => zoomIn({ duration: 200 });
+  const handleZoomOut = () => zoomOut({ duration: 200 });
+  const handleFitView = () => fitView({ padding: 0.2, duration: 300 });
 
   const handleDownload = async () => {
     if (!selectedImage) return;
@@ -101,7 +105,7 @@ export function QuickToolbar() {
                   variant="ghost"
                   size="icon"
                   onClick={handleZoomOut}
-                  disabled={zoom <= 25}
+                  disabled={nodes.length === 0}
                   className="size-8 rounded-lg"
                 >
                   <ZoomOut className="size-4" strokeWidth={1.5} />
@@ -111,10 +115,11 @@ export function QuickToolbar() {
             </Tooltip>
 
             <button
-              onClick={handleZoomReset}
-              className="px-2 py-1 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors min-w-[3rem] text-center"
+              onClick={handleFitView}
+              disabled={nodes.length === 0}
+              className="px-2 py-1 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors min-w-[3rem] text-center disabled:opacity-50"
             >
-              {zoom}%
+              {currentZoom}%
             </button>
 
             <Tooltip>
@@ -123,13 +128,28 @@ export function QuickToolbar() {
                   variant="ghost"
                   size="icon"
                   onClick={handleZoomIn}
-                  disabled={zoom >= 200}
+                  disabled={nodes.length === 0}
                   className="size-8 rounded-lg"
                 >
                   <ZoomIn className="size-4" strokeWidth={1.5} />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Zoom In</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleFitView}
+                  disabled={nodes.length === 0}
+                  className="size-8 rounded-lg"
+                >
+                  <Maximize2 className="size-4" strokeWidth={1.5} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Fit View</TooltipContent>
             </Tooltip>
           </div>
 

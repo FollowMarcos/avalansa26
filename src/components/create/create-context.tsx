@@ -3,8 +3,19 @@
 import * as React from "react";
 import type { ApiConfig } from "@/types/api-config";
 import type { Generation } from "@/types/generation";
+import type { Canvas, CanvasViewport, ImageNodeData } from "@/types/canvas";
 import { uploadReferenceImage, deleteReferenceImages } from "@/utils/supabase/storage";
 import { createClient } from "@/utils/supabase/client";
+import {
+  type Node,
+  type Edge,
+  type OnNodesChange,
+  type OnEdgesChange,
+  type OnConnect,
+  applyNodeChanges,
+  applyEdgeChanges,
+  addEdge,
+} from "@xyflow/react";
 
 // Gemini 3 Pro Image Preview API types
 export type ImageSize = "1K" | "2K" | "4K";
@@ -79,6 +90,25 @@ interface CreateContextType {
   selectImage: (image: GeneratedImage | null) => void;
   clearHistory: () => void;
 
+  // React Flow nodes and edges
+  nodes: Node<ImageNodeData>[];
+  edges: Edge[];
+  onNodesChange: OnNodesChange<Node<ImageNodeData>>;
+  onEdgesChange: OnEdgesChange<Edge>;
+  onConnect: OnConnect;
+  addImageNode: (image: GeneratedImage) => void;
+  selectImageByNodeId: (nodeId: string) => void;
+
+  // Canvas management
+  currentCanvasId: string | null;
+  canvasList: Canvas[];
+  isSaving: boolean;
+  lastSaved: Date | null;
+  createNewCanvas: () => Promise<void>;
+  switchCanvas: (id: string) => Promise<void>;
+  renameCanvas: (id: string, name: string) => Promise<void>;
+  deleteCanvas: (id: string) => Promise<void>;
+
   // UI state
   viewMode: "canvas" | "gallery";
   setViewMode: (mode: "canvas" | "gallery") => void;
@@ -148,6 +178,19 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [historyStack, setHistoryStack] = React.useState<GeneratedImage[][]>([]);
   const [pendingBatchJobs, setPendingBatchJobs] = React.useState<string[]>([]);
   const abortControllerRef = React.useRef<AbortController | null>(null);
+
+  // React Flow state
+  const [nodes, setNodes] = React.useState<Node<ImageNodeData>[]>([]);
+  const [edges, setEdges] = React.useState<Edge[]>([]);
+  const [viewport, setViewport] = React.useState<CanvasViewport>({ x: 0, y: 0, zoom: 1 });
+
+  // Canvas management state
+  const [currentCanvasId, setCurrentCanvasId] = React.useState<string | null>(null);
+  const [canvasList, setCanvasList] = React.useState<Canvas[]>([]);
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [lastSaved, setLastSaved] = React.useState<Date | null>(null);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
+  const saveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // Poll for batch job completion
   const pollBatchJob = React.useCallback(async (
@@ -579,6 +622,261 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     }
   }, [canRedo, historyIndex, historyStack]);
 
+  // React Flow handlers
+  const onNodesChange: OnNodesChange<Node<ImageNodeData>> = React.useCallback(
+    (changes) => {
+      setNodes((nds) => applyNodeChanges(changes, nds));
+      setHasUnsavedChanges(true);
+    },
+    []
+  );
+
+  const onEdgesChange: OnEdgesChange<Edge> = React.useCallback(
+    (changes) => {
+      setEdges((eds) => applyEdgeChanges(changes, eds));
+      setHasUnsavedChanges(true);
+    },
+    []
+  );
+
+  const onConnect: OnConnect = React.useCallback(
+    (connection) => {
+      setEdges((eds) => addEdge(connection, eds));
+      setHasUnsavedChanges(true);
+    },
+    []
+  );
+
+  // Calculate position for new node (grid layout)
+  const getNextNodePosition = React.useCallback(() => {
+    const COLS = 4;
+    const SPACING_X = 300;
+    const SPACING_Y = 380;
+    const nodeCount = nodes.length;
+    const row = Math.floor(nodeCount / COLS);
+    const col = nodeCount % COLS;
+    return {
+      x: col * SPACING_X + 50,
+      y: row * SPACING_Y + 50,
+    };
+  }, [nodes.length]);
+
+  // Add a new image node from a generated image
+  const addImageNode = React.useCallback((image: GeneratedImage) => {
+    const position = getNextNodePosition();
+    const newNode: Node<ImageNodeData> = {
+      id: `node-${image.id}`,
+      type: 'imageNode',
+      position,
+      data: {
+        generationId: image.id,
+        imageUrl: image.url,
+        prompt: image.prompt,
+        negativePrompt: image.settings.negativePrompt,
+        timestamp: image.timestamp,
+        settings: {
+          aspectRatio: image.settings.aspectRatio,
+          imageSize: image.settings.imageSize,
+          outputCount: image.settings.outputCount,
+          generationSpeed: image.settings.generationSpeed,
+        },
+      },
+    };
+    setNodes((nds) => [...nds, newNode]);
+    setHasUnsavedChanges(true);
+  }, [getNextNodePosition]);
+
+  // Select image by node ID
+  const selectImageByNodeId = React.useCallback((nodeId: string) => {
+    const node = nodes.find((n) => n.id === nodeId);
+    if (node) {
+      const image = history.find((h) => h.id === node.data.generationId);
+      if (image) {
+        setSelectedImage(image);
+      }
+    }
+  }, [nodes, history]);
+
+  // Auto-save canvas with debounce
+  const autoSaveCanvas = React.useCallback(async () => {
+    if (!currentCanvasId || !hasUnsavedChanges) return;
+
+    setIsSaving(true);
+    try {
+      const { updateCanvas } = await import("@/utils/supabase/canvases.server");
+      await updateCanvas(currentCanvasId, {
+        nodes,
+        edges,
+        viewport,
+      });
+      setLastSaved(new Date());
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      console.error("Failed to auto-save canvas:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  }, [currentCanvasId, hasUnsavedChanges, nodes, edges, viewport]);
+
+  // Debounced auto-save effect
+  React.useEffect(() => {
+    if (hasUnsavedChanges && currentCanvasId) {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+      saveTimeoutRef.current = setTimeout(() => {
+        autoSaveCanvas();
+      }, 2000); // 2 second debounce
+    }
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [hasUnsavedChanges, currentCanvasId, autoSaveCanvas]);
+
+  // Create a new canvas
+  const createNewCanvas = React.useCallback(async () => {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    try {
+      const { createCanvas } = await import("@/utils/supabase/canvases.server");
+      const canvas = await createCanvas({
+        user_id: user.id,
+        name: `Canvas ${canvasList.length + 1}`,
+      });
+
+      if (canvas) {
+        setCanvasList((prev) => [canvas, ...prev]);
+        setCurrentCanvasId(canvas.id);
+        setNodes([]);
+        setEdges([]);
+        setViewport({ x: 0, y: 0, zoom: 1 });
+        setHasUnsavedChanges(false);
+      }
+    } catch (error) {
+      console.error("Failed to create canvas:", error);
+    }
+  }, [canvasList.length]);
+
+  // Switch to a different canvas
+  const switchCanvas = React.useCallback(async (id: string) => {
+    // Save current canvas first if there are unsaved changes
+    if (currentCanvasId && hasUnsavedChanges) {
+      await autoSaveCanvas();
+    }
+
+    try {
+      const { getCanvas } = await import("@/utils/supabase/canvases.server");
+      const canvas = await getCanvas(id);
+
+      if (canvas) {
+        setCurrentCanvasId(canvas.id);
+        setNodes(canvas.nodes || []);
+        setEdges(canvas.edges || []);
+        setViewport(canvas.viewport || { x: 0, y: 0, zoom: 1 });
+        setHasUnsavedChanges(false);
+      }
+    } catch (error) {
+      console.error("Failed to switch canvas:", error);
+    }
+  }, [currentCanvasId, hasUnsavedChanges, autoSaveCanvas]);
+
+  // Rename a canvas
+  const renameCanvas = React.useCallback(async (id: string, name: string) => {
+    try {
+      const { updateCanvas } = await import("@/utils/supabase/canvases.server");
+      await updateCanvas(id, { name });
+      setCanvasList((prev) =>
+        prev.map((c) => (c.id === id ? { ...c, name } : c))
+      );
+    } catch (error) {
+      console.error("Failed to rename canvas:", error);
+    }
+  }, []);
+
+  // Delete a canvas
+  const deleteCanvasById = React.useCallback(async (id: string) => {
+    try {
+      const { deleteCanvas } = await import("@/utils/supabase/canvases.server");
+      await deleteCanvas(id);
+      setCanvasList((prev) => prev.filter((c) => c.id !== id));
+
+      // If deleting current canvas, switch to another or create new
+      if (currentCanvasId === id) {
+        const remaining = canvasList.filter((c) => c.id !== id);
+        if (remaining.length > 0) {
+          await switchCanvas(remaining[0].id);
+        } else {
+          await createNewCanvas();
+        }
+      }
+    } catch (error) {
+      console.error("Failed to delete canvas:", error);
+    }
+  }, [currentCanvasId, canvasList, switchCanvas, createNewCanvas]);
+
+  // Load canvases and initialize on mount
+  React.useEffect(() => {
+    async function loadCanvases() {
+      try {
+        const { getUserCanvases, getLatestCanvas, createCanvas } = await import(
+          "@/utils/supabase/canvases.server"
+        );
+
+        const canvases = await getUserCanvases();
+        setCanvasList(canvases);
+
+        if (canvases.length > 0) {
+          // Load the most recent canvas
+          const latest = await getLatestCanvas();
+          if (latest) {
+            setCurrentCanvasId(latest.id);
+            setNodes(latest.nodes || []);
+            setEdges(latest.edges || []);
+            setViewport(latest.viewport || { x: 0, y: 0, zoom: 1 });
+          }
+        } else {
+          // Create a new canvas if none exist
+          const supabase = createClient();
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const newCanvas = await createCanvas({
+              user_id: user.id,
+              name: "Canvas 1",
+            });
+            if (newCanvas) {
+              setCanvasList([newCanvas]);
+              setCurrentCanvasId(newCanvas.id);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load canvases:", error);
+      }
+    }
+    loadCanvases();
+  }, []);
+
+  // Convert history to nodes when history changes (for new generations)
+  const prevHistoryLength = React.useRef(history.length);
+  React.useEffect(() => {
+    // Only add nodes for new history items
+    if (history.length > prevHistoryLength.current) {
+      const newItems = history.slice(0, history.length - prevHistoryLength.current);
+      for (const item of newItems) {
+        // Check if node already exists
+        const exists = nodes.some((n) => n.data.generationId === item.id);
+        if (!exists && item.url) {
+          addImageNode(item);
+        }
+      }
+    }
+    prevHistoryLength.current = history.length;
+  }, [history, nodes, addImageNode]);
+
   const value = React.useMemo(() => ({
     // API selection
     availableApis,
@@ -600,6 +898,24 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     selectedImage,
     selectImage,
     clearHistory,
+    // React Flow
+    nodes,
+    edges,
+    onNodesChange,
+    onEdgesChange,
+    onConnect,
+    addImageNode,
+    selectImageByNodeId,
+    // Canvas management
+    currentCanvasId,
+    canvasList,
+    isSaving,
+    lastSaved,
+    createNewCanvas,
+    switchCanvas,
+    renameCanvas,
+    deleteCanvas: deleteCanvasById,
+    // UI state
     viewMode,
     setViewMode,
     historyPanelOpen,
@@ -623,6 +939,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   }), [
     availableApis, selectedApiId, isLoadingApis, pendingBatchJobs,
     prompt, isPromptExpanded, settings, referenceImages, history, selectedImage,
+    nodes, edges, onNodesChange, onEdgesChange, onConnect, addImageNode, selectImageByNodeId,
+    currentCanvasId, canvasList, isSaving, lastSaved, createNewCanvas, switchCanvas, renameCanvas, deleteCanvasById,
     viewMode, historyPanelOpen, isInputVisible, activeTab, zoom, canUndo, canRedo,
     isGenerating, thinkingSteps,
     updateSettings, addReferenceImages, removeReferenceImage, clearReferenceImages,

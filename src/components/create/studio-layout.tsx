@@ -1,9 +1,11 @@
 "use client";
 
 import * as React from "react";
+import { ReactFlowProvider } from "@xyflow/react";
 import { useCreate } from "./create-context";
 import { CanvasViewport } from "./canvas-viewport";
 import { HistoryIsland } from "./history-island";
+import { CanvasList } from "./canvas-list";
 import { PromptComposer } from "./prompt-composer";
 import { QuickToolbar } from "./quick-toolbar";
 import { ThinkingDisplay } from "./thinking-display";
@@ -14,41 +16,46 @@ export function StudioLayout() {
   const { addReferenceImages } = useCreate();
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="relative h-dvh flex flex-col bg-background text-foreground overflow-hidden"
-    >
-      {/* Grain texture overlay */}
-      <div className="pointer-events-none fixed inset-0 z-50 bg-noise opacity-[0.03]" />
+    <ReactFlowProvider>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="relative h-dvh flex flex-col bg-background text-foreground overflow-hidden"
+      >
+        {/* Grain texture overlay */}
+        <div className="pointer-events-none fixed inset-0 z-50 bg-noise opacity-[0.03]" />
 
-      {/* Main content area */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Center - Canvas/Gallery */}
-        <div className="relative flex-1 flex flex-col overflow-hidden">
-          {/* Quick Toolbar */}
-          <QuickToolbar />
+        {/* Main content area */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Center - Canvas/Gallery */}
+          <div className="relative flex-1 flex flex-col overflow-hidden">
+            {/* Quick Toolbar */}
+            <QuickToolbar />
 
-          {/* Thinking Display */}
-          <ThinkingDisplay />
+            {/* Thinking Display */}
+            <ThinkingDisplay />
 
-          {/* Canvas Viewport */}
-          <CanvasViewport />
+            {/* Canvas Viewport */}
+            <CanvasViewport />
 
-          {/* Gallery View (overlay when active) */}
-          <GenerationGallery />
+            {/* Gallery View (overlay when active) */}
+            <GenerationGallery />
 
-          {/* Prompt Composer */}
-          <PromptComposer />
+            {/* Prompt Composer */}
+            <PromptComposer />
 
-          {/* Floating History Island */}
-          <HistoryIsland />
+            {/* Floating Canvas List (left side) */}
+            <CanvasList />
+
+            {/* Floating History Island (right side) */}
+            <HistoryIsland />
+          </div>
         </div>
-      </div>
 
-      {/* Drag overlay for file uploads */}
-      <DragOverlay onDrop={addReferenceImages} />
-    </motion.div>
+        {/* Drag overlay for file uploads */}
+        <DragOverlay onDrop={addReferenceImages} />
+      </motion.div>
+    </ReactFlowProvider>
   );
 }
 

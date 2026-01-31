@@ -1,39 +1,36 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useCreate } from "./create-context";
 import { ImagePlus, Sparkles, Type, Images } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
+import { FlowCanvas } from "./flow-canvas";
 
 export function CanvasViewport() {
   const {
-    selectedImage,
     isGenerating,
-    zoom,
     referenceImages,
+    nodes,
   } = useCreate();
+
+  const hasNodes = nodes.length > 0;
 
   return (
     <div className="relative flex-1 flex items-center justify-center overflow-hidden bg-muted/30">
-      {/* Subtle grid pattern */}
-      <div
-        className="absolute inset-0 opacity-[0.02]"
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, currentColor 1px, transparent 1px),
-            linear-gradient(to bottom, currentColor 1px, transparent 1px)
-          `,
-          backgroundSize: "40px 40px",
-        }}
-      />
-
       <AnimatePresence mode="wait">
         {isGenerating ? (
           <GeneratingState key="generating" />
-        ) : selectedImage ? (
-          <ImageDisplay key={selectedImage.id} zoom={zoom} />
+        ) : hasNodes ? (
+          <motion.div
+            key="flow-canvas"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0"
+          >
+            <FlowCanvas />
+          </motion.div>
         ) : (
           <EmptyState key="empty" hasReferenceImages={referenceImages.length > 0} />
         )}
@@ -178,36 +175,3 @@ function GeneratingState() {
   );
 }
 
-function ImageDisplay({ zoom }: { zoom: number }) {
-  const { selectedImage } = useCreate();
-
-  if (!selectedImage) return null;
-
-  const scale = zoom / 100;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      className="relative z-10 flex items-center justify-center p-8"
-      style={{ transform: `scale(${scale})` }}
-    >
-      <div className="relative rounded-lg overflow-hidden border border-border shadow-lg">
-        <Image
-          src={selectedImage.url}
-          alt={selectedImage.prompt || "Generated image"}
-          width={selectedImage.settings.imageSize === "4K" ? 1024 : selectedImage.settings.imageSize === "2K" ? 800 : 512}
-          height={selectedImage.settings.imageSize === "4K" ? 1024 : selectedImage.settings.imageSize === "2K" ? 800 : 512}
-          className="max-w-full max-h-[70vh] w-auto h-auto object-contain"
-          unoptimized
-        />
-      </div>
-
-      {/* Image info overlay */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-background border border-border text-xs text-muted-foreground font-mono shadow-sm">
-        {selectedImage.settings.imageSize} | {selectedImage.settings.aspectRatio}
-      </div>
-    </motion.div>
-  );
-}
