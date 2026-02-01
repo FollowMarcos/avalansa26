@@ -173,7 +173,7 @@ interface CreateContextType {
   sessions: SessionWithCount[];
   historyGroupedBySession: boolean;
   setHistoryGroupedBySession: (grouped: boolean) => void;
-  startNewSession: (name?: string) => Promise<void>;
+  startNewSession: (name?: string) => void;
   renameCurrentSession: (name: string) => Promise<void>;
   loadSessions: () => Promise<void>;
   deleteSession: (sessionId: string) => Promise<void>;
@@ -351,6 +351,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [currentSessionName, setCurrentSessionName] = React.useState<string | null>(null);
   const [sessions, setSessions] = React.useState<SessionWithCount[]>([]);
   const [historyGroupedBySession, setHistoryGroupedBySession] = React.useState(true);
+  // Pending session name - set when user clicks "New Session" but no generation yet
+  const [pendingSessionName, setPendingSessionName] = React.useState<string | null>(null);
 
   // localStorage persistence refs
   const persistTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -512,6 +514,15 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         } catch (error) {
           console.error("Failed to backfill sessions:", error);
         }
+      }
+
+      // Opportunistic cleanup of old empty sessions (once per browser session)
+      const cleanupKey = "sessions-cleanup-ran";
+      if (typeof window !== "undefined" && !sessionStorage.getItem(cleanupKey)) {
+        sessionStorage.setItem(cleanupKey, "true");
+        import("@/utils/supabase/sessions.server")
+          .then(({ cleanupEmptySessions }) => cleanupEmptySessions())
+          .catch((error) => console.error("Failed to cleanup empty sessions:", error));
       }
     }
 
@@ -758,43 +769,16 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  // Ensure we have an active session (creates one if needed)
-  const ensureActiveSession = React.useCallback(async (): Promise<string | null> => {
-    try {
-      const { getOrCreateSession } = await import("@/utils/supabase/sessions.server");
-      const session = await getOrCreateSession(currentCanvasId || undefined);
-      if (session) {
-        setCurrentSessionId(session.id);
-        setCurrentSessionName(session.name);
-        // Refresh sessions list
-        loadSessions();
-        return session.id;
-      }
-      return null;
-    } catch (error) {
-      console.error("Failed to ensure active session:", error);
-      return null;
-    }
-  }, [currentCanvasId, loadSessions]);
-
-  // Start a new named session
-  const startNewSession = React.useCallback(async (name?: string) => {
-    try {
-      const { createNamedSession } = await import("@/utils/supabase/sessions.server");
-      const session = await createNamedSession(
-        name || `Session ${sessions.length + 1}`,
-        currentCanvasId || undefined
-      );
-      if (session) {
-        setCurrentSessionId(session.id);
-        setCurrentSessionName(session.name);
-        // Refresh sessions list
-        loadSessions();
-      }
-    } catch (error) {
-      console.error("Failed to start new session:", error);
-    }
-  }, [currentCanvasId, sessions.length, loadSessions]);
+  // Start a new named session (lazy - session created on first generation)
+  const startNewSession = React.useCallback((name?: string) => {
+    // Set pending session name - the actual session will be created
+    // by the API route when the user generates their first image
+    const sessionName = name || `Session ${sessions.length + 1}`;
+    setPendingSessionName(sessionName);
+    setCurrentSessionName(sessionName);
+    // Clear current session so next generation starts a new one
+    setCurrentSessionId(null);
+  }, [sessions.length]);
 
   // Rename current session
   const renameCurrentSession = React.useCallback(async (name: string) => {
@@ -971,8 +955,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       // Build the final prompt
       const finalPrompt = buildFinalPrompt();
 
-      // Ensure we have an active session
-      const sessionId = await ensureActiveSession();
+      // Session is now created server-side AFTER successful generation (lazy creation)
+      // We pass canvasId and pendingSessionName so the API can create the session
 
       // Debug: Log the exact parameters being sent
       const requestParams: {
@@ -984,7 +968,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         outputCount: number;
         referenceImagePaths: string[];
         mode: GenerationSpeed;
-        sessionId: string | null;
+        canvasId: string | null;
+        pendingSessionName: string | null;
       } = {
         apiId: selectedApiId,
         prompt: finalPrompt,
@@ -994,7 +979,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         outputCount: settings.outputCount,
         referenceImagePaths, // Storage paths instead of base64
         mode: settings.generationSpeed, // 'fast' or 'relaxed'
-        sessionId, // Session for grouping
+        canvasId: currentCanvasId, // Canvas for session association
+        pendingSessionName, // User-requested new session name (if any)
       };
       console.log('[Generate] Sending request with params:', {
         ...requestParams,
@@ -1105,6 +1091,15 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         return slot;
       }));
 
+      // Update session state from API response (lazy session creation)
+      if (data.sessionId) {
+        setCurrentSessionId(data.sessionId);
+        // Clear pending session name since it's now created
+        setPendingSessionName(null);
+        // Refresh sessions list to include the new session
+        loadSessions();
+      }
+
       // Save to history for undo
       setHistoryStack(prev => [...prev.slice(0, historyIndex + 1), history]);
       setHistoryIndex(prev => prev + 1);
@@ -1132,7 +1127,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       setThinkingSteps([]);
       // Note: Don't reset slots here - let user see results and select images
     }
-  }, [prompt, referenceImages, settings, history, historyIndex, selectedApiId, getThinkingSteps, buildFinalPrompt, generationSlots, ensureActiveSession]);
+  }, [prompt, referenceImages, settings, history, historyIndex, selectedApiId, getThinkingSteps, buildFinalPrompt, generationSlots, currentCanvasId, pendingSessionName, loadSessions]);
 
   const cancelGeneration = React.useCallback(() => {
     abortControllerRef.current?.abort();

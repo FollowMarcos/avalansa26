@@ -168,9 +168,12 @@ export async function getSession(sessionId: string): Promise<Session | null> {
 
 /**
  * Get user's sessions with generation counts and thumbnails
+ * @param limit - Maximum number of sessions to return
+ * @param includeEmpty - If false (default), filter out sessions with 0 generations
  */
 export async function getUserSessions(
-  limit: number = 50
+  limit: number = 50,
+  includeEmpty: boolean = false
 ): Promise<SessionWithCount[]> {
   const supabase = await createClient();
 
@@ -226,6 +229,11 @@ export async function getUserSessions(
       };
     })
   );
+
+  // Filter out empty sessions unless explicitly requested
+  if (!includeEmpty) {
+    return sessionsWithCounts.filter(s => s.generation_count > 0);
+  }
 
   return sessionsWithCounts;
 }
@@ -402,4 +410,54 @@ export async function needsBackfill(): Promise<boolean> {
   }
 
   return (count ?? 0) > 0;
+}
+
+/**
+ * Clean up empty sessions older than 1 hour.
+ * Called opportunistically on page load to prevent empty session accumulation.
+ */
+export async function cleanupEmptySessions(): Promise<number> {
+  const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return 0;
+
+  // Find sessions older than 1 hour
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+
+  const { data: oldSessions, error } = await supabase
+    .from('sessions')
+    .select('id')
+    .eq('user_id', user.id)
+    .lt('started_at', oneHourAgo);
+
+  if (error || !oldSessions || oldSessions.length === 0) {
+    return 0;
+  }
+
+  // Check each session for generations and delete if empty
+  let deleted = 0;
+  for (const session of oldSessions) {
+    const { count } = await supabase
+      .from('generations')
+      .select('*', { count: 'exact', head: true })
+      .eq('session_id', session.id);
+
+    if (count === 0) {
+      const { error: deleteError } = await supabase
+        .from('sessions')
+        .delete()
+        .eq('id', session.id);
+
+      if (!deleteError) {
+        deleted++;
+      }
+    }
+  }
+
+  if (deleted > 0) {
+    console.log(`[Sessions] Cleaned up ${deleted} empty sessions`);
+  }
+
+  return deleted;
 }

@@ -4,6 +4,7 @@ import { getDecryptedApiKey, getApiConfig } from '@/utils/supabase/api-configs.s
 import { createBatchJob, submitGeminiBatchJob } from '@/utils/supabase/batch-jobs.server';
 import { getImagesAsBase64, uploadGeneratedImage } from '@/utils/supabase/storage.server';
 import { saveGeneration } from '@/utils/supabase/generations.server';
+import { getOrCreateSession, createNamedSession } from '@/utils/supabase/sessions.server';
 import type { BatchJobRequest } from '@/types/batch-job';
 
 export interface GenerateRequest {
@@ -15,7 +16,8 @@ export interface GenerateRequest {
   outputCount?: number;
   referenceImagePaths?: string[]; // Storage paths (not base64)
   mode?: 'fast' | 'relaxed'; // Generation mode
-  sessionId?: string; // Session for grouping generations
+  canvasId?: string; // Canvas for session association
+  pendingSessionName?: string; // User-requested new session name
 }
 
 export interface GeneratedImage {
@@ -31,6 +33,8 @@ export interface GenerateResponse {
   batchJobId?: string;
   mode?: 'fast' | 'relaxed';
   estimatedCompletion?: string;
+  // Session created/used for this generation
+  sessionId?: string;
 }
 
 /**
@@ -54,7 +58,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
 
     // Parse request body
     const body: GenerateRequest = await request.json();
-    const { apiId, prompt, negativePrompt, aspectRatio, imageSize, outputCount = 1, referenceImagePaths, mode = 'fast', sessionId } = body;
+    const { apiId, prompt, negativePrompt, aspectRatio, imageSize, outputCount = 1, referenceImagePaths, mode = 'fast', canvasId, pendingSessionName } = body;
 
     // Debug: Log received parameters
     console.log('[API /generate] Received params:', {
@@ -239,6 +243,24 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
         });
     }
 
+    // Get or create session AFTER successful generation (lazy session creation)
+    // This prevents empty sessions when generation fails
+    let sessionId: string | null = null;
+    try {
+      if (pendingSessionName) {
+        // User explicitly started a new session
+        const session = await createNamedSession(pendingSessionName, canvasId);
+        sessionId = session?.id || null;
+      } else {
+        // Auto-create/reuse session based on 30-min gap rule
+        const session = await getOrCreateSession(canvasId);
+        sessionId = session?.id || null;
+      }
+    } catch (sessionError) {
+      console.error('Failed to create session:', sessionError);
+      // Continue without session - generations will be unsessioned
+    }
+
     // Upload base64 images to storage and get public URLs
     const processedImages: GeneratedImage[] = [];
     for (const image of images) {
@@ -268,7 +290,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
       await saveGeneration({
         user_id: user.id,
         api_config_id: apiId,
-        session_id: sessionId || null,
+        session_id: sessionId,
         prompt: prompt || '',
         negative_prompt: negativePrompt,
         image_url: imageUrl,
@@ -281,7 +303,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
       });
     }
 
-    return NextResponse.json({ success: true, images: processedImages, mode: 'fast' });
+    return NextResponse.json({ success: true, images: processedImages, mode: 'fast', sessionId: sessionId || undefined });
   } catch (error) {
     console.error('Generation error:', error);
     return NextResponse.json(
