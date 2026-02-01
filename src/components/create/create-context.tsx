@@ -446,7 +446,11 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         });
 
       const referencesPromise = import("@/utils/supabase/reference-images.server")
-        .then(({ getUserReferenceImages }) => getUserReferenceImages())
+        .then(async ({ getUserReferenceImages, ensureReferenceImagesBucket }) => {
+          // Ensure bucket is public before fetching (fixes images uploaded before bucket was made public)
+          await ensureReferenceImagesBucket();
+          return getUserReferenceImages();
+        })
         .catch((error) => {
           console.error("Failed to load reference images:", error);
           return [] as ReferenceImageWithUrl[];
