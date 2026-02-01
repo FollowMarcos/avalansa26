@@ -449,7 +449,7 @@ export function PromptComposer() {
                         onChange={(e) => updateSettings({ negativePrompt: e.target.value })}
                         placeholder="blurry, low quality, distorted, watermark…"
                         aria-label="Negative prompt - elements to avoid in generation"
-                        className="w-full bg-transparent text-base placeholder:text-muted-foreground focus:outline-none"
+                        className="w-full bg-transparent text-base placeholder:text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded"
                       />
                     </div>
                   </motion.div>
@@ -498,7 +498,7 @@ export function PromptComposer() {
                     disabled={isGenerating}
                     rows={isPromptExpanded ? 6 : 1}
                     className={cn(
-                      "w-full bg-transparent text-base resize-none focus:outline-none",
+                      "w-full bg-transparent text-base resize-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded",
                       "placeholder:text-muted-foreground",
                       isPromptExpanded ? "min-h-[160px]" : "min-h-[44px] py-3"
                     )}

@@ -287,6 +287,8 @@ export function HistoryIsland() {
         {/* Session header */}
         <button
           onClick={() => toggleSessionExpanded(session.id)}
+          aria-expanded={isExpanded}
+          aria-label={`${sessionName}: ${session.generation_count} images, ${formatSessionTime(session.started_at)}`}
           className={cn(
             "w-full flex items-center gap-2 px-3 py-2 hover:bg-muted/50 transition-colors text-left",
             isCurrentSession && "bg-muted/30"
@@ -335,8 +337,11 @@ export function HistoryIsland() {
           {/* Session actions */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <button className="size-6 rounded hover:bg-muted flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                <MoreHorizontal className="size-3.5 text-muted-foreground" />
+              <button
+                className="size-7 rounded hover:bg-muted flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                aria-label={`Options for ${sessionName}`}
+              >
+                <MoreHorizontal className="size-3.5 text-muted-foreground" aria-hidden="true" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40">
@@ -429,7 +434,8 @@ export function HistoryIsland() {
             value={newSessionName}
             onChange={(e) => setNewSessionName(e.target.value)}
             placeholder="Session name (optional)"
-            className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm"
+            aria-label="Session name"
+            className="w-full px-3 py-2 border border-border rounded-lg bg-background text-sm focus-visible:ring-2 focus-visible:ring-primary/50 focus:outline-none"
             autoFocus
           />
           <AlertDialogFooter>
