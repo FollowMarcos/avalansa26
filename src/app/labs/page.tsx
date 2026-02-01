@@ -4,15 +4,15 @@ import * as React from 'react';
 import Link from 'next/link';
 import {
   Sparkles, ThumbsUp, ThumbsDown, MessageSquare, X, Send, Zap, Clock,
-  Settings, ImagePlus, Ban, ChevronDown,
-  Layers, Library, Server, Command
+  Settings, ImagePlus, Ban, ChevronDown, Maximize2, Minimize2,
+  Layers, Library, Server, Command, Terminal, Palette, Wand2, Gem
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ModeToggle } from '@/components/mode-toggle';
 import { PageShell } from "@/components/layout/page-shell";
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { voteMockup, getUserMockupVotes, removeVote } from '@/utils/supabase/mockup-votes.server';
+import { voteMockup, getUserMockupVotes, removeVote, getAllMockupVoteStats, type MockupVoteStats } from '@/utils/supabase/mockup-votes.server';
 import type { VoteType } from '@/types/mockup-vote';
 
 // Aspect ratio options matching the real composer
@@ -41,18 +41,28 @@ function AspectRatioShape({ ratio, className }: { ratio: string; className?: str
 
 export default function LabsPage() {
   const [votes, setVotes] = React.useState<Record<string, { type: VoteType; feedback: string | null }>>({});
+  const [voteStats, setVoteStats] = React.useState<Record<string, MockupVoteStats>>({});
   const [feedbackOpen, setFeedbackOpen] = React.useState<string | null>(null);
   const [feedbackText, setFeedbackText] = React.useState('');
+  const [showAllFeedback, setShowAllFeedback] = React.useState<string | null>(null);
+
+  const fetchData = React.useCallback(async () => {
+    const [userVotes, stats] = await Promise.all([
+      getUserMockupVotes(),
+      getAllMockupVoteStats()
+    ]);
+
+    const voteMap: Record<string, { type: VoteType; feedback: string | null }> = {};
+    userVotes.forEach((v) => {
+      voteMap[v.mockup_id] = { type: v.vote_type, feedback: v.feedback };
+    });
+    setVotes(voteMap);
+    setVoteStats(stats);
+  }, []);
 
   React.useEffect(() => {
-    getUserMockupVotes().then((userVotes) => {
-      const voteMap: Record<string, { type: VoteType; feedback: string | null }> = {};
-      userVotes.forEach((v) => {
-        voteMap[v.mockup_id] = { type: v.vote_type, feedback: v.feedback };
-      });
-      setVotes(voteMap);
-    });
-  }, []);
+    fetchData();
+  }, [fetchData]);
 
   const handleVote = async (mockupId: string, voteType: VoteType) => {
     const currentVote = votes[mockupId];
@@ -70,6 +80,9 @@ export default function LabsPage() {
         [mockupId]: { type: voteType, feedback: prev[mockupId]?.feedback || null }
       }));
     }
+    // Refresh stats
+    const stats = await getAllMockupVoteStats();
+    setVoteStats(stats);
   };
 
   const handleFeedback = async (mockupId: string) => {
@@ -82,6 +95,9 @@ export default function LabsPage() {
     }));
     setFeedbackOpen(null);
     setFeedbackText('');
+    // Refresh stats
+    const stats = await getAllMockupVoteStats();
+    setVoteStats(stats);
   };
 
   const mockups = [
@@ -93,6 +109,10 @@ export default function LabsPage() {
     { id: 'composer-v6-terminal', title: 'Terminal Style', description: 'Developer-focused monospace design', component: ComposerTerminal },
     { id: 'composer-v7-floating', title: 'Floating Island', description: 'Elevated with prominent shadow', component: ComposerFloating },
     { id: 'composer-v8-gradient', title: 'Gradient Border', description: 'Animated gradient border accent', component: ComposerGradient },
+    { id: 'composer-v9-brutalist', title: 'Brutalist', description: 'Bold borders and raw aesthetic', component: ComposerBrutalist },
+    { id: 'composer-v10-aurora', title: 'Aurora', description: 'Animated aurora borealis gradient', component: ComposerAurora },
+    { id: 'composer-v11-retro', title: 'Retro CRT', description: 'Vintage CRT monitor aesthetic', component: ComposerRetro },
+    { id: 'composer-v12-neumorphic', title: 'Neumorphic', description: 'Soft shadows and pressed elements', component: ComposerNeumorphic },
   ];
 
   return (
@@ -133,6 +153,8 @@ export default function LabsPage() {
           {mockups.map((mockup, index) => {
             const MockupComponent = mockup.component;
             const vote = votes[mockup.id];
+            const stats = voteStats[mockup.id];
+            const feedbackList = stats?.feedback || [];
 
             return (
               <motion.div
@@ -149,50 +171,71 @@ export default function LabsPage() {
                     <p className="text-sm text-muted-foreground/60 mt-0.5">{mockup.description}</p>
                   </div>
 
-                  {/* Voting Buttons */}
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleVote(mockup.id, 'like')}
-                      aria-label={`Like ${mockup.title}`}
-                      aria-pressed={vote?.type === 'like'}
-                      className={cn(
-                        "size-9 rounded-lg transition-colors",
-                        vote?.type === 'like' && "bg-green-500/10 text-green-500 hover:bg-green-500/20"
+                  {/* Voting Buttons with Counters */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleVote(mockup.id, 'like')}
+                        aria-label={`Like ${mockup.title}`}
+                        aria-pressed={vote?.type === 'like'}
+                        className={cn(
+                          "size-9 rounded-lg transition-colors",
+                          vote?.type === 'like' && "bg-green-500/10 text-green-500 hover:bg-green-500/20"
+                        )}
+                      >
+                        <ThumbsUp className="size-4" aria-hidden="true" />
+                      </Button>
+                      {(stats?.likes ?? 0) > 0 && (
+                        <span className="text-xs font-mono text-green-500 min-w-[1.25rem]">{stats?.likes}</span>
                       )}
-                    >
-                      <ThumbsUp className="size-4" aria-hidden="true" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleVote(mockup.id, 'dislike')}
-                      aria-label={`Dislike ${mockup.title}`}
-                      aria-pressed={vote?.type === 'dislike'}
-                      className={cn(
-                        "size-9 rounded-lg transition-colors",
-                        vote?.type === 'dislike' && "bg-red-500/10 text-red-500 hover:bg-red-500/20"
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleVote(mockup.id, 'dislike')}
+                        aria-label={`Dislike ${mockup.title}`}
+                        aria-pressed={vote?.type === 'dislike'}
+                        className={cn(
+                          "size-9 rounded-lg transition-colors",
+                          vote?.type === 'dislike' && "bg-red-500/10 text-red-500 hover:bg-red-500/20"
+                        )}
+                      >
+                        <ThumbsDown className="size-4" aria-hidden="true" />
+                      </Button>
+                      {(stats?.dislikes ?? 0) > 0 && (
+                        <span className="text-xs font-mono text-red-500 min-w-[1.25rem]">{stats?.dislikes}</span>
                       )}
-                    >
-                      <ThumbsDown className="size-4" aria-hidden="true" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        setFeedbackOpen(feedbackOpen === mockup.id ? null : mockup.id);
-                        setFeedbackText(vote?.feedback || '');
-                      }}
-                      aria-label={`Add feedback for ${mockup.title}`}
-                      aria-expanded={feedbackOpen === mockup.id}
-                      className={cn(
-                        "size-9 rounded-lg transition-colors",
-                        vote?.feedback && "bg-blue-500/10 text-blue-500"
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setFeedbackOpen(feedbackOpen === mockup.id ? null : mockup.id);
+                          setFeedbackText(vote?.feedback || '');
+                        }}
+                        aria-label={`Add feedback for ${mockup.title}`}
+                        aria-expanded={feedbackOpen === mockup.id}
+                        className={cn(
+                          "size-9 rounded-lg transition-colors",
+                          vote?.feedback && "bg-blue-500/10 text-blue-500"
+                        )}
+                      >
+                        <MessageSquare className="size-4" aria-hidden="true" />
+                      </Button>
+                      {feedbackList.length > 0 && (
+                        <button
+                          onClick={() => setShowAllFeedback(showAllFeedback === mockup.id ? null : mockup.id)}
+                          className="text-xs font-mono text-blue-500 hover:text-blue-400 transition-colors"
+                          aria-label={`View ${feedbackList.length} feedback comments`}
+                        >
+                          {feedbackList.length}
+                        </button>
                       )}
-                    >
-                      <MessageSquare className="size-4" aria-hidden="true" />
-                    </Button>
+                    </div>
                   </div>
                 </div>
 
@@ -231,6 +274,40 @@ export default function LabsPage() {
                   )}
                 </AnimatePresence>
 
+                {/* All Feedback Display */}
+                <AnimatePresence>
+                  {showAllFeedback === mockup.id && feedbackList.length > 0 && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden border-b border-white/5"
+                    >
+                      <div className="px-6 py-4 bg-blue-500/5 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-sm font-medium text-blue-400">Feedback ({feedbackList.length})</h3>
+                          <Button size="icon" variant="ghost" onClick={() => setShowAllFeedback(null)} aria-label="Close feedback list" className="size-7 rounded-lg">
+                            <X className="size-3" aria-hidden="true" />
+                          </Button>
+                        </div>
+                        <div className="space-y-2 max-h-48 overflow-y-auto">
+                          {feedbackList.map((fb, i) => (
+                            <div key={i} className="flex items-start gap-3 p-3 rounded-lg bg-white/5">
+                              <MessageSquare className="size-4 text-blue-400 mt-0.5 flex-shrink-0" aria-hidden="true" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-zinc-300">{fb.feedback}</p>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {new Date(fb.created_at).toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {/* Preview Area - Canvas-like background */}
                 <div className="relative min-h-[320px] bg-muted/30 flex items-end justify-center p-8">
                   {/* Grain texture overlay like the real canvas */}
@@ -259,6 +336,7 @@ function ComposerGlass() {
   const [count, setCount] = React.useState(1);
   const [speed, setSpeed] = React.useState<'fast' | 'batch'>('fast');
   const [showNegative, setShowNegative] = React.useState(false);
+  const [isExpanded, setIsExpanded] = React.useState(false);
 
   return (
     <div className="relative">
@@ -359,7 +437,9 @@ function ComposerGlass() {
 
         {/* Input area */}
         <div className="p-4">
-          <textarea placeholder="Imagine something beautiful…" aria-label="Image prompt" className="w-full bg-transparent text-base text-zinc-200 placeholder:text-zinc-600 focus:outline-none resize-none min-h-[60px]" />
+          <motion.div animate={{ height: isExpanded ? 200 : 60 }} transition={{ duration: 0.2 }}>
+            <textarea placeholder="Imagine something beautiful…" aria-label="Image prompt" className="w-full h-full bg-transparent text-base text-zinc-200 placeholder:text-zinc-600 focus:outline-none resize-none" />
+          </motion.div>
           <div className="flex items-center justify-between mt-3">
             <div className="flex items-center gap-2">
               <button className="size-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:bg-white/10 transition-colors" aria-label="Add reference images">
@@ -367,6 +447,14 @@ function ComposerGlass() {
               </button>
               <button className="size-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:bg-white/10 transition-colors" aria-label="Saved library">
                 <Library className="size-4" aria-hidden="true" />
+              </button>
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className={cn("size-10 rounded-xl border flex items-center justify-center transition-colors", isExpanded ? "bg-white/10 border-white/20 text-zinc-300" : "bg-white/5 border-white/10 text-zinc-500 hover:text-zinc-300 hover:bg-white/10")}
+                aria-label={isExpanded ? "Collapse prompt" : "Expand prompt"}
+                aria-expanded={isExpanded}
+              >
+                {isExpanded ? <Minimize2 className="size-4" aria-hidden="true" /> : <Maximize2 className="size-4" aria-hidden="true" />}
               </button>
             </div>
             <button className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-medium text-sm shadow-lg shadow-violet-500/25 flex items-center gap-2 hover:shadow-violet-500/40 transition-shadow" aria-label="Generate image">
@@ -390,15 +478,23 @@ function ComposerCommand() {
   const [count, setCount] = React.useState(1);
   const [speed, setSpeed] = React.useState<'fast' | 'batch'>('fast');
   const [showNegative, setShowNegative] = React.useState(false);
+  const [isExpanded, setIsExpanded] = React.useState(false);
 
   return (
     <div className="bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
       {/* Search-like header */}
-      <div className="flex items-center gap-3 px-4 py-4 border-b border-white/5">
-        <Command className="size-5 text-violet-400" aria-hidden="true" />
-        <input type="text" placeholder="What do you want to create?" aria-label="Image prompt" className="flex-1 bg-transparent text-base text-zinc-200 placeholder:text-zinc-600 focus:outline-none" />
+      <motion.div animate={{ height: isExpanded ? 120 : 56 }} transition={{ duration: 0.2 }} className="flex items-start gap-3 px-4 py-4 border-b border-white/5">
+        <Command className="size-5 text-violet-400 mt-0.5" aria-hidden="true" />
+        {isExpanded ? (
+          <textarea placeholder="What do you want to create?" aria-label="Image prompt" className="flex-1 bg-transparent text-base text-zinc-200 placeholder:text-zinc-600 focus:outline-none resize-none h-full" />
+        ) : (
+          <input type="text" placeholder="What do you want to create?" aria-label="Image prompt" className="flex-1 bg-transparent text-base text-zinc-200 placeholder:text-zinc-600 focus:outline-none" />
+        )}
+        <button onClick={() => setIsExpanded(!isExpanded)} className="size-8 rounded-lg flex items-center justify-center hover:bg-zinc-800 transition-colors" aria-label={isExpanded ? "Collapse" : "Expand"}>
+          {isExpanded ? <Minimize2 className="size-4 text-zinc-400" /> : <Maximize2 className="size-4 text-zinc-400" />}
+        </button>
         <kbd className="px-2 py-1 text-[10px] font-mono bg-zinc-800 rounded border border-zinc-700 text-zinc-400">⌘K</kbd>
-      </div>
+      </motion.div>
 
       {/* Settings bar */}
       <div className="flex items-center gap-2 px-4 py-3 bg-zinc-800/50 border-b border-white/5 overflow-x-auto">
@@ -507,6 +603,7 @@ function ComposerMinimal() {
   const [count, setCount] = React.useState(1);
   const [speed, setSpeed] = React.useState<'fast' | 'batch'>('fast');
   const [showNegative, setShowNegative] = React.useState(false);
+  const [isExpanded, setIsExpanded] = React.useState(false);
 
   return (
     <div className="bg-zinc-900/90 backdrop-blur-xl border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden">
@@ -588,7 +685,12 @@ function ComposerMinimal() {
         <button className="size-10 rounded-xl bg-zinc-800/50 flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors flex-shrink-0" aria-label="Saved library">
           <Library className="size-4" strokeWidth={1.5} aria-hidden="true" />
         </button>
-        <textarea placeholder="Describe the image you want to create…" aria-label="Image prompt" className="flex-1 bg-transparent text-base text-zinc-200 resize-none focus:outline-none placeholder:text-zinc-600 min-h-[44px] py-2" rows={1} />
+        <button onClick={() => setIsExpanded(!isExpanded)} className={cn("size-10 rounded-xl flex items-center justify-center transition-colors flex-shrink-0", isExpanded ? "bg-zinc-700 text-zinc-300" : "bg-zinc-800/50 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800")} aria-label={isExpanded ? "Collapse prompt" : "Expand prompt"}>
+          {isExpanded ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+        </button>
+        <motion.div animate={{ height: isExpanded ? 120 : 44 }} transition={{ duration: 0.2 }} className="flex-1">
+          <textarea placeholder="Describe the image you want to create…" aria-label="Image prompt" className="w-full h-full bg-transparent text-base text-zinc-200 resize-none focus:outline-none placeholder:text-zinc-600 py-2" />
+        </motion.div>
       </div>
     </div>
   );
@@ -1003,6 +1105,7 @@ function ComposerGradient() {
   const [count, setCount] = React.useState(1);
   const [speed, setSpeed] = React.useState<'fast' | 'batch'>('fast');
   const [showNegative, setShowNegative] = React.useState(false);
+  const [isExpanded, setIsExpanded] = React.useState(false);
 
   return (
     <div className="relative p-[1px] rounded-2xl bg-gradient-to-r from-violet-500 via-pink-500 to-orange-500">
@@ -1073,7 +1176,9 @@ function ComposerGradient() {
 
         {/* Input area */}
         <div className="p-4">
-          <textarea placeholder="Describe your creative vision…" aria-label="Image prompt" className="w-full bg-transparent text-base text-zinc-200 placeholder:text-zinc-600 focus:outline-none resize-none min-h-[60px]" />
+          <motion.div animate={{ height: isExpanded ? 160 : 60 }} transition={{ duration: 0.2 }}>
+            <textarea placeholder="Describe your creative vision…" aria-label="Image prompt" className="w-full h-full bg-transparent text-base text-zinc-200 placeholder:text-zinc-600 focus:outline-none resize-none" />
+          </motion.div>
           <div className="flex items-center justify-between mt-3">
             <div className="flex items-center gap-2">
               <button className="size-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:border-zinc-700 transition-colors" aria-label="Add reference images">
@@ -1082,6 +1187,9 @@ function ComposerGradient() {
               <button className="size-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:border-zinc-700 transition-colors" aria-label="Library">
                 <Library className="size-4" aria-hidden="true" />
               </button>
+              <button onClick={() => setIsExpanded(!isExpanded)} className={cn("size-10 rounded-xl border flex items-center justify-center transition-colors", isExpanded ? "bg-zinc-800 border-zinc-700 text-zinc-300" : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300")} aria-label={isExpanded ? "Collapse" : "Expand"}>
+                {isExpanded ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+              </button>
             </div>
             <button className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 via-pink-500 to-orange-500 text-white font-medium text-sm shadow-lg shadow-pink-500/20 flex items-center gap-2 hover:shadow-pink-500/30 transition-shadow" aria-label="Generate image">
               <Sparkles className="size-4" aria-hidden="true" />
@@ -1089,6 +1197,389 @@ function ComposerGradient() {
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// MOCKUP 9: Brutalist
+// Bold borders and raw aesthetic
+// ============================================================================
+function ComposerBrutalist() {
+  const [aspectRatio, setAspectRatio] = React.useState('1:1');
+  const [quality, setQuality] = React.useState('2K');
+  const [count, setCount] = React.useState(1);
+  const [speed, setSpeed] = React.useState<'fast' | 'batch'>('fast');
+  const [showNegative, setShowNegative] = React.useState(false);
+  const [isExpanded, setIsExpanded] = React.useState(false);
+
+  return (
+    <div className="bg-black border-4 border-white rounded-none shadow-[8px_8px_0px_0px_rgba(255,255,255,0.3)] overflow-hidden">
+      {/* Bold header */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b-4 border-white bg-white text-black">
+        <span className="text-sm font-black uppercase tracking-wider">CREATE</span>
+        <div className="flex-1" />
+        <button className="px-3 py-1 border-2 border-black text-xs font-bold uppercase hover:bg-black hover:text-white transition-colors" aria-label="API">
+          NANO PRO
+        </button>
+      </div>
+
+      {/* Settings */}
+      <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b-2 border-white/30">
+        <button onClick={() => setAspectRatio(aspectRatio === '1:1' ? '16:9' : '1:1')} className="px-3 py-2 border-2 border-white text-xs font-mono uppercase hover:bg-white hover:text-black transition-colors" aria-label={`Aspect ratio ${aspectRatio}`}>
+          {aspectRatio}
+        </button>
+        {QUALITY_OPTIONS.map((q) => (
+          <button key={q} onClick={() => setQuality(q)} className={cn("px-3 py-2 border-2 text-xs font-mono uppercase transition-colors", quality === q ? "bg-white text-black border-white" : "border-white/50 hover:border-white")} aria-label={`Quality ${q}`}>
+            {q}
+          </button>
+        ))}
+        {COUNT_OPTIONS.map((n) => (
+          <button key={n} onClick={() => setCount(n)} className={cn("size-10 border-2 text-sm font-mono transition-colors", count === n ? "bg-white text-black border-white" : "border-white/50 hover:border-white")} aria-label={`Count ${n}`}>
+            {n}
+          </button>
+        ))}
+        <button onClick={() => setSpeed(speed === 'fast' ? 'batch' : 'fast')} className={cn("px-3 py-2 border-2 text-xs font-mono uppercase transition-colors flex items-center gap-2", speed === 'fast' ? "bg-amber-400 text-black border-amber-400" : "border-white/50 hover:border-white")} aria-label={speed === 'fast' ? 'Fast mode' : 'Batch mode'}>
+          {speed === 'fast' ? <Zap className="size-3" /> : <Clock className="size-3" />}
+          {speed.toUpperCase()}
+        </button>
+        <button onClick={() => setShowNegative(!showNegative)} className={cn("size-10 border-2 flex items-center justify-center transition-colors", showNegative ? "bg-red-500 border-red-500" : "border-white/50 hover:border-white")} aria-label="Negative prompt">
+          <Ban className="size-4" />
+        </button>
+      </div>
+
+      {/* Negative */}
+      <AnimatePresence>
+        {showNegative && (
+          <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+            <div className="px-4 py-3 border-b-2 border-red-500/50 bg-red-500/10">
+              <input type="text" placeholder="EXCLUDE: BLURRY, LOW QUALITY..." aria-label="Negative prompt" className="w-full bg-transparent text-sm font-mono uppercase placeholder:text-white/30 focus:outline-none" />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Input */}
+      <div className="p-4">
+        <motion.div animate={{ height: isExpanded ? 160 : 80 }} transition={{ duration: 0.15 }}>
+          <textarea placeholder="DESCRIBE YOUR IMAGE..." aria-label="Image prompt" className="w-full h-full bg-transparent text-lg font-mono uppercase placeholder:text-white/20 focus:outline-none resize-none" />
+        </motion.div>
+        <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center gap-2">
+            <button className="size-12 border-2 border-white/50 flex items-center justify-center hover:bg-white hover:text-black transition-colors" aria-label="Add images">
+              <ImagePlus className="size-5" />
+            </button>
+            <button className="size-12 border-2 border-white/50 flex items-center justify-center hover:bg-white hover:text-black transition-colors" aria-label="Library">
+              <Library className="size-5" />
+            </button>
+            <button onClick={() => setIsExpanded(!isExpanded)} className={cn("size-12 border-2 flex items-center justify-center transition-colors", isExpanded ? "bg-white text-black border-white" : "border-white/50 hover:border-white")} aria-label={isExpanded ? "Collapse" : "Expand"}>
+              {isExpanded ? <Minimize2 className="size-5" /> : <Maximize2 className="size-5" />}
+            </button>
+          </div>
+          <button className="px-8 py-4 bg-white text-black font-black text-sm uppercase tracking-wider hover:bg-zinc-200 transition-colors flex items-center gap-2" aria-label="Generate">
+            <Sparkles className="size-4" />
+            GENERATE
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// MOCKUP 10: Aurora
+// Animated aurora borealis gradient
+// ============================================================================
+function ComposerAurora() {
+  const [aspectRatio, setAspectRatio] = React.useState('1:1');
+  const [quality, setQuality] = React.useState('2K');
+  const [count, setCount] = React.useState(1);
+  const [speed, setSpeed] = React.useState<'fast' | 'batch'>('fast');
+  const [showNegative, setShowNegative] = React.useState(false);
+  const [isExpanded, setIsExpanded] = React.useState(false);
+
+  return (
+    <div className="relative">
+      {/* Aurora effect */}
+      <div className="absolute inset-0 bg-gradient-to-r from-green-500/20 via-cyan-500/20 to-purple-500/20 rounded-2xl blur-2xl animate-pulse" aria-hidden="true" />
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-emerald-500/10 to-transparent rounded-2xl" aria-hidden="true" />
+
+      <div className="relative bg-zinc-950/95 backdrop-blur-xl border border-emerald-500/20 rounded-2xl shadow-2xl overflow-hidden">
+        {/* Settings with aurora accent */}
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-emerald-500/10 overflow-x-auto">
+          <button className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors" aria-label="API">
+            <Server className="size-3 text-emerald-400" aria-hidden="true" />
+            <span className="text-xs font-mono text-emerald-300">Nano Pro</span>
+          </button>
+
+          <button onClick={() => setAspectRatio(aspectRatio === '1:1' ? '16:9' : '1:1')} className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/20 hover:bg-cyan-500/20 transition-colors" aria-label={`Aspect ratio ${aspectRatio}`}>
+            <AspectRatioShape ratio={aspectRatio} className="text-cyan-400" />
+            <span className="text-xs font-mono text-cyan-300">{aspectRatio}</span>
+          </button>
+
+          <div className="flex items-center p-0.5 rounded-xl bg-zinc-900/50 border border-white/5" role="radiogroup" aria-label="Quality">
+            {QUALITY_OPTIONS.map((q) => (
+              <button key={q} onClick={() => setQuality(q)} role="radio" aria-checked={quality === q} className={cn("px-2.5 py-1 rounded-lg text-xs font-mono transition-all", quality === q ? "bg-gradient-to-r from-emerald-500 to-cyan-500 text-white" : "text-zinc-500 hover:text-zinc-300")}>
+                {q}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-0.5" role="radiogroup" aria-label="Count">
+            {COUNT_OPTIONS.map((n) => (
+              <button key={n} onClick={() => setCount(n)} role="radio" aria-checked={count === n} className={cn("size-7 rounded-lg text-xs font-mono transition-all", count === n ? "bg-purple-500 text-white" : "text-zinc-500 hover:text-zinc-300")}>
+                {n}
+              </button>
+            ))}
+          </div>
+
+          <button onClick={() => setSpeed(speed === 'fast' ? 'batch' : 'fast')} className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-xl transition-colors", speed === 'fast' ? "bg-amber-500/10 border border-amber-500/20" : "bg-zinc-900/50 border border-white/5")} aria-label={speed === 'fast' ? 'Fast' : 'Batch'}>
+            {speed === 'fast' ? <Zap className="size-3 text-amber-400" /> : <Clock className="size-3 text-zinc-400" />}
+            <span className={cn("text-xs font-mono", speed === 'fast' ? "text-amber-300" : "text-zinc-400")}>{speed === 'fast' ? 'Fast' : 'Batch'}</span>
+          </button>
+
+          <button onClick={() => setShowNegative(!showNegative)} className={cn("size-7 rounded-lg flex items-center justify-center transition-colors", showNegative ? "bg-red-500/20 border border-red-500/30" : "bg-zinc-900/50 border border-white/5 hover:bg-zinc-800")} aria-label="Negative prompt">
+            <Ban className="size-3 text-zinc-400" />
+          </button>
+        </div>
+
+        {/* Negative */}
+        <AnimatePresence>
+          {showNegative && (
+            <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+              <div className="px-4 py-3 bg-red-500/5 border-b border-red-500/10">
+                <input type="text" placeholder="Negative: blurry, distorted…" aria-label="Negative prompt" className="w-full bg-transparent text-sm text-zinc-300 placeholder:text-zinc-600 focus:outline-none" />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Input */}
+        <div className="p-4">
+          <motion.div animate={{ height: isExpanded ? 160 : 60 }} transition={{ duration: 0.2 }}>
+            <textarea placeholder="Describe the aurora of your imagination…" aria-label="Image prompt" className="w-full h-full bg-transparent text-base text-zinc-200 placeholder:text-zinc-600 focus:outline-none resize-none" />
+          </motion.div>
+          <div className="flex items-center justify-between mt-3">
+            <div className="flex items-center gap-2">
+              <button className="size-10 rounded-xl bg-zinc-900/50 border border-white/5 flex items-center justify-center text-zinc-500 hover:text-emerald-400 transition-colors" aria-label="Add images">
+                <ImagePlus className="size-4" />
+              </button>
+              <button className="size-10 rounded-xl bg-zinc-900/50 border border-white/5 flex items-center justify-center text-zinc-500 hover:text-cyan-400 transition-colors" aria-label="Library">
+                <Library className="size-4" />
+              </button>
+              <button onClick={() => setIsExpanded(!isExpanded)} className={cn("size-10 rounded-xl border flex items-center justify-center transition-colors", isExpanded ? "bg-purple-500/20 border-purple-500/30 text-purple-300" : "bg-zinc-900/50 border-white/5 text-zinc-500 hover:text-purple-400")} aria-label={isExpanded ? "Collapse" : "Expand"}>
+                {isExpanded ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+              </button>
+            </div>
+            <button className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 via-cyan-500 to-purple-500 text-white font-medium text-sm shadow-lg shadow-emerald-500/20 flex items-center gap-2" aria-label="Generate">
+              <Sparkles className="size-4" />
+              Illuminate
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// MOCKUP 11: Retro CRT
+// Vintage CRT monitor aesthetic
+// ============================================================================
+function ComposerRetro() {
+  const [aspectRatio, setAspectRatio] = React.useState('1:1');
+  const [quality, setQuality] = React.useState('2K');
+  const [count, setCount] = React.useState(1);
+  const [speed, setSpeed] = React.useState<'fast' | 'batch'>('fast');
+  const [showNegative, setShowNegative] = React.useState(false);
+  const [isExpanded, setIsExpanded] = React.useState(false);
+
+  return (
+    <div className="relative">
+      {/* CRT bezel */}
+      <div className="absolute inset-0 bg-gradient-to-b from-zinc-700 to-zinc-800 rounded-3xl" aria-hidden="true" />
+      <div className="absolute inset-2 bg-zinc-900 rounded-2xl" aria-hidden="true" />
+
+      {/* Scanlines overlay */}
+      <div className="absolute inset-4 pointer-events-none bg-[repeating-linear-gradient(0deg,transparent,transparent_2px,rgba(0,0,0,0.1)_2px,rgba(0,0,0,0.1)_4px)] rounded-xl z-10" aria-hidden="true" />
+
+      {/* Screen glow */}
+      <div className="absolute inset-4 bg-green-500/5 rounded-xl" aria-hidden="true" />
+
+      <div className="relative m-4 bg-zinc-950 rounded-xl overflow-hidden border border-green-500/20">
+        {/* CRT header */}
+        <div className="flex items-center gap-3 px-4 py-2 border-b border-green-500/20 bg-green-500/5">
+          <div className="size-2 rounded-full bg-green-500 animate-pulse" aria-hidden="true" />
+          <span className="text-xs font-mono text-green-400 uppercase tracking-widest">Image Generator v1.0</span>
+          <div className="flex-1" />
+          <span className="text-xs font-mono text-green-500/50">READY</span>
+        </div>
+
+        {/* Config line */}
+        <div className="flex flex-wrap items-center gap-2 px-4 py-2 border-b border-green-500/10 font-mono text-xs text-green-400">
+          <span className="text-green-500/50">&gt;</span>
+          <button className="hover:text-green-300 transition-colors" aria-label="API">api:nano</button>
+          <span className="text-green-500/30">|</span>
+          <button onClick={() => setAspectRatio(aspectRatio === '1:1' ? '16:9' : '1:1')} className="hover:text-green-300 transition-colors" aria-label={`Ratio ${aspectRatio}`}>ratio:{aspectRatio}</button>
+          <span className="text-green-500/30">|</span>
+          {QUALITY_OPTIONS.map((q) => (
+            <button key={q} onClick={() => setQuality(q)} className={cn("transition-colors", quality === q ? "text-green-300 underline" : "text-green-400/50 hover:text-green-300")} aria-label={`Quality ${q}`}>
+              {q.toLowerCase()}
+            </button>
+          ))}
+          <span className="text-green-500/30">|</span>
+          <span className="text-green-500/50">n=</span>
+          {COUNT_OPTIONS.map((n) => (
+            <button key={n} onClick={() => setCount(n)} className={cn("transition-colors", count === n ? "text-green-300" : "text-green-400/50 hover:text-green-300")} aria-label={`Count ${n}`}>
+              {n}
+            </button>
+          ))}
+          <span className="text-green-500/30">|</span>
+          <button onClick={() => setSpeed(speed === 'fast' ? 'batch' : 'fast')} className={cn("transition-colors", speed === 'fast' ? "text-amber-400" : "text-green-400/50")} aria-label={speed === 'fast' ? 'Fast' : 'Batch'}>
+            {speed}
+          </button>
+          <button onClick={() => setShowNegative(!showNegative)} className={cn("transition-colors ml-auto", showNegative ? "text-red-400" : "text-green-400/50")} aria-label="Negative">
+            [neg]
+          </button>
+        </div>
+
+        {/* Negative */}
+        <AnimatePresence>
+          {showNegative && (
+            <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+              <div className="flex items-center gap-2 px-4 py-2 border-b border-red-500/20 bg-red-500/5 font-mono text-xs">
+                <span className="text-red-400">&gt; exclude:</span>
+                <input type="text" placeholder="blurry, artifacts..." aria-label="Negative prompt" className="flex-1 bg-transparent text-red-300 placeholder:text-red-400/30 focus:outline-none" />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Input */}
+        <div className="p-4">
+          <div className="flex items-start gap-2 font-mono">
+            <span className="text-green-500 mt-1">&gt;</span>
+            <motion.div animate={{ height: isExpanded ? 120 : 60 }} transition={{ duration: 0.2 }} className="flex-1">
+              <textarea placeholder="Enter prompt..." aria-label="Image prompt" className="w-full h-full bg-transparent text-sm text-green-300 placeholder:text-green-500/30 focus:outline-none resize-none caret-green-400" />
+            </motion.div>
+          </div>
+          <div className="flex items-center justify-between mt-4 font-mono text-xs">
+            <div className="flex items-center gap-2">
+              <button className="px-3 py-1.5 border border-green-500/30 text-green-400 hover:bg-green-500/10 transition-colors flex items-center gap-1.5" aria-label="Add images">
+                <ImagePlus className="size-3" />
+                [img]
+              </button>
+              <button className="px-3 py-1.5 border border-green-500/30 text-green-400 hover:bg-green-500/10 transition-colors flex items-center gap-1.5" aria-label="Library">
+                <Library className="size-3" />
+                [lib]
+              </button>
+              <button onClick={() => setIsExpanded(!isExpanded)} className={cn("px-3 py-1.5 border transition-colors flex items-center gap-1.5", isExpanded ? "border-green-400 bg-green-500/10 text-green-300" : "border-green-500/30 text-green-400 hover:bg-green-500/10")} aria-label={isExpanded ? "Collapse" : "Expand"}>
+                {isExpanded ? <Minimize2 className="size-3" /> : <Maximize2 className="size-3" />}
+                [{isExpanded ? 'min' : 'max'}]
+              </button>
+            </div>
+            <button className="px-4 py-2 bg-green-500 text-black font-bold uppercase tracking-wider hover:bg-green-400 transition-colors flex items-center gap-2" aria-label="Execute">
+              <Sparkles className="size-3" />
+              EXECUTE
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// MOCKUP 12: Neumorphic
+// Soft shadows and pressed elements
+// ============================================================================
+function ComposerNeumorphic() {
+  const [aspectRatio, setAspectRatio] = React.useState('1:1');
+  const [quality, setQuality] = React.useState('2K');
+  const [count, setCount] = React.useState(1);
+  const [speed, setSpeed] = React.useState<'fast' | 'batch'>('fast');
+  const [showNegative, setShowNegative] = React.useState(false);
+  const [isExpanded, setIsExpanded] = React.useState(false);
+
+  const neumorphicBtn = "bg-zinc-800 shadow-[inset_-2px_-2px_4px_rgba(255,255,255,0.05),inset_2px_2px_4px_rgba(0,0,0,0.5)] rounded-xl";
+  const neumorphicBtnActive = "bg-zinc-800 shadow-[inset_2px_2px_4px_rgba(0,0,0,0.5),inset_-2px_-2px_4px_rgba(255,255,255,0.05)] rounded-xl";
+
+  return (
+    <div className="bg-zinc-800 rounded-3xl p-6 shadow-[20px_20px_60px_#1a1a1a,-20px_-20px_60px_#363636]">
+      {/* Settings */}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <button className={cn(neumorphicBtn, "px-4 py-2.5 flex items-center gap-2")} aria-label="API">
+          <Server className="size-4 text-zinc-400" />
+          <span className="text-sm font-mono text-zinc-300">Nano Pro</span>
+        </button>
+
+        <button onClick={() => setAspectRatio(aspectRatio === '1:1' ? '16:9' : '1:1')} className={cn(neumorphicBtn, "px-4 py-2.5 flex items-center gap-2")} aria-label={`Ratio ${aspectRatio}`}>
+          <AspectRatioShape ratio={aspectRatio} className="text-zinc-400" />
+          <span className="text-sm font-mono text-zinc-300">{aspectRatio}</span>
+        </button>
+
+        <div className="flex items-center gap-1">
+          {QUALITY_OPTIONS.map((q) => (
+            <button key={q} onClick={() => setQuality(q)} className={cn("px-3 py-2.5 text-xs font-mono transition-all", quality === q ? neumorphicBtnActive + " text-zinc-100" : neumorphicBtn + " text-zinc-400")} aria-label={`Quality ${q}`}>
+              {q}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-1">
+          {COUNT_OPTIONS.map((n) => (
+            <button key={n} onClick={() => setCount(n)} className={cn("size-10 text-sm font-mono transition-all", count === n ? neumorphicBtnActive + " text-zinc-100" : neumorphicBtn + " text-zinc-400")} aria-label={`Count ${n}`}>
+              {n}
+            </button>
+          ))}
+        </div>
+
+        <button onClick={() => setSpeed(speed === 'fast' ? 'batch' : 'fast')} className={cn("px-4 py-2.5 flex items-center gap-2 transition-all", speed === 'fast' ? neumorphicBtnActive : neumorphicBtn)} aria-label={speed === 'fast' ? 'Fast' : 'Batch'}>
+          {speed === 'fast' ? <Zap className="size-4 text-amber-400" /> : <Clock className="size-4 text-zinc-400" />}
+          <span className={cn("text-sm font-mono", speed === 'fast' ? "text-amber-300" : "text-zinc-400")}>{speed === 'fast' ? 'Fast' : 'Batch'}</span>
+        </button>
+
+        <button onClick={() => setShowNegative(!showNegative)} className={cn("size-10 flex items-center justify-center transition-all", showNegative ? neumorphicBtnActive : neumorphicBtn)} aria-label="Negative">
+          <Ban className={cn("size-4", showNegative ? "text-red-400" : "text-zinc-400")} />
+        </button>
+      </div>
+
+      {/* Negative */}
+      <AnimatePresence>
+        {showNegative && (
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mb-4">
+            <div className={cn(neumorphicBtnActive, "px-4 py-3")}>
+              <input type="text" placeholder="Negative: blurry, low quality…" aria-label="Negative prompt" className="w-full bg-transparent text-sm text-zinc-300 placeholder:text-zinc-600 focus:outline-none" />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Input area */}
+      <div className={cn(neumorphicBtnActive, "p-4 mb-4")}>
+        <motion.div animate={{ height: isExpanded ? 140 : 60 }} transition={{ duration: 0.2 }}>
+          <textarea placeholder="Describe your image…" aria-label="Image prompt" className="w-full h-full bg-transparent text-base text-zinc-200 placeholder:text-zinc-600 focus:outline-none resize-none" />
+        </motion.div>
+      </div>
+
+      {/* Actions */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <button className={cn(neumorphicBtn, "size-12 flex items-center justify-center")} aria-label="Add images">
+            <ImagePlus className="size-5 text-zinc-400" />
+          </button>
+          <button className={cn(neumorphicBtn, "size-12 flex items-center justify-center")} aria-label="Library">
+            <Library className="size-5 text-zinc-400" />
+          </button>
+          <button onClick={() => setIsExpanded(!isExpanded)} className={cn("size-12 flex items-center justify-center transition-all", isExpanded ? neumorphicBtnActive : neumorphicBtn)} aria-label={isExpanded ? "Collapse" : "Expand"}>
+            {isExpanded ? <Minimize2 className="size-5 text-zinc-300" /> : <Maximize2 className="size-5 text-zinc-400" />}
+          </button>
+        </div>
+        <button className="px-8 py-4 rounded-xl bg-gradient-to-r from-violet-500 to-purple-500 text-white font-medium text-sm shadow-lg shadow-violet-500/30 flex items-center gap-2 hover:shadow-violet-500/50 transition-shadow" aria-label="Generate">
+          <Sparkles className="size-4" />
+          Generate
+        </button>
       </div>
     </div>
   );

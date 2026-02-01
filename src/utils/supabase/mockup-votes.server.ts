@@ -121,3 +121,59 @@ export async function updateVoteFeedback(
 
   return vote;
 }
+
+/**
+ * Vote statistics for a mockup
+ */
+export interface MockupVoteStats {
+  mockup_id: string;
+  likes: number;
+  dislikes: number;
+  feedback: Array<{ feedback: string; created_at: string }>;
+}
+
+/**
+ * Get vote statistics for all mockups (counts and feedback)
+ */
+export async function getAllMockupVoteStats(): Promise<Record<string, MockupVoteStats>> {
+  const supabase = await createClient();
+
+  const { data: votes, error } = await supabase
+    .from('mockup_votes')
+    .select('mockup_id, vote_type, feedback, created_at')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching vote stats:', error.message);
+    return {};
+  }
+
+  // Aggregate stats by mockup_id
+  const stats: Record<string, MockupVoteStats> = {};
+
+  for (const vote of votes ?? []) {
+    if (!stats[vote.mockup_id]) {
+      stats[vote.mockup_id] = {
+        mockup_id: vote.mockup_id,
+        likes: 0,
+        dislikes: 0,
+        feedback: [],
+      };
+    }
+
+    if (vote.vote_type === 'like') {
+      stats[vote.mockup_id].likes++;
+    } else {
+      stats[vote.mockup_id].dislikes++;
+    }
+
+    if (vote.feedback) {
+      stats[vote.mockup_id].feedback.push({
+        feedback: vote.feedback,
+        created_at: vote.created_at,
+      });
+    }
+  }
+
+  return stats;
+}
