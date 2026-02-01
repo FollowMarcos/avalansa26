@@ -5,8 +5,9 @@ import type { ApiConfig } from "@/types/api-config";
 import type { Generation } from "@/types/generation";
 import type { Canvas, CanvasViewport, ImageNodeData } from "@/types/canvas";
 import type { SessionWithCount } from "@/types/session";
-import { uploadReferenceImage, deleteReferenceImages } from "@/utils/supabase/storage";
+import { uploadReferenceImage as uploadToStorage, deleteReferenceImages } from "@/utils/supabase/storage";
 import { createClient } from "@/utils/supabase/client";
+import type { ReferenceImageWithUrl } from "@/types/reference-image";
 import {
   type Node,
   type Edge,
@@ -38,13 +39,8 @@ export interface ImageFile {
   isUploading?: boolean;
 }
 
-export interface SavedReferenceImage {
-  id: string;
-  url: string; // Public URL from storage
-  storagePath: string; // Path in Supabase Storage
-  name: string;
-  savedAt: number;
-}
+// Re-export the database-backed type for components that need it
+export type SavedReferenceImage = ReferenceImageWithUrl;
 
 export interface GeneratedImage {
   id: string;
@@ -104,11 +100,12 @@ interface CreateContextType {
   removeReferenceImage: (id: string) => void;
   clearReferenceImages: () => void;
 
-  // Saved reference images library
+  // Saved reference images library (auto-saved to database)
   savedReferences: SavedReferenceImage[];
-  saveReferenceImage: (image: ImageFile) => void;
-  removeSavedReference: (id: string) => void;
-  addSavedReferenceToActive: (saved: SavedReferenceImage) => Promise<void>;
+  loadSavedReferences: () => Promise<void>;
+  removeSavedReference: (id: string) => Promise<void>;
+  renameSavedReference: (id: string, name: string) => Promise<void>;
+  addSavedReferenceToActive: (saved: SavedReferenceImage) => void;
 
   // Generation history
   history: GeneratedImage[];
@@ -203,15 +200,10 @@ const TEXT_CONTENT_REGEX = /["']|say|text|sign|label|title|headline|word/i;
 
 // localStorage key prefix for persisting state (user ID will be appended)
 const STORAGE_KEY_PREFIX = "create-studio-state";
-const SAVED_REFS_KEY_PREFIX = "savedReferenceImages";
 
 // Get storage key for a specific user
 function getStorageKey(userId: string | null): string {
   return userId ? `${STORAGE_KEY_PREFIX}-${userId}` : STORAGE_KEY_PREFIX;
-}
-
-function getSavedRefsKey(userId: string | null): string {
-  return userId ? `${SAVED_REFS_KEY_PREFIX}-${userId}` : SAVED_REFS_KEY_PREFIX;
 }
 
 // Interface for persisted state (subset of full state)
@@ -452,11 +444,19 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
           return [] as SessionWithCount[];
         });
 
+      const referencesPromise = import("@/utils/supabase/reference-images.server")
+        .then(({ getUserReferenceImages }) => getUserReferenceImages())
+        .catch((error) => {
+          console.error("Failed to load reference images:", error);
+          return [] as ReferenceImageWithUrl[];
+        });
+
       // Wait for all to complete in parallel
-      const [apis, generations, userSessions] = await Promise.all([
+      const [apis, generations, userSessions, savedRefs] = await Promise.all([
         apisPromise,
         historyPromise,
         sessionsPromise,
+        referencesPromise,
       ]);
 
       // Process APIs
@@ -497,6 +497,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         setCurrentSessionId(activeSession.id);
         setCurrentSessionName(activeSession.name);
       }
+
+      // Process saved reference images from database
+      setSavedReferences(savedRefs);
 
       // Check if we need to backfill sessions for existing generations
       // This runs once per user to migrate existing data
@@ -556,24 +559,28 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
     setReferenceImages(prev => [...prev, ...newImages].slice(0, MAX_REFERENCE_IMAGES));
 
-    // Upload each image to storage
-    for (const img of newImages) {
-      const { path, error } = await uploadReferenceImage(img.file, user.id);
+    // Upload each image to storage AND save to database (auto-save)
+    const { uploadReferenceImage: uploadAndSave } = await import("@/utils/supabase/reference-images.server");
 
-      if (error) {
-        console.error('Failed to upload image:', error);
+    for (const img of newImages) {
+      const savedRef = await uploadAndSave(img.file);
+
+      if (!savedRef) {
+        console.error('Failed to upload image');
         // Remove failed upload from state
         setReferenceImages(prev => prev.filter(i => i.id !== img.id));
         URL.revokeObjectURL(img.preview);
       } else {
-        // Update image with storage path
+        // Update active reference with storage path
         setReferenceImages(prev =>
           prev.map(i =>
             i.id === img.id
-              ? { ...i, storagePath: path, isUploading: false }
+              ? { ...i, storagePath: savedRef.storage_path, isUploading: false }
               : i
           )
         );
+        // Also add to saved references library (auto-save)
+        setSavedReferences(prev => [savedRef, ...prev]);
       }
     }
   }, [referenceImages.length]);
@@ -583,25 +590,15 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       const img = prev.find(i => i.id === id);
       if (img) {
         URL.revokeObjectURL(img.preview);
-        // Delete from storage if uploaded
-        if (img.storagePath) {
-          deleteReferenceImages([img.storagePath]).catch(console.error);
-        }
+        // Note: We don't delete from storage/database here since the image
+        // is auto-saved to the library. User can delete from library separately.
       }
       return prev.filter(i => i.id !== id);
     });
   }, []);
 
   const clearReferenceImages = React.useCallback(() => {
-    // Delete all from storage
-    const pathsToDelete = referenceImages
-      .filter(img => img.storagePath)
-      .map(img => img.storagePath!);
-
-    if (pathsToDelete.length > 0) {
-      deleteReferenceImages(pathsToDelete).catch(console.error);
-    }
-
+    // Just clear from active state, don't delete from library
     referenceImages.forEach(img => URL.revokeObjectURL(img.preview));
     setReferenceImages([]);
   }, [referenceImages]);
@@ -651,82 +648,94 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       };
       setReferenceImages(prev => [...prev, newImage].slice(0, MAX_REFERENCE_IMAGES));
 
-      // Upload to storage
-      const { path, error } = await uploadReferenceImage(file, user.id);
+      // Upload to storage AND save to database (auto-save)
+      const { uploadReferenceImage: uploadAndSave } = await import("@/utils/supabase/reference-images.server");
+      const savedRef = await uploadAndSave(file);
 
-      if (error || !path) {
-        console.error('Failed to upload reference image:', error);
+      if (!savedRef) {
+        console.error('Failed to upload reference image');
         setReferenceImages(prev => prev.filter(i => i.id !== id));
         URL.revokeObjectURL(preview);
         return;
       }
 
-      // Update with storage path
+      // Update active reference with storage path
       setReferenceImages(prev =>
         prev.map(img =>
-          img.id === id ? { ...img, storagePath: path, isUploading: false } : img
+          img.id === id ? { ...img, storagePath: savedRef.storage_path, isUploading: false } : img
         )
       );
+      // Also add to saved references library (auto-save)
+      setSavedReferences(prev => [savedRef, ...prev]);
     } catch (error) {
       console.error('Failed to add reference image from URL:', error);
     }
   }, [referenceImages.length]);
 
   /**
-   * Save a reference image to the library for later reuse
+   * Load saved reference images from database
    */
-  const saveReferenceImage = React.useCallback((image: ImageFile) => {
-    if (!image.storagePath) {
-      console.warn('Cannot save image without storage path');
-      return;
+  const loadSavedReferences = React.useCallback(async () => {
+    try {
+      const { getUserReferenceImages } = await import("@/utils/supabase/reference-images.server");
+      const refs = await getUserReferenceImages();
+      setSavedReferences(refs);
+    } catch (error) {
+      console.error("Failed to load saved references:", error);
     }
-
-    // Get public URL from storage path
-    const supabase = createClient();
-    const { data } = supabase.storage
-      .from('reference-images')
-      .getPublicUrl(image.storagePath);
-
-    const savedImage: SavedReferenceImage = {
-      id: `saved-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      url: data.publicUrl,
-      storagePath: image.storagePath,
-      name: `Reference ${new Date().toLocaleDateString()}`,
-      savedAt: Date.now(),
-    };
-
-    setSavedReferences(prev => {
-      const updated = [...prev, savedImage];
-      const key = getSavedRefsKey(currentUserId);
-      localStorage.setItem(key, JSON.stringify(updated));
-      return updated;
-    });
-  }, [currentUserId]);
+  }, []);
 
   /**
-   * Remove a saved reference from the library
+   * Remove a saved reference from the library (and storage)
    */
-  const removeSavedReference = React.useCallback((id: string) => {
-    setSavedReferences(prev => {
-      const updated = prev.filter(ref => ref.id !== id);
-      const key = getSavedRefsKey(currentUserId);
-      localStorage.setItem(key, JSON.stringify(updated));
-      return updated;
-    });
-  }, [currentUserId]);
+  const removeSavedReference = React.useCallback(async (id: string) => {
+    try {
+      const { deleteReferenceImage } = await import("@/utils/supabase/reference-images.server");
+      const success = await deleteReferenceImage(id);
+      if (success) {
+        setSavedReferences(prev => prev.filter(ref => ref.id !== id));
+      }
+    } catch (error) {
+      console.error("Failed to delete reference image:", error);
+    }
+  }, []);
 
   /**
-   * Add a saved reference image to the active references
+   * Rename a saved reference image
    */
-  const addSavedReferenceToActive = React.useCallback(async (saved: SavedReferenceImage) => {
+  const renameSavedReference = React.useCallback(async (id: string, name: string) => {
+    try {
+      const { updateReferenceImage } = await import("@/utils/supabase/reference-images.server");
+      const updated = await updateReferenceImage(id, { name });
+      if (updated) {
+        setSavedReferences(prev =>
+          prev.map(ref => ref.id === id ? { ...ref, name } : ref)
+        );
+      }
+    } catch (error) {
+      console.error("Failed to rename reference image:", error);
+    }
+  }, []);
+
+  /**
+   * Add a saved reference image to the active references (no re-upload needed)
+   */
+  const addSavedReferenceToActive = React.useCallback((saved: SavedReferenceImage) => {
     if (referenceImages.length >= MAX_REFERENCE_IMAGES) {
       console.warn('Maximum reference images reached');
       return;
     }
 
-    // Use the existing function to add from URL
-    await addReferenceImageFromUrl(saved.url);
-  }, [referenceImages.length, addReferenceImageFromUrl]);
+    // Create a local reference pointing to the already-saved image
+    const newImage: ImageFile = {
+      id: `ref-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      file: new File([], saved.name || 'reference'), // Placeholder file
+      preview: saved.url,
+      storagePath: saved.storage_path,
+      isUploading: false,
+    };
+    setReferenceImages(prev => [...prev, newImage].slice(0, MAX_REFERENCE_IMAGES));
+  }, [referenceImages.length]);
 
   const selectImage = React.useCallback((image: GeneratedImage | null) => {
     setSelectedImage(image);
@@ -1547,17 +1556,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // Load saved reference images for this user
-    try {
-      const savedRefsKey = getSavedRefsKey(currentUserId);
-      const savedRefsData = localStorage.getItem(savedRefsKey);
-      if (savedRefsData) {
-        const parsed = JSON.parse(savedRefsData) as SavedReferenceImage[];
-        setSavedReferences(parsed);
-      }
-    } catch {
-      // Ignore parse errors
-    }
+    // Saved references are now loaded from database in loadInitialData()
   }, [currentUserId]);
 
   // Persist state to localStorage on changes (debounced)
@@ -1636,10 +1635,11 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     addReferenceImageFromUrl,
     removeReferenceImage,
     clearReferenceImages,
-    // Saved references
+    // Saved references (database-backed)
     savedReferences,
-    saveReferenceImage,
+    loadSavedReferences,
     removeSavedReference,
+    renameSavedReference,
     addSavedReferenceToActive,
     history,
     selectedImage,
@@ -1706,7 +1706,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     isGenerating, thinkingSteps, generationSlots,
     currentSessionId, currentSessionName, sessions, historyGroupedBySession,
     updateSettings, addReferenceImages, addReferenceImageFromUrl, removeReferenceImage, clearReferenceImages,
-    savedReferences, saveReferenceImage, removeSavedReference, addSavedReferenceToActive,
+    savedReferences, loadSavedReferences, removeSavedReference, renameSavedReference, addSavedReferenceToActive,
     selectImage, clearHistory, toggleHistoryPanel, toggleInputVisibility, undo, redo, generate, cancelGeneration, selectGeneratedImage, clearGenerationSlots,
     startNewSession, renameCurrentSession, loadSessions, deleteSessionById, buildFinalPrompt,
   ]);

@@ -14,7 +14,8 @@
       "Bash(npm install:*)",
       "Bash(npx eslint:*)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "WebFetch(domain:dribbble.com)"
+      "WebFetch(domain:dribbble.com)",
+      "WebFetch(domain:uselayouts.com)"
     ]
   }
 }

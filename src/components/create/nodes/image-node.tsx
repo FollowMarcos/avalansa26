@@ -3,7 +3,8 @@
 import * as React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { cn } from '@/lib/utils';
-import { ImagePlus, Download, Copy, Trash2 } from 'lucide-react';
+import { ImagePlus, Download, Copy } from 'lucide-react';
+import { DeleteButton } from './delete-button';
 import type { ImageNodeData } from '@/types/canvas';
 import { useCreate } from '../create-context';
 import {
@@ -93,8 +94,7 @@ export function ImageNode({ data, selected, id }: ImageNodeProps & { id: string 
     }
   };
 
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDelete = () => {
     deleteNode(id);
   };
 
@@ -161,18 +161,7 @@ export function ImageNode({ data, selected, id }: ImageNodeProps & { id: string 
               </TooltipTrigger>
               <TooltipContent>Copy prompt</TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={handleDelete}
-                  aria-label="Delete from canvas"
-                  className="size-8 rounded-md bg-red-500/90 flex items-center justify-center hover:bg-red-500 transition-colors"
-                >
-                  <Trash2 className="size-4 text-white" aria-hidden="true" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>Delete from canvas</TooltipContent>
-            </Tooltip>
+            <DeleteButton onDelete={handleDelete} />
           </div>
 
           {/* Prompt on bottom */}
