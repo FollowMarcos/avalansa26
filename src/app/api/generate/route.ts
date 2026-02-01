@@ -330,6 +330,9 @@ interface ProviderParams {
 /**
  * Generate images using Google Gemini API
  * Supports both Gemini 2.0 Flash and Gemini 3 Pro Image Preview models
+ *
+ * Note: Gemini's generateContent API returns 1 image per call,
+ * so we make parallel API calls when outputCount > 1
  */
 async function generateWithGemini(params: ProviderParams): Promise<GeneratedImage[]> {
   const { apiKey, endpoint, modelId, prompt, negativePrompt, aspectRatio, imageSize, outputCount, referenceImages } = params;
@@ -427,75 +430,105 @@ async function generateWithGemini(params: ProviderParams): Promise<GeneratedImag
     model,
     supportsImageConfig,
     generationConfig,
+    parallelRequests: outputCount,
   });
 
   // Use the configured endpoint or default to Gemini API
   const apiEndpoint = endpoint || `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
-  const response = await fetch(`${apiEndpoint}?key=${apiKey}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(requestBody),
-  });
+  // Helper function to make a single API call and extract image
+  const makeSingleRequest = async (requestIndex: number): Promise<GeneratedImage | null> => {
+    console.log(`[Gemini] Starting request ${requestIndex + 1}/${outputCount}`);
 
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Gemini API error: ${error}`);
-  }
+    const response = await fetch(`${apiEndpoint}?key=${apiKey}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+    });
 
-  const data = await response.json();
+    if (!response.ok) {
+      const error = await response.text();
+      console.error(`[Gemini] Request ${requestIndex + 1} failed:`, error);
+      throw new Error(`Gemini API error: ${error}`);
+    }
 
-  // Debug: Log the full Gemini response structure
-  console.log('[Gemini] Response structure:', {
-    hasCandidate: !!data.candidates?.[0],
-    finishReason: data.candidates?.[0]?.finishReason,
-    safetyRatings: data.candidates?.[0]?.safetyRatings,
-    partsCount: data.candidates?.[0]?.content?.parts?.length || 0,
-    partTypes: data.candidates?.[0]?.content?.parts?.map((p: Record<string, unknown>) =>
-      p.inlineData ? 'image' : p.text ? 'text' : 'unknown'
-    ),
-    promptFeedback: data.promptFeedback,
-  });
+    const data = await response.json();
 
-  // Check for content blocked by safety filters
-  if (data.promptFeedback?.blockReason) {
-    throw new Error(`Content blocked: ${data.promptFeedback.blockReason}`);
-  }
+    // Debug: Log the response structure
+    console.log(`[Gemini] Response ${requestIndex + 1}:`, {
+      hasCandidate: !!data.candidates?.[0],
+      finishReason: data.candidates?.[0]?.finishReason,
+      partsCount: data.candidates?.[0]?.content?.parts?.length || 0,
+    });
 
-  // Check if the response was filtered
-  const finishReason = data.candidates?.[0]?.finishReason;
-  if (finishReason === 'SAFETY' || finishReason === 'IMAGE_SAFETY') {
-    throw new Error('Image generation blocked by safety filters. Try modifying your prompt or using a different reference image.');
-  }
-  if (finishReason === 'RECITATION') {
-    throw new Error('Content blocked due to potential copyright issues.');
-  }
+    // Check for content blocked by safety filters
+    if (data.promptFeedback?.blockReason) {
+      throw new Error(`Content blocked: ${data.promptFeedback.blockReason}`);
+    }
 
-  // Extract images from response
-  const images: GeneratedImage[] = [];
+    // Check if the response was filtered
+    const finishReason = data.candidates?.[0]?.finishReason;
+    if (finishReason === 'SAFETY' || finishReason === 'IMAGE_SAFETY') {
+      throw new Error('Image generation blocked by safety filters. Try modifying your prompt or using a different reference image.');
+    }
+    if (finishReason === 'RECITATION') {
+      throw new Error('Content blocked due to potential copyright issues.');
+    }
 
-  if (data.candidates && data.candidates[0]?.content?.parts) {
-    for (const part of data.candidates[0].content.parts) {
-      if (part.inlineData) {
-        // Convert base64 to data URL
-        const dataUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-        images.push({ url: dataUrl, base64: part.inlineData.data });
-      } else if (part.text) {
-        // Log any text response (model might be explaining why it can't generate)
-        console.log('[Gemini] Text response (no image):', part.text.slice(0, 500));
+    // Extract image from response
+    if (data.candidates && data.candidates[0]?.content?.parts) {
+      for (const part of data.candidates[0].content.parts) {
+        if (part.inlineData) {
+          // Convert base64 to data URL
+          const dataUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+          return { url: dataUrl, base64: part.inlineData.data };
+        } else if (part.text) {
+          // Log any text response (model might be explaining why it can't generate)
+          console.log(`[Gemini] Request ${requestIndex + 1} text response:`, part.text.slice(0, 200));
+        }
       }
     }
+
+    // If no image, check for text explanation
+    if (data.candidates?.[0]) {
+      const textParts = data.candidates[0].content?.parts?.filter((p: Record<string, unknown>) => p.text) || [];
+      if (textParts.length > 0) {
+        const textContent = textParts.map((p: { text: string }) => p.text).join(' ').slice(0, 200);
+        console.warn(`[Gemini] Request ${requestIndex + 1} returned text instead of image: "${textContent}..."`);
+      }
+    }
+
+    return null;
+  };
+
+  // Make parallel API calls for outputCount images
+  // Use Promise.allSettled to handle partial failures gracefully
+  const requests = Array.from({ length: outputCount }, (_, i) => makeSingleRequest(i));
+  const results = await Promise.allSettled(requests);
+
+  const images: GeneratedImage[] = [];
+  const errors: string[] = [];
+
+  for (const result of results) {
+    if (result.status === 'fulfilled' && result.value) {
+      images.push(result.value);
+    } else if (result.status === 'rejected') {
+      errors.push(result.reason?.message || 'Unknown error');
+    }
   }
 
-  // If no images but we have candidates, provide more context
-  if (images.length === 0 && data.candidates?.[0]) {
-    const textParts = data.candidates[0].content?.parts?.filter((p: Record<string, unknown>) => p.text) || [];
-    if (textParts.length > 0) {
-      const textContent = textParts.map((p: { text: string }) => p.text).join(' ').slice(0, 200);
-      throw new Error(`Gemini returned text instead of an image: "${textContent}...". Try rephrasing your prompt to request image generation explicitly.`);
-    }
+  console.log(`[Gemini] Completed: ${images.length}/${outputCount} images generated, ${errors.length} errors`);
+
+  // If all requests failed, throw the first error
+  if (images.length === 0 && errors.length > 0) {
+    throw new Error(errors[0]);
+  }
+
+  // If some succeeded, return what we got (partial success)
+  if (images.length < outputCount) {
+    console.warn(`[Gemini] Partial success: ${images.length}/${outputCount} images. Errors: ${errors.join('; ')}`);
   }
 
   return images;

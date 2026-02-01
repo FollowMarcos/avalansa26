@@ -562,27 +562,51 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     // Upload each image to storage AND save to database (auto-save)
     const { uploadReferenceImage: uploadAndSave } = await import("@/utils/supabase/reference-images.server");
 
-    for (const img of newImages) {
-      const savedRef = await uploadAndSave(img.file);
+    // Helper: Upload with timeout (30 seconds)
+    const uploadWithTimeout = async (file: File): Promise<ReferenceImageWithUrl | null> => {
+      const UPLOAD_TIMEOUT = 30000; // 30 seconds
 
-      if (!savedRef) {
-        console.error('Failed to upload image');
-        // Remove failed upload from state
+      return Promise.race([
+        uploadAndSave(file),
+        new Promise<null>((_, reject) =>
+          setTimeout(() => reject(new Error('Upload timed out')), UPLOAD_TIMEOUT)
+        ),
+      ]).catch((error) => {
+        console.error('Upload error:', error);
+        return null;
+      });
+    };
+
+    // Upload all images in parallel with timeout
+    const uploadPromises = newImages.map(async (img) => {
+      try {
+        const savedRef = await uploadWithTimeout(img.file);
+
+        if (!savedRef) {
+          console.error('Failed to upload image:', img.id);
+          // Remove failed upload from state
+          setReferenceImages(prev => prev.filter(i => i.id !== img.id));
+          URL.revokeObjectURL(img.preview);
+        } else {
+          // Update active reference with storage path
+          setReferenceImages(prev =>
+            prev.map(i =>
+              i.id === img.id
+                ? { ...i, storagePath: savedRef.storage_path, isUploading: false }
+                : i
+            )
+          );
+          // Also add to saved references library (auto-save)
+          setSavedReferences(prev => [savedRef, ...prev]);
+        }
+      } catch (error) {
+        console.error('Upload error for image:', img.id, error);
         setReferenceImages(prev => prev.filter(i => i.id !== img.id));
         URL.revokeObjectURL(img.preview);
-      } else {
-        // Update active reference with storage path
-        setReferenceImages(prev =>
-          prev.map(i =>
-            i.id === img.id
-              ? { ...i, storagePath: savedRef.storage_path, isUploading: false }
-              : i
-          )
-        );
-        // Also add to saved references library (auto-save)
-        setSavedReferences(prev => [savedRef, ...prev]);
       }
-    }
+    });
+
+    await Promise.all(uploadPromises);
   }, [referenceImages.length]);
 
   const removeReferenceImage = React.useCallback((id: string) => {
@@ -612,6 +636,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    const id = `ref-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    let preview: string | null = null;
+
     try {
       // Get current user
       const supabase = createClient();
@@ -622,8 +649,13 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Use proxy endpoint to bypass CORS restrictions for cross-origin images
+      // Add timeout for fetch (15 seconds)
+      const controller = new AbortController();
+      const fetchTimeout = setTimeout(() => controller.abort(), 15000);
+
       const proxyUrl = `/api/proxy-image?url=${encodeURIComponent(url)}`;
-      const response = await fetch(proxyUrl);
+      const response = await fetch(proxyUrl, { signal: controller.signal });
+      clearTimeout(fetchTimeout);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch image: ${response.status}`);
@@ -636,8 +668,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       const file = new File([blob], filename, { type: blob.type });
 
       // Create preview URL
-      const preview = URL.createObjectURL(blob);
-      const id = `ref-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      preview = URL.createObjectURL(blob);
 
       // Add to state with loading indicator
       const newImage: ImageFile = {
@@ -648,14 +679,24 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       };
       setReferenceImages(prev => [...prev, newImage].slice(0, MAX_REFERENCE_IMAGES));
 
-      // Upload to storage AND save to database (auto-save)
+      // Upload to storage AND save to database (auto-save) with timeout
       const { uploadReferenceImage: uploadAndSave } = await import("@/utils/supabase/reference-images.server");
-      const savedRef = await uploadAndSave(file);
+
+      const UPLOAD_TIMEOUT = 30000; // 30 seconds
+      const savedRef = await Promise.race([
+        uploadAndSave(file),
+        new Promise<null>((_, reject) =>
+          setTimeout(() => reject(new Error('Upload timed out')), UPLOAD_TIMEOUT)
+        ),
+      ]).catch((error) => {
+        console.error('Upload error:', error);
+        return null;
+      });
 
       if (!savedRef) {
         console.error('Failed to upload reference image');
         setReferenceImages(prev => prev.filter(i => i.id !== id));
-        URL.revokeObjectURL(preview);
+        if (preview) URL.revokeObjectURL(preview);
         return;
       }
 
@@ -669,6 +710,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       setSavedReferences(prev => [savedRef, ...prev]);
     } catch (error) {
       console.error('Failed to add reference image from URL:', error);
+      // Clean up on error
+      setReferenceImages(prev => prev.filter(i => i.id !== id));
+      if (preview) URL.revokeObjectURL(preview);
     }
   }, [referenceImages.length]);
 
