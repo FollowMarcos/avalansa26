@@ -123,6 +123,7 @@ interface CreateContextType {
   onEdgesChange: OnEdgesChange<Edge>;
   onConnect: OnConnect;
   addImageNode: (image: GeneratedImage) => void;
+  deleteNode: (nodeId: string) => void;
   selectImageByNodeId: (nodeId: string) => void;
 
   // Canvas management
@@ -1257,6 +1258,22 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     setHasUnsavedChanges(true);
   }, [getNextNodePosition]);
 
+  // Delete a node from the canvas
+  const deleteNode = React.useCallback((nodeId: string) => {
+    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+    // Also remove any edges connected to this node
+    setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+    // Clear selection if the deleted node was selected
+    setSelectedImage((prev) => {
+      const node = nodes.find((n) => n.id === nodeId);
+      if (node && prev?.id === node.data.generationId) {
+        return null;
+      }
+      return prev;
+    });
+    setHasUnsavedChanges(true);
+  }, [nodes]);
+
   // Select image by node ID
   const selectImageByNodeId = React.useCallback((nodeId: string) => {
     const node = nodes.find((n) => n.id === nodeId);
@@ -1635,6 +1652,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     onEdgesChange,
     onConnect,
     addImageNode,
+    deleteNode,
     selectImageByNodeId,
     // Canvas management
     currentCanvasId,
@@ -1682,7 +1700,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   }), [
     availableApis, selectedApiId, isLoadingApis, pendingBatchJobs,
     prompt, isPromptExpanded, settings, referenceImages, history, selectedImage,
-    nodes, edges, onNodesChange, onEdgesChange, onConnect, addImageNode, selectImageByNodeId,
+    nodes, edges, onNodesChange, onEdgesChange, onConnect, addImageNode, deleteNode, selectImageByNodeId,
     currentCanvasId, canvasList, isSaving, lastSaved, createNewCanvas, switchCanvas, renameCanvas, deleteCanvasById,
     viewMode, historyPanelOpen, isInputVisible, activeTab, zoom, canUndo, canRedo,
     isGenerating, thinkingSteps, generationSlots,

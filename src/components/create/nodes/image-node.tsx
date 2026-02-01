@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { cn } from '@/lib/utils';
-import { ImagePlus, Download, Copy } from 'lucide-react';
+import { ImagePlus, Download, Copy, Trash2 } from 'lucide-react';
 import type { ImageNodeData } from '@/types/canvas';
 import { useCreate } from '../create-context';
 import {
@@ -28,9 +28,9 @@ function parseAspectRatio(aspectRatio: string): { w: number; h: number } {
 /**
  * Custom React Flow node for displaying generated images
  */
-export function ImageNode({ data, selected }: ImageNodeProps) {
+export function ImageNode({ data, selected, id }: ImageNodeProps & { id: string }) {
   const { imageUrl, prompt, settings, timestamp, generationId } = data;
-  const { addReferenceImageFromUrl } = useCreate();
+  const { addReferenceImageFromUrl, deleteNode } = useCreate();
 
   // Calculate dimensions based on aspect ratio
   const { w, h } = parseAspectRatio(settings.aspectRatio || '1:1');
@@ -91,6 +91,11 @@ export function ImageNode({ data, selected }: ImageNodeProps) {
     } catch (error) {
       console.error('Copy failed:', error);
     }
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    deleteNode(id);
   };
 
   return (
@@ -155,6 +160,18 @@ export function ImageNode({ data, selected }: ImageNodeProps) {
                 </button>
               </TooltipTrigger>
               <TooltipContent>Copy prompt</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={handleDelete}
+                  aria-label="Delete from canvas"
+                  className="size-8 rounded-md bg-red-500/90 flex items-center justify-center hover:bg-red-500 transition-colors"
+                >
+                  <Trash2 className="size-4 text-white" aria-hidden="true" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Delete from canvas</TooltipContent>
             </Tooltip>
           </div>
 
