@@ -4,9 +4,8 @@ import * as React from 'react';
 import Link from 'next/link';
 import {
   Sparkles, ThumbsUp, ThumbsDown, MessageSquare, X, Send, Zap, Clock,
-  Settings, ImagePlus, Images, Ban, ChevronDown, Maximize2, Minimize2,
-  Sliders, Wand2, Layers, Grid3X3, Square, RectangleHorizontal,
-  RectangleVertical, Library, Bookmark, Server, ChevronRight
+  Settings, ImagePlus, Ban, ChevronDown,
+  Layers, Library, Server, Command
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ModeToggle } from '@/components/mode-toggle';
@@ -86,14 +85,14 @@ export default function LabsPage() {
   };
 
   const mockups = [
-    { id: 'composer-v1-current', title: 'Current Design', description: 'The existing composer with settings row above input', component: ComposerCurrent },
-    { id: 'composer-v2-minimal', title: 'Minimal Floating', description: 'Clean single-row with popover settings', component: ComposerMinimal },
-    { id: 'composer-v3-command', title: 'Command Palette', description: 'Spotlight-style with keyboard-first navigation', component: ComposerCommand },
-    { id: 'composer-v4-stacked', title: 'Stacked Controls', description: 'Vertical layout with icon buttons above input', component: ComposerStacked },
-    { id: 'composer-v5-split', title: 'Split Panel', description: 'Settings sidebar with spacious prompt area', component: ComposerSplit },
-    { id: 'composer-v6-pills', title: 'Pill Segmented', description: 'All settings as inline segmented pill controls', component: ComposerPills },
-    { id: 'composer-v7-drawer', title: 'Collapsible Drawer', description: 'Hidden settings revealed on demand', component: ComposerDrawer },
-    { id: 'composer-v8-glass', title: 'Glass Morphism', description: 'Frosted glass with floating chip settings', component: ComposerGlass },
+    { id: 'composer-v1-glass', title: 'Glass Morphism', description: 'Frosted glass with gradient accents', component: ComposerGlass },
+    { id: 'composer-v2-command', title: 'Command Palette', description: 'Spotlight-style with ⌘K shortcut', component: ComposerCommand },
+    { id: 'composer-v3-minimal', title: 'Minimal Dark', description: 'Clean dark surface with subtle borders', component: ComposerMinimal },
+    { id: 'composer-v4-neon', title: 'Neon Glow', description: 'Subtle glow effects with vibrant accents', component: ComposerNeon },
+    { id: 'composer-v5-layered', title: 'Layered Cards', description: 'Stacked card aesthetic with depth', component: ComposerLayered },
+    { id: 'composer-v6-terminal', title: 'Terminal Style', description: 'Developer-focused monospace design', component: ComposerTerminal },
+    { id: 'composer-v7-floating', title: 'Floating Island', description: 'Elevated with prominent shadow', component: ComposerFloating },
+    { id: 'composer-v8-gradient', title: 'Gradient Border', description: 'Animated gradient border accent', component: ComposerGradient },
   ];
 
   return (
@@ -233,7 +232,7 @@ export default function LabsPage() {
                 </AnimatePresence>
 
                 {/* Preview Area - Canvas-like background */}
-                <div className="relative min-h-[280px] bg-muted/30 flex items-end justify-center p-8">
+                <div className="relative min-h-[320px] bg-muted/30 flex items-end justify-center p-8">
                   {/* Grain texture overlay like the real canvas */}
                   <div className="pointer-events-none absolute inset-0 bg-noise opacity-[0.02]" aria-hidden="true" />
 
@@ -251,10 +250,10 @@ export default function LabsPage() {
 }
 
 // ============================================================================
-// MOCKUP 1: Current Design (baseline)
-// The existing composer layout with settings row above input
+// MOCKUP 1: Glass Morphism
+// Frosted glass with gradient blobs and floating chips
 // ============================================================================
-function ComposerCurrent() {
+function ComposerGlass() {
   const [aspectRatio, setAspectRatio] = React.useState('1:1');
   const [quality, setQuality] = React.useState('2K');
   const [count, setCount] = React.useState(1);
@@ -262,100 +261,320 @@ function ComposerCurrent() {
   const [showNegative, setShowNegative] = React.useState(false);
 
   return (
-    <div className="bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-lg overflow-hidden">
-      {/* Settings Row */}
-      <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border overflow-x-auto">
-        {/* API Selector */}
-        <button className="h-8 px-3 rounded-lg bg-muted/50 text-xs font-mono flex items-center gap-2 hover:bg-muted transition-colors" aria-label="Select API">
-          <Server className="size-3.5" aria-hidden="true" />
-          <span>Nano Pro</span>
-          <ChevronDown className="size-3" aria-hidden="true" />
-        </button>
+    <div className="relative">
+      {/* Gradient blobs */}
+      <div className="absolute -top-12 -right-12 w-48 h-48 bg-gradient-to-br from-violet-500/30 to-fuchsia-500/20 rounded-full blur-3xl" aria-hidden="true" />
+      <div className="absolute -bottom-12 -left-12 w-40 h-40 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-full blur-3xl" aria-hidden="true" />
 
-        <div className="w-px h-5 bg-border mx-1" aria-hidden="true" />
+      <div className="relative bg-zinc-900/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+        {/* Floating settings chips */}
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5 overflow-x-auto">
+          <button className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors" aria-label="Select API">
+            <Server className="size-3 text-zinc-400" aria-hidden="true" />
+            <span className="text-xs font-mono text-zinc-300">Nano Pro</span>
+            <ChevronDown className="size-3 text-zinc-500" aria-hidden="true" />
+          </button>
 
-        {/* Aspect Ratio */}
-        <button className="h-8 px-2.5 gap-2 rounded-lg flex items-center hover:bg-muted/50 transition-colors" aria-label={`Aspect ratio ${aspectRatio}`}>
-          <AspectRatioShape ratio={aspectRatio} className="opacity-70" />
-          <span className="font-mono text-xs">{aspectRatio}</span>
-          <ChevronDown className="size-3 text-muted-foreground" aria-hidden="true" />
-        </button>
+          <button
+            onClick={() => setAspectRatio(aspectRatio === '1:1' ? '16:9' : '1:1')}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
+            aria-label={`Aspect ratio ${aspectRatio}`}
+          >
+            <AspectRatioShape ratio={aspectRatio} className="text-violet-400" />
+            <span className="text-xs font-mono text-zinc-300">{aspectRatio}</span>
+          </button>
 
-        {/* Quality Segmented Control */}
-        <div className="flex items-center h-8 p-0.5 bg-muted/50 rounded-lg" role="radiogroup" aria-label="Image quality">
-          {QUALITY_OPTIONS.map((q) => (
-            <button
-              key={q}
-              onClick={() => setQuality(q)}
-              role="radio"
-              aria-checked={quality === q}
-              className={cn(
-                "h-7 px-2.5 rounded-md font-mono text-xs transition-all",
-                quality === q ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              {q}
-            </button>
-          ))}
+          <div className="flex items-center h-7 p-0.5 bg-white/5 rounded-full border border-white/10" role="radiogroup" aria-label="Quality">
+            {QUALITY_OPTIONS.map((q) => (
+              <button
+                key={q}
+                onClick={() => setQuality(q)}
+                role="radio"
+                aria-checked={quality === q}
+                className={cn(
+                  "h-6 px-2.5 rounded-full text-xs font-mono transition-all",
+                  quality === q ? "bg-white/20 text-white" : "text-zinc-500 hover:text-zinc-300"
+                )}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-0.5" role="radiogroup" aria-label="Count">
+            {COUNT_OPTIONS.map((n) => (
+              <button
+                key={n}
+                onClick={() => setCount(n)}
+                role="radio"
+                aria-checked={count === n}
+                className={cn(
+                  "size-7 rounded-full text-xs font-mono transition-all",
+                  count === n ? "bg-white/20 text-white" : "text-zinc-500 hover:text-zinc-300"
+                )}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+
+          <button
+            onClick={() => setSpeed(speed === 'fast' ? 'batch' : 'fast')}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-1.5 rounded-full border transition-colors",
+              speed === 'fast'
+                ? "bg-gradient-to-r from-amber-500/20 to-orange-500/20 border-amber-500/30"
+                : "bg-white/5 border-white/10 hover:bg-white/10"
+            )}
+            aria-label={speed === 'fast' ? 'Fast mode' : 'Batch mode'}
+          >
+            {speed === 'fast' ? <Zap className="size-3 text-amber-400" aria-hidden="true" /> : <Clock className="size-3 text-zinc-400" aria-hidden="true" />}
+            <span className={cn("text-xs font-mono", speed === 'fast' ? "text-amber-300" : "text-zinc-300")}>{speed === 'fast' ? 'Turbo' : 'Batch'}</span>
+          </button>
+
+          <button
+            onClick={() => setShowNegative(!showNegative)}
+            className={cn("size-7 rounded-full flex items-center justify-center border transition-colors", showNegative ? "bg-white/10 border-white/20" : "bg-white/5 border-white/10 hover:bg-white/10")}
+            aria-label="Toggle negative prompt"
+            aria-expanded={showNegative}
+          >
+            <Ban className="size-3 text-zinc-400" aria-hidden="true" />
+          </button>
         </div>
 
-        {/* Output Count */}
-        <div className="flex items-center h-8 gap-0.5" role="radiogroup" aria-label="Number of images">
+        {/* Negative Prompt */}
+        <AnimatePresence>
+          {showNegative && (
+            <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+              <div className="px-4 py-3 bg-white/[0.02] border-b border-white/5">
+                <div className="flex items-center gap-2 mb-2">
+                  <Ban className="size-3.5 text-zinc-500" aria-hidden="true" />
+                  <span className="text-xs text-zinc-500 font-mono">Negative</span>
+                </div>
+                <input type="text" placeholder="blurry, low quality, distorted…" aria-label="Negative prompt" className="w-full bg-transparent text-sm text-zinc-300 placeholder:text-zinc-600 focus:outline-none" />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Input area */}
+        <div className="p-4">
+          <textarea placeholder="Imagine something beautiful…" aria-label="Image prompt" className="w-full bg-transparent text-base text-zinc-200 placeholder:text-zinc-600 focus:outline-none resize-none min-h-[60px]" />
+          <div className="flex items-center justify-between mt-3">
+            <div className="flex items-center gap-2">
+              <button className="size-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:bg-white/10 transition-colors" aria-label="Add reference images">
+                <ImagePlus className="size-4" aria-hidden="true" />
+              </button>
+              <button className="size-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:bg-white/10 transition-colors" aria-label="Saved library">
+                <Library className="size-4" aria-hidden="true" />
+              </button>
+            </div>
+            <button className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white font-medium text-sm shadow-lg shadow-violet-500/25 flex items-center gap-2 hover:shadow-violet-500/40 transition-shadow" aria-label="Generate image">
+              <Sparkles className="size-4" aria-hidden="true" />
+              Dream
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// MOCKUP 2: Command Palette
+// Spotlight-style with ⌘K shortcut and keyboard-first design
+// ============================================================================
+function ComposerCommand() {
+  const [aspectRatio, setAspectRatio] = React.useState('1:1');
+  const [quality, setQuality] = React.useState('2K');
+  const [count, setCount] = React.useState(1);
+  const [speed, setSpeed] = React.useState<'fast' | 'batch'>('fast');
+  const [showNegative, setShowNegative] = React.useState(false);
+
+  return (
+    <div className="bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl overflow-hidden">
+      {/* Search-like header */}
+      <div className="flex items-center gap-3 px-4 py-4 border-b border-white/5">
+        <Command className="size-5 text-violet-400" aria-hidden="true" />
+        <input type="text" placeholder="What do you want to create?" aria-label="Image prompt" className="flex-1 bg-transparent text-base text-zinc-200 placeholder:text-zinc-600 focus:outline-none" />
+        <kbd className="px-2 py-1 text-[10px] font-mono bg-zinc-800 rounded border border-zinc-700 text-zinc-400">⌘K</kbd>
+      </div>
+
+      {/* Settings bar */}
+      <div className="flex items-center gap-2 px-4 py-3 bg-zinc-800/50 border-b border-white/5 overflow-x-auto">
+        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors text-xs" aria-label="API: Nano Pro">
+          <Server className="size-3 text-zinc-400" aria-hidden="true" />
+          <span className="font-mono text-zinc-300">Nano Pro</span>
+        </button>
+
+        <button
+          onClick={() => setAspectRatio(aspectRatio === '1:1' ? '16:9' : '1:1')}
+          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors text-xs"
+          aria-label={`Aspect ratio ${aspectRatio}`}
+        >
+          <AspectRatioShape ratio={aspectRatio} className="text-zinc-400" />
+          <span className="font-mono text-zinc-300">{aspectRatio}</span>
+        </button>
+
+        {QUALITY_OPTIONS.map((q) => (
+          <button
+            key={q}
+            onClick={() => setQuality(q)}
+            className={cn("px-2.5 py-1.5 rounded-lg text-xs font-mono transition-colors", quality === q ? "bg-white text-zinc-900" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700")}
+            aria-label={`Quality ${q}`}
+          >
+            {q}
+          </button>
+        ))}
+
+        <div className="flex items-center gap-0.5" role="radiogroup" aria-label="Count">
           {COUNT_OPTIONS.map((n) => (
             <button
               key={n}
               onClick={() => setCount(n)}
               role="radio"
               aria-checked={count === n}
-              className={cn(
-                "size-7 rounded-md font-mono text-xs transition-all flex items-center justify-center",
-                count === n ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-              )}
+              className={cn("size-7 rounded-lg text-xs font-mono transition-colors", count === n ? "bg-white text-zinc-900" : "text-zinc-500 hover:bg-zinc-800")}
             >
               {n}
             </button>
           ))}
         </div>
 
-        {/* Speed Toggle */}
         <button
           onClick={() => setSpeed(speed === 'fast' ? 'batch' : 'fast')}
+          className={cn("flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs transition-colors", speed === 'fast' ? "bg-amber-500/20 text-amber-400" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700")}
           aria-label={speed === 'fast' ? 'Fast mode' : 'Batch mode'}
-          className="h-8 px-2.5 gap-1.5 rounded-lg font-mono text-xs flex items-center hover:bg-muted/50 transition-colors"
         >
-          {speed === 'fast' ? <Zap className="size-3.5" aria-hidden="true" /> : <Clock className="size-3.5" aria-hidden="true" />}
-          <span className="hidden sm:inline">{speed === 'fast' ? 'Fast' : 'Batch'}</span>
+          {speed === 'fast' ? <Zap className="size-3" aria-hidden="true" /> : <Clock className="size-3" aria-hidden="true" />}
+          <span className="font-mono">{speed === 'fast' ? 'Fast' : 'Batch'}</span>
         </button>
 
-        {/* Negative Prompt Toggle */}
         <button
           onClick={() => setShowNegative(!showNegative)}
+          className={cn("size-7 rounded-lg flex items-center justify-center transition-colors", showNegative ? "bg-zinc-700" : "hover:bg-zinc-800")}
           aria-label="Toggle negative prompt"
           aria-expanded={showNegative}
-          className={cn("size-8 rounded-lg flex items-center justify-center transition-colors", showNegative && "bg-muted")}
         >
-          <Ban className="size-3.5" aria-hidden="true" />
+          <Ban className="size-3 text-zinc-400" aria-hidden="true" />
         </button>
 
         <div className="flex-1" />
 
-        {/* Generate Button */}
-        <button className="h-8 px-4 rounded-lg font-medium text-sm gap-1.5 bg-foreground text-background hover:bg-foreground/90 flex items-center" aria-label="Generate image">
+        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors text-xs" aria-label="Add images">
+          <ImagePlus className="size-3 text-zinc-400" aria-hidden="true" />
+          <span className="text-zinc-300">Images</span>
+        </button>
+
+        <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 transition-colors text-xs" aria-label="Library">
+          <Library className="size-3 text-zinc-400" aria-hidden="true" />
+          <span className="text-zinc-300">Library</span>
+        </button>
+      </div>
+
+      {/* Negative Prompt */}
+      <AnimatePresence>
+        {showNegative && (
+          <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+            <div className="px-4 py-3 bg-zinc-800/30 border-b border-white/5">
+              <div className="flex items-center gap-2">
+                <Ban className="size-3.5 text-zinc-500" aria-hidden="true" />
+                <input type="text" placeholder="Exclude: blurry, distorted, low quality…" aria-label="Negative prompt" className="flex-1 bg-transparent text-sm text-zinc-300 placeholder:text-zinc-600 focus:outline-none" />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Action row */}
+      <div className="flex items-center justify-end px-4 py-3">
+        <button className="px-5 py-2.5 rounded-lg bg-violet-500 text-white text-sm font-medium hover:bg-violet-400 transition-colors flex items-center gap-2" aria-label="Create image">
+          <Sparkles className="size-4" aria-hidden="true" />
+          Create
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// MOCKUP 3: Minimal Dark
+// Clean dark surface with subtle borders
+// ============================================================================
+function ComposerMinimal() {
+  const [aspectRatio, setAspectRatio] = React.useState('1:1');
+  const [quality, setQuality] = React.useState('2K');
+  const [count, setCount] = React.useState(1);
+  const [speed, setSpeed] = React.useState<'fast' | 'batch'>('fast');
+  const [showNegative, setShowNegative] = React.useState(false);
+
+  return (
+    <div className="bg-zinc-900/90 backdrop-blur-xl border border-zinc-800 rounded-2xl shadow-2xl overflow-hidden">
+      {/* Compact settings row */}
+      <div className="flex items-center gap-1 px-3 py-2 border-b border-zinc-800 overflow-x-auto">
+        <button className="h-8 px-3 rounded-lg bg-zinc-800/50 text-xs font-mono text-zinc-400 flex items-center gap-2 hover:bg-zinc-800 transition-colors" aria-label="Select API">
+          <Server className="size-3" aria-hidden="true" />
+          <span>Nano</span>
+        </button>
+
+        <div className="w-px h-5 bg-zinc-800 mx-1" aria-hidden="true" />
+
+        <button onClick={() => setAspectRatio(aspectRatio === '1:1' ? '16:9' : '1:1')} className="h-8 px-2 rounded-lg flex items-center gap-2 hover:bg-zinc-800/50 transition-colors" aria-label={`Aspect ratio ${aspectRatio}`}>
+          <AspectRatioShape ratio={aspectRatio} className="text-zinc-500" />
+          <span className="font-mono text-xs text-zinc-400">{aspectRatio}</span>
+        </button>
+
+        <div className="flex items-center h-8 p-0.5 bg-zinc-800/50 rounded-lg" role="radiogroup" aria-label="Quality">
+          {QUALITY_OPTIONS.map((q) => (
+            <button
+              key={q}
+              onClick={() => setQuality(q)}
+              role="radio"
+              aria-checked={quality === q}
+              className={cn("h-7 px-2.5 rounded-md font-mono text-xs transition-all", quality === q ? "bg-zinc-700 text-zinc-200" : "text-zinc-500 hover:text-zinc-300")}
+            >
+              {q}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex items-center h-8 gap-0.5" role="radiogroup" aria-label="Count">
+          {COUNT_OPTIONS.map((n) => (
+            <button
+              key={n}
+              onClick={() => setCount(n)}
+              role="radio"
+              aria-checked={count === n}
+              className={cn("size-7 rounded-md font-mono text-xs transition-all flex items-center justify-center", count === n ? "bg-zinc-200 text-zinc-900" : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50")}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+
+        <button onClick={() => setSpeed(speed === 'fast' ? 'batch' : 'fast')} className="h-8 px-2.5 gap-1.5 rounded-lg font-mono text-xs flex items-center hover:bg-zinc-800/50 transition-colors" aria-label={speed === 'fast' ? 'Fast mode' : 'Batch mode'}>
+          {speed === 'fast' ? <Zap className="size-3 text-amber-500" aria-hidden="true" /> : <Clock className="size-3 text-zinc-400" aria-hidden="true" />}
+          <span className={speed === 'fast' ? "text-amber-400" : "text-zinc-400"}>{speed === 'fast' ? 'Fast' : 'Batch'}</span>
+        </button>
+
+        <button onClick={() => setShowNegative(!showNegative)} className={cn("size-8 rounded-lg flex items-center justify-center transition-colors", showNegative && "bg-zinc-800")} aria-label="Toggle negative prompt" aria-expanded={showNegative}>
+          <Ban className="size-3 text-zinc-500" aria-hidden="true" />
+        </button>
+
+        <div className="flex-1" />
+
+        <button className="h-8 px-4 rounded-lg font-medium text-sm gap-1.5 bg-zinc-200 text-zinc-900 hover:bg-white flex items-center transition-colors" aria-label="Generate image">
           <Sparkles className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
           <span>Generate</span>
         </button>
       </div>
 
-      {/* Negative Prompt (collapsible) */}
+      {/* Negative Prompt */}
       <AnimatePresence>
         {showNegative && (
-          <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden border-b border-border">
-            <div className="px-4 py-3 bg-muted/30">
-              <div className="flex items-center gap-2 mb-2">
-                <Ban className="size-4 text-muted-foreground" aria-hidden="true" />
-                <span className="text-sm text-muted-foreground font-mono">Negative</span>
-              </div>
-              <input type="text" placeholder="blurry, low quality, distorted…" aria-label="Negative prompt" className="w-full bg-transparent text-sm placeholder:text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded" />
+          <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+            <div className="px-4 py-3 bg-zinc-800/30 border-b border-zinc-800">
+              <input type="text" placeholder="Negative: blurry, low quality…" aria-label="Negative prompt" className="w-full bg-transparent text-sm text-zinc-300 placeholder:text-zinc-600 focus:outline-none" />
             </div>
           </motion.div>
         )}
@@ -363,451 +582,510 @@ function ComposerCurrent() {
 
       {/* Main Input */}
       <div className="flex items-end gap-3 p-3">
-        <button className="size-11 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-colors flex-shrink-0" aria-label="Add reference images">
-          <ImagePlus className="size-5" strokeWidth={1.5} aria-hidden="true" />
+        <button className="size-10 rounded-xl bg-zinc-800/50 flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors flex-shrink-0" aria-label="Add reference images">
+          <ImagePlus className="size-4" strokeWidth={1.5} aria-hidden="true" />
         </button>
-        <textarea placeholder="Describe the image you want to create…" aria-label="Image prompt" className="flex-1 bg-transparent text-base resize-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded placeholder:text-muted-foreground min-h-[44px] py-3" rows={1} />
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <span className="px-2 py-1 text-xs font-mono text-muted-foreground tabular-nums">0</span>
-          <button className="size-8 rounded-lg flex items-center justify-center hover:bg-muted transition-colors" aria-label="Expand prompt">
-            <Maximize2 className="size-4" aria-hidden="true" />
-          </button>
-        </div>
+        <button className="size-10 rounded-xl bg-zinc-800/50 flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors flex-shrink-0" aria-label="Saved library">
+          <Library className="size-4" strokeWidth={1.5} aria-hidden="true" />
+        </button>
+        <textarea placeholder="Describe the image you want to create…" aria-label="Image prompt" className="flex-1 bg-transparent text-base text-zinc-200 resize-none focus:outline-none placeholder:text-zinc-600 min-h-[44px] py-2" rows={1} />
       </div>
     </div>
   );
 }
 
 // ============================================================================
-// MOCKUP 2: Minimal Floating
-// Clean single-row with popover settings
+// MOCKUP 4: Neon Glow
+// Subtle glow effects with vibrant accents
 // ============================================================================
-function ComposerMinimal() {
-  return (
-    <div className="bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-lg overflow-hidden">
-      <div className="flex items-center gap-3 p-3">
-        <button className="size-11 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors" aria-label="Add reference images">
-          <ImagePlus className="size-5" strokeWidth={1.5} aria-hidden="true" />
-        </button>
-
-        <input type="text" placeholder="Describe your image…" aria-label="Image prompt" className="flex-1 bg-transparent text-base placeholder:text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded" />
-
-        {/* Compact settings cluster */}
-        <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-muted/30">
-          <button className="px-2 py-1 rounded text-xs font-mono text-muted-foreground hover:text-foreground" aria-label="Aspect ratio 1:1">
-            <AspectRatioShape ratio="1:1" />
-          </button>
-          <span className="text-xs text-muted-foreground font-mono">2K</span>
-          <span className="text-xs text-muted-foreground font-mono">×1</span>
-          <Zap className="size-3 text-amber-500" aria-hidden="true" />
-        </div>
-
-        <button className="size-9 rounded-xl flex items-center justify-center hover:bg-muted transition-colors" aria-label="More settings">
-          <Settings className="size-4 text-muted-foreground" aria-hidden="true" />
-        </button>
-
-        <button className="h-11 px-6 rounded-xl bg-foreground text-background font-medium text-sm flex items-center gap-2 hover:bg-foreground/90 transition-colors" aria-label="Generate image">
-          <Sparkles className="size-4" aria-hidden="true" />
-          Generate
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// MOCKUP 3: Command Palette
-// Spotlight-style with keyboard navigation feel
-// ============================================================================
-function ComposerCommand() {
-  const [quality, setQuality] = React.useState('2K');
-
-  return (
-    <div className="bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-lg overflow-hidden">
-      {/* Search-like header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
-        <Wand2 className="size-5 text-primary" aria-hidden="true" />
-        <input type="text" placeholder="What do you want to create?" aria-label="Image prompt" className="flex-1 bg-transparent text-base placeholder:text-muted-foreground/50 focus:outline-none" />
-        <kbd className="px-2 py-1 text-[10px] font-mono bg-muted rounded border border-border text-muted-foreground">⌘K</kbd>
-      </div>
-
-      {/* Quick settings bar */}
-      <div className="flex items-center gap-2 px-4 py-3 bg-muted/20">
-        <div className="flex items-center gap-2 text-xs">
-          <button className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted hover:bg-muted/80" aria-label="API: Nano Pro">
-            <Server className="size-3" aria-hidden="true" />
-            <span className="font-mono">Nano Pro</span>
-          </button>
-          <button className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted hover:bg-muted/80" aria-label="Aspect ratio 1:1">
-            <AspectRatioShape ratio="1:1" />
-            <span className="font-mono">1:1</span>
-          </button>
-          {QUALITY_OPTIONS.map((q) => (
-            <button
-              key={q}
-              onClick={() => setQuality(q)}
-              className={cn("px-2 py-1 rounded-md font-mono", quality === q ? "bg-foreground text-background" : "bg-muted hover:bg-muted/80")}
-              aria-label={`Quality ${q}`}
-            >
-              {q}
-            </button>
-          ))}
-          <button className="flex items-center gap-1 px-2 py-1 rounded-md bg-muted hover:bg-muted/80" aria-label="Fast mode">
-            <Zap className="size-3 text-amber-500" aria-hidden="true" />
-            <span className="font-mono">Fast</span>
-          </button>
-        </div>
-        <div className="flex-1" />
-        <button className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-muted hover:bg-muted/80 text-xs" aria-label="Add images">
-          <ImagePlus className="size-3" aria-hidden="true" />
-          <span>Images</span>
-        </button>
-        <button className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium" aria-label="Create image">Create</button>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// MOCKUP 4: Stacked Controls
-// Vertical icon buttons above input
-// ============================================================================
-function ComposerStacked() {
-  const [count, setCount] = React.useState(1);
-  const [speed, setSpeed] = React.useState<'fast' | 'batch'>('fast');
-
-  return (
-    <div className="bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-lg overflow-hidden">
-      {/* Icon settings row */}
-      <div className="flex items-center justify-center gap-1 p-2 border-b border-border bg-muted/20">
-        <button className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg hover:bg-muted transition-colors" aria-label="API: Nano Pro">
-          <Server className="size-4 text-muted-foreground" aria-hidden="true" />
-          <span className="text-[10px] text-muted-foreground font-mono">API</span>
-        </button>
-        <button className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg hover:bg-muted transition-colors" aria-label="Aspect ratio 1:1">
-          <AspectRatioShape ratio="1:1" className="text-muted-foreground" />
-          <span className="text-[10px] text-muted-foreground font-mono">1:1</span>
-        </button>
-        <button className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg hover:bg-muted transition-colors" aria-label="Quality 2K">
-          <Layers className="size-4 text-muted-foreground" aria-hidden="true" />
-          <span className="text-[10px] text-muted-foreground font-mono">2K</span>
-        </button>
-        <div className="flex items-center gap-0.5 px-2" role="radiogroup" aria-label="Number of images">
-          {COUNT_OPTIONS.map((n) => (
-            <button
-              key={n}
-              onClick={() => setCount(n)}
-              role="radio"
-              aria-checked={count === n}
-              className={cn("size-7 rounded-md text-xs font-mono transition-colors", count === n ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted")}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
-        <button
-          onClick={() => setSpeed(speed === 'fast' ? 'batch' : 'fast')}
-          className={cn("flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg transition-colors", speed === 'fast' ? "bg-amber-500/10" : "hover:bg-muted")}
-          aria-label={speed === 'fast' ? 'Fast mode' : 'Batch mode'}
-          aria-pressed={speed === 'fast'}
-        >
-          {speed === 'fast' ? <Zap className="size-4 text-amber-500" aria-hidden="true" /> : <Clock className="size-4 text-muted-foreground" aria-hidden="true" />}
-          <span className="text-[10px] text-muted-foreground font-mono">{speed === 'fast' ? 'Fast' : 'Batch'}</span>
-        </button>
-        <button className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg hover:bg-muted transition-colors" aria-label="Negative prompt">
-          <Ban className="size-4 text-muted-foreground" aria-hidden="true" />
-          <span className="text-[10px] text-muted-foreground font-mono">Neg</span>
-        </button>
-      </div>
-
-      {/* Input area */}
-      <div className="flex items-center gap-3 p-3">
-        <button className="size-10 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors" aria-label="Add reference images">
-          <ImagePlus className="size-5" strokeWidth={1.5} aria-hidden="true" />
-        </button>
-        <input type="text" placeholder="Describe your vision…" aria-label="Image prompt" className="flex-1 bg-transparent text-base placeholder:text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded" />
-        <button className="size-10 rounded-xl bg-foreground text-background flex items-center justify-center" aria-label="Generate image">
-          <Sparkles className="size-5" aria-hidden="true" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// MOCKUP 5: Split Panel
-// Settings sidebar with spacious prompt area
-// ============================================================================
-function ComposerSplit() {
-  const [quality, setQuality] = React.useState('2K');
-
-  return (
-    <div className="bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-lg overflow-hidden flex">
-      {/* Settings sidebar */}
-      <div className="w-32 border-r border-border p-3 bg-muted/20 flex flex-col gap-2">
-        <button className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-muted text-xs" aria-label="API: Nano Pro">
-          <Server className="size-3.5 text-muted-foreground" aria-hidden="true" />
-          <span className="font-mono">Nano</span>
-        </button>
-        <button className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-muted text-xs" aria-label="Aspect ratio 16:9">
-          <AspectRatioShape ratio="16:9" className="text-muted-foreground" />
-          <span className="font-mono">16:9</span>
-        </button>
-        <div className="flex flex-col gap-1">
-          {QUALITY_OPTIONS.map((q) => (
-            <button
-              key={q}
-              onClick={() => setQuality(q)}
-              className={cn("px-2 py-1.5 rounded-md text-xs font-mono text-left", quality === q ? "bg-foreground text-background" : "hover:bg-muted text-muted-foreground")}
-              aria-label={`Quality ${q}`}
-            >
-              {q}
-            </button>
-          ))}
-        </div>
-        <button className="flex items-center justify-between px-2 py-1.5 rounded-md bg-amber-500/10 text-xs" aria-label="Fast mode">
-          <Zap className="size-3.5 text-amber-500" aria-hidden="true" />
-          <span className="font-mono text-amber-600 dark:text-amber-400">Fast</span>
-        </button>
-        <button className="flex items-center justify-between px-2 py-1.5 rounded-md hover:bg-muted text-xs" aria-label="Negative prompt">
-          <Ban className="size-3.5 text-muted-foreground" aria-hidden="true" />
-          <span className="font-mono text-muted-foreground">Neg</span>
-        </button>
-      </div>
-
-      {/* Prompt area */}
-      <div className="flex-1 p-4 flex flex-col gap-3">
-        <textarea placeholder="Describe your image in detail…" aria-label="Image prompt" className="flex-1 bg-transparent text-base placeholder:text-muted-foreground focus:outline-none resize-none min-h-[80px]" />
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <button className="size-9 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors" aria-label="Add reference images">
-              <ImagePlus className="size-4" aria-hidden="true" />
-            </button>
-            <button className="size-9 rounded-lg bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors" aria-label="Saved references library">
-              <Library className="size-4" aria-hidden="true" />
-            </button>
-          </div>
-          <button className="px-5 py-2.5 rounded-lg bg-foreground text-background text-sm font-medium flex items-center gap-2" aria-label="Generate image">
-            <Sparkles className="size-4" aria-hidden="true" />
-            Generate
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// MOCKUP 6: Pill Segmented
-// All settings as inline pill controls
-// ============================================================================
-function ComposerPills() {
+function ComposerNeon() {
   const [aspectRatio, setAspectRatio] = React.useState('1:1');
   const [quality, setQuality] = React.useState('2K');
   const [count, setCount] = React.useState(1);
+  const [speed, setSpeed] = React.useState<'fast' | 'batch'>('fast');
+  const [showNegative, setShowNegative] = React.useState(false);
 
-  return (
-    <div className="bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-lg overflow-hidden">
-      {/* Pills row */}
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-border overflow-x-auto">
-        {/* API Pill */}
-        <div className="flex items-center h-8 px-3 bg-muted/50 rounded-full gap-2 flex-shrink-0">
-          <Server className="size-3.5 text-muted-foreground" aria-hidden="true" />
-          <span className="text-xs font-mono">Nano Pro</span>
-        </div>
-
-        {/* Aspect Ratio Pills */}
-        <div className="flex items-center h-8 p-0.5 bg-muted/50 rounded-full flex-shrink-0" role="radiogroup" aria-label="Aspect ratio">
-          {['1:1', '16:9', '9:16'].map((r) => (
-            <button
-              key={r}
-              onClick={() => setAspectRatio(r)}
-              role="radio"
-              aria-checked={aspectRatio === r}
-              className={cn("h-7 px-2.5 rounded-full text-xs font-mono transition-colors flex items-center gap-1.5", aspectRatio === r ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}
-            >
-              <AspectRatioShape ratio={r} className={aspectRatio === r ? "" : "opacity-50"} />
-              {r}
-            </button>
-          ))}
-        </div>
-
-        {/* Quality Pills */}
-        <div className="flex items-center h-8 p-0.5 bg-muted/50 rounded-full flex-shrink-0" role="radiogroup" aria-label="Quality">
-          {QUALITY_OPTIONS.map((q) => (
-            <button
-              key={q}
-              onClick={() => setQuality(q)}
-              role="radio"
-              aria-checked={quality === q}
-              className={cn("h-7 px-3 rounded-full text-xs font-mono transition-colors", quality === q ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}
-            >
-              {q}
-            </button>
-          ))}
-        </div>
-
-        {/* Count Pills */}
-        <div className="flex items-center gap-0.5 flex-shrink-0" role="radiogroup" aria-label="Number of images">
-          {COUNT_OPTIONS.map((n) => (
-            <button
-              key={n}
-              onClick={() => setCount(n)}
-              role="radio"
-              aria-checked={count === n}
-              className={cn("size-8 rounded-full text-xs font-mono transition-colors", count === n ? "bg-foreground text-background" : "text-muted-foreground hover:bg-muted/50")}
-            >
-              {n}
-            </button>
-          ))}
-        </div>
-
-        {/* Speed Pill */}
-        <div className="flex items-center h-8 px-3 bg-amber-500/10 rounded-full gap-1.5 flex-shrink-0">
-          <Zap className="size-3.5 text-amber-500" aria-hidden="true" />
-          <span className="text-xs font-mono text-amber-600 dark:text-amber-400">Fast</span>
-        </div>
-      </div>
-
-      {/* Input */}
-      <div className="flex items-center gap-3 p-3">
-        <button className="size-10 rounded-xl bg-muted/50 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors" aria-label="Add reference images">
-          <ImagePlus className="size-4" strokeWidth={1.5} aria-hidden="true" />
-        </button>
-        <input type="text" placeholder="Your prompt here…" aria-label="Image prompt" className="flex-1 bg-transparent text-base placeholder:text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded" />
-        <button className="h-10 px-5 rounded-xl bg-gradient-to-r from-primary to-primary/80 text-primary-foreground font-medium text-sm" aria-label="Create image">Create</button>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// MOCKUP 7: Collapsible Drawer
-// Hidden settings revealed on demand
-// ============================================================================
-function ComposerDrawer() {
-  const [isOpen, setIsOpen] = React.useState(false);
-  const [quality, setQuality] = React.useState('2K');
-
-  return (
-    <div className="bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-lg overflow-hidden">
-      {/* Drawer content */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
-            <div className="p-4 bg-muted/20 border-b border-border">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">API</span>
-                  <button className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted hover:bg-muted/80 text-sm" aria-label="Select API">
-                    <Server className="size-4" aria-hidden="true" />
-                    <span className="font-mono">Nano Pro</span>
-                  </button>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Aspect</span>
-                  <div className="flex items-center gap-1">
-                    {['1:1', '16:9', '9:16'].map((r) => (
-                      <button key={r} className={cn("px-2 py-2 rounded-lg text-xs font-mono", r === '1:1' ? "bg-foreground text-background" : "bg-muted hover:bg-muted/80")} aria-label={`Aspect ratio ${r}`}>
-                        {r}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Quality</span>
-                  <div className="flex items-center gap-1">
-                    {QUALITY_OPTIONS.map((q) => (
-                      <button key={q} onClick={() => setQuality(q)} className={cn("px-2 py-2 rounded-lg text-xs font-mono", quality === q ? "bg-foreground text-background" : "bg-muted hover:bg-muted/80")} aria-label={`Quality ${q}`}>
-                        {q}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-mono">Speed</span>
-                  <button className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 text-sm" aria-label="Fast mode">
-                    <Zap className="size-4 text-amber-500" aria-hidden="true" />
-                    <span className="font-mono text-amber-600 dark:text-amber-400">Fast</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Main input */}
-      <div className="flex items-center gap-3 p-3">
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          aria-label="Toggle settings"
-          aria-expanded={isOpen}
-          className={cn("size-11 rounded-xl flex items-center justify-center transition-colors", isOpen ? "bg-foreground text-background" : "bg-muted/50 text-muted-foreground hover:text-foreground")}
-        >
-          <Settings className="size-5" strokeWidth={1.5} aria-hidden="true" />
-        </button>
-        <input type="text" placeholder="What would you like to create?" aria-label="Image prompt" className="flex-1 bg-transparent text-base placeholder:text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded" />
-        <button className="size-11 rounded-xl bg-primary text-primary-foreground flex items-center justify-center" aria-label="Generate image">
-          <Sparkles className="size-5" aria-hidden="true" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================================
-// MOCKUP 8: Glass Morphism
-// Frosted glass with floating chip settings
-// ============================================================================
-function ComposerGlass() {
   return (
     <div className="relative">
-      {/* Gradient blobs */}
-      <div className="absolute -top-10 -right-10 w-40 h-40 bg-gradient-to-br from-primary/20 to-purple-500/20 rounded-full blur-3xl" aria-hidden="true" />
-      <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-gradient-to-br from-blue-500/20 to-cyan-500/20 rounded-full blur-3xl" aria-hidden="true" />
+      {/* Glow effect */}
+      <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/10 via-transparent to-pink-500/10 rounded-2xl blur-xl" aria-hidden="true" />
 
-      <div className="relative bg-background/60 backdrop-blur-2xl border border-white/10 rounded-3xl shadow-2xl overflow-hidden">
-        {/* Floating settings chips */}
+      <div className="relative bg-zinc-950/90 backdrop-blur-xl border border-cyan-500/20 rounded-2xl shadow-2xl shadow-cyan-500/5 overflow-hidden">
+        {/* Settings row with neon accents */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5 overflow-x-auto">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm">
-            <Server className="size-3 text-muted-foreground" aria-hidden="true" />
-            <span className="text-xs font-mono">Nano Pro</span>
+          <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-cyan-500/30 transition-colors" aria-label="Select API">
+            <Server className="size-3 text-cyan-400" aria-hidden="true" />
+            <span className="text-xs font-mono text-zinc-300">Nano Pro</span>
+          </button>
+
+          <button onClick={() => setAspectRatio(aspectRatio === '1:1' ? '16:9' : '1:1')} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-cyan-500/30 transition-colors" aria-label={`Aspect ratio ${aspectRatio}`}>
+            <AspectRatioShape ratio={aspectRatio} className="text-cyan-400" />
+            <span className="text-xs font-mono text-zinc-300">{aspectRatio}</span>
+          </button>
+
+          <div className="flex items-center gap-0.5 p-0.5 bg-zinc-900 rounded-lg border border-zinc-800" role="radiogroup" aria-label="Quality">
+            {QUALITY_OPTIONS.map((q) => (
+              <button
+                key={q}
+                onClick={() => setQuality(q)}
+                role="radio"
+                aria-checked={quality === q}
+                className={cn("px-2.5 py-1 rounded-md text-xs font-mono transition-all", quality === q ? "bg-cyan-500 text-zinc-950" : "text-zinc-500 hover:text-zinc-300")}
+              >
+                {q}
+              </button>
+            ))}
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm">
-            <AspectRatioShape ratio="9:16" className="text-primary" />
-            <span className="text-xs font-mono">9:16</span>
+
+          <div className="flex items-center gap-0.5" role="radiogroup" aria-label="Count">
+            {COUNT_OPTIONS.map((n) => (
+              <button
+                key={n}
+                onClick={() => setCount(n)}
+                role="radio"
+                aria-checked={count === n}
+                className={cn("size-7 rounded-lg text-xs font-mono transition-all", count === n ? "bg-pink-500 text-white" : "text-zinc-500 hover:text-zinc-300 border border-zinc-800 hover:border-pink-500/30")}
+              >
+                {n}
+              </button>
+            ))}
           </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm">
-            <span className="text-xs font-mono">4K</span>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm">
-            <span className="text-xs font-mono">×2</span>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/20">
-            <Zap className="size-3 text-amber-400" aria-hidden="true" />
-            <span className="text-xs font-mono text-amber-300">Turbo</span>
-          </div>
+
+          <button onClick={() => setSpeed(speed === 'fast' ? 'batch' : 'fast')} className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-colors", speed === 'fast' ? "bg-amber-500/10 border-amber-500/30" : "bg-zinc-900 border-zinc-800 hover:border-amber-500/30")} aria-label={speed === 'fast' ? 'Fast mode' : 'Batch mode'}>
+            {speed === 'fast' ? <Zap className="size-3 text-amber-400" aria-hidden="true" /> : <Clock className="size-3 text-zinc-400" aria-hidden="true" />}
+            <span className={cn("text-xs font-mono", speed === 'fast' ? "text-amber-400" : "text-zinc-400")}>{speed === 'fast' ? 'Fast' : 'Batch'}</span>
+          </button>
+
+          <button onClick={() => setShowNegative(!showNegative)} className={cn("size-7 rounded-lg flex items-center justify-center border transition-colors", showNegative ? "bg-zinc-800 border-zinc-700" : "border-zinc-800 hover:border-zinc-700")} aria-label="Toggle negative prompt" aria-expanded={showNegative}>
+            <Ban className="size-3 text-zinc-400" aria-hidden="true" />
+          </button>
         </div>
+
+        {/* Negative Prompt */}
+        <AnimatePresence>
+          {showNegative && (
+            <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+              <div className="px-4 py-3 bg-zinc-900/50 border-b border-white/5">
+                <input type="text" placeholder="Negative: blurry, distorted…" aria-label="Negative prompt" className="w-full bg-transparent text-sm text-zinc-300 placeholder:text-zinc-600 focus:outline-none" />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Input area */}
         <div className="p-4">
-          <textarea placeholder="Imagine something beautiful…" aria-label="Image prompt" className="w-full bg-transparent text-base placeholder:text-muted-foreground/50 focus:outline-none resize-none min-h-[80px]" />
+          <textarea placeholder="Describe your vision…" aria-label="Image prompt" className="w-full bg-transparent text-base text-zinc-200 placeholder:text-zinc-600 focus:outline-none resize-none min-h-[60px]" />
           <div className="flex items-center justify-between mt-3">
             <div className="flex items-center gap-2">
-              <button className="size-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors" aria-label="Add reference images">
+              <button className="size-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-cyan-400 hover:border-cyan-500/30 transition-colors" aria-label="Add reference images">
                 <ImagePlus className="size-4" aria-hidden="true" />
               </button>
-              <button className="size-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors" aria-label="Saved library">
+              <button className="size-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-cyan-400 hover:border-cyan-500/30 transition-colors" aria-label="Saved library">
                 <Library className="size-4" aria-hidden="true" />
               </button>
-              <button className="size-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors" aria-label="Negative prompt">
-                <Ban className="size-4" aria-hidden="true" />
+            </div>
+            <button className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-pink-500 text-white font-medium text-sm shadow-lg shadow-cyan-500/20 flex items-center gap-2" aria-label="Generate image">
+              <Sparkles className="size-4" aria-hidden="true" />
+              Generate
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// MOCKUP 5: Layered Cards
+// Stacked card aesthetic with depth
+// ============================================================================
+function ComposerLayered() {
+  const [aspectRatio, setAspectRatio] = React.useState('1:1');
+  const [quality, setQuality] = React.useState('2K');
+  const [count, setCount] = React.useState(1);
+  const [speed, setSpeed] = React.useState<'fast' | 'batch'>('fast');
+  const [showNegative, setShowNegative] = React.useState(false);
+
+  return (
+    <div className="relative">
+      {/* Background layers for depth */}
+      <div className="absolute inset-0 translate-x-2 translate-y-2 bg-zinc-800/50 rounded-2xl" aria-hidden="true" />
+      <div className="absolute inset-0 translate-x-1 translate-y-1 bg-zinc-800/70 rounded-2xl" aria-hidden="true" />
+
+      <div className="relative bg-zinc-900 border border-zinc-700 rounded-2xl shadow-xl overflow-hidden">
+        {/* Settings as stacked chips */}
+        <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-zinc-800">
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-800 border border-zinc-700">
+            <Server className="size-3.5 text-zinc-400" aria-hidden="true" />
+            <span className="text-xs font-mono text-zinc-300">Nano Pro</span>
+          </div>
+
+          <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-800 border border-zinc-700" onClick={() => setAspectRatio(aspectRatio === '1:1' ? '16:9' : '1:1')} role="button" aria-label={`Aspect ratio ${aspectRatio}`}>
+            <AspectRatioShape ratio={aspectRatio} className="text-zinc-400" />
+            <span className="text-xs font-mono text-zinc-300">{aspectRatio}</span>
+          </div>
+
+          <div className="flex items-center p-1 rounded-xl bg-zinc-800 border border-zinc-700" role="radiogroup" aria-label="Quality">
+            {QUALITY_OPTIONS.map((q) => (
+              <button
+                key={q}
+                onClick={() => setQuality(q)}
+                role="radio"
+                aria-checked={quality === q}
+                className={cn("px-3 py-1 rounded-lg text-xs font-mono transition-all", quality === q ? "bg-zinc-600 text-white" : "text-zinc-500 hover:text-zinc-300")}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-1" role="radiogroup" aria-label="Count">
+            {COUNT_OPTIONS.map((n) => (
+              <button
+                key={n}
+                onClick={() => setCount(n)}
+                role="radio"
+                aria-checked={count === n}
+                className={cn("size-8 rounded-lg text-xs font-mono transition-all border", count === n ? "bg-white text-zinc-900 border-white" : "text-zinc-500 border-zinc-700 hover:border-zinc-600")}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+
+          <button onClick={() => setSpeed(speed === 'fast' ? 'batch' : 'fast')} className={cn("flex items-center gap-2 px-3 py-2 rounded-xl border transition-colors", speed === 'fast' ? "bg-amber-500/10 border-amber-500/30" : "bg-zinc-800 border-zinc-700")} aria-label={speed === 'fast' ? 'Fast mode' : 'Batch mode'}>
+            {speed === 'fast' ? <Zap className="size-3.5 text-amber-400" aria-hidden="true" /> : <Clock className="size-3.5 text-zinc-400" aria-hidden="true" />}
+            <span className={cn("text-xs font-mono", speed === 'fast' ? "text-amber-400" : "text-zinc-400")}>{speed === 'fast' ? 'Fast' : 'Batch'}</span>
+          </button>
+
+          <button onClick={() => setShowNegative(!showNegative)} className={cn("size-8 rounded-lg flex items-center justify-center border transition-colors", showNegative ? "bg-zinc-700 border-zinc-600" : "border-zinc-700 hover:border-zinc-600")} aria-label="Toggle negative prompt" aria-expanded={showNegative}>
+            <Ban className="size-3.5 text-zinc-400" aria-hidden="true" />
+          </button>
+        </div>
+
+        {/* Negative Prompt */}
+        <AnimatePresence>
+          {showNegative && (
+            <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+              <div className="px-4 py-3 bg-zinc-800/50 border-b border-zinc-800">
+                <input type="text" placeholder="Exclude: blurry, low quality…" aria-label="Negative prompt" className="w-full bg-transparent text-sm text-zinc-300 placeholder:text-zinc-600 focus:outline-none" />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Input */}
+        <div className="p-4">
+          <textarea placeholder="Describe what you'd like to create…" aria-label="Image prompt" className="w-full bg-transparent text-base text-zinc-200 placeholder:text-zinc-500 focus:outline-none resize-none min-h-[60px]" />
+          <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center gap-2">
+              <button className="size-10 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:border-zinc-600 transition-colors" aria-label="Add reference images">
+                <ImagePlus className="size-4" aria-hidden="true" />
+              </button>
+              <button className="size-10 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:border-zinc-600 transition-colors" aria-label="Saved library">
+                <Library className="size-4" aria-hidden="true" />
               </button>
             </div>
-            <button className="px-6 py-3 rounded-xl bg-gradient-to-r from-primary to-purple-500 text-primary-foreground font-medium text-sm shadow-lg shadow-primary/25 flex items-center gap-2" aria-label="Generate image">
+            <button className="px-6 py-3 rounded-xl bg-white text-zinc-900 font-medium text-sm shadow-lg flex items-center gap-2 hover:bg-zinc-100 transition-colors" aria-label="Generate image">
               <Sparkles className="size-4" aria-hidden="true" />
-              Dream
+              Generate
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// MOCKUP 6: Terminal Style
+// Developer-focused monospace design
+// ============================================================================
+function ComposerTerminal() {
+  const [aspectRatio, setAspectRatio] = React.useState('1:1');
+  const [quality, setQuality] = React.useState('2K');
+  const [count, setCount] = React.useState(1);
+  const [speed, setSpeed] = React.useState<'fast' | 'batch'>('fast');
+  const [showNegative, setShowNegative] = React.useState(false);
+
+  return (
+    <div className="bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl overflow-hidden font-mono">
+      {/* Terminal header */}
+      <div className="flex items-center gap-2 px-4 py-2 bg-zinc-900 border-b border-zinc-800">
+        <div className="flex items-center gap-1.5">
+          <div className="size-3 rounded-full bg-red-500/80" aria-hidden="true" />
+          <div className="size-3 rounded-full bg-yellow-500/80" aria-hidden="true" />
+          <div className="size-3 rounded-full bg-green-500/80" aria-hidden="true" />
+        </div>
+        <span className="text-xs text-zinc-500 ml-2">avalansa — generate</span>
+      </div>
+
+      {/* Config section */}
+      <div className="px-4 py-3 text-xs border-b border-zinc-800 space-y-1.5">
+        <div className="flex items-center gap-3 text-zinc-500">
+          <span className="text-green-400">$</span>
+          <span>config</span>
+          <button className="text-cyan-400 hover:underline" aria-label="API: Nano Pro">--api=nano-pro</button>
+          <button onClick={() => setAspectRatio(aspectRatio === '1:1' ? '16:9' : '1:1')} className="text-yellow-400 hover:underline" aria-label={`Aspect ratio ${aspectRatio}`}>--ratio={aspectRatio}</button>
+          <button onClick={() => setQuality(quality === '2K' ? '4K' : '2K')} className="text-pink-400 hover:underline" aria-label={`Quality ${quality}`}>--quality={quality.toLowerCase()}</button>
+          <button onClick={() => setCount(count >= 4 ? 1 : count + 1)} className="text-purple-400 hover:underline" aria-label={`Count ${count}`}>--count={count}</button>
+          <button onClick={() => setSpeed(speed === 'fast' ? 'batch' : 'fast')} className={cn("hover:underline", speed === 'fast' ? "text-amber-400" : "text-zinc-400")} aria-label={speed === 'fast' ? 'Fast mode' : 'Batch mode'}>--{speed}</button>
+        </div>
+
+        <AnimatePresence>
+          {showNegative && (
+            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
+              <div className="flex items-center gap-3 text-zinc-500">
+                <span className="text-green-400">$</span>
+                <span>exclude</span>
+                <input type="text" placeholder="\"blurry, low quality\"" aria-label="Negative prompt" className="flex-1 bg-transparent text-red-400 placeholder:text-zinc-700 focus:outline-none" />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {/* Prompt input */}
+      <div className="px-4 py-4">
+        <div className="flex items-start gap-3">
+          <span className="text-green-400 text-sm mt-0.5">❯</span>
+          <textarea placeholder="describe your image..." aria-label="Image prompt" className="flex-1 bg-transparent text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none resize-none min-h-[60px]" />
+        </div>
+      </div>
+
+      {/* Action bar */}
+      <div className="flex items-center justify-between px-4 py-3 bg-zinc-900/50 border-t border-zinc-800">
+        <div className="flex items-center gap-2">
+          <button className="px-3 py-1.5 rounded-md bg-zinc-800 text-zinc-400 text-xs hover:text-zinc-200 transition-colors flex items-center gap-1.5" aria-label="Add reference images">
+            <ImagePlus className="size-3" aria-hidden="true" />
+            refs
+          </button>
+          <button className="px-3 py-1.5 rounded-md bg-zinc-800 text-zinc-400 text-xs hover:text-zinc-200 transition-colors flex items-center gap-1.5" aria-label="Library">
+            <Library className="size-3" aria-hidden="true" />
+            lib
+          </button>
+          <button onClick={() => setShowNegative(!showNegative)} className={cn("px-3 py-1.5 rounded-md text-xs transition-colors flex items-center gap-1.5", showNegative ? "bg-red-500/20 text-red-400" : "bg-zinc-800 text-zinc-400 hover:text-zinc-200")} aria-label="Toggle negative prompt" aria-expanded={showNegative}>
+            <Ban className="size-3" aria-hidden="true" />
+            neg
+          </button>
+        </div>
+        <button className="px-4 py-2 rounded-md bg-green-500 text-zinc-950 text-xs font-medium hover:bg-green-400 transition-colors flex items-center gap-1.5" aria-label="Run generation">
+          <Sparkles className="size-3" aria-hidden="true" />
+          run
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// MOCKUP 7: Floating Island
+// Elevated with prominent shadow
+// ============================================================================
+function ComposerFloating() {
+  const [aspectRatio, setAspectRatio] = React.useState('1:1');
+  const [quality, setQuality] = React.useState('2K');
+  const [count, setCount] = React.useState(1);
+  const [speed, setSpeed] = React.useState<'fast' | 'batch'>('fast');
+  const [showNegative, setShowNegative] = React.useState(false);
+  const [showSettings, setShowSettings] = React.useState(false);
+
+  return (
+    <div className="relative">
+      {/* Shadow layers */}
+      <div className="absolute inset-0 translate-y-4 bg-black/40 rounded-3xl blur-2xl" aria-hidden="true" />
+      <div className="absolute inset-0 translate-y-2 bg-black/20 rounded-3xl blur-xl" aria-hidden="true" />
+
+      <div className="relative bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden">
+        {/* Settings drawer */}
+        <AnimatePresence>
+          {showSettings && (
+            <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+              <div className="p-4 bg-zinc-800/30 border-b border-white/5">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider">API</span>
+                    <button className="flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-sm transition-colors" aria-label="Select API">
+                      <Server className="size-4 text-zinc-400" aria-hidden="true" />
+                      <span className="font-mono text-zinc-300">Nano Pro</span>
+                    </button>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Ratio</span>
+                    <div className="flex items-center gap-1">
+                      {['1:1', '16:9', '9:16'].map((r) => (
+                        <button key={r} onClick={() => setAspectRatio(r)} className={cn("px-2.5 py-2 rounded-xl text-xs font-mono transition-colors", r === aspectRatio ? "bg-white text-zinc-900" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700")} aria-label={`Aspect ratio ${r}`}>
+                          {r}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Quality</span>
+                    <div className="flex items-center gap-1">
+                      {QUALITY_OPTIONS.map((q) => (
+                        <button key={q} onClick={() => setQuality(q)} className={cn("px-2.5 py-2 rounded-xl text-xs font-mono transition-colors", quality === q ? "bg-white text-zinc-900" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700")} aria-label={`Quality ${q}`}>
+                          {q}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Speed</span>
+                    <button onClick={() => setSpeed(speed === 'fast' ? 'batch' : 'fast')} className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 text-sm transition-colors" aria-label={speed === 'fast' ? 'Fast mode' : 'Batch mode'}>
+                      {speed === 'fast' ? <Zap className="size-4 text-amber-400" aria-hidden="true" /> : <Clock className="size-4 text-zinc-400" aria-hidden="true" />}
+                      <span className={cn("font-mono", speed === 'fast' ? "text-amber-400" : "text-zinc-400")}>{speed === 'fast' ? 'Fast' : 'Batch'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Count and negative in second row */}
+                <div className="flex items-center gap-4 mt-4">
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Count</span>
+                    <div className="flex items-center gap-1" role="radiogroup" aria-label="Count">
+                      {COUNT_OPTIONS.map((n) => (
+                        <button key={n} onClick={() => setCount(n)} role="radio" aria-checked={count === n} className={cn("size-8 rounded-lg text-xs font-mono transition-colors", count === n ? "bg-white text-zinc-900" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700")}>
+                          {n}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <button onClick={() => setShowNegative(!showNegative)} className={cn("flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors mt-auto", showNegative ? "bg-zinc-700" : "bg-zinc-800 hover:bg-zinc-700")} aria-label="Toggle negative prompt" aria-expanded={showNegative}>
+                    <Ban className="size-4 text-zinc-400" aria-hidden="true" />
+                    <span className="text-zinc-400 font-mono">Negative</span>
+                  </button>
+                </div>
+
+                {showNegative && (
+                  <div className="mt-4">
+                    <input type="text" placeholder="blurry, low quality, distorted…" aria-label="Negative prompt" className="w-full px-3 py-2 rounded-xl bg-zinc-800 text-sm text-zinc-300 placeholder:text-zinc-600 focus:outline-none" />
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Main input */}
+        <div className="flex items-center gap-3 p-4">
+          <button onClick={() => setShowSettings(!showSettings)} className={cn("size-12 rounded-2xl flex items-center justify-center transition-colors", showSettings ? "bg-white text-zinc-900" : "bg-zinc-800 text-zinc-400 hover:text-zinc-200")} aria-label="Toggle settings" aria-expanded={showSettings}>
+            <Settings className="size-5" strokeWidth={1.5} aria-hidden="true" />
+          </button>
+
+          <div className="flex-1 flex items-center gap-2">
+            <button className="size-10 rounded-xl bg-zinc-800/50 flex items-center justify-center text-zinc-500 hover:text-zinc-300 transition-colors" aria-label="Add reference images">
+              <ImagePlus className="size-4" aria-hidden="true" />
+            </button>
+            <button className="size-10 rounded-xl bg-zinc-800/50 flex items-center justify-center text-zinc-500 hover:text-zinc-300 transition-colors" aria-label="Library">
+              <Library className="size-4" aria-hidden="true" />
+            </button>
+          </div>
+
+          <input type="text" placeholder="What would you like to create?" aria-label="Image prompt" className="flex-1 bg-transparent text-base text-zinc-200 placeholder:text-zinc-500 focus:outline-none" />
+
+          <button className="size-12 rounded-2xl bg-white text-zinc-900 flex items-center justify-center hover:bg-zinc-100 transition-colors" aria-label="Generate image">
+            <Sparkles className="size-5" aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// MOCKUP 8: Gradient Border
+// Animated gradient border accent
+// ============================================================================
+function ComposerGradient() {
+  const [aspectRatio, setAspectRatio] = React.useState('1:1');
+  const [quality, setQuality] = React.useState('2K');
+  const [count, setCount] = React.useState(1);
+  const [speed, setSpeed] = React.useState<'fast' | 'batch'>('fast');
+  const [showNegative, setShowNegative] = React.useState(false);
+
+  return (
+    <div className="relative p-[1px] rounded-2xl bg-gradient-to-r from-violet-500 via-pink-500 to-orange-500">
+      {/* Glow */}
+      <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-violet-500 via-pink-500 to-orange-500 blur-lg opacity-30" aria-hidden="true" />
+
+      <div className="relative bg-zinc-950 rounded-2xl overflow-hidden">
+        {/* Settings row */}
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 overflow-x-auto">
+          <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-colors" aria-label="Select API">
+            <Server className="size-3 text-zinc-400" aria-hidden="true" />
+            <span className="text-xs font-mono text-zinc-300">Nano Pro</span>
+          </button>
+
+          <button onClick={() => setAspectRatio(aspectRatio === '1:1' ? '16:9' : '1:1')} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition-colors" aria-label={`Aspect ratio ${aspectRatio}`}>
+            <AspectRatioShape ratio={aspectRatio} className="text-violet-400" />
+            <span className="text-xs font-mono text-zinc-300">{aspectRatio}</span>
+          </button>
+
+          <div className="flex items-center p-0.5 bg-zinc-900 rounded-lg border border-zinc-800" role="radiogroup" aria-label="Quality">
+            {QUALITY_OPTIONS.map((q) => (
+              <button
+                key={q}
+                onClick={() => setQuality(q)}
+                role="radio"
+                aria-checked={quality === q}
+                className={cn("px-2.5 py-1 rounded-md text-xs font-mono transition-all", quality === q ? "bg-gradient-to-r from-violet-500 to-pink-500 text-white" : "text-zinc-500 hover:text-zinc-300")}
+              >
+                {q}
+              </button>
+            ))}
+          </div>
+
+          <div className="flex items-center gap-0.5" role="radiogroup" aria-label="Count">
+            {COUNT_OPTIONS.map((n) => (
+              <button
+                key={n}
+                onClick={() => setCount(n)}
+                role="radio"
+                aria-checked={count === n}
+                className={cn("size-7 rounded-lg text-xs font-mono transition-all", count === n ? "bg-gradient-to-r from-pink-500 to-orange-500 text-white" : "text-zinc-500 hover:text-zinc-300")}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+
+          <button onClick={() => setSpeed(speed === 'fast' ? 'batch' : 'fast')} className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-lg border transition-colors", speed === 'fast' ? "bg-amber-500/10 border-amber-500/30" : "bg-zinc-900 border-zinc-800")} aria-label={speed === 'fast' ? 'Fast mode' : 'Batch mode'}>
+            {speed === 'fast' ? <Zap className="size-3 text-amber-400" aria-hidden="true" /> : <Clock className="size-3 text-zinc-400" aria-hidden="true" />}
+            <span className={cn("text-xs font-mono", speed === 'fast' ? "text-amber-400" : "text-zinc-400")}>{speed === 'fast' ? 'Fast' : 'Batch'}</span>
+          </button>
+
+          <button onClick={() => setShowNegative(!showNegative)} className={cn("size-7 rounded-lg flex items-center justify-center border transition-colors", showNegative ? "bg-zinc-800 border-zinc-700" : "border-zinc-800 hover:border-zinc-700")} aria-label="Toggle negative prompt" aria-expanded={showNegative}>
+            <Ban className="size-3 text-zinc-400" aria-hidden="true" />
+          </button>
+        </div>
+
+        {/* Negative Prompt */}
+        <AnimatePresence>
+          {showNegative && (
+            <motion.div initial={{ height: 0 }} animate={{ height: 'auto' }} exit={{ height: 0 }} className="overflow-hidden">
+              <div className="px-4 py-3 bg-zinc-900/50 border-b border-zinc-800">
+                <input type="text" placeholder="Exclude: blurry, distorted…" aria-label="Negative prompt" className="w-full bg-transparent text-sm text-zinc-300 placeholder:text-zinc-600 focus:outline-none" />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Input area */}
+        <div className="p-4">
+          <textarea placeholder="Describe your creative vision…" aria-label="Image prompt" className="w-full bg-transparent text-base text-zinc-200 placeholder:text-zinc-600 focus:outline-none resize-none min-h-[60px]" />
+          <div className="flex items-center justify-between mt-3">
+            <div className="flex items-center gap-2">
+              <button className="size-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:border-zinc-700 transition-colors" aria-label="Add reference images">
+                <ImagePlus className="size-4" aria-hidden="true" />
+              </button>
+              <button className="size-10 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-300 hover:border-zinc-700 transition-colors" aria-label="Library">
+                <Library className="size-4" aria-hidden="true" />
+              </button>
+            </div>
+            <button className="px-6 py-3 rounded-xl bg-gradient-to-r from-violet-500 via-pink-500 to-orange-500 text-white font-medium text-sm shadow-lg shadow-pink-500/20 flex items-center gap-2 hover:shadow-pink-500/30 transition-shadow" aria-label="Generate image">
+              <Sparkles className="size-4" aria-hidden="true" />
+              Create
             </button>
           </div>
         </div>
