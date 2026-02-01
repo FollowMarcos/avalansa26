@@ -162,6 +162,7 @@ interface CreateContextType {
 
   // Generation slots for concurrent image generation (max 4)
   generationSlots: GenerationSlot[];
+  hasAvailableSlots: boolean; // True if any slots are idle (can start new generation)
   selectGeneratedImage: (slotId: string) => void;
   clearGenerationSlots: () => void;
 
@@ -1698,6 +1699,11 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [prompt, settings, currentCanvasId, selectedApiId, nodes, edges, viewport, viewMode, historyPanelOpen, currentUserId]);
 
+  // Compute whether there are available slots for new generations
+  const hasAvailableSlots = React.useMemo(() => {
+    return generationSlots.some(slot => slot.status === "idle");
+  }, [generationSlots]);
+
   const value = React.useMemo(() => ({
     // API selection
     availableApis,
@@ -1765,6 +1771,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     cancelGeneration,
     pendingBatchJobs,
     generationSlots,
+    hasAvailableSlots,
     selectGeneratedImage,
     clearGenerationSlots,
     // Session management
@@ -1784,7 +1791,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     nodes, edges, onNodesChange, onEdgesChange, onConnect, addImageNode, deleteNode, selectImageByNodeId,
     currentCanvasId, canvasList, isSaving, lastSaved, createNewCanvas, switchCanvas, renameCanvas, deleteCanvasById,
     viewMode, historyPanelOpen, isInputVisible, activeTab, zoom, canUndo, canRedo,
-    isGenerating, thinkingSteps, generationSlots,
+    isGenerating, thinkingSteps, generationSlots, hasAvailableSlots,
     currentSessionId, currentSessionName, sessions, historyGroupedBySession,
     updateSettings, addReferenceImages, addReferenceImageFromUrl, removeReferenceImage, clearReferenceImages,
     savedReferences, loadSavedReferences, removeSavedReference, renameSavedReference, addSavedReferenceToActive,

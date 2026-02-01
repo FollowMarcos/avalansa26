@@ -94,6 +94,7 @@ export function PromptComposer() {
     removeSavedReference,
     addSavedReferenceToActive,
     isGenerating,
+    hasAvailableSlots,
     generate,
     settings,
     updateSettings,
@@ -113,7 +114,7 @@ export function PromptComposer() {
   }, [prompt.length, isPromptExpanded, setIsPromptExpanded]);
 
   const handleSubmit = () => {
-    if (!isGenerating && (prompt.trim() || referenceImages.length > 0)) {
+    if (hasAvailableSlots && (prompt.trim() || referenceImages.length > 0)) {
       generate();
     }
   };
@@ -141,7 +142,7 @@ export function PromptComposer() {
             onFilesAdded={addReferenceImages}
             multiple
             accept="image/*"
-            disabled={isGenerating}
+            disabled={!hasAvailableSlots}
           >
             {/* Main Composer Island */}
             <div className="relative">
@@ -209,7 +210,7 @@ export function PromptComposer() {
 
                           {/* Upload button */}
                           <FileUploadTrigger asChild>
-                            <button className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-muted dark:bg-zinc-800 hover:bg-muted/80 dark:hover:bg-zinc-700 text-sm transition-colors border-2 border-dashed border-border dark:border-zinc-700" disabled={isGenerating || referenceImages.length >= 14}>
+                            <button className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-muted dark:bg-zinc-800 hover:bg-muted/80 dark:hover:bg-zinc-700 text-sm transition-colors border-2 border-dashed border-border dark:border-zinc-700" disabled={!hasAvailableSlots || referenceImages.length >= 14}>
                               <ImagePlus className="size-4" />
                               <span>Upload images</span>
                             </button>
@@ -314,7 +315,7 @@ export function PromptComposer() {
                       <TooltipTrigger asChild>
                         <Button
                           onClick={handleSubmit}
-                          disabled={isGenerating || (!prompt.trim() && referenceImages.length === 0)}
+                          disabled={!hasAvailableSlots || (!prompt.trim() && referenceImages.length === 0)}
                           className={cn(
                             "size-11 rounded-2xl flex items-center justify-center transition-colors shrink-0 p-0",
                             "bg-foreground dark:bg-white text-background dark:text-zinc-900 hover:bg-foreground/90 dark:hover:bg-zinc-100",
@@ -322,7 +323,7 @@ export function PromptComposer() {
                           )}
                           aria-label="Generate image"
                         >
-                          {isGenerating ? (
+                          {isGenerating && !hasAvailableSlots ? (
                             <Loader variant="circular" size="sm" className="border-background dark:border-zinc-900" />
                           ) : (
                             <Sparkles className="size-5" strokeWidth={1.5} aria-hidden="true" />
@@ -343,7 +344,7 @@ export function PromptComposer() {
                     apis={availableApis}
                     selectedApiId={selectedApiId}
                     onSelect={setSelectedApiId}
-                    disabled={isGenerating || isLoadingApis}
+                    disabled={!hasAvailableSlots || isLoadingApis}
                   />
 
                   <div className="w-px h-5 bg-border dark:bg-zinc-700/50 shrink-0 mx-1" />

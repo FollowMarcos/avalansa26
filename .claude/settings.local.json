@@ -15,7 +15,9 @@
       "Bash(npx eslint:*)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:dribbble.com)",
-      "WebFetch(domain:uselayouts.com)"
+      "WebFetch(domain:uselayouts.com)",
+      "Bash(gh repo view:*)",
+      "Bash(gh api:*)"
     ]
   }
 }
