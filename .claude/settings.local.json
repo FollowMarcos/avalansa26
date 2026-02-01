@@ -12,7 +12,8 @@
       "Bash(findstr:*)",
       "Bash(git add:*)",
       "Bash(npm install:*)",
-      "Bash(npx eslint:*)"
+      "Bash(npx eslint:*)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ]
   }
 }
