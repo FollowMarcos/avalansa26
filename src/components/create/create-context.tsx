@@ -1700,8 +1700,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   }, [prompt, settings, currentCanvasId, selectedApiId, nodes, edges, viewport, viewMode, historyPanelOpen, currentUserId]);
 
   // Compute whether there are available slots for new generations
+  // Slots are available if they're not actively generating (idle, success, or failed can all be used)
   const hasAvailableSlots = React.useMemo(() => {
-    return generationSlots.some(slot => slot.status === "idle");
+    return generationSlots.some(slot => slot.status !== "generating");
   }, [generationSlots]);
 
   const value = React.useMemo(() => ({
