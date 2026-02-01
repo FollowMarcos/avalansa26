@@ -559,19 +559,34 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
     setReferenceImages(prev => [...prev, ...newImages].slice(0, MAX_REFERENCE_IMAGES));
 
-    // Upload each image to storage AND save to database (auto-save)
-    const { uploadReferenceImage: uploadAndSave } = await import("@/utils/supabase/reference-images.server");
+    // Import client-side storage upload and server action for DB record
+    const { uploadReferenceImage: uploadToStorage } = await import("@/utils/supabase/storage");
+    const { createReferenceImageRecord } = await import("@/utils/supabase/reference-images.server");
 
-    // Helper: Upload with timeout (30 seconds)
-    const uploadWithTimeout = async (file: File): Promise<ReferenceImageWithUrl | null> => {
-      const UPLOAD_TIMEOUT = 30000; // 30 seconds
+    // Helper: Upload with timeout (60 seconds for large files)
+    const uploadWithTimeout = async (file: File, userId: string): Promise<ReferenceImageWithUrl | null> => {
+      const UPLOAD_TIMEOUT = 60000; // 60 seconds for large files with compression
 
-      // Wrap File in FormData for Server Action serialization
-      const formData = new FormData();
-      formData.append('file', file);
+      const uploadPromise = async (): Promise<ReferenceImageWithUrl | null> => {
+        // Step 1: Upload to storage (client-side, bypasses Server Action limits)
+        const { path, url, error } = await uploadToStorage(file, userId);
+        if (error || !path) {
+          console.error('Storage upload failed:', error);
+          return null;
+        }
+
+        // Step 2: Create database record (lightweight server action)
+        const savedRef = await createReferenceImageRecord(path, file.name);
+        if (!savedRef) {
+          console.error('Failed to create database record');
+          return null;
+        }
+
+        return savedRef;
+      };
 
       return Promise.race([
-        uploadAndSave(formData),
+        uploadPromise(),
         new Promise<null>((_, reject) =>
           setTimeout(() => reject(new Error('Upload timed out')), UPLOAD_TIMEOUT)
         ),
@@ -584,7 +599,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     // Upload all images in parallel with timeout
     const uploadPromises = newImages.map(async (img) => {
       try {
-        const savedRef = await uploadWithTimeout(img.file);
+        const savedRef = await uploadWithTimeout(img.file, user.id);
 
         if (!savedRef) {
           console.error('Failed to upload image:', img.id);
@@ -683,16 +698,27 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       };
       setReferenceImages(prev => [...prev, newImage].slice(0, MAX_REFERENCE_IMAGES));
 
-      // Upload to storage AND save to database (auto-save) with timeout
-      const { uploadReferenceImage: uploadAndSave } = await import("@/utils/supabase/reference-images.server");
+      // Import client-side storage upload and server action for DB record
+      const { uploadReferenceImage: uploadToStorage } = await import("@/utils/supabase/storage");
+      const { createReferenceImageRecord } = await import("@/utils/supabase/reference-images.server");
 
-      // Wrap File in FormData for Server Action serialization
-      const formData = new FormData();
-      formData.append('file', file);
+      const UPLOAD_TIMEOUT = 60000; // 60 seconds for large files
 
-      const UPLOAD_TIMEOUT = 30000; // 30 seconds
+      const uploadPromise = async (): Promise<ReferenceImageWithUrl | null> => {
+        // Step 1: Upload to storage (client-side)
+        const { path, error } = await uploadToStorage(file, user.id);
+        if (error || !path) {
+          console.error('Storage upload failed:', error);
+          return null;
+        }
+
+        // Step 2: Create database record (lightweight server action)
+        const savedRef = await createReferenceImageRecord(path, file.name);
+        return savedRef;
+      };
+
       const savedRef = await Promise.race([
-        uploadAndSave(formData),
+        uploadPromise(),
         new Promise<null>((_, reject) =>
           setTimeout(() => reject(new Error('Upload timed out')), UPLOAD_TIMEOUT)
         ),

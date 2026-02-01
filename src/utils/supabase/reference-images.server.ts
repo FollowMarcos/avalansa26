@@ -51,8 +51,61 @@ export async function getUserReferenceImages(): Promise<ReferenceImageWithUrl[]>
 }
 
 /**
- * Upload a file and create a reference image record
- * Accepts FormData to properly serialize File objects in Server Actions
+ * Create a reference image database record after client-side upload
+ * This is a lightweight server action that only handles the database insert
+ * File upload should be done client-side to avoid Server Action size limits
+ */
+export async function createReferenceImageRecord(
+  storagePath: string,
+  name: string
+): Promise<ReferenceImageWithUrl | null> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    console.error('User not authenticated');
+    return null;
+  }
+
+  // Verify the path belongs to this user (security check)
+  if (!storagePath.startsWith(`${user.id}/`)) {
+    console.error('Storage path does not belong to user');
+    return null;
+  }
+
+  // Create database record
+  const { data, error: insertError } = await supabase
+    .from('reference_images')
+    .insert({
+      user_id: user.id,
+      storage_path: storagePath,
+      name: name,
+    })
+    .select()
+    .single();
+
+  if (insertError) {
+    console.error('Error creating reference image record:', insertError);
+    return null;
+  }
+
+  // Get public URL
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from(BUCKET_NAME).getPublicUrl(storagePath);
+
+  return {
+    ...data,
+    url: publicUrl,
+  };
+}
+
+/**
+ * @deprecated Use createReferenceImageRecord instead - upload directly from client
+ * This function is kept for backwards compatibility but will hit Server Action size limits
  */
 export async function uploadReferenceImage(
   formData: FormData
