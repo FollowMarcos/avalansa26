@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import { Trash2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -14,6 +13,7 @@ interface DeleteButtonProps {
  * Animated delete button with confirmation state.
  * First click expands to show confirmation, second click deletes.
  * Click cancel or outside to reset.
+ * Uses CSS transitions on transform/opacity only for performance.
  */
 export function DeleteButton({ onDelete, className }: DeleteButtonProps) {
   const [isConfirming, setIsConfirming] = React.useState(false);
@@ -43,68 +43,48 @@ export function DeleteButton({ onDelete, className }: DeleteButtonProps) {
   };
 
   return (
-    <AnimatePresence mode="wait">
-      {!isConfirming ? (
-        // Initial delete button
-        <motion.button
-          key="delete"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.8 }}
-          whileTap={{ scale: 0.9 }}
-          transition={{ duration: 0.15, ease: [0.4, 0, 0.2, 1] }}
-          onClick={handleInitialClick}
-          aria-label="Delete from canvas"
-          className={cn(
-            'size-6 rounded-full bg-red-500/90 flex items-center justify-center text-white',
-            'hover:bg-red-500 transition-colors shadow-sm',
-            className
-          )}
-        >
+    <div className="flex items-center gap-1 h-6">
+      {/* Initial delete button - always rendered, transforms when confirming */}
+      <button
+        onClick={isConfirming ? handleCancel : handleInitialClick}
+        aria-label={isConfirming ? "Cancel deletion" : "Delete from canvas"}
+        className={cn(
+          'size-6 rounded-full flex items-center justify-center shadow-sm shrink-0',
+          'transition-all duration-150 ease-out active:scale-90',
+          'focus-visible:ring-2 focus-visible:ring-ring',
+          isConfirming
+            ? 'bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700'
+            : 'bg-red-500/90 hover:bg-red-500 text-white',
+          className
+        )}
+      >
+        {isConfirming ? (
+          <X className="size-3 text-zinc-600 dark:text-zinc-400" aria-hidden="true" strokeWidth={2.5} />
+        ) : (
           <Trash2 className="size-3" aria-hidden="true" strokeWidth={2.5} />
-        </motion.button>
-      ) : (
-        // Confirmation state
-        <motion.div
-          key="confirm"
-          initial={{ opacity: 0, width: 24 }}
-          animate={{ opacity: 1, width: 'auto' }}
-          exit={{ opacity: 0, width: 24 }}
-          transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-          className="flex items-center gap-1 h-6 overflow-hidden"
-        >
-          {/* Cancel button */}
-          <motion.button
-            initial={{ opacity: 0, x: 8 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1, duration: 0.15 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={handleCancel}
-            aria-label="Cancel deletion"
-            className="size-6 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors shadow-sm shrink-0"
-          >
-            <X className="size-3 text-zinc-600 dark:text-zinc-400" aria-hidden="true" strokeWidth={2.5} />
-          </motion.button>
+        )}
+      </button>
 
-          {/* Confirm delete button */}
-          <motion.button
-            initial={{ opacity: 0, x: 8 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.05, duration: 0.15 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleConfirm}
-            aria-label="Confirm deletion"
-            className={cn(
-              'h-6 px-2 rounded-full flex items-center gap-1',
-              'bg-red-500 hover:bg-red-600 transition-colors shadow-sm',
-              'text-white text-[11px] font-medium whitespace-nowrap'
-            )}
-          >
-            <Trash2 className="size-3" aria-hidden="true" strokeWidth={2.5} />
-            <span>Delete</span>
-          </motion.button>
-        </motion.div>
-      )}
-    </AnimatePresence>
+      {/* Confirm delete button - slides in with transform */}
+      <button
+        onClick={handleConfirm}
+        aria-label="Confirm deletion"
+        aria-hidden={!isConfirming}
+        tabIndex={isConfirming ? 0 : -1}
+        className={cn(
+          'h-6 px-2 rounded-full flex items-center gap-1',
+          'bg-red-500 hover:bg-red-600 shadow-sm',
+          'text-white text-[11px] font-medium whitespace-nowrap',
+          'transition-all duration-150 ease-out active:scale-95',
+          'focus-visible:ring-2 focus-visible:ring-ring',
+          isConfirming
+            ? 'opacity-100 translate-x-0'
+            : 'opacity-0 -translate-x-2 pointer-events-none absolute'
+        )}
+      >
+        <Trash2 className="size-3" aria-hidden="true" strokeWidth={2.5} />
+        <span>Delete</span>
+      </button>
+    </div>
   );
 }

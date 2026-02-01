@@ -160,6 +160,8 @@ function GenerationSlotItem({ slot, index, onSelect }: GenerationSlotItemProps) 
             <img
               src={slot.imageUrl}
               alt={`Generated image ${index + 1}`}
+              width={48}
+              height={48}
               className="absolute inset-0 w-full h-full object-cover"
             />
           )}

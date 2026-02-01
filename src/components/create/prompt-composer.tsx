@@ -21,7 +21,7 @@ import {
   Minus,
   Plus,
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -134,7 +134,7 @@ export function PromptComposer() {
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="absolute bottom-0 left-0 right-0 z-30 p-4"
+        className="absolute bottom-0 left-0 right-0 z-30 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
       >
         <div className="max-w-4xl mx-auto">
           <FileUpload
@@ -253,10 +253,14 @@ export function PromptComposer() {
                     {/* Input Area */}
                     <div className="flex-1 min-w-0">
                       {/* Inline reference thumbnails */}
-                      <AnimatePresence>
-                        {hasReferences && (
-                          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="mb-2 overflow-hidden">
-                            <div className="flex items-center gap-1.5">
+                      <div
+                        className={cn(
+                          "grid transition-all duration-200",
+                          hasReferences ? "grid-rows-[1fr] opacity-100 mb-2" : "grid-rows-[0fr] opacity-0"
+                        )}
+                      >
+                        <div className="overflow-hidden">
+                          <div className="flex items-center gap-1.5">
                               {referenceImages.slice(0, maxVisibleRefs).map((img) => (
                                 <div key={img.id} className="relative group">
                                   <div className="w-8 h-8 rounded-lg overflow-hidden bg-muted dark:bg-zinc-800 border border-border dark:border-white/10">
@@ -275,14 +279,13 @@ export function PromptComposer() {
                               {hiddenRefCount > 0 && (
                                 <span className="text-[10px] text-muted-foreground font-mono">+{hiddenRefCount}</span>
                               )}
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                          </div>
+                        </div>
+                      </div>
 
                       {/* Textarea */}
                       <div className="relative">
-                        <motion.div animate={{ height: isPromptExpanded ? "auto" : "44px" }} transition={{ duration: 0.2 }} className="overflow-hidden">
+                        <div className={cn("transition-all duration-200 overflow-hidden", isPromptExpanded ? "max-h-[200px]" : "max-h-[44px]")}>
                           <textarea
                             ref={textareaRef}
                             value={prompt}
@@ -292,11 +295,11 @@ export function PromptComposer() {
                             aria-label="Image generation prompt"
                             rows={isPromptExpanded ? 5 : 1}
                             className={cn(
-                              "w-full bg-transparent text-base text-foreground dark:text-zinc-200 placeholder:text-muted-foreground dark:placeholder:text-zinc-500 resize-none focus:outline-none",
+                              "w-full bg-transparent text-base text-foreground dark:text-zinc-200 placeholder:text-muted-foreground dark:placeholder:text-zinc-500 resize-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0",
                               isPromptExpanded ? "min-h-[120px] py-2.5" : "h-[44px] py-2.5"
                             )}
                           />
-                        </motion.div>
+                        </div>
                         <div className="absolute bottom-0.5 right-0 flex items-center gap-1">
                           <span className="text-[10px] text-muted-foreground dark:text-zinc-600 font-mono tabular-nums">{prompt.length}</span>
                           <button onClick={() => setIsPromptExpanded(!isPromptExpanded)} className="size-6 rounded-lg flex items-center justify-center text-muted-foreground dark:text-zinc-500 hover:text-foreground dark:hover:text-zinc-300 transition-colors" aria-label={isPromptExpanded ? "Collapse" : "Expand"}>
@@ -348,7 +351,10 @@ export function PromptComposer() {
                   {/* Aspect Ratio - Visual Popover */}
                   <Popover>
                     <PopoverTrigger asChild>
-                      <button className="flex items-center gap-2 h-8 px-2.5 rounded-lg bg-muted/50 dark:bg-zinc-800/50 hover:bg-muted dark:hover:bg-zinc-800 border border-transparent hover:border-border dark:hover:border-zinc-700 transition-all shrink-0">
+                      <button
+                        aria-label={`Aspect ratio: ${settings.aspectRatio}`}
+                        className="flex items-center gap-2 h-8 px-2.5 rounded-lg bg-muted/50 dark:bg-zinc-800/50 hover:bg-muted dark:hover:bg-zinc-800 border border-transparent hover:border-border dark:hover:border-zinc-700 transition-all shrink-0 focus-visible:ring-2 focus-visible:ring-ring"
+                      >
                         <AspectRatioShape ratio={settings.aspectRatio} size="sm" className="text-muted-foreground" />
                         <span className="text-xs font-medium text-foreground dark:text-zinc-300">{settings.aspectRatio}</span>
                         <ChevronDown className="size-3 text-muted-foreground" />
@@ -409,8 +415,9 @@ export function PromptComposer() {
                   {/* Speed - Toggle Pill */}
                   <button
                     onClick={() => updateSettings({ generationSpeed: settings.generationSpeed === "fast" ? "relaxed" : "fast" })}
+                    aria-label={`Generation speed: ${settings.generationSpeed === "fast" ? "Fast" : "Batch"}`}
                     className={cn(
-                      "flex items-center gap-1.5 h-8 px-3 rounded-lg transition-all shrink-0",
+                      "flex items-center gap-1.5 h-8 px-3 rounded-lg transition-all shrink-0 focus-visible:ring-2 focus-visible:ring-ring",
                       settings.generationSpeed === "fast"
                         ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25"
                         : "bg-muted/50 dark:bg-zinc-800/50 text-muted-foreground hover:bg-muted dark:hover:bg-zinc-800"
@@ -458,7 +465,9 @@ export function PromptComposer() {
                         value={settings.negativePrompt}
                         onChange={(e) => updateSettings({ negativePrompt: e.target.value })}
                         placeholder="blurry, watermark…"
-                        className="flex-1 min-w-0 bg-transparent text-xs text-foreground dark:text-zinc-300 placeholder:text-muted-foreground/50 dark:placeholder:text-zinc-600 focus:outline-none"
+                        aria-label="Negative prompt - things to avoid in generation"
+                        autoComplete="off"
+                        className="flex-1 min-w-0 bg-transparent text-xs text-foreground dark:text-zinc-300 placeholder:text-muted-foreground/50 dark:placeholder:text-zinc-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       />
                     </div>
                   </div>

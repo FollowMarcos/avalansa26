@@ -122,6 +122,8 @@ export function ImageNode({ data, selected, id }: ImageNodeProps & { id: string 
         <img
           src={imageUrl}
           alt={prompt}
+          width={finalWidth}
+          height={finalHeight}
           className="h-full w-full object-cover"
           draggable={false}
         />

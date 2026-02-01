@@ -354,20 +354,20 @@ export function HistoryIsland() {
         </button>
 
         {/* Session images */}
-        <AnimatePresence>
-          {isExpanded && images.length > 0 && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden"
-            >
+        {images.length > 0 && (
+          <div
+            className={cn(
+              "grid transition-all duration-200",
+              isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+            )}
+          >
+            <div className="overflow-hidden">
               <div className="grid grid-cols-2 gap-2 p-2 bg-muted/20">
                 {images.map(renderImageThumbnail)}
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
