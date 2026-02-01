@@ -755,7 +755,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
    */
   const loadSavedReferences = React.useCallback(async () => {
     try {
-      const { getUserReferenceImages } = await import("@/utils/supabase/reference-images.server");
+      const { getUserReferenceImages, ensureReferenceImagesBucket } = await import("@/utils/supabase/reference-images.server");
+      // Ensure bucket is public (fixes images uploaded before bucket was made public)
+      await ensureReferenceImagesBucket();
       const refs = await getUserReferenceImages();
       setSavedReferences(refs);
     } catch (error) {
@@ -970,8 +972,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
-    // If no idle slots available, auto-clear all slots to make room for new generation
-    if (availableIndices.length === 0) {
+    // If not enough idle slots for the requested count, auto-clear all slots
+    // This ensures we always generate the full requested amount
+    if (availableIndices.length < outputCount) {
       // Reset all slots to idle
       const freshSlots: GenerationSlot[] = [
         { id: "slot-0", status: "idle" },
@@ -982,7 +985,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       setGenerationSlots(freshSlots);
       currentSlots = freshSlots;
 
-      // Now all slots are available
+      // Now all slots are available - use as many as needed
       availableIndices = [];
       for (let i = 0; i < outputCount; i++) {
         availableIndices.push(i);

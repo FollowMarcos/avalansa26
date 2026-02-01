@@ -76,6 +76,9 @@ export async function createReferenceImageRecord(
     return null;
   }
 
+  // Ensure bucket exists and is public (lazy initialization)
+  await ensureReferenceImagesBucket();
+
   // Create database record
   const { data, error: insertError } = await supabase
     .from('reference_images')
@@ -345,16 +348,17 @@ export async function deleteReferenceImage(id: string): Promise<boolean> {
 
 /**
  * Create the reference-images bucket if it doesn't exist
- * This should be called during app initialization
+ * Also ensures the bucket is public (updates if needed)
  */
 export async function ensureReferenceImagesBucket(): Promise<void> {
   const supabase = await createClient();
 
   const { data: buckets } = await supabase.storage.listBuckets();
 
-  const bucketExists = buckets?.some((b) => b.name === BUCKET_NAME);
+  const existingBucket = buckets?.find((b) => b.name === BUCKET_NAME);
 
-  if (!bucketExists) {
+  if (!existingBucket) {
+    // Create new public bucket
     const { error } = await supabase.storage.createBucket(BUCKET_NAME, {
       public: true, // Images need to be publicly accessible
       fileSizeLimit: 10 * 1024 * 1024, // 10MB limit
@@ -363,6 +367,21 @@ export async function ensureReferenceImagesBucket(): Promise<void> {
 
     if (error) {
       console.error('Error creating reference-images bucket:', error);
+    } else {
+      console.log('[Storage] Created reference-images bucket (public)');
+    }
+  } else if (!existingBucket.public) {
+    // Update existing bucket to be public
+    const { error } = await supabase.storage.updateBucket(BUCKET_NAME, {
+      public: true,
+      fileSizeLimit: 10 * 1024 * 1024,
+      allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
+    });
+
+    if (error) {
+      console.error('Error updating reference-images bucket to public:', error);
+    } else {
+      console.log('[Storage] Updated reference-images bucket to public');
     }
   }
 }
