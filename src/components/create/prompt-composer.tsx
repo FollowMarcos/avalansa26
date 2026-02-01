@@ -12,7 +12,6 @@ import {
   ImagePlus,
   Sparkles,
   X,
-  Images,
   Maximize2,
   Minimize2,
   Zap,
@@ -21,7 +20,6 @@ import {
   Bookmark,
   Library,
   Trash2,
-  Settings,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -60,7 +58,7 @@ const imageSizeOptions: { value: ImageSize; label: string }[] = [
 function AspectRatioShape({ ratio, className }: { ratio: AspectRatio; className?: string }) {
   const getShapeDimensions = (r: AspectRatio): { width: number; height: number } => {
     const [w, h] = r.split(":").map(Number);
-    const maxSize = 14;
+    const maxSize = 12;
     if (w > h) {
       return { width: maxSize, height: Math.round((h / w) * maxSize) };
     } else if (h > w) {
@@ -73,7 +71,7 @@ function AspectRatioShape({ ratio, className }: { ratio: AspectRatio; className?
 
   return (
     <div
-      className={cn("border-2 border-current rounded-[2px]", className)}
+      className={cn("border-[1.5px] border-current rounded-[1px]", className)}
       style={{ width: `${width}px`, height: `${height}px` }}
       aria-hidden="true"
     />
@@ -103,9 +101,15 @@ export function PromptComposer() {
     isLoadingApis,
   } = useCreate();
 
-  const [showSettings, setShowSettings] = React.useState(false);
   const [showNegative, setShowNegative] = React.useState(false);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+
+  // Auto-expand when prompt exceeds 150 characters
+  React.useEffect(() => {
+    if (prompt.length >= 150 && !isPromptExpanded) {
+      setIsPromptExpanded(true);
+    }
+  }, [prompt.length, isPromptExpanded, setIsPromptExpanded]);
 
   const handleSubmit = () => {
     if (!isGenerating && (prompt.trim() || referenceImages.length > 0)) {
@@ -136,272 +140,149 @@ export function PromptComposer() {
             accept="image/*"
             disabled={isGenerating}
           >
-            {/* Floating Island Container */}
+            {/* Reference Images - Above Composer */}
+            <AnimatePresence>
+              {hasReferences && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  className="mb-3"
+                >
+                  <div className="flex items-center gap-2 p-2 rounded-2xl bg-background/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-border dark:border-white/10">
+                    {referenceImages.map((img) => (
+                      <div key={img.id} className="relative flex-shrink-0 group">
+                        <div className="w-12 h-12 rounded-xl overflow-hidden bg-muted dark:bg-zinc-800 border border-border dark:border-white/10">
+                          <Image
+                            src={img.preview}
+                            alt="Reference"
+                            width={48}
+                            height={48}
+                            className="w-full h-full object-cover"
+                          />
+                          {img.isUploading && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                              <Loader className="size-4 text-white" />
+                            </div>
+                          )}
+                        </div>
+                        {img.storagePath && !img.isUploading && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                onClick={() => saveReferenceImage(img)}
+                                aria-label="Save to library"
+                                className="absolute -top-1 -left-1 size-5 rounded-full bg-background dark:bg-zinc-900 border border-border dark:border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary hover:text-primary-foreground"
+                              >
+                                <Bookmark className="size-2.5" />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent>Save to library</TooltipContent>
+                          </Tooltip>
+                        )}
+                        <button
+                          onClick={() => removeReferenceImage(img.id)}
+                          aria-label="Remove reference image"
+                          className="absolute -top-1 -right-1 size-5 rounded-full bg-background dark:bg-zinc-900 border border-border dark:border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground hover:border-destructive"
+                        >
+                          <X className="size-2.5" />
+                        </button>
+                      </div>
+                    ))}
+                    <span className="text-xs text-muted-foreground ml-auto font-mono px-2">
+                      {referenceImages.length}/14
+                    </span>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Main Composer Island */}
             <div className="relative">
               {/* Shadow layers for floating effect */}
-              <div className="absolute inset-0 translate-y-4 bg-black/40 rounded-3xl blur-2xl" aria-hidden="true" />
-              <div className="absolute inset-0 translate-y-2 bg-black/20 rounded-3xl blur-xl" aria-hidden="true" />
+              <div className="absolute inset-0 translate-y-4 bg-black/20 dark:bg-black/40 rounded-3xl blur-2xl" aria-hidden="true" />
+              <div className="absolute inset-0 translate-y-2 bg-black/10 dark:bg-black/20 rounded-3xl blur-xl" aria-hidden="true" />
 
-              <div className="relative bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden">
-                {/* Settings Drawer */}
-                <AnimatePresence>
-                  {showSettings && (
-                    <motion.div
-                      initial={{ height: 0 }}
-                      animate={{ height: "auto" }}
-                      exit={{ height: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="p-4 bg-zinc-800/30 border-b border-white/5">
-                        {/* Settings row: API, Quality, Speed */}
-                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                          {/* API Selector */}
-                          <div className="flex flex-col gap-1.5">
-                            <span className="text-[10px] text-zinc-500 uppercase tracking-wider">API</span>
-                            <ApiSelector
-                              apis={availableApis}
-                              selectedApiId={selectedApiId}
-                              onSelect={setSelectedApiId}
-                              disabled={isGenerating || isLoadingApis}
-                            />
-                          </div>
-
-                          {/* Quality */}
-                          <div className="flex flex-col gap-1.5">
-                            <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Quality</span>
-                            <div className="flex items-center gap-1">
-                              {imageSizeOptions.map((size) => (
-                                <button
-                                  key={size.value}
-                                  onClick={() => updateSettings({ imageSize: size.value })}
-                                  className={cn(
-                                    "px-2.5 py-2 rounded-xl text-xs font-mono transition-colors",
-                                    settings.imageSize === size.value
-                                      ? "bg-white text-zinc-900"
-                                      : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
-                                  )}
-                                  aria-label={`Quality ${size.label}`}
-                                >
-                                  {size.label}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Speed */}
-                          <div className="flex flex-col gap-1.5">
-                            <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Speed</span>
-                            <button
-                              onClick={() => updateSettings({
-                                generationSpeed: settings.generationSpeed === "fast" ? "relaxed" : "fast"
-                              })}
-                              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 text-sm transition-colors"
-                              aria-label={settings.generationSpeed === "fast" ? "Fast mode" : "Batch mode"}
-                            >
-                              {settings.generationSpeed === "fast" ? (
-                                <Zap className="size-4 text-amber-400" aria-hidden="true" />
-                              ) : (
-                                <Clock className="size-4 text-zinc-400" aria-hidden="true" />
-                              )}
-                              <span className={cn(
-                                "font-mono",
-                                settings.generationSpeed === "fast" ? "text-amber-400" : "text-zinc-400"
-                              )}>
-                                {settings.generationSpeed === "fast" ? "Fast" : "Batch"}
-                              </span>
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Second row: Negative, References, Library */}
-                        <div className="flex items-center gap-3 mt-4 flex-wrap">
-                          {/* Negative Prompt Toggle */}
-                          <button
-                            onClick={() => setShowNegative(!showNegative)}
-                            className={cn(
-                              "flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors",
-                              showNegative ? "bg-zinc-700" : "bg-zinc-800 hover:bg-zinc-700"
-                            )}
-                            aria-label="Toggle negative prompt"
-                            aria-expanded={showNegative}
-                          >
-                            <Ban className="size-4 text-zinc-400" aria-hidden="true" />
-                            <span className="text-zinc-400 font-mono">Negative</span>
-                          </button>
-
-                          {/* References and Library */}
-                          <div className="flex items-center gap-2 ml-auto">
-                            <FileUploadTrigger asChild>
-                              <button
-                                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-sm transition-colors"
-                                aria-label="Add reference images"
-                                disabled={isGenerating || referenceImages.length >= 14}
-                              >
-                                <ImagePlus className="size-4 text-zinc-400" aria-hidden="true" />
-                                <span className="text-zinc-400 font-mono">References</span>
-                                {hasReferences && (
-                                  <span className="text-xs text-zinc-500 font-mono">{referenceImages.length}/14</span>
-                                )}
-                              </button>
-                            </FileUploadTrigger>
-
-                            {savedReferences.length > 0 && (
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <button
-                                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-sm transition-colors"
-                                    aria-label="Open saved library"
-                                  >
-                                    <Library className="size-4 text-zinc-400" aria-hidden="true" />
-                                    <span className="text-zinc-400 font-mono">Library</span>
-                                    <span className="text-xs text-zinc-500 font-mono">{savedReferences.length}</span>
-                                  </button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" side="top" className="w-64 max-h-64 overflow-auto">
-                                  <DropdownMenuLabel className="text-xs font-mono">Saved References</DropdownMenuLabel>
-                                  <div className="grid grid-cols-4 gap-1 p-2">
-                                    {savedReferences.map((saved) => (
-                                      <div key={saved.id} className="relative group">
-                                        <button
-                                          onClick={() => addSavedReferenceToActive(saved)}
-                                          className="w-12 h-12 rounded-lg overflow-hidden border border-border hover:border-foreground/50 transition-colors"
-                                          aria-label={`Add ${saved.name}`}
-                                        >
-                                          <Image
-                                            src={saved.url}
-                                            alt={saved.name}
-                                            width={48}
-                                            height={48}
-                                            className="w-full h-full object-cover"
-                                            unoptimized
-                                          />
-                                        </button>
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            removeSavedReference(saved.id);
-                                          }}
-                                          aria-label="Remove from library"
-                                          className="absolute -top-1 -right-1 size-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                        >
-                                          <Trash2 className="size-2.5" />
-                                        </button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Negative Prompt Input */}
-                        {showNegative && (
-                          <div className="mt-4">
-                            <input
-                              type="text"
-                              value={settings.negativePrompt}
-                              onChange={(e) => updateSettings({ negativePrompt: e.target.value })}
-                              placeholder="blurry, low quality, distorted, watermark…"
-                              aria-label="Negative prompt"
-                              className="w-full px-3 py-2 rounded-xl bg-zinc-800 text-sm text-zinc-300 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-white/20"
-                            />
-                          </div>
-                        )}
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Reference Images Row (when visible) */}
-                <AnimatePresence>
-                  {hasReferences && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="flex items-center gap-2 px-4 py-2 border-b border-white/5 bg-zinc-800/20">
-                        <div className="flex items-center gap-1 text-xs text-zinc-500 mr-2 flex-shrink-0">
-                          <Images className="size-3.5" />
-                          <span className="font-mono">References</span>
-                        </div>
-
-                        {referenceImages.map((img) => (
-                          <div key={img.id} className="relative flex-shrink-0 group">
-                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-zinc-800 border border-white/10">
-                              <Image
-                                src={img.preview}
-                                alt="Reference"
-                                width={40}
-                                height={40}
-                                className="w-full h-full object-cover"
-                              />
-                              {img.isUploading && (
-                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                  <Loader className="size-4 text-white" />
-                                </div>
-                              )}
-                            </div>
-                            {img.storagePath && !img.isUploading && (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <button
-                                    onClick={() => saveReferenceImage(img)}
-                                    aria-label="Save to library"
-                                    className="absolute -top-1 -left-1 size-4 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white hover:text-zinc-900"
-                                  >
-                                    <Bookmark className="size-2.5" />
-                                  </button>
-                                </TooltipTrigger>
-                                <TooltipContent>Save to library</TooltipContent>
-                              </Tooltip>
-                            )}
-                            <button
-                              onClick={() => removeReferenceImage(img.id)}
-                              aria-label="Remove reference image"
-                              className="absolute -top-1 -right-1 size-4 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:border-red-500"
-                            >
-                              <X className="size-2.5 text-zinc-400 group-hover:text-white" />
-                            </button>
-                          </div>
-                        ))}
-
-                        <span className="text-xs text-zinc-500 flex-shrink-0 ml-auto font-mono">
-                          {referenceImages.length}/14
-                        </span>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
+              <div className="relative bg-background/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-border dark:border-white/10 rounded-3xl overflow-hidden shadow-lg dark:shadow-none">
                 {/* Main Input Row */}
                 <div className="flex items-end gap-3 p-4 pb-2">
-                  {/* Settings Toggle */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        onClick={() => setShowSettings(!showSettings)}
-                        className={cn(
-                          "size-12 rounded-2xl flex items-center justify-center transition-colors shrink-0",
-                          showSettings
-                            ? "bg-white text-zinc-900"
-                            : "bg-zinc-800 text-zinc-400 hover:text-zinc-200"
+                  {/* References Button */}
+                  <DropdownMenu>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <DropdownMenuTrigger asChild>
+                          <button
+                            className={cn(
+                              "size-11 rounded-2xl flex items-center justify-center transition-colors shrink-0",
+                              hasReferences
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted dark:bg-zinc-800 text-muted-foreground hover:text-foreground dark:text-zinc-400 dark:hover:text-zinc-200"
+                            )}
+                            aria-label="Add reference images"
+                          >
+                            <ImagePlus className="size-5" strokeWidth={1.5} aria-hidden="true" />
+                          </button>
+                        </DropdownMenuTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">References</TooltipContent>
+                    </Tooltip>
+                    <DropdownMenuContent align="start" side="top" className="w-64">
+                      <DropdownMenuLabel className="text-xs font-mono">Add References</DropdownMenuLabel>
+                      <div className="p-2 space-y-2">
+                        <FileUploadTrigger asChild>
+                          <button
+                            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-muted dark:bg-zinc-800 hover:bg-muted/80 dark:hover:bg-zinc-700 text-sm transition-colors"
+                            disabled={isGenerating || referenceImages.length >= 14}
+                          >
+                            <ImagePlus className="size-4" />
+                            <span>Upload images</span>
+                          </button>
+                        </FileUploadTrigger>
+                        {savedReferences.length > 0 && (
+                          <>
+                            <div className="text-[10px] text-muted-foreground uppercase tracking-wider px-1">
+                              Saved Library
+                            </div>
+                            <div className="grid grid-cols-4 gap-1">
+                              {savedReferences.map((saved) => (
+                                <div key={saved.id} className="relative group">
+                                  <button
+                                    onClick={() => addSavedReferenceToActive(saved)}
+                                    className="w-12 h-12 rounded-lg overflow-hidden border border-border hover:border-foreground/50 transition-colors"
+                                    aria-label={`Add ${saved.name}`}
+                                  >
+                                    <Image
+                                      src={saved.url}
+                                      alt={saved.name}
+                                      width={48}
+                                      height={48}
+                                      className="w-full h-full object-cover"
+                                      unoptimized
+                                    />
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      removeSavedReference(saved.id);
+                                    }}
+                                    aria-label="Remove from library"
+                                    className="absolute -top-1 -right-1 size-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                  >
+                                    <Trash2 className="size-2.5" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          </>
                         )}
-                        aria-label="Toggle settings"
-                        aria-expanded={showSettings}
-                      >
-                        <Settings className="size-5" strokeWidth={1.5} aria-hidden="true" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">Settings</TooltipContent>
-                  </Tooltip>
+                      </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
 
                   {/* Expandable Prompt Input */}
                   <div className="flex-1 min-w-0 relative">
                     <motion.div
-                      animate={{ height: isPromptExpanded ? "auto" : "48px" }}
+                      animate={{ height: isPromptExpanded ? "auto" : "44px" }}
                       transition={{ duration: 0.2 }}
                       className="overflow-hidden"
                     >
@@ -412,27 +293,27 @@ export function PromptComposer() {
                         onKeyDown={handleKeyDown}
                         placeholder={
                           hasReferences
-                            ? "Describe how to transform or style your images…"
+                            ? "Describe how to transform your images…"
                             : "What would you like to create?"
                         }
                         aria-label="Image generation prompt"
                         disabled={isGenerating}
-                        rows={isPromptExpanded ? 6 : 1}
+                        rows={isPromptExpanded ? 5 : 1}
                         className={cn(
-                          "w-full bg-transparent text-base text-zinc-200 placeholder:text-zinc-500 resize-none focus:outline-none",
-                          isPromptExpanded ? "min-h-[160px] py-3" : "h-[48px] py-3"
+                          "w-full bg-transparent text-base text-foreground dark:text-zinc-200 placeholder:text-muted-foreground dark:placeholder:text-zinc-500 resize-none focus:outline-none",
+                          isPromptExpanded ? "min-h-[120px] py-2.5" : "h-[44px] py-2.5"
                         )}
                       />
                     </motion.div>
 
                     {/* Expand/Collapse & Character Count */}
-                    <div className="absolute bottom-1 right-0 flex items-center gap-1">
-                      <span className="text-[10px] text-zinc-600 font-mono tabular-nums">
+                    <div className="absolute bottom-0.5 right-0 flex items-center gap-1">
+                      <span className="text-[10px] text-muted-foreground dark:text-zinc-600 font-mono tabular-nums">
                         {prompt.length}
                       </span>
                       <button
                         onClick={() => setIsPromptExpanded(!isPromptExpanded)}
-                        className="size-6 rounded-lg flex items-center justify-center text-zinc-500 hover:text-zinc-300 transition-colors"
+                        className="size-6 rounded-lg flex items-center justify-center text-muted-foreground dark:text-zinc-500 hover:text-foreground dark:hover:text-zinc-300 transition-colors"
                         aria-label={isPromptExpanded ? "Collapse prompt" : "Expand prompt"}
                       >
                         {isPromptExpanded ? (
@@ -449,33 +330,44 @@ export function PromptComposer() {
                     onClick={handleSubmit}
                     disabled={isGenerating || (!prompt.trim() && referenceImages.length === 0)}
                     className={cn(
-                      "size-12 rounded-2xl flex items-center justify-center transition-colors shrink-0 p-0",
-                      "bg-white text-zinc-900 hover:bg-zinc-100",
+                      "size-11 rounded-2xl flex items-center justify-center transition-colors shrink-0 p-0",
+                      "bg-foreground dark:bg-white text-background dark:text-zinc-900 hover:bg-foreground/90 dark:hover:bg-zinc-100",
                       "disabled:opacity-50 disabled:cursor-not-allowed"
                     )}
                     aria-label="Generate image"
                   >
                     {isGenerating ? (
-                      <Loader variant="circular" size="sm" className="border-zinc-900" />
+                      <Loader variant="circular" size="sm" className="border-background dark:border-zinc-900" />
                     ) : (
                       <Sparkles className="size-5" strokeWidth={1.5} aria-hidden="true" />
                     )}
                   </Button>
                 </div>
 
-                {/* Inline Quick Settings Row */}
-                <div className="flex items-center gap-3 px-4 pb-3 pt-1">
+                {/* All Settings Row */}
+                <div className="flex items-center gap-2 px-4 pb-3 pt-1 overflow-x-auto">
                   {/* Spacer to align with prompt */}
-                  <div className="w-12 shrink-0" />
+                  <div className="w-11 shrink-0" />
+
+                  {/* API Selector */}
+                  <ApiSelector
+                    apis={availableApis}
+                    selectedApiId={selectedApiId}
+                    onSelect={setSelectedApiId}
+                    disabled={isGenerating || isLoadingApis}
+                  />
+
+                  {/* Divider */}
+                  <div className="w-px h-4 bg-border dark:bg-zinc-700 shrink-0" />
 
                   {/* Aspect Ratio Dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button
-                        className="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-300 transition-colors"
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-muted dark:hover:bg-zinc-800 text-muted-foreground dark:text-zinc-400 hover:text-foreground dark:hover:text-zinc-300 transition-colors shrink-0"
                         aria-label={`Aspect ratio ${settings.aspectRatio}`}
                       >
-                        <AspectRatioShape ratio={settings.aspectRatio} className="text-zinc-500" />
+                        <AspectRatioShape ratio={settings.aspectRatio} />
                         <span className="text-xs font-mono">{settings.aspectRatio}</span>
                       </button>
                     </DropdownMenuTrigger>
@@ -502,11 +394,58 @@ export function PromptComposer() {
                     </DropdownMenuContent>
                   </DropdownMenu>
 
-                  {/* Divider */}
-                  <div className="w-px h-4 bg-zinc-700" />
+                  {/* Quality Pills */}
+                  <div className="flex items-center gap-0.5 shrink-0" role="radiogroup" aria-label="Image quality">
+                    {imageSizeOptions.map((size) => (
+                      <button
+                        key={size.value}
+                        onClick={() => updateSettings({ imageSize: size.value })}
+                        role="radio"
+                        aria-checked={settings.imageSize === size.value}
+                        className={cn(
+                          "px-2 py-1 rounded-md text-[11px] font-mono transition-colors",
+                          settings.imageSize === size.value
+                            ? "bg-muted dark:bg-zinc-700 text-foreground dark:text-zinc-200"
+                            : "text-muted-foreground dark:text-zinc-500 hover:text-foreground dark:hover:text-zinc-300 hover:bg-muted/50 dark:hover:bg-zinc-800"
+                        )}
+                      >
+                        {size.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Speed Toggle */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => updateSettings({
+                          generationSpeed: settings.generationSpeed === "fast" ? "relaxed" : "fast"
+                        })}
+                        className={cn(
+                          "flex items-center gap-1 px-2 py-1 rounded-lg transition-colors shrink-0",
+                          settings.generationSpeed === "fast"
+                            ? "text-amber-500 dark:text-amber-400 hover:bg-amber-500/10"
+                            : "text-muted-foreground dark:text-zinc-500 hover:bg-muted dark:hover:bg-zinc-800"
+                        )}
+                        aria-label={settings.generationSpeed === "fast" ? "Fast mode" : "Batch mode"}
+                      >
+                        {settings.generationSpeed === "fast" ? (
+                          <Zap className="size-3.5" aria-hidden="true" />
+                        ) : (
+                          <Clock className="size-3.5" aria-hidden="true" />
+                        )}
+                        <span className="text-[11px] font-mono">
+                          {settings.generationSpeed === "fast" ? "Fast" : "Batch"}
+                        </span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      {settings.generationSpeed === "fast" ? "Immediate generation" : "Lower cost, queued"}
+                    </TooltipContent>
+                  </Tooltip>
 
                   {/* Count Pills */}
-                  <div className="flex items-center gap-0.5" role="radiogroup" aria-label="Number of images">
+                  <div className="flex items-center gap-0.5 shrink-0" role="radiogroup" aria-label="Number of images">
                     {[1, 2, 3, 4].map((n) => (
                       <button
                         key={n}
@@ -516,8 +455,8 @@ export function PromptComposer() {
                         className={cn(
                           "size-6 rounded-md text-[11px] font-mono transition-colors",
                           settings.outputCount === n
-                            ? "bg-zinc-700 text-zinc-200"
-                            : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
+                            ? "bg-muted dark:bg-zinc-700 text-foreground dark:text-zinc-200"
+                            : "text-muted-foreground dark:text-zinc-500 hover:text-foreground dark:hover:text-zinc-300 hover:bg-muted/50 dark:hover:bg-zinc-800"
                         )}
                       >
                         {n}
@@ -525,13 +464,62 @@ export function PromptComposer() {
                     ))}
                   </div>
 
-                  {/* Keyboard hint */}
+                  {/* Negative Prompt Toggle */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setShowNegative(!showNegative)}
+                        className={cn(
+                          "size-6 rounded-md flex items-center justify-center transition-colors shrink-0",
+                          showNegative
+                            ? "bg-muted dark:bg-zinc-700 text-foreground dark:text-zinc-200"
+                            : "text-muted-foreground dark:text-zinc-500 hover:text-foreground dark:hover:text-zinc-300 hover:bg-muted/50 dark:hover:bg-zinc-800"
+                        )}
+                        aria-label="Toggle negative prompt"
+                        aria-expanded={showNegative}
+                      >
+                        <Ban className="size-3.5" aria-hidden="true" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Negative prompt</TooltipContent>
+                  </Tooltip>
+
+                  {/* Keyboard hint - pushed to end */}
                   {prompt.trim() && (
-                    <span className="text-[10px] text-zinc-600 ml-auto font-mono">
-                      ⏎ to generate
+                    <span className="text-[10px] text-muted-foreground dark:text-zinc-600 ml-auto font-mono shrink-0">
+                      ⏎ generate
                     </span>
                   )}
                 </div>
+
+                {/* Negative Prompt Row */}
+                <AnimatePresence>
+                  {showNegative && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="px-4 pb-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-11 shrink-0" />
+                          <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-xl bg-muted/50 dark:bg-zinc-800/50 border border-border dark:border-white/5">
+                            <Ban className="size-3.5 text-muted-foreground dark:text-zinc-500 shrink-0" />
+                            <input
+                              type="text"
+                              value={settings.negativePrompt}
+                              onChange={(e) => updateSettings({ negativePrompt: e.target.value })}
+                              placeholder="blurry, low quality, distorted…"
+                              aria-label="Negative prompt"
+                              className="flex-1 bg-transparent text-sm text-foreground dark:text-zinc-300 placeholder:text-muted-foreground dark:placeholder:text-zinc-600 focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </div>
           </FileUpload>
