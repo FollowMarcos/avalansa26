@@ -13,16 +13,15 @@ import {
   Sparkles,
   X,
   Images,
-  ChevronUp,
   Maximize2,
   Minimize2,
   Zap,
   Clock,
   Ban,
   Bookmark,
-  BookmarkCheck,
   Library,
   Trash2,
+  Settings,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -58,9 +57,7 @@ const imageSizeOptions: { value: ImageSize; label: string }[] = [
   { value: "4K", label: "4K" },
 ];
 
-// Visual aspect ratio shape component
 function AspectRatioShape({ ratio, className }: { ratio: AspectRatio; className?: string }) {
-  // Calculate dimensions for visual representation (max 14px either dimension)
   const getShapeDimensions = (r: AspectRatio): { width: number; height: number } => {
     const [w, h] = r.split(":").map(Number);
     const maxSize = 14;
@@ -106,6 +103,7 @@ export function PromptComposer() {
     isLoadingApis,
   } = useCreate();
 
+  const [showSettings, setShowSettings] = React.useState(false);
   const [showNegative, setShowNegative] = React.useState(false);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
@@ -123,7 +121,6 @@ export function PromptComposer() {
   };
 
   const hasReferences = referenceImages.length > 0;
-  const promptLength = prompt.length;
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -139,406 +136,391 @@ export function PromptComposer() {
             accept="image/*"
             disabled={isGenerating}
           >
-            <div className="bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-lg overflow-hidden">
-              {/* Reference Images Row */}
-              <AnimatePresence>
-                {(hasReferences || savedReferences.length > 0) && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden"
-                  >
-                    <div className="flex items-center gap-2 px-3 py-2 border-b border-border bg-muted/30">
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mr-2 flex-shrink-0">
-                        <Images className="size-3.5" />
-                        <span>References</span>
-                      </div>
+            {/* Floating Island Container */}
+            <div className="relative">
+              {/* Shadow layers for floating effect */}
+              <div className="absolute inset-0 translate-y-4 bg-black/40 rounded-3xl blur-2xl" aria-hidden="true" />
+              <div className="absolute inset-0 translate-y-2 bg-black/20 rounded-3xl blur-xl" aria-hidden="true" />
 
-                      {/* Saved references library picker */}
-                      {savedReferences.length > 0 && (
-                        <DropdownMenu>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
+              <div className="relative bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-3xl overflow-hidden">
+                {/* Settings Drawer */}
+                <AnimatePresence>
+                  {showSettings && (
+                    <motion.div
+                      initial={{ height: 0 }}
+                      animate={{ height: "auto" }}
+                      exit={{ height: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="p-4 bg-zinc-800/30 border-b border-white/5">
+                        {/* First row: API, Ratio, Quality, Speed */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          {/* API Selector */}
+                          <div className="flex flex-col gap-1.5">
+                            <span className="text-[10px] text-zinc-500 uppercase tracking-wider">API</span>
+                            <ApiSelector
+                              apis={availableApis}
+                              selectedApiId={selectedApiId}
+                              onSelect={setSelectedApiId}
+                              disabled={isGenerating || isLoadingApis}
+                            />
+                          </div>
+
+                          {/* Aspect Ratio */}
+                          <div className="flex flex-col gap-1.5">
+                            <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Ratio</span>
+                            <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <button
-                                  className="w-10 h-10 rounded-lg border border-dashed border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-foreground/50 transition-colors flex-shrink-0"
-                                  aria-label="Add from saved library"
+                                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-sm transition-colors"
+                                  aria-label={`Aspect ratio ${settings.aspectRatio}`}
                                 >
-                                  <Library className="size-4" />
+                                  <AspectRatioShape ratio={settings.aspectRatio} className="text-zinc-400" />
+                                  <span className="font-mono text-zinc-300">{settings.aspectRatio}</span>
                                 </button>
                               </DropdownMenuTrigger>
-                            </TooltipTrigger>
-                            <TooltipContent>Saved library ({savedReferences.length})</TooltipContent>
-                          </Tooltip>
-                          <DropdownMenuContent align="start" side="top" className="w-64 max-h-64 overflow-auto">
-                            <DropdownMenuLabel className="text-xs font-mono">Saved References</DropdownMenuLabel>
-                            <div className="grid grid-cols-4 gap-1 p-2">
-                              {savedReferences.map((saved) => (
-                                <div key={saved.id} className="relative group">
-                                  <button
-                                    onClick={() => addSavedReferenceToActive(saved)}
-                                    className="w-12 h-12 rounded-lg overflow-hidden border border-border hover:border-foreground/50 transition-colors"
-                                    aria-label={`Add ${saved.name}`}
+                              <DropdownMenuContent align="start" side="top" className="min-w-[160px]">
+                                <DropdownMenuLabel className="text-xs font-mono text-muted-foreground">
+                                  Aspect Ratio
+                                </DropdownMenuLabel>
+                                {aspectRatioOptions.map((ratio) => (
+                                  <DropdownMenuItem
+                                    key={ratio.value}
+                                    onClick={() => updateSettings({ aspectRatio: ratio.value })}
+                                    className={cn(
+                                      "font-mono text-xs gap-3",
+                                      settings.aspectRatio === ratio.value && "bg-muted"
+                                    )}
                                   >
-                                    <Image
-                                      src={saved.url}
-                                      alt={saved.name}
-                                      width={48}
-                                      height={48}
-                                      className="w-full h-full object-cover"
-                                      unoptimized
-                                    />
-                                  </button>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      removeSavedReference(saved.id);
-                                    }}
-                                    aria-label="Remove from library"
-                                    className="absolute -top-1 -right-1 size-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                                  >
-                                    <Trash2 className="size-2.5" />
-                                  </button>
-                                </div>
+                                    <AspectRatioShape ratio={ratio.value} className="opacity-60" />
+                                    <span className="font-medium">{ratio.label}</span>
+                                    <span className="text-[10px] text-muted-foreground ml-auto">
+                                      {ratio.category}
+                                    </span>
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+
+                          {/* Quality */}
+                          <div className="flex flex-col gap-1.5">
+                            <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Quality</span>
+                            <div className="flex items-center gap-1">
+                              {imageSizeOptions.map((size) => (
+                                <button
+                                  key={size.value}
+                                  onClick={() => updateSettings({ imageSize: size.value })}
+                                  className={cn(
+                                    "px-2.5 py-2 rounded-xl text-xs font-mono transition-colors",
+                                    settings.imageSize === size.value
+                                      ? "bg-white text-zinc-900"
+                                      : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                                  )}
+                                  aria-label={`Quality ${size.label}`}
+                                >
+                                  {size.label}
+                                </button>
                               ))}
                             </div>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
+                          </div>
 
-                      {/* Active reference images */}
-                      {referenceImages.map((img) => (
-                        <div key={img.id} className="relative flex-shrink-0 group">
-                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted border border-border">
-                            <Image
-                              src={img.preview}
-                              alt="Reference"
-                              width={40}
-                              height={40}
-                              className="w-full h-full object-cover"
-                            />
-                            {img.isUploading && (
-                              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                <Loader className="size-4 text-white" />
-                              </div>
+                          {/* Speed */}
+                          <div className="flex flex-col gap-1.5">
+                            <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Speed</span>
+                            <button
+                              onClick={() => updateSettings({
+                                generationSpeed: settings.generationSpeed === "fast" ? "relaxed" : "fast"
+                              })}
+                              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-500/10 text-sm transition-colors"
+                              aria-label={settings.generationSpeed === "fast" ? "Fast mode" : "Batch mode"}
+                            >
+                              {settings.generationSpeed === "fast" ? (
+                                <Zap className="size-4 text-amber-400" aria-hidden="true" />
+                              ) : (
+                                <Clock className="size-4 text-zinc-400" aria-hidden="true" />
+                              )}
+                              <span className={cn(
+                                "font-mono",
+                                settings.generationSpeed === "fast" ? "text-amber-400" : "text-zinc-400"
+                              )}>
+                                {settings.generationSpeed === "fast" ? "Fast" : "Batch"}
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Second row: Count, Negative, References, Library */}
+                        <div className="flex items-center gap-4 mt-4 flex-wrap">
+                          {/* Count */}
+                          <div className="flex flex-col gap-1.5">
+                            <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Count</span>
+                            <div className="flex items-center gap-1" role="radiogroup" aria-label="Number of images">
+                              {[1, 2, 3, 4].map((n) => (
+                                <button
+                                  key={n}
+                                  onClick={() => updateSettings({ outputCount: n })}
+                                  role="radio"
+                                  aria-checked={settings.outputCount === n}
+                                  className={cn(
+                                    "size-8 rounded-lg text-xs font-mono transition-colors",
+                                    settings.outputCount === n
+                                      ? "bg-white text-zinc-900"
+                                      : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+                                  )}
+                                >
+                                  {n}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Negative Prompt Toggle */}
+                          <button
+                            onClick={() => setShowNegative(!showNegative)}
+                            className={cn(
+                              "flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors mt-auto",
+                              showNegative ? "bg-zinc-700" : "bg-zinc-800 hover:bg-zinc-700"
+                            )}
+                            aria-label="Toggle negative prompt"
+                            aria-expanded={showNegative}
+                          >
+                            <Ban className="size-4 text-zinc-400" aria-hidden="true" />
+                            <span className="text-zinc-400 font-mono">Negative</span>
+                          </button>
+
+                          {/* References and Library */}
+                          <div className="flex items-center gap-2 ml-auto">
+                            <FileUploadTrigger asChild>
+                              <button
+                                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-sm transition-colors"
+                                aria-label="Add reference images"
+                                disabled={isGenerating || referenceImages.length >= 14}
+                              >
+                                <ImagePlus className="size-4 text-zinc-400" aria-hidden="true" />
+                                <span className="text-zinc-400 font-mono">References</span>
+                                {hasReferences && (
+                                  <span className="text-xs text-zinc-500 font-mono">{referenceImages.length}/14</span>
+                                )}
+                              </button>
+                            </FileUploadTrigger>
+
+                            {savedReferences.length > 0 && (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <button
+                                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-sm transition-colors"
+                                    aria-label="Open saved library"
+                                  >
+                                    <Library className="size-4 text-zinc-400" aria-hidden="true" />
+                                    <span className="text-zinc-400 font-mono">Library</span>
+                                    <span className="text-xs text-zinc-500 font-mono">{savedReferences.length}</span>
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" side="top" className="w-64 max-h-64 overflow-auto">
+                                  <DropdownMenuLabel className="text-xs font-mono">Saved References</DropdownMenuLabel>
+                                  <div className="grid grid-cols-4 gap-1 p-2">
+                                    {savedReferences.map((saved) => (
+                                      <div key={saved.id} className="relative group">
+                                        <button
+                                          onClick={() => addSavedReferenceToActive(saved)}
+                                          className="w-12 h-12 rounded-lg overflow-hidden border border-border hover:border-foreground/50 transition-colors"
+                                          aria-label={`Add ${saved.name}`}
+                                        >
+                                          <Image
+                                            src={saved.url}
+                                            alt={saved.name}
+                                            width={48}
+                                            height={48}
+                                            className="w-full h-full object-cover"
+                                            unoptimized
+                                          />
+                                        </button>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            removeSavedReference(saved.id);
+                                          }}
+                                          aria-label="Remove from library"
+                                          className="absolute -top-1 -right-1 size-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                          <Trash2 className="size-2.5" />
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             )}
                           </div>
-                          {/* Save to library button */}
-                          {img.storagePath && !img.isUploading && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <button
-                                  onClick={() => saveReferenceImage(img)}
-                                  aria-label="Save to library"
-                                  className="absolute -top-1 -left-1 size-4 rounded-full bg-background border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary hover:text-primary-foreground hover:border-primary"
-                                >
-                                  <Bookmark className="size-2.5" />
-                                </button>
-                              </TooltipTrigger>
-                              <TooltipContent>Save to library</TooltipContent>
-                            </Tooltip>
-                          )}
-                          {/* Remove button */}
-                          <button
-                            onClick={() => removeReferenceImage(img.id)}
-                            aria-label="Remove reference image"
-                            className="absolute -top-1 -right-1 size-4 rounded-full bg-background border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                          >
-                            <X className="size-2.5 text-muted-foreground" />
-                          </button>
                         </div>
-                      ))}
-                      <span className="text-xs text-muted-foreground flex-shrink-0 ml-auto font-mono">
-                        {referenceImages.length}/14
-                      </span>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
 
-              {/* Settings Row */}
-              <div className="flex items-center gap-1.5 px-3 py-2 border-b border-border overflow-x-auto">
-                {/* API Selector */}
-                <ApiSelector
-                  apis={availableApis}
-                  selectedApiId={selectedApiId}
-                  onSelect={setSelectedApiId}
-                  disabled={isGenerating || isLoadingApis}
-                />
-
-                <div className="w-px h-5 bg-border mx-1" />
-
-                {/* Aspect Ratio - Visual Shape Selector */}
-                <DropdownMenu>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 px-2.5 gap-2 rounded-lg"
-                        >
-                          <AspectRatioShape ratio={settings.aspectRatio} className="opacity-70" />
-                          <span className="font-mono text-xs">{settings.aspectRatio}</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">Aspect Ratio</TooltipContent>
-                  </Tooltip>
-                  <DropdownMenuContent align="start" side="top" className="min-w-[160px]">
-                    <DropdownMenuLabel className="text-xs font-mono text-muted-foreground">
-                      Aspect Ratio
-                    </DropdownMenuLabel>
-                    {aspectRatioOptions.map((ratio) => (
-                      <DropdownMenuItem
-                        key={ratio.value}
-                        onClick={() => updateSettings({ aspectRatio: ratio.value })}
-                        className={cn(
-                          "font-mono text-xs gap-3",
-                          settings.aspectRatio === ratio.value && "bg-muted"
+                        {/* Negative Prompt Input */}
+                        {showNegative && (
+                          <div className="mt-4">
+                            <input
+                              type="text"
+                              value={settings.negativePrompt}
+                              onChange={(e) => updateSettings({ negativePrompt: e.target.value })}
+                              placeholder="blurry, low quality, distorted, watermark…"
+                              aria-label="Negative prompt"
+                              className="w-full px-3 py-2 rounded-xl bg-zinc-800 text-sm text-zinc-300 placeholder:text-zinc-600 focus:outline-none focus:ring-2 focus:ring-white/20"
+                            />
+                          </div>
                         )}
-                      >
-                        <AspectRatioShape ratio={ratio.value} className="opacity-60" />
-                        <span className="font-medium">{ratio.label}</span>
-                        <span className="text-[10px] text-muted-foreground ml-auto">
-                          {ratio.category}
-                        </span>
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                {/* Quality - Inline Segmented Control */}
-                <div className="flex items-center h-8 p-0.5 bg-muted/50 rounded-lg" role="radiogroup" aria-label="Image quality">
-                  {imageSizeOptions.map((size) => (
-                    <button
-                      key={size.value}
-                      onClick={() => updateSettings({ imageSize: size.value })}
-                      role="radio"
-                      aria-checked={settings.imageSize === size.value}
-                      className={cn(
-                        "h-7 px-2.5 rounded-md font-mono text-xs transition-all",
-                        settings.imageSize === size.value
-                          ? "bg-background text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      {size.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Output Count - Inline Pills */}
-                <div className="flex items-center h-8 gap-0.5" role="radiogroup" aria-label="Number of images">
-                  {[1, 2, 3, 4].map((count) => (
-                    <button
-                      key={count}
-                      onClick={() => updateSettings({ outputCount: count })}
-                      role="radio"
-                      aria-checked={settings.outputCount === count}
-                      className={cn(
-                        "size-7 rounded-md font-mono text-xs transition-all flex items-center justify-center",
-                        settings.outputCount === count
-                          ? "bg-foreground text-background"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                      )}
-                    >
-                      {count}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Generation Speed - Toggle Button */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => updateSettings({
-                        generationSpeed: settings.generationSpeed === "fast" ? "relaxed" : "fast"
-                      })}
-                      aria-label={settings.generationSpeed === "fast" ? "Fast mode" : "Relaxed mode"}
-                      className="h-8 px-2.5 gap-1.5 rounded-lg font-mono text-xs"
-                    >
-                      {settings.generationSpeed === "fast" ? (
-                        <>
-                          <Zap className="size-3.5" aria-hidden="true" />
-                          <span className="hidden sm:inline">Fast</span>
-                        </>
-                      ) : (
-                        <>
-                          <Clock className="size-3.5" aria-hidden="true" />
-                          <span className="hidden sm:inline">Batch</span>
-                        </>
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <p className="font-medium">{settings.generationSpeed === "fast" ? "Fast Mode" : "Batch Mode"}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {settings.generationSpeed === "fast"
-                        ? "Immediate generation"
-                        : "Lower cost, queued processing"}
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-
-                {/* Negative Prompt Toggle */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setShowNegative(!showNegative)}
-                      aria-label="Toggle negative prompt"
-                      aria-expanded={showNegative}
-                      className={cn(
-                        "size-8 rounded-lg",
-                        showNegative && "bg-muted"
-                      )}
-                    >
-                      <Ban className="size-3.5" aria-hidden="true" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">Negative prompt</TooltipContent>
-                </Tooltip>
-
-                <div className="flex-1" />
-
-                {/* Generate Button - Now in settings row */}
-                <Button
-                  onClick={handleSubmit}
-                  disabled={isGenerating || (!prompt.trim() && referenceImages.length === 0)}
-                  className={cn(
-                    "h-8 px-4 rounded-lg font-medium text-sm gap-1.5",
-                    "bg-foreground text-background hover:bg-foreground/90",
-                    "disabled:opacity-50 disabled:cursor-not-allowed"
+                      </div>
+                    </motion.div>
                   )}
-                >
-                  {isGenerating ? (
-                    <Loader variant="circular" size="sm" className="border-background" />
-                  ) : (
-                    <>
-                      <Sparkles className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
-                      <span>Generate</span>
-                    </>
-                  )}
-                </Button>
-              </div>
+                </AnimatePresence>
 
-              {/* Negative Prompt Expansion */}
-              <AnimatePresence>
-                {showNegative && (
-                  <motion.div
-                    initial={{ height: 0, opacity: 0 }}
-                    animate={{ height: "auto", opacity: 1 }}
-                    exit={{ height: 0, opacity: 0 }}
-                    className="overflow-hidden border-b border-border"
-                  >
-                    <div className="px-4 py-3 bg-muted/30">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Ban className="size-4 text-muted-foreground" aria-hidden="true" />
-                        <span className="text-sm text-muted-foreground font-mono">
-                          Negative (elements to avoid)
+                {/* Reference Images Row (when visible) */}
+                <AnimatePresence>
+                  {hasReferences && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="flex items-center gap-2 px-4 py-2 border-b border-white/5 bg-zinc-800/20">
+                        <div className="flex items-center gap-1 text-xs text-zinc-500 mr-2 flex-shrink-0">
+                          <Images className="size-3.5" />
+                          <span className="font-mono">References</span>
+                        </div>
+
+                        {referenceImages.map((img) => (
+                          <div key={img.id} className="relative flex-shrink-0 group">
+                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-zinc-800 border border-white/10">
+                              <Image
+                                src={img.preview}
+                                alt="Reference"
+                                width={40}
+                                height={40}
+                                className="w-full h-full object-cover"
+                              />
+                              {img.isUploading && (
+                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                  <Loader className="size-4 text-white" />
+                                </div>
+                              )}
+                            </div>
+                            {img.storagePath && !img.isUploading && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button
+                                    onClick={() => saveReferenceImage(img)}
+                                    aria-label="Save to library"
+                                    className="absolute -top-1 -left-1 size-4 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-white hover:text-zinc-900"
+                                  >
+                                    <Bookmark className="size-2.5" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent>Save to library</TooltipContent>
+                              </Tooltip>
+                            )}
+                            <button
+                              onClick={() => removeReferenceImage(img.id)}
+                              aria-label="Remove reference image"
+                              className="absolute -top-1 -right-1 size-4 rounded-full bg-zinc-900 border border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:border-red-500"
+                            >
+                              <X className="size-2.5 text-zinc-400 group-hover:text-white" />
+                            </button>
+                          </div>
+                        ))}
+
+                        <span className="text-xs text-zinc-500 flex-shrink-0 ml-auto font-mono">
+                          {referenceImages.length}/14
                         </span>
                       </div>
-                      <input
-                        type="text"
-                        value={settings.negativePrompt}
-                        onChange={(e) => updateSettings({ negativePrompt: e.target.value })}
-                        placeholder="blurry, low quality, distorted, watermark…"
-                        aria-label="Negative prompt - elements to avoid in generation"
-                        className="w-full bg-transparent text-base placeholder:text-muted-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded"
-                      />
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
-              {/* Main Input Area */}
-              <div className="flex items-end gap-3 p-3">
-                {/* Image Upload Button */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <span>
-                      <FileUploadTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className={cn(
-                            "size-11 rounded-xl flex-shrink-0",
-                            hasReferences
-                              ? "text-foreground bg-muted"
-                              : "text-muted-foreground hover:text-foreground"
-                          )}
-                          disabled={isGenerating || referenceImages.length >= 14}
-                        >
-                          <ImagePlus className="size-5" strokeWidth={1.5} />
-                        </Button>
-                      </FileUploadTrigger>
-                    </span>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">Add reference images (up to 14)</TooltipContent>
-                </Tooltip>
-
-                {/* Textarea */}
-                <div className="flex-1 relative">
-                  <textarea
-                    ref={textareaRef}
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder={
-                      hasReferences
-                        ? "Describe how to transform or style your images…"
-                        : "Describe the image you want to create…"
-                    }
-                    aria-label="Image generation prompt"
-                    disabled={isGenerating}
-                    rows={isPromptExpanded ? 6 : 1}
-                    className={cn(
-                      "w-full bg-transparent text-base resize-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 rounded",
-                      "placeholder:text-muted-foreground",
-                      isPromptExpanded ? "min-h-[160px]" : "min-h-[44px] py-3"
-                    )}
-                    style={{
-                      height: isPromptExpanded ? "auto" : undefined,
-                    }}
-                  />
-                </div>
-
-                {/* Right Actions */}
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  {/* Character Count */}
-                  <span
-                    aria-label={`Prompt length: ${promptLength} characters`}
-                    className="px-2 py-1 text-xs font-mono text-muted-foreground tabular-nums"
-                  >
-                    {promptLength}
-                  </span>
-
-                  {/* Expand/Collapse */}
+                {/* Main Input Row */}
+                <div className="flex items-end gap-3 p-4">
+                  {/* Settings Toggle */}
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
+                      <button
+                        onClick={() => setShowSettings(!showSettings)}
+                        className={cn(
+                          "size-12 rounded-2xl flex items-center justify-center transition-colors shrink-0",
+                          showSettings
+                            ? "bg-white text-zinc-900"
+                            : "bg-zinc-800 text-zinc-400 hover:text-zinc-200"
+                        )}
+                        aria-label="Toggle settings"
+                        aria-expanded={showSettings}
+                      >
+                        <Settings className="size-5" strokeWidth={1.5} aria-hidden="true" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Settings</TooltipContent>
+                  </Tooltip>
+
+                  {/* Expandable Prompt Input */}
+                  <div className="flex-1 min-w-0 relative">
+                    <motion.div
+                      animate={{ height: isPromptExpanded ? "auto" : "48px" }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden"
+                    >
+                      <textarea
+                        ref={textareaRef}
+                        value={prompt}
+                        onChange={(e) => setPrompt(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                        placeholder={
+                          hasReferences
+                            ? "Describe how to transform or style your images…"
+                            : "What would you like to create?"
+                        }
+                        aria-label="Image generation prompt"
+                        disabled={isGenerating}
+                        rows={isPromptExpanded ? 6 : 1}
+                        className={cn(
+                          "w-full bg-transparent text-base text-zinc-200 placeholder:text-zinc-500 resize-none focus:outline-none",
+                          isPromptExpanded ? "min-h-[160px] py-3" : "h-[48px] py-3"
+                        )}
+                      />
+                    </motion.div>
+
+                    {/* Expand/Collapse & Character Count */}
+                    <div className="absolute bottom-1 right-0 flex items-center gap-1">
+                      <span className="text-[10px] text-zinc-600 font-mono tabular-nums">
+                        {prompt.length}
+                      </span>
+                      <button
                         onClick={() => setIsPromptExpanded(!isPromptExpanded)}
+                        className="size-6 rounded-lg flex items-center justify-center text-zinc-500 hover:text-zinc-300 transition-colors"
                         aria-label={isPromptExpanded ? "Collapse prompt" : "Expand prompt"}
-                        className="size-8 rounded-lg"
                       >
                         {isPromptExpanded ? (
-                          <Minimize2 className="size-4" />
+                          <Minimize2 className="size-3.5" />
                         ) : (
-                          <Maximize2 className="size-4" />
+                          <Maximize2 className="size-3.5" />
                         )}
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      {isPromptExpanded ? "Collapse" : "Expand"}
-                    </TooltipContent>
-                  </Tooltip>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Generate Button */}
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={isGenerating || (!prompt.trim() && referenceImages.length === 0)}
+                    className={cn(
+                      "size-12 rounded-2xl flex items-center justify-center transition-colors shrink-0 p-0",
+                      "bg-white text-zinc-900 hover:bg-zinc-100",
+                      "disabled:opacity-50 disabled:cursor-not-allowed"
+                    )}
+                    aria-label="Generate image"
+                  >
+                    {isGenerating ? (
+                      <Loader variant="circular" size="sm" className="border-zinc-900" />
+                    ) : (
+                      <Sparkles className="size-5" strokeWidth={1.5} aria-hidden="true" />
+                    )}
+                  </Button>
                 </div>
               </div>
             </div>
