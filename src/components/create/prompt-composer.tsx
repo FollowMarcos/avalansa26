@@ -18,7 +18,6 @@ import {
   Clock,
   Ban,
   Bookmark,
-  Library,
   Trash2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -53,6 +52,16 @@ const imageSizeOptions: { value: ImageSize; label: string }[] = [
   { value: "1K", label: "1K" },
   { value: "2K", label: "2K" },
   { value: "4K", label: "4K" },
+];
+
+// Prompt suggestions for empty state
+const promptSuggestions = [
+  "A serene Japanese garden at sunset",
+  "Futuristic cyberpunk cityscape",
+  "Minimalist product photography",
+  "Portrait with dramatic lighting",
+  "Abstract fluid art in vibrant colors",
+  "Cozy cabin interior in winter",
 ];
 
 function AspectRatioShape({ ratio, className }: { ratio: AspectRatio; className?: string }) {
@@ -124,7 +133,15 @@ export function PromptComposer() {
     }
   };
 
+  const handleSuggestionClick = (suggestion: string) => {
+    setPrompt(suggestion);
+    textareaRef.current?.focus();
+  };
+
   const hasReferences = referenceImages.length > 0;
+  const showEmptyState = !prompt.trim() && !hasReferences && !isGenerating;
+  const maxVisibleRefs = 4;
+  const hiddenRefCount = Math.max(0, referenceImages.length - maxVisibleRefs);
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -140,63 +157,6 @@ export function PromptComposer() {
             accept="image/*"
             disabled={isGenerating}
           >
-            {/* Reference Images - Above Composer */}
-            <AnimatePresence>
-              {hasReferences && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 10 }}
-                  className="mb-3"
-                >
-                  <div className="flex items-center gap-2 p-2 rounded-2xl bg-background/80 dark:bg-zinc-900/80 backdrop-blur-xl border border-border dark:border-white/10">
-                    {referenceImages.map((img) => (
-                      <div key={img.id} className="relative flex-shrink-0 group">
-                        <div className="w-12 h-12 rounded-xl overflow-hidden bg-muted dark:bg-zinc-800 border border-border dark:border-white/10">
-                          <Image
-                            src={img.preview}
-                            alt="Reference"
-                            width={48}
-                            height={48}
-                            className="w-full h-full object-cover"
-                          />
-                          {img.isUploading && (
-                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                              <Loader className="size-4 text-white" />
-                            </div>
-                          )}
-                        </div>
-                        {img.storagePath && !img.isUploading && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                onClick={() => saveReferenceImage(img)}
-                                aria-label="Save to library"
-                                className="absolute -top-1 -left-1 size-5 rounded-full bg-background dark:bg-zinc-900 border border-border dark:border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary hover:text-primary-foreground"
-                              >
-                                <Bookmark className="size-2.5" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>Save to library</TooltipContent>
-                          </Tooltip>
-                        )}
-                        <button
-                          onClick={() => removeReferenceImage(img.id)}
-                          aria-label="Remove reference image"
-                          className="absolute -top-1 -right-1 size-5 rounded-full bg-background dark:bg-zinc-900 border border-border dark:border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground hover:border-destructive"
-                        >
-                          <X className="size-2.5" />
-                        </button>
-                      </div>
-                    ))}
-                    <span className="text-xs text-muted-foreground ml-auto font-mono px-2">
-                      {referenceImages.length}/14
-                    </span>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
             {/* Main Composer Island */}
             <div className="relative">
               {/* Shadow layers for floating effect */}
@@ -204,144 +164,279 @@ export function PromptComposer() {
               <div className="absolute inset-0 translate-y-2 bg-black/10 dark:bg-black/20 rounded-3xl blur-xl" aria-hidden="true" />
 
               <div className="relative bg-background/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-border dark:border-white/10 rounded-3xl overflow-hidden shadow-lg dark:shadow-none">
-                {/* Main Input Row */}
-                <div className="flex items-end gap-3 p-4 pb-2">
-                  {/* References Button */}
-                  <DropdownMenu>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <DropdownMenuTrigger asChild>
-                          <button
-                            className={cn(
-                              "size-11 rounded-2xl flex items-center justify-center transition-colors shrink-0",
-                              hasReferences
-                                ? "bg-primary text-primary-foreground"
-                                : "bg-muted dark:bg-zinc-800 text-muted-foreground hover:text-foreground dark:text-zinc-400 dark:hover:text-zinc-200"
-                            )}
-                            aria-label="Add reference images"
-                          >
-                            <ImagePlus className="size-5" strokeWidth={1.5} aria-hidden="true" />
-                          </button>
-                        </DropdownMenuTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">References</TooltipContent>
-                    </Tooltip>
-                    <DropdownMenuContent align="start" side="top" className="w-64">
-                      <DropdownMenuLabel className="text-xs font-mono">Add References</DropdownMenuLabel>
-                      <div className="p-2 space-y-2">
-                        <FileUploadTrigger asChild>
-                          <button
-                            className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-muted dark:bg-zinc-800 hover:bg-muted/80 dark:hover:bg-zinc-700 text-sm transition-colors"
-                            disabled={isGenerating || referenceImages.length >= 14}
-                          >
-                            <ImagePlus className="size-4" />
-                            <span>Upload images</span>
-                          </button>
-                        </FileUploadTrigger>
-                        {savedReferences.length > 0 && (
-                          <>
-                            <div className="text-[10px] text-muted-foreground uppercase tracking-wider px-1">
-                              Saved Library
+                {/* Main Input Area */}
+                <div className="p-4 pb-2">
+                  {/* Inline Reference Thumbnails + Textarea */}
+                  <div className="flex items-start gap-3">
+                    {/* References Button with Badge */}
+                    <DropdownMenu>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              className={cn(
+                                "size-11 rounded-2xl flex items-center justify-center transition-colors shrink-0 relative",
+                                hasReferences
+                                  ? "bg-primary text-primary-foreground"
+                                  : "bg-muted dark:bg-zinc-800 text-muted-foreground hover:text-foreground dark:text-zinc-400 dark:hover:text-zinc-200"
+                              )}
+                              aria-label="Add reference images"
+                            >
+                              <ImagePlus className="size-5" strokeWidth={1.5} aria-hidden="true" />
+                              {hasReferences && (
+                                <span className="absolute -top-1 -right-1 size-5 rounded-full bg-background dark:bg-zinc-900 border-2 border-primary text-[10px] font-mono font-medium text-primary flex items-center justify-center">
+                                  {referenceImages.length}
+                                </span>
+                              )}
+                            </button>
+                          </DropdownMenuTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          {hasReferences ? `${referenceImages.length} references` : "Add references"}
+                        </TooltipContent>
+                      </Tooltip>
+                      <DropdownMenuContent align="start" side="top" className="w-72">
+                        <DropdownMenuLabel className="text-xs font-mono">Reference Images</DropdownMenuLabel>
+                        <div className="p-2 space-y-3">
+                          {/* Current references */}
+                          {hasReferences && (
+                            <div className="space-y-2">
+                              <div className="grid grid-cols-5 gap-1.5">
+                                {referenceImages.map((img) => (
+                                  <div key={img.id} className="relative group">
+                                    <div className="aspect-square rounded-lg overflow-hidden bg-muted dark:bg-zinc-800 border border-border dark:border-white/10">
+                                      <Image
+                                        src={img.preview}
+                                        alt="Reference"
+                                        width={48}
+                                        height={48}
+                                        className="w-full h-full object-cover"
+                                      />
+                                      {img.isUploading && (
+                                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                          <Loader className="size-3 text-white" />
+                                        </div>
+                                      )}
+                                    </div>
+                                    {img.storagePath && !img.isUploading && (
+                                      <button
+                                        onClick={() => saveReferenceImage(img)}
+                                        aria-label="Save to library"
+                                        className="absolute -top-1 -left-1 size-4 rounded-full bg-background dark:bg-zinc-900 border border-border dark:border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-primary hover:text-primary-foreground text-[8px]"
+                                      >
+                                        <Bookmark className="size-2" />
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => removeReferenceImage(img.id)}
+                                      aria-label="Remove"
+                                      className="absolute -top-1 -right-1 size-4 rounded-full bg-background dark:bg-zinc-900 border border-border dark:border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
+                                    >
+                                      <X className="size-2" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="text-[10px] text-muted-foreground text-right font-mono">
+                                {referenceImages.length}/14
+                              </div>
                             </div>
-                            <div className="grid grid-cols-4 gap-1">
-                              {savedReferences.map((saved) => (
-                                <div key={saved.id} className="relative group">
-                                  <button
-                                    onClick={() => addSavedReferenceToActive(saved)}
-                                    className="w-12 h-12 rounded-lg overflow-hidden border border-border hover:border-foreground/50 transition-colors"
-                                    aria-label={`Add ${saved.name}`}
-                                  >
+                          )}
+
+                          {/* Upload button */}
+                          <FileUploadTrigger asChild>
+                            <button
+                              className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-muted dark:bg-zinc-800 hover:bg-muted/80 dark:hover:bg-zinc-700 text-sm transition-colors border-2 border-dashed border-border dark:border-zinc-700"
+                              disabled={isGenerating || referenceImages.length >= 14}
+                            >
+                              <ImagePlus className="size-4" />
+                              <span>Upload images</span>
+                            </button>
+                          </FileUploadTrigger>
+
+                          {/* Saved library */}
+                          {savedReferences.length > 0 && (
+                            <>
+                              <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                                Saved Library
+                              </div>
+                              <div className="grid grid-cols-5 gap-1.5">
+                                {savedReferences.map((saved) => (
+                                  <div key={saved.id} className="relative group">
+                                    <button
+                                      onClick={() => addSavedReferenceToActive(saved)}
+                                      className="aspect-square w-full rounded-lg overflow-hidden border border-border hover:border-foreground/50 transition-colors"
+                                      aria-label={`Add ${saved.name}`}
+                                    >
+                                      <Image
+                                        src={saved.url}
+                                        alt={saved.name}
+                                        width={48}
+                                        height={48}
+                                        className="w-full h-full object-cover"
+                                        unoptimized
+                                      />
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        removeSavedReference(saved.id);
+                                      }}
+                                      aria-label="Remove from library"
+                                      className="absolute -top-1 -right-1 size-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                    >
+                                      <Trash2 className="size-2" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    {/* Input Area */}
+                    <div className="flex-1 min-w-0">
+                      {/* Inline reference thumbnails when present */}
+                      <AnimatePresence>
+                        {hasReferences && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="mb-2 overflow-hidden"
+                          >
+                            <div className="flex items-center gap-1.5">
+                              {referenceImages.slice(0, maxVisibleRefs).map((img) => (
+                                <div key={img.id} className="relative group">
+                                  <div className="w-8 h-8 rounded-lg overflow-hidden bg-muted dark:bg-zinc-800 border border-border dark:border-white/10">
                                     <Image
-                                      src={saved.url}
-                                      alt={saved.name}
-                                      width={48}
-                                      height={48}
+                                      src={img.preview}
+                                      alt="Reference"
+                                      width={32}
+                                      height={32}
                                       className="w-full h-full object-cover"
-                                      unoptimized
                                     />
-                                  </button>
+                                    {img.isUploading && (
+                                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                        <Loader className="size-2.5 text-white" />
+                                      </div>
+                                    )}
+                                  </div>
                                   <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      removeSavedReference(saved.id);
-                                    }}
-                                    aria-label="Remove from library"
-                                    className="absolute -top-1 -right-1 size-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                    onClick={() => removeReferenceImage(img.id)}
+                                    aria-label="Remove"
+                                    className="absolute -top-1 -right-1 size-4 rounded-full bg-background dark:bg-zinc-900 border border-border dark:border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
                                   >
-                                    <Trash2 className="size-2.5" />
+                                    <X className="size-2" />
                                   </button>
                                 </div>
                               ))}
+                              {hiddenRefCount > 0 && (
+                                <span className="text-[10px] text-muted-foreground font-mono">
+                                  +{hiddenRefCount} more
+                                </span>
+                              )}
                             </div>
-                          </>
+                          </motion.div>
                         )}
+                      </AnimatePresence>
+
+                      {/* Textarea */}
+                      <div className="relative">
+                        <motion.div
+                          animate={{ height: isPromptExpanded ? "auto" : "44px" }}
+                          transition={{ duration: 0.2 }}
+                          className="overflow-hidden"
+                        >
+                          <textarea
+                            ref={textareaRef}
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                            placeholder={
+                              hasReferences
+                                ? "Describe how to transform your images…"
+                                : "What would you like to create?"
+                            }
+                            aria-label="Image generation prompt"
+                            disabled={isGenerating}
+                            rows={isPromptExpanded ? 5 : 1}
+                            className={cn(
+                              "w-full bg-transparent text-base text-foreground dark:text-zinc-200 placeholder:text-muted-foreground dark:placeholder:text-zinc-500 resize-none focus:outline-none",
+                              isPromptExpanded ? "min-h-[120px] py-2.5" : "h-[44px] py-2.5"
+                            )}
+                          />
+                        </motion.div>
+
+                        {/* Expand/Collapse & Character Count */}
+                        <div className="absolute bottom-0.5 right-0 flex items-center gap-1">
+                          <span className="text-[10px] text-muted-foreground dark:text-zinc-600 font-mono tabular-nums">
+                            {prompt.length}
+                          </span>
+                          <button
+                            onClick={() => setIsPromptExpanded(!isPromptExpanded)}
+                            className="size-6 rounded-lg flex items-center justify-center text-muted-foreground dark:text-zinc-500 hover:text-foreground dark:hover:text-zinc-300 transition-colors"
+                            aria-label={isPromptExpanded ? "Collapse prompt" : "Expand prompt"}
+                          >
+                            {isPromptExpanded ? (
+                              <Minimize2 className="size-3.5" />
+                            ) : (
+                              <Maximize2 className="size-3.5" />
+                            )}
+                          </button>
+                        </div>
                       </div>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
 
-                  {/* Expandable Prompt Input */}
-                  <div className="flex-1 min-w-0 relative">
-                    <motion.div
-                      animate={{ height: isPromptExpanded ? "auto" : "44px" }}
-                      transition={{ duration: 0.2 }}
-                      className="overflow-hidden"
-                    >
-                      <textarea
-                        ref={textareaRef}
-                        value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder={
-                          hasReferences
-                            ? "Describe how to transform your images…"
-                            : "What would you like to create?"
-                        }
-                        aria-label="Image generation prompt"
-                        disabled={isGenerating}
-                        rows={isPromptExpanded ? 5 : 1}
-                        className={cn(
-                          "w-full bg-transparent text-base text-foreground dark:text-zinc-200 placeholder:text-muted-foreground dark:placeholder:text-zinc-500 resize-none focus:outline-none",
-                          isPromptExpanded ? "min-h-[120px] py-2.5" : "h-[44px] py-2.5"
+                      {/* Empty State Suggestions */}
+                      <AnimatePresence>
+                        {showEmptyState && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            className="mt-2"
+                          >
+                            <div className="flex flex-wrap gap-1.5">
+                              {promptSuggestions.slice(0, 4).map((suggestion) => (
+                                <button
+                                  key={suggestion}
+                                  onClick={() => handleSuggestionClick(suggestion)}
+                                  className="px-2.5 py-1 rounded-full text-xs bg-muted/50 dark:bg-zinc-800/50 text-muted-foreground dark:text-zinc-400 hover:bg-muted dark:hover:bg-zinc-800 hover:text-foreground dark:hover:text-zinc-200 transition-colors border border-transparent hover:border-border dark:hover:border-zinc-700"
+                                >
+                                  {suggestion}
+                                </button>
+                              ))}
+                            </div>
+                          </motion.div>
                         )}
-                      />
-                    </motion.div>
-
-                    {/* Expand/Collapse & Character Count */}
-                    <div className="absolute bottom-0.5 right-0 flex items-center gap-1">
-                      <span className="text-[10px] text-muted-foreground dark:text-zinc-600 font-mono tabular-nums">
-                        {prompt.length}
-                      </span>
-                      <button
-                        onClick={() => setIsPromptExpanded(!isPromptExpanded)}
-                        className="size-6 rounded-lg flex items-center justify-center text-muted-foreground dark:text-zinc-500 hover:text-foreground dark:hover:text-zinc-300 transition-colors"
-                        aria-label={isPromptExpanded ? "Collapse prompt" : "Expand prompt"}
-                      >
-                        {isPromptExpanded ? (
-                          <Minimize2 className="size-3.5" />
-                        ) : (
-                          <Maximize2 className="size-3.5" />
-                        )}
-                      </button>
+                      </AnimatePresence>
                     </div>
-                  </div>
 
-                  {/* Generate Button */}
-                  <Button
-                    onClick={handleSubmit}
-                    disabled={isGenerating || (!prompt.trim() && referenceImages.length === 0)}
-                    className={cn(
-                      "size-11 rounded-2xl flex items-center justify-center transition-colors shrink-0 p-0",
-                      "bg-foreground dark:bg-white text-background dark:text-zinc-900 hover:bg-foreground/90 dark:hover:bg-zinc-100",
-                      "disabled:opacity-50 disabled:cursor-not-allowed"
-                    )}
-                    aria-label="Generate image"
-                  >
-                    {isGenerating ? (
-                      <Loader variant="circular" size="sm" className="border-background dark:border-zinc-900" />
-                    ) : (
-                      <Sparkles className="size-5" strokeWidth={1.5} aria-hidden="true" />
-                    )}
-                  </Button>
+                    {/* Generate Button */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={handleSubmit}
+                          disabled={isGenerating || (!prompt.trim() && referenceImages.length === 0)}
+                          className={cn(
+                            "size-11 rounded-2xl flex items-center justify-center transition-colors shrink-0 p-0",
+                            "bg-foreground dark:bg-white text-background dark:text-zinc-900 hover:bg-foreground/90 dark:hover:bg-zinc-100",
+                            "disabled:opacity-50 disabled:cursor-not-allowed"
+                          )}
+                          aria-label="Generate image"
+                        >
+                          {isGenerating ? (
+                            <Loader variant="circular" size="sm" className="border-background dark:border-zinc-900" />
+                          ) : (
+                            <Sparkles className="size-5" strokeWidth={1.5} aria-hidden="true" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">Generate</TooltipContent>
+                    </Tooltip>
+                  </div>
                 </div>
 
                 {/* All Settings Row */}
@@ -485,9 +580,20 @@ export function PromptComposer() {
                   </Tooltip>
 
                   {/* Keyboard hint - pushed to end */}
-                  {prompt.trim() && (
+                  {prompt.trim() && !isGenerating && (
                     <span className="text-[10px] text-muted-foreground dark:text-zinc-600 ml-auto font-mono shrink-0">
                       ⏎ generate
+                    </span>
+                  )}
+
+                  {/* Generating indicator */}
+                  {isGenerating && (
+                    <span className="text-[10px] text-muted-foreground dark:text-zinc-600 ml-auto font-mono shrink-0 flex items-center gap-1.5">
+                      <span className="relative flex size-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full size-2 bg-amber-500" />
+                      </span>
+                      generating...
                     </span>
                   )}
                 </div>
