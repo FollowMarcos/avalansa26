@@ -52,10 +52,18 @@ export async function getUserReferenceImages(): Promise<ReferenceImageWithUrl[]>
 
 /**
  * Upload a file and create a reference image record
+ * Accepts FormData to properly serialize File objects in Server Actions
  */
 export async function uploadReferenceImage(
-  file: File
+  formData: FormData
 ): Promise<ReferenceImageWithUrl | null> {
+  const file = formData.get('file') as File | null;
+
+  if (!file) {
+    console.error('No file provided in FormData');
+    return null;
+  }
+
   const supabase = await createClient();
 
   const {
@@ -66,6 +74,9 @@ export async function uploadReferenceImage(
     console.error('User not authenticated');
     return null;
   }
+
+  // Ensure bucket exists before uploading
+  await ensureReferenceImagesBucket();
 
   // Generate a unique filename
   const fileExt = file.name.split('.').pop() || 'jpg';

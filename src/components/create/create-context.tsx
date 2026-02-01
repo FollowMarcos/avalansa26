@@ -566,8 +566,12 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     const uploadWithTimeout = async (file: File): Promise<ReferenceImageWithUrl | null> => {
       const UPLOAD_TIMEOUT = 30000; // 30 seconds
 
+      // Wrap File in FormData for Server Action serialization
+      const formData = new FormData();
+      formData.append('file', file);
+
       return Promise.race([
-        uploadAndSave(file),
+        uploadAndSave(formData),
         new Promise<null>((_, reject) =>
           setTimeout(() => reject(new Error('Upload timed out')), UPLOAD_TIMEOUT)
         ),
@@ -682,9 +686,13 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       // Upload to storage AND save to database (auto-save) with timeout
       const { uploadReferenceImage: uploadAndSave } = await import("@/utils/supabase/reference-images.server");
 
+      // Wrap File in FormData for Server Action serialization
+      const formData = new FormData();
+      formData.append('file', file);
+
       const UPLOAD_TIMEOUT = 30000; // 30 seconds
       const savedRef = await Promise.race([
-        uploadAndSave(file),
+        uploadAndSave(formData),
         new Promise<null>((_, reject) =>
           setTimeout(() => reject(new Error('Upload timed out')), UPLOAD_TIMEOUT)
         ),
