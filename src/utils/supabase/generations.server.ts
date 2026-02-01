@@ -127,3 +127,46 @@ export async function getGenerationCount(): Promise<number> {
 
   return count ?? 0;
 }
+
+/**
+ * Get generations for a specific session
+ */
+export async function getGenerationsBySession(
+  sessionId: string
+): Promise<Generation[]> {
+  const supabase = await createClient();
+
+  const { data: generations, error } = await supabase
+    .from('generations')
+    .select('*')
+    .eq('session_id', sessionId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching session generations:', error.message);
+    return [];
+  }
+
+  return generations ?? [];
+}
+
+/**
+ * Delete all generations in a session
+ */
+export async function deleteGenerationsBySession(
+  sessionId: string
+): Promise<boolean> {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from('generations')
+    .delete()
+    .eq('session_id', sessionId);
+
+  if (error) {
+    console.error('Error deleting session generations:', error.message);
+    return false;
+  }
+
+  return true;
+}

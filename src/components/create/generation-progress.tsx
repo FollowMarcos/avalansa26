@@ -28,6 +28,12 @@ export function GenerationProgress() {
   const generatingCount = generationSlots.filter((s) => s.status === "generating").length;
   const idleCount = generationSlots.filter((s) => s.status === "idle").length;
 
+  // Get error message from first failed slot
+  const errorMessage = React.useMemo(() => {
+    const failedSlot = generationSlots.find((s) => s.status === "failed" && s.error);
+    return failedSlot?.error || null;
+  }, [generationSlots]);
+
   // Don't show if not generating and no recent results
   const hasActiveSlots = generationSlots.some(
     (slot) => slot.status !== "idle"
@@ -53,6 +59,8 @@ export function GenerationProgress() {
                     <span className="size-1.5 rounded-full bg-foreground animate-pulse" />
                     Generating
                   </span>
+                ) : failedCount > 0 && successCount === 0 ? (
+                  <span className="text-destructive">Failed</span>
                 ) : (
                   <span>
                     {successCount}/{4 - idleCount} complete
@@ -77,8 +85,21 @@ export function GenerationProgress() {
               </Tooltip>
             </div>
 
-            {/* Generation Slots - 2x2 Grid */}
-            <div className="grid grid-cols-2 gap-1.5">
+            {/* Error Message - Show when there are failures */}
+            {failedCount > 0 && errorMessage && !isGenerating && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="px-1 max-w-[280px]"
+              >
+                <p className="text-[10px] text-destructive leading-tight line-clamp-2">
+                  {errorMessage}
+                </p>
+              </motion.div>
+            )}
+
+            {/* Generation Slots - Single Row */}
+            <div className="flex items-center gap-1.5">
               {generationSlots.map((slot, index) => (
                 <GenerationSlotItem
                   key={slot.id || index}
@@ -125,7 +146,7 @@ function GenerationSlotItem({ slot, index, onSelect }: GenerationSlotItemProps) 
                   : `Slot ${index + 1} available`
           }
           className={cn(
-            "relative size-14 rounded-lg border overflow-hidden transition-all",
+            "relative size-12 rounded-lg border overflow-hidden transition-all",
             "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             slot.status === "idle" && "border-dashed border-border bg-muted/30",
             slot.status === "generating" && "border-foreground/30 bg-muted/50",

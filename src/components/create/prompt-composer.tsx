@@ -58,6 +58,31 @@ const imageSizeOptions: { value: ImageSize; label: string }[] = [
   { value: "4K", label: "4K" },
 ];
 
+// Visual aspect ratio shape component
+function AspectRatioShape({ ratio, className }: { ratio: AspectRatio; className?: string }) {
+  // Calculate dimensions for visual representation (max 14px either dimension)
+  const getShapeDimensions = (r: AspectRatio): { width: number; height: number } => {
+    const [w, h] = r.split(":").map(Number);
+    const maxSize = 14;
+    if (w > h) {
+      return { width: maxSize, height: Math.round((h / w) * maxSize) };
+    } else if (h > w) {
+      return { width: Math.round((w / h) * maxSize), height: maxSize };
+    }
+    return { width: maxSize, height: maxSize };
+  };
+
+  const { width, height } = getShapeDimensions(ratio);
+
+  return (
+    <div
+      className={cn("border-2 border-current rounded-[2px]", className)}
+      style={{ width: `${width}px`, height: `${height}px` }}
+      aria-hidden="true"
+    />
+  );
+}
+
 export function PromptComposer() {
   const {
     prompt,
@@ -244,7 +269,7 @@ export function PromptComposer() {
 
                 <div className="w-px h-5 bg-border mx-1" />
 
-                {/* Aspect Ratio - Compact Dropdown */}
+                {/* Aspect Ratio - Visual Shape Selector */}
                 <DropdownMenu>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -252,16 +277,16 @@ export function PromptComposer() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-8 px-2.5 gap-1 rounded-lg font-mono text-xs"
+                          className="h-8 px-2.5 gap-2 rounded-lg"
                         >
-                          <span>{settings.aspectRatio}</span>
-                          <ChevronUp className="size-3 text-muted-foreground" />
+                          <AspectRatioShape ratio={settings.aspectRatio} className="opacity-70" />
+                          <span className="font-mono text-xs">{settings.aspectRatio}</span>
                         </Button>
                       </DropdownMenuTrigger>
                     </TooltipTrigger>
                     <TooltipContent side="top">Aspect Ratio</TooltipContent>
                   </Tooltip>
-                  <DropdownMenuContent align="start" side="top" className="min-w-[140px]">
+                  <DropdownMenuContent align="start" side="top" className="min-w-[160px]">
                     <DropdownMenuLabel className="text-xs font-mono text-muted-foreground">
                       Aspect Ratio
                     </DropdownMenuLabel>
@@ -270,10 +295,11 @@ export function PromptComposer() {
                         key={ratio.value}
                         onClick={() => updateSettings({ aspectRatio: ratio.value })}
                         className={cn(
-                          "font-mono text-xs",
+                          "font-mono text-xs gap-3",
                           settings.aspectRatio === ratio.value && "bg-muted"
                         )}
                       >
+                        <AspectRatioShape ratio={ratio.value} className="opacity-60" />
                         <span className="font-medium">{ratio.label}</span>
                         <span className="text-[10px] text-muted-foreground ml-auto">
                           {ratio.category}
@@ -283,77 +309,45 @@ export function PromptComposer() {
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                {/* Quality - Compact Dropdown */}
-                <DropdownMenu>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 px-2.5 gap-1 rounded-lg font-mono text-xs"
-                        >
-                          <span>{settings.imageSize}</span>
-                          <ChevronUp className="size-3 text-muted-foreground" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">Quality</TooltipContent>
-                  </Tooltip>
-                  <DropdownMenuContent align="start" side="top" className="min-w-[100px]">
-                    <DropdownMenuLabel className="text-xs font-mono text-muted-foreground">
-                      Quality
-                    </DropdownMenuLabel>
-                    {imageSizeOptions.map((size) => (
-                      <DropdownMenuItem
-                        key={size.value}
-                        onClick={() => updateSettings({ imageSize: size.value })}
-                        className={cn(
-                          "font-mono text-xs",
-                          settings.imageSize === size.value && "bg-muted"
-                        )}
-                      >
-                        {size.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {/* Quality - Inline Segmented Control */}
+                <div className="flex items-center h-8 p-0.5 bg-muted/50 rounded-lg" role="radiogroup" aria-label="Image quality">
+                  {imageSizeOptions.map((size) => (
+                    <button
+                      key={size.value}
+                      onClick={() => updateSettings({ imageSize: size.value })}
+                      role="radio"
+                      aria-checked={settings.imageSize === size.value}
+                      className={cn(
+                        "h-7 px-2.5 rounded-md font-mono text-xs transition-all",
+                        settings.imageSize === size.value
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {size.label}
+                    </button>
+                  ))}
+                </div>
 
-                {/* Output Count - Compact Dropdown */}
-                <DropdownMenu>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 px-2.5 gap-1 rounded-lg font-mono text-xs"
-                        >
-                          <span>×{settings.outputCount}</span>
-                          <ChevronUp className="size-3 text-muted-foreground" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">Images per batch</TooltipContent>
-                  </Tooltip>
-                  <DropdownMenuContent align="start" side="top" className="min-w-[100px]">
-                    <DropdownMenuLabel className="text-xs font-mono text-muted-foreground">
-                      Count
-                    </DropdownMenuLabel>
-                    {[1, 2, 3, 4].map((count) => (
-                      <DropdownMenuItem
-                        key={count}
-                        onClick={() => updateSettings({ outputCount: count })}
-                        className={cn(
-                          "font-mono text-xs",
-                          settings.outputCount === count && "bg-muted"
-                        )}
-                      >
-                        {count} image{count > 1 ? "s" : ""}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {/* Output Count - Inline Pills */}
+                <div className="flex items-center h-8 gap-0.5" role="radiogroup" aria-label="Number of images">
+                  {[1, 2, 3, 4].map((count) => (
+                    <button
+                      key={count}
+                      onClick={() => updateSettings({ outputCount: count })}
+                      role="radio"
+                      aria-checked={settings.outputCount === count}
+                      className={cn(
+                        "size-7 rounded-md font-mono text-xs transition-all flex items-center justify-center",
+                        settings.outputCount === count
+                          ? "bg-foreground text-background"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      )}
+                    >
+                      {count}
+                    </button>
+                  ))}
+                </div>
 
                 {/* Generation Speed - Toggle Button */}
                 <Tooltip>

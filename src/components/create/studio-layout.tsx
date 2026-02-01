@@ -8,7 +8,6 @@ import { HistoryIsland } from "./history-island";
 import { CanvasList } from "./canvas-list";
 import { PromptComposer } from "./prompt-composer";
 import { QuickToolbar } from "./quick-toolbar";
-import { ThinkingDisplay } from "./thinking-display";
 import { GenerationGallery } from "./generation-gallery";
 import { GenerationProgress } from "./generation-progress";
 import { motion } from "motion/react";
@@ -32,9 +31,6 @@ export function StudioLayout() {
           <div className="relative flex-1 flex flex-col overflow-hidden">
             {/* Quick Toolbar */}
             <QuickToolbar />
-
-            {/* Thinking Display */}
-            <ThinkingDisplay />
 
             {/* Canvas Viewport */}
             <CanvasViewport />

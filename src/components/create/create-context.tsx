@@ -4,6 +4,7 @@ import * as React from "react";
 import type { ApiConfig } from "@/types/api-config";
 import type { Generation } from "@/types/generation";
 import type { Canvas, CanvasViewport, ImageNodeData } from "@/types/canvas";
+import type { SessionWithCount } from "@/types/session";
 import { uploadReferenceImage, deleteReferenceImages } from "@/utils/supabase/storage";
 import { createClient } from "@/utils/supabase/client";
 import {
@@ -165,6 +166,17 @@ interface CreateContextType {
   generationSlots: GenerationSlot[];
   selectGeneratedImage: (slotId: string) => void;
   clearGenerationSlots: () => void;
+
+  // Session management
+  currentSessionId: string | null;
+  currentSessionName: string | null;
+  sessions: SessionWithCount[];
+  historyGroupedBySession: boolean;
+  setHistoryGroupedBySession: (grouped: boolean) => void;
+  startNewSession: (name?: string) => Promise<void>;
+  renameCurrentSession: (name: string) => Promise<void>;
+  loadSessions: () => Promise<void>;
+  deleteSession: (sessionId: string) => Promise<void>;
 
   // Helper to build final prompt with negative injection
   buildFinalPrompt: () => string;
@@ -334,6 +346,12 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
   const saveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
+  // Session management state
+  const [currentSessionId, setCurrentSessionId] = React.useState<string | null>(null);
+  const [currentSessionName, setCurrentSessionName] = React.useState<string | null>(null);
+  const [sessions, setSessions] = React.useState<SessionWithCount[]>([]);
+  const [historyGroupedBySession, setHistoryGroupedBySession] = React.useState(true);
+
   // localStorage persistence refs
   const persistTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const hasLoadedPersistedState = React.useRef(false);
@@ -406,10 +424,10 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     }, 4 * 60 * 60 * 1000);
   }, []);
 
-  // Fetch available APIs and load generation history in parallel on mount
+  // Fetch available APIs, generation history, and sessions in parallel on mount
   React.useEffect(() => {
     async function loadInitialData() {
-      // Start both fetches in parallel (async-parallel optimization)
+      // Start all fetches in parallel (async-parallel optimization)
       const apisPromise = import("@/utils/supabase/api-configs.server")
         .then(({ getAccessibleApiConfigs }) => getAccessibleApiConfigs())
         .catch((error) => {
@@ -424,8 +442,19 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
           return [] as Generation[];
         });
 
-      // Wait for both to complete in parallel
-      const [apis, generations] = await Promise.all([apisPromise, historyPromise]);
+      const sessionsPromise = import("@/utils/supabase/sessions.server")
+        .then(({ getUserSessions }) => getUserSessions())
+        .catch((error) => {
+          console.error("Failed to load sessions:", error);
+          return [] as SessionWithCount[];
+        });
+
+      // Wait for all to complete in parallel
+      const [apis, generations, userSessions] = await Promise.all([
+        apisPromise,
+        historyPromise,
+        sessionsPromise,
+      ]);
 
       // Process APIs
       setAvailableApis(apis);
@@ -455,6 +484,34 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       // Select the most recent image if available
       if (historyImages.length > 0) {
         setSelectedImage(historyImages[0]);
+      }
+
+      // Process sessions
+      setSessions(userSessions);
+      // Find and set the active session (one without ended_at)
+      const activeSession = userSessions.find(s => s.ended_at === null);
+      if (activeSession) {
+        setCurrentSessionId(activeSession.id);
+        setCurrentSessionName(activeSession.name);
+      }
+
+      // Check if we need to backfill sessions for existing generations
+      // This runs once per user to migrate existing data
+      if (userSessions.length === 0 && generations.length > 0) {
+        try {
+          const { backfillSessions, getUserSessions: refreshSessions } = await import(
+            "@/utils/supabase/sessions.server"
+          );
+          const sessionsCreated = await backfillSessions();
+          if (sessionsCreated > 0) {
+            console.log(`Backfilled ${sessionsCreated} sessions for existing generations`);
+            // Refresh sessions after backfill
+            const refreshedSessions = await refreshSessions();
+            setSessions(refreshedSessions);
+          }
+        } catch (error) {
+          console.error("Failed to backfill sessions:", error);
+        }
       }
     }
 
@@ -688,6 +745,111 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     return finalPrompt;
   }, [prompt, settings.negativePrompt]);
 
+  // Session management functions
+
+  // Load user's sessions
+  const loadSessions = React.useCallback(async () => {
+    try {
+      const { getUserSessions } = await import("@/utils/supabase/sessions.server");
+      const userSessions = await getUserSessions();
+      setSessions(userSessions);
+    } catch (error) {
+      console.error("Failed to load sessions:", error);
+    }
+  }, []);
+
+  // Ensure we have an active session (creates one if needed)
+  const ensureActiveSession = React.useCallback(async (): Promise<string | null> => {
+    try {
+      const { getOrCreateSession } = await import("@/utils/supabase/sessions.server");
+      const session = await getOrCreateSession(currentCanvasId || undefined);
+      if (session) {
+        setCurrentSessionId(session.id);
+        setCurrentSessionName(session.name);
+        // Refresh sessions list
+        loadSessions();
+        return session.id;
+      }
+      return null;
+    } catch (error) {
+      console.error("Failed to ensure active session:", error);
+      return null;
+    }
+  }, [currentCanvasId, loadSessions]);
+
+  // Start a new named session
+  const startNewSession = React.useCallback(async (name?: string) => {
+    try {
+      const { createNamedSession } = await import("@/utils/supabase/sessions.server");
+      const session = await createNamedSession(
+        name || `Session ${sessions.length + 1}`,
+        currentCanvasId || undefined
+      );
+      if (session) {
+        setCurrentSessionId(session.id);
+        setCurrentSessionName(session.name);
+        // Refresh sessions list
+        loadSessions();
+      }
+    } catch (error) {
+      console.error("Failed to start new session:", error);
+    }
+  }, [currentCanvasId, sessions.length, loadSessions]);
+
+  // Rename current session
+  const renameCurrentSession = React.useCallback(async (name: string) => {
+    if (!currentSessionId) return;
+    try {
+      const { renameSession } = await import("@/utils/supabase/sessions.server");
+      const session = await renameSession(currentSessionId, name);
+      if (session) {
+        setCurrentSessionName(session.name);
+        // Refresh sessions list
+        loadSessions();
+      }
+    } catch (error) {
+      console.error("Failed to rename session:", error);
+    }
+  }, [currentSessionId, loadSessions]);
+
+  // Delete a session
+  const deleteSessionById = React.useCallback(async (sessionId: string) => {
+    try {
+      const { deleteSession } = await import("@/utils/supabase/sessions.server");
+      const success = await deleteSession(sessionId, true); // Delete generations too
+      if (success) {
+        // Clear current session if it was deleted
+        if (sessionId === currentSessionId) {
+          setCurrentSessionId(null);
+          setCurrentSessionName(null);
+        }
+        // Refresh sessions list and history
+        loadSessions();
+        // Also reload history since generations were deleted
+        const { getGenerationHistory } = await import("@/utils/supabase/generations.server");
+        const generations = await getGenerationHistory(50);
+        const historyImages: GeneratedImage[] = generations.map((gen: Generation) => ({
+          id: gen.id,
+          url: gen.image_url,
+          prompt: gen.prompt,
+          timestamp: new Date(gen.created_at).getTime(),
+          settings: {
+            model: "nano-banana-pro" as ModelId,
+            imageSize: (gen.settings.imageSize as ImageSize) || "2K",
+            aspectRatio: (gen.settings.aspectRatio as AspectRatio) || "1:1",
+            outputCount: gen.settings.outputCount || 1,
+            generationSpeed: (gen.settings.generationSpeed as GenerationSpeed) || "fast",
+            styleStrength: 75,
+            negativePrompt: "",
+          },
+        }));
+        setHistory(historyImages);
+      }
+    } catch (error) {
+      console.error("Failed to delete session:", error);
+    }
+  }, [currentSessionId, loadSessions]);
+
   // Dynamic thinking steps based on context
   const getThinkingSteps = React.useCallback((): ThinkingStep[] => {
     const steps: ThinkingStep[] = [
@@ -728,18 +890,31 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     const outputCount = Math.min(settings.outputCount, 4);
 
     // Find available (idle) slots to use for this batch
-    const currentSlots = generationSlots;
-    const availableIndices: number[] = [];
+    let currentSlots = generationSlots;
+    let availableIndices: number[] = [];
     for (let i = 0; i < currentSlots.length && availableIndices.length < outputCount; i++) {
       if (currentSlots[i].status === "idle") {
         availableIndices.push(i);
       }
     }
 
-    // Check if we have enough slots
+    // If no idle slots available, auto-clear all slots to make room for new generation
     if (availableIndices.length === 0) {
-      console.warn("No available slots for generation. Clear existing results first.");
-      return;
+      // Reset all slots to idle
+      const freshSlots: GenerationSlot[] = [
+        { id: "slot-0", status: "idle" },
+        { id: "slot-1", status: "idle" },
+        { id: "slot-2", status: "idle" },
+        { id: "slot-3", status: "idle" },
+      ];
+      setGenerationSlots(freshSlots);
+      currentSlots = freshSlots;
+
+      // Now all slots are available
+      availableIndices = [];
+      for (let i = 0; i < outputCount; i++) {
+        availableIndices.push(i);
+      }
     }
 
     // Store which slots we're using for this batch
@@ -796,8 +971,21 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       // Build the final prompt
       const finalPrompt = buildFinalPrompt();
 
+      // Ensure we have an active session
+      const sessionId = await ensureActiveSession();
+
       // Debug: Log the exact parameters being sent
-      const requestParams = {
+      const requestParams: {
+        apiId: string;
+        prompt: string;
+        negativePrompt: string;
+        aspectRatio: AspectRatio;
+        imageSize: ImageSize;
+        outputCount: number;
+        referenceImagePaths: string[];
+        mode: GenerationSpeed;
+        sessionId: string | null;
+      } = {
         apiId: selectedApiId,
         prompt: finalPrompt,
         negativePrompt: settings.negativePrompt,
@@ -806,6 +994,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         outputCount: settings.outputCount,
         referenceImagePaths, // Storage paths instead of base64
         mode: settings.generationSpeed, // 'fast' or 'relaxed'
+        sessionId, // Session for grouping
       };
       console.log('[Generate] Sending request with params:', {
         ...requestParams,
@@ -943,7 +1132,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       setThinkingSteps([]);
       // Note: Don't reset slots here - let user see results and select images
     }
-  }, [prompt, referenceImages, settings, history, historyIndex, selectedApiId, getThinkingSteps, buildFinalPrompt, generationSlots]);
+  }, [prompt, referenceImages, settings, history, historyIndex, selectedApiId, getThinkingSteps, buildFinalPrompt, generationSlots, ensureActiveSession]);
 
   const cancelGeneration = React.useCallback(() => {
     abortControllerRef.current?.abort();
@@ -1484,6 +1673,16 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     generationSlots,
     selectGeneratedImage,
     clearGenerationSlots,
+    // Session management
+    currentSessionId,
+    currentSessionName,
+    sessions,
+    historyGroupedBySession,
+    setHistoryGroupedBySession,
+    startNewSession,
+    renameCurrentSession,
+    loadSessions,
+    deleteSession: deleteSessionById,
     buildFinalPrompt,
   }), [
     availableApis, selectedApiId, isLoadingApis, pendingBatchJobs,
@@ -1492,9 +1691,11 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     currentCanvasId, canvasList, isSaving, lastSaved, createNewCanvas, switchCanvas, renameCanvas, deleteCanvasById,
     viewMode, historyPanelOpen, isInputVisible, activeTab, zoom, canUndo, canRedo,
     isGenerating, thinkingSteps, generationSlots,
+    currentSessionId, currentSessionName, sessions, historyGroupedBySession,
     updateSettings, addReferenceImages, addReferenceImageFromUrl, removeReferenceImage, clearReferenceImages,
     savedReferences, saveReferenceImage, removeSavedReference, addSavedReferenceToActive,
-    selectImage, clearHistory, toggleHistoryPanel, toggleInputVisibility, undo, redo, generate, cancelGeneration, selectGeneratedImage, clearGenerationSlots, buildFinalPrompt,
+    selectImage, clearHistory, toggleHistoryPanel, toggleInputVisibility, undo, redo, generate, cancelGeneration, selectGeneratedImage, clearGenerationSlots,
+    startNewSession, renameCurrentSession, loadSessions, deleteSessionById, buildFinalPrompt,
   ]);
 
   return (

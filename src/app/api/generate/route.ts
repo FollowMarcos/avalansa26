@@ -15,6 +15,7 @@ export interface GenerateRequest {
   outputCount?: number;
   referenceImagePaths?: string[]; // Storage paths (not base64)
   mode?: 'fast' | 'relaxed'; // Generation mode
+  sessionId?: string; // Session for grouping generations
 }
 
 export interface GeneratedImage {
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
 
     // Parse request body
     const body: GenerateRequest = await request.json();
-    const { apiId, prompt, negativePrompt, aspectRatio, imageSize, outputCount = 1, referenceImagePaths, mode = 'fast' } = body;
+    const { apiId, prompt, negativePrompt, aspectRatio, imageSize, outputCount = 1, referenceImagePaths, mode = 'fast', sessionId } = body;
 
     // Debug: Log received parameters
     console.log('[API /generate] Received params:', {
@@ -267,6 +268,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
       await saveGeneration({
         user_id: user.id,
         api_config_id: apiId,
+        session_id: sessionId || null,
         prompt: prompt || '',
         negative_prompt: negativePrompt,
         image_url: imageUrl,
