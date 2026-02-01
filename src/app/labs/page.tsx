@@ -1041,8 +1041,8 @@ function ComposerFloating() {
                   </div>
                 </div>
 
-                {/* Count and negative in second row */}
-                <div className="flex items-center gap-4 mt-4">
+                {/* Count, negative, and references in second row */}
+                <div className="flex items-center gap-4 mt-4 flex-wrap">
                   <div className="flex flex-col gap-1.5">
                     <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Count</span>
                     <div className="flex items-center gap-1" role="radiogroup" aria-label="Count">
@@ -1057,6 +1057,16 @@ function ComposerFloating() {
                     <Ban className="size-4 text-zinc-400" aria-hidden="true" />
                     <span className="text-zinc-400 font-mono">Negative</span>
                   </button>
+                  <div className="flex items-center gap-2 ml-auto">
+                    <button className="flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-sm transition-colors" aria-label="Add reference images">
+                      <ImagePlus className="size-4 text-zinc-400" aria-hidden="true" />
+                      <span className="text-zinc-400 font-mono">References</span>
+                    </button>
+                    <button className="flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-sm transition-colors" aria-label="Open library">
+                      <Library className="size-4 text-zinc-400" aria-hidden="true" />
+                      <span className="text-zinc-400 font-mono">Library</span>
+                    </button>
+                  </div>
                 </div>
 
                 {showNegative && (
@@ -1069,24 +1079,15 @@ function ComposerFloating() {
           )}
         </AnimatePresence>
 
-        {/* Main input */}
+        {/* Main input - clean layout with full-width prompt */}
         <div className="flex items-center gap-3 p-4">
-          <button onClick={() => setShowSettings(!showSettings)} className={cn("size-12 rounded-2xl flex items-center justify-center transition-colors", showSettings ? "bg-white text-zinc-900" : "bg-zinc-800 text-zinc-400 hover:text-zinc-200")} aria-label="Toggle settings" aria-expanded={showSettings}>
+          <button onClick={() => setShowSettings(!showSettings)} className={cn("size-12 rounded-2xl flex items-center justify-center transition-colors shrink-0", showSettings ? "bg-white text-zinc-900" : "bg-zinc-800 text-zinc-400 hover:text-zinc-200")} aria-label="Toggle settings" aria-expanded={showSettings}>
             <Settings className="size-5" strokeWidth={1.5} aria-hidden="true" />
           </button>
 
-          <div className="flex-1 flex items-center gap-2">
-            <button className="size-10 rounded-xl bg-zinc-800/50 flex items-center justify-center text-zinc-500 hover:text-zinc-300 transition-colors" aria-label="Add reference images">
-              <ImagePlus className="size-4" aria-hidden="true" />
-            </button>
-            <button className="size-10 rounded-xl bg-zinc-800/50 flex items-center justify-center text-zinc-500 hover:text-zinc-300 transition-colors" aria-label="Library">
-              <Library className="size-4" aria-hidden="true" />
-            </button>
-          </div>
+          <input type="text" placeholder="What would you like to create?" aria-label="Image prompt" className="flex-1 min-w-0 bg-transparent text-base text-zinc-200 placeholder:text-zinc-500 focus:outline-none" />
 
-          <input type="text" placeholder="What would you like to create?" aria-label="Image prompt" className="flex-1 bg-transparent text-base text-zinc-200 placeholder:text-zinc-500 focus:outline-none" />
-
-          <button className="size-12 rounded-2xl bg-white text-zinc-900 flex items-center justify-center hover:bg-zinc-100 transition-colors" aria-label="Generate image">
+          <button className="size-12 rounded-2xl bg-white text-zinc-900 flex items-center justify-center hover:bg-zinc-100 transition-colors shrink-0" aria-label="Generate image">
             <Sparkles className="size-5" aria-hidden="true" />
           </button>
         </div>
