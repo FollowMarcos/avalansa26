@@ -838,7 +838,7 @@ function ComposerTerminal() {
               <div className="flex items-center gap-3 text-zinc-500">
                 <span className="text-green-400">$</span>
                 <span>exclude</span>
-                <input type="text" placeholder="\"blurry, low quality\"" aria-label="Negative prompt" className="flex-1 bg-transparent text-red-400 placeholder:text-zinc-700 focus:outline-none" />
+                <input type="text" placeholder="blurry, low quality" aria-label="Negative prompt" className="flex-1 bg-transparent text-red-400 placeholder:text-zinc-700 focus:outline-none" />
               </div>
             </motion.div>
           )}
