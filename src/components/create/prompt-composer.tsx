@@ -153,8 +153,8 @@ export function PromptComposer() {
                       className="overflow-hidden"
                     >
                       <div className="p-4 bg-zinc-800/30 border-b border-white/5">
-                        {/* First row: API, Ratio, Quality, Speed */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {/* Settings row: API, Quality, Speed */}
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                           {/* API Selector */}
                           <div className="flex flex-col gap-1.5">
                             <span className="text-[10px] text-zinc-500 uppercase tracking-wider">API</span>
@@ -164,43 +164,6 @@ export function PromptComposer() {
                               onSelect={setSelectedApiId}
                               disabled={isGenerating || isLoadingApis}
                             />
-                          </div>
-
-                          {/* Aspect Ratio */}
-                          <div className="flex flex-col gap-1.5">
-                            <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Ratio</span>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <button
-                                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-sm transition-colors"
-                                  aria-label={`Aspect ratio ${settings.aspectRatio}`}
-                                >
-                                  <AspectRatioShape ratio={settings.aspectRatio} className="text-zinc-400" />
-                                  <span className="font-mono text-zinc-300">{settings.aspectRatio}</span>
-                                </button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="start" side="top" className="min-w-[160px]">
-                                <DropdownMenuLabel className="text-xs font-mono text-muted-foreground">
-                                  Aspect Ratio
-                                </DropdownMenuLabel>
-                                {aspectRatioOptions.map((ratio) => (
-                                  <DropdownMenuItem
-                                    key={ratio.value}
-                                    onClick={() => updateSettings({ aspectRatio: ratio.value })}
-                                    className={cn(
-                                      "font-mono text-xs gap-3",
-                                      settings.aspectRatio === ratio.value && "bg-muted"
-                                    )}
-                                  >
-                                    <AspectRatioShape ratio={ratio.value} className="opacity-60" />
-                                    <span className="font-medium">{ratio.label}</span>
-                                    <span className="text-[10px] text-muted-foreground ml-auto">
-                                      {ratio.category}
-                                    </span>
-                                  </DropdownMenuItem>
-                                ))}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
                           </div>
 
                           {/* Quality */}
@@ -250,36 +213,13 @@ export function PromptComposer() {
                           </div>
                         </div>
 
-                        {/* Second row: Count, Negative, References, Library */}
-                        <div className="flex items-center gap-4 mt-4 flex-wrap">
-                          {/* Count */}
-                          <div className="flex flex-col gap-1.5">
-                            <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Count</span>
-                            <div className="flex items-center gap-1" role="radiogroup" aria-label="Number of images">
-                              {[1, 2, 3, 4].map((n) => (
-                                <button
-                                  key={n}
-                                  onClick={() => updateSettings({ outputCount: n })}
-                                  role="radio"
-                                  aria-checked={settings.outputCount === n}
-                                  className={cn(
-                                    "size-8 rounded-lg text-xs font-mono transition-colors",
-                                    settings.outputCount === n
-                                      ? "bg-white text-zinc-900"
-                                      : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
-                                  )}
-                                >
-                                  {n}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-
+                        {/* Second row: Negative, References, Library */}
+                        <div className="flex items-center gap-3 mt-4 flex-wrap">
                           {/* Negative Prompt Toggle */}
                           <button
                             onClick={() => setShowNegative(!showNegative)}
                             className={cn(
-                              "flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors mt-auto",
+                              "flex items-center gap-2 px-3 py-2 rounded-xl text-sm transition-colors",
                               showNegative ? "bg-zinc-700" : "bg-zinc-800 hover:bg-zinc-700"
                             )}
                             aria-label="Toggle negative prompt"
@@ -437,7 +377,7 @@ export function PromptComposer() {
                 </AnimatePresence>
 
                 {/* Main Input Row */}
-                <div className="flex items-end gap-3 p-4">
+                <div className="flex items-end gap-3 p-4 pb-2">
                   {/* Settings Toggle */}
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -521,6 +461,76 @@ export function PromptComposer() {
                       <Sparkles className="size-5" strokeWidth={1.5} aria-hidden="true" />
                     )}
                   </Button>
+                </div>
+
+                {/* Inline Quick Settings Row */}
+                <div className="flex items-center gap-3 px-4 pb-3 pt-1">
+                  {/* Spacer to align with prompt */}
+                  <div className="w-12 shrink-0" />
+
+                  {/* Aspect Ratio Dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-zinc-300 transition-colors"
+                        aria-label={`Aspect ratio ${settings.aspectRatio}`}
+                      >
+                        <AspectRatioShape ratio={settings.aspectRatio} className="text-zinc-500" />
+                        <span className="text-xs font-mono">{settings.aspectRatio}</span>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" side="top" className="min-w-[160px]">
+                      <DropdownMenuLabel className="text-xs font-mono text-muted-foreground">
+                        Aspect Ratio
+                      </DropdownMenuLabel>
+                      {aspectRatioOptions.map((ratio) => (
+                        <DropdownMenuItem
+                          key={ratio.value}
+                          onClick={() => updateSettings({ aspectRatio: ratio.value })}
+                          className={cn(
+                            "font-mono text-xs gap-3",
+                            settings.aspectRatio === ratio.value && "bg-muted"
+                          )}
+                        >
+                          <AspectRatioShape ratio={ratio.value} className="opacity-60" />
+                          <span className="font-medium">{ratio.label}</span>
+                          <span className="text-[10px] text-muted-foreground ml-auto">
+                            {ratio.category}
+                          </span>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  {/* Divider */}
+                  <div className="w-px h-4 bg-zinc-700" />
+
+                  {/* Count Pills */}
+                  <div className="flex items-center gap-0.5" role="radiogroup" aria-label="Number of images">
+                    {[1, 2, 3, 4].map((n) => (
+                      <button
+                        key={n}
+                        onClick={() => updateSettings({ outputCount: n })}
+                        role="radio"
+                        aria-checked={settings.outputCount === n}
+                        className={cn(
+                          "size-6 rounded-md text-[11px] font-mono transition-colors",
+                          settings.outputCount === n
+                            ? "bg-zinc-700 text-zinc-200"
+                            : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800"
+                        )}
+                      >
+                        {n}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Keyboard hint */}
+                  {prompt.trim() && (
+                    <span className="text-[10px] text-zinc-600 ml-auto font-mono">
+                      ⏎ to generate
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
