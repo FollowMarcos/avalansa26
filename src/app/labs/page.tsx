@@ -14,6 +14,10 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { voteMockup, getUserMockupVotes, removeVote, getAllMockupVoteStats, type MockupVoteStats } from '@/utils/supabase/mockup-votes.server';
 import type { VoteType } from '@/types/mockup-vote';
+import {
+  ComposerZen, ComposerCyberpunk, ComposerArchitect, ComposerPaper, ComposerHolographic,
+  ComposerMonochrome, ComposerPlayful, ComposerIndustrial, ComposerEthereal, ComposerBauhaus
+} from '@/components/labs/mockups-set-2';
 
 // Aspect ratio options matching the real composer
 const ASPECT_RATIOS = ['1:1', '16:9', '9:16', '4:3', '3:4', '21:9'] as const;
@@ -113,6 +117,16 @@ export default function LabsPage() {
     { id: 'composer-v10-aurora', title: 'Aurora', description: 'Animated aurora borealis gradient', component: ComposerAurora },
     { id: 'composer-v11-retro', title: 'Retro CRT', description: 'Vintage CRT monitor aesthetic', component: ComposerRetro },
     { id: 'composer-v12-neumorphic', title: 'Neumorphic', description: 'Soft shadows and pressed elements', component: ComposerNeumorphic },
+    { id: 'composer-v13-zen', title: 'Zen Garden', description: 'Nature-inspired texturing and calm tones', component: ComposerZen },
+    { id: 'composer-v14-cyberpunk', title: 'Cyberpunk 2077', description: 'Aggressive yellow glitch aesthetic', component: ComposerCyberpunk },
+    { id: 'composer-v15-architect', title: 'The Architect', description: 'Blueprint drafting style with grid', component: ComposerArchitect },
+    { id: 'composer-v16-paper', title: 'Sketchbook', description: 'Paper texture with pencil styling', component: ComposerPaper },
+    { id: 'composer-v17-holographic', title: 'Holographic', description: 'Iridescent shifting gradients', component: ComposerHolographic },
+    { id: 'composer-v18-monochrome', title: 'Ultra Mono', description: 'Strict black and white high contrast', component: ComposerMonochrome },
+    { id: 'composer-v19-playful', title: 'Playful Pop', description: 'Bouncy, colorful and fun', component: ComposerPlayful },
+    { id: 'composer-v20-industrial', title: 'Heavy Industry', description: 'Brushed metal, screws and safety guards', component: ComposerIndustrial },
+    { id: 'composer-v21-ethereal', title: 'Ethereal Dream', description: 'Soft, white, cloudy and dreamlike', component: ComposerEthereal },
+    { id: 'composer-v22-bauhaus', title: 'Bauhaus', description: 'Geometric forms and primary colors', component: ComposerBauhaus },
   ];
 
   return (
