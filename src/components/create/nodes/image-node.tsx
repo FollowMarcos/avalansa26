@@ -109,6 +109,11 @@ export function ImageNode({ data, selected, id }: ImageNodeProps & { id: string 
       )}
       style={{ width: finalWidth }}
     >
+      {/* Delete button - top right corner */}
+      <div className="absolute -top-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
+        <DeleteButton onDelete={handleDelete} />
+      </div>
+
       {/* Image container with dynamic aspect ratio */}
       <div
         className="relative overflow-hidden rounded-t-lg"
@@ -161,7 +166,6 @@ export function ImageNode({ data, selected, id }: ImageNodeProps & { id: string 
               </TooltipTrigger>
               <TooltipContent>Copy prompt</TooltipContent>
             </Tooltip>
-            <DeleteButton onDelete={handleDelete} />
           </div>
 
           {/* Prompt on bottom */}

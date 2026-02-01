@@ -290,7 +290,6 @@ export function PromptComposer() {
                             onKeyDown={handleKeyDown}
                             placeholder={hasReferences ? "Describe how to transform your images…" : "What would you like to create?"}
                             aria-label="Image generation prompt"
-                            disabled={isGenerating}
                             rows={isPromptExpanded ? 5 : 1}
                             className={cn(
                               "w-full bg-transparent text-base text-foreground dark:text-zinc-200 placeholder:text-muted-foreground dark:placeholder:text-zinc-500 resize-none focus:outline-none",

@@ -36,7 +36,7 @@ export function FlowCanvas({ className }: FlowCanvasProps) {
     selectImageByNodeId,
   } = useCreate();
 
-  const { fitView } = useReactFlow();
+  const { setCenter, getZoom } = useReactFlow();
 
   // Handle node selection
   const handleSelectionChange = React.useCallback(
@@ -48,18 +48,40 @@ export function FlowCanvas({ className }: FlowCanvasProps) {
     [selectImageByNodeId]
   );
 
-  // Fit view when nodes change significantly
-  const prevNodeCount = React.useRef(nodes.length);
+  // Track previous nodes to detect new additions
+  const prevNodesRef = React.useRef<Node<ImageNodeData>[]>([]);
+
+  // Focus on newly added node(s)
   React.useEffect(() => {
-    if (nodes.length > 0 && nodes.length !== prevNodeCount.current) {
+    const prevNodes = prevNodesRef.current;
+    const prevNodeIds = new Set(prevNodes.map(n => n.id));
+
+    // Find newly added nodes
+    const newNodes = nodes.filter(n => !prevNodeIds.has(n.id));
+
+    if (newNodes.length > 0) {
       // Small delay to let the node render
       const timer = setTimeout(() => {
-        fitView({ padding: 0.2, duration: 300 });
-      }, 100);
-      prevNodeCount.current = nodes.length;
+        // Focus on the first new node (most recent generation)
+        const targetNode = newNodes[0];
+        const nodeWidth = 240; // Approximate node width
+        const nodeHeight = 300; // Approximate node height
+
+        // Center on the new node with current zoom level
+        const zoom = Math.max(getZoom(), 0.8); // Ensure minimum zoom for visibility
+        setCenter(
+          targetNode.position.x + nodeWidth / 2,
+          targetNode.position.y + nodeHeight / 2,
+          { zoom, duration: 300 }
+        );
+      }, 150);
+
+      prevNodesRef.current = nodes;
       return () => clearTimeout(timer);
     }
-  }, [nodes.length, fitView]);
+
+    prevNodesRef.current = nodes;
+  }, [nodes, setCenter, getZoom]);
 
   return (
     <TooltipProvider delayDuration={300}>
