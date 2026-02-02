@@ -13,9 +13,133 @@ const ONBOARDING_ROUTES = [
 
 const ADMIN_ROUTES = ['/dashboard'];
 
+// ============================================================================
+// RATE LIMITING (Edge-compatible)
+// ============================================================================
+class EdgeRateLimiter {
+  private requests: Map<string, { count: number; resetTime: number }>;
+  private readonly limit: number;
+  private readonly windowMs: number;
+  private lastCleanup: number;
+
+  constructor(limit: number, windowMs: number) {
+    this.requests = new Map();
+    this.limit = limit;
+    this.windowMs = windowMs;
+    this.lastCleanup = Date.now();
+  }
+
+  private cleanup(): void {
+    const now = Date.now();
+    if (now - this.lastCleanup < 60000) return;
+
+    this.lastCleanup = now;
+    for (const [key, value] of this.requests.entries()) {
+      if (now > value.resetTime) {
+        this.requests.delete(key);
+      }
+    }
+
+    // Cap map size to prevent memory issues
+    if (this.requests.size > 10000) {
+      const entries = Array.from(this.requests.entries());
+      entries.sort((a, b) => b[1].resetTime - a[1].resetTime);
+      this.requests = new Map(entries.slice(0, 10000));
+    }
+  }
+
+  check(identifier: string): { allowed: boolean; remaining: number; resetTime: number; limit: number } {
+    this.cleanup();
+    const now = Date.now();
+    const record = this.requests.get(identifier);
+
+    if (!record || now > record.resetTime) {
+      const resetTime = now + this.windowMs;
+      this.requests.set(identifier, { count: 1, resetTime });
+      return { allowed: true, remaining: this.limit - 1, resetTime, limit: this.limit };
+    }
+
+    if (record.count >= this.limit) {
+      return { allowed: false, remaining: 0, resetTime: record.resetTime, limit: this.limit };
+    }
+
+    record.count++;
+    this.requests.set(identifier, record);
+    return { allowed: true, remaining: this.limit - record.count, resetTime: record.resetTime, limit: this.limit };
+  }
+}
+
+// Create rate limiters for different endpoint types
+const apiLimiter = new EdgeRateLimiter(60, 60000); // 60 req/min for general API
+const generateLimiter = new EdgeRateLimiter(10, 60000); // 10 req/min for generation
+const authLimiter = new EdgeRateLimiter(5, 300000); // 5 req/5min for auth
+
+// Get client identifier with proper IP handling
+function getClientIdentifier(request: NextRequest): string {
+  // Next.js 16+ provides IP through headers (no request.ip)
+  const realIp = request.headers.get('x-real-ip');
+  const forwardedFor = request.headers.get('x-forwarded-for');
+  const ip = realIp || forwardedFor?.split(',')[0].trim() || 'unknown';
+  return `${ip}:${request.nextUrl.pathname}`;
+}
+
+// ============================================================================
+// PROXY FUNCTION (combines auth + rate limiting)
+// ============================================================================
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // ============================================================================
+  // RATE LIMITING (check before expensive auth operations)
+  // ============================================================================
+  if (pathname.startsWith('/api/')) {
+    const identifier = getClientIdentifier(request);
+    let result;
+    let limitType: string;
+
+    // Select rate limiter based on endpoint sensitivity
+    if (pathname.startsWith('/api/generate') || pathname.startsWith('/api/batch-status')) {
+      result = generateLimiter.check(identifier);
+      limitType = 'generation';
+    } else if (pathname.includes('/auth/')) {
+      result = authLimiter.check(identifier);
+      limitType = 'authentication';
+    } else {
+      result = apiLimiter.check(identifier);
+      limitType = 'api';
+    }
+
+    if (!result.allowed) {
+      const retryAfter = Math.ceil((result.resetTime - Date.now()) / 1000);
+      return NextResponse.json(
+        {
+          error: 'Rate Limit Exceeded',
+          message: `Too many ${limitType} requests. Please try again later.`,
+          retryAfter,
+        },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': retryAfter.toString(),
+            'X-RateLimit-Limit': result.limit.toString(),
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': new Date(result.resetTime).toISOString(),
+            'X-Content-Type-Options': 'nosniff',
+            'X-Frame-Options': 'DENY',
+          },
+        }
+      );
+    }
+
+    // Add rate limit headers for successful requests (will be added to response later)
+    request.headers.set('X-RateLimit-Remaining-Internal', result.remaining.toString());
+    request.headers.set('X-RateLimit-Reset-Internal', new Date(result.resetTime).toISOString());
+    request.headers.set('X-RateLimit-Limit-Internal', result.limit.toString());
+  }
+
+  // ============================================================================
+  // AUTHENTICATION & ROUTING (original logic)
+  // ============================================================================
   let response = NextResponse.next({
     request,
   });
@@ -95,6 +219,25 @@ export async function proxy(request: NextRequest) {
 
   if (isAdminRoute && userRole !== 'admin') {
     return NextResponse.redirect(new URL('/', request.url));
+  }
+
+  // ============================================================================
+  // SECURITY HEADERS (add to all responses)
+  // ============================================================================
+  response.headers.set('X-Content-Type-Options', 'nosniff');
+  response.headers.set('X-Frame-Options', 'DENY');
+  response.headers.set('X-XSS-Protection', '1; mode=block');
+  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+  // Add rate limit headers if this was an API request
+  if (pathname.startsWith('/api/')) {
+    const remaining = request.headers.get('X-RateLimit-Remaining-Internal');
+    const reset = request.headers.get('X-RateLimit-Reset-Internal');
+    const limit = request.headers.get('X-RateLimit-Limit-Internal');
+
+    if (remaining) response.headers.set('X-RateLimit-Remaining', remaining);
+    if (reset) response.headers.set('X-RateLimit-Reset', reset);
+    if (limit) response.headers.set('X-RateLimit-Limit', limit);
   }
 
   return response;

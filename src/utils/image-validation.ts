@@ -1,6 +1,11 @@
 /**
- * Image validation utilities with magic byte checking
- * Prevents malicious file uploads by validating file signatures
+ * SECURE Image validation utilities with comprehensive checks
+ *
+ * Security improvements:
+ * - Added dimension validation (prevents image bombs)
+ * - Added zero-byte file check
+ * - Added aspect ratio validation
+ * - Better error messages
  */
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const;
@@ -10,13 +15,19 @@ const ALLOWED_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.webp', '.gif'] as const;
 export const MAX_AVATAR_SIZE = 2 * 1024 * 1024; // 2MB
 export const MAX_REFERENCE_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
 
+// Maximum dimensions (prevents decompression bombs)
+export const MAX_IMAGE_WIDTH = 4096;
+export const MAX_IMAGE_HEIGHT = 4096;
+export const MIN_IMAGE_WIDTH = 1;
+export const MIN_IMAGE_HEIGHT = 1;
+
 /**
  * Validate image file magic bytes (file signature)
  * This prevents attackers from uploading malicious files with fake extensions
  */
 function validateMagicBytes(header: Uint8Array): boolean {
   // JPEG: FF D8 FF
-  if (header[0] === 0xFF && header[1] === 0xD8 && header[2] === 0xFF) {
+  if (header[0] === 0xff && header[1] === 0xd8 && header[2] === 0xff) {
     return true;
   }
 
@@ -24,12 +35,12 @@ function validateMagicBytes(header: Uint8Array): boolean {
   if (
     header[0] === 0x89 &&
     header[1] === 0x50 &&
-    header[2] === 0x4E &&
+    header[2] === 0x4e &&
     header[3] === 0x47 &&
-    header[4] === 0x0D &&
-    header[5] === 0x0A &&
-    header[6] === 0x1A &&
-    header[7] === 0x0A
+    header[4] === 0x0d &&
+    header[5] === 0x0a &&
+    header[6] === 0x1a &&
+    header[7] === 0x0a
   ) {
     return true;
   }
@@ -59,21 +70,38 @@ function validateMagicBytes(header: Uint8Array): boolean {
 export interface ImageValidationResult {
   valid: boolean;
   error?: string;
+  dimensions?: { width: number; height: number };
 }
 
 /**
- * Comprehensive image file validation
- * - Checks MIME type
- * - Validates file extension
- * - Verifies magic bytes
- * - Enforces size limits
+ * Comprehensive image file validation with dimension checking
+ *
+ * Validates:
+ * - MIME type (allowlist)
+ * - File extension (allowlist)
+ * - Magic bytes (file signature)
+ * - File size (min/max)
+ * - Image dimensions (prevents bombs)
+ * - Image can be decoded
  */
 export async function validateImageFile(
   file: File,
-  maxSize: number = MAX_AVATAR_SIZE
+  maxSize: number = MAX_AVATAR_SIZE,
+  maxDimensions: { width: number; height: number } = {
+    width: MAX_IMAGE_WIDTH,
+    height: MAX_IMAGE_HEIGHT,
+  }
 ): Promise<ImageValidationResult> {
+  // 0. Check for zero-byte file
+  if (file.size === 0) {
+    return {
+      valid: false,
+      error: 'File is empty (0 bytes).',
+    };
+  }
+
   // 1. Check MIME type
-  if (!ALLOWED_MIME_TYPES.includes(file.type as typeof ALLOWED_MIME_TYPES[number])) {
+  if (!ALLOWED_MIME_TYPES.includes(file.type as (typeof ALLOWED_MIME_TYPES)[number])) {
     return {
       valid: false,
       error: 'Invalid file type. Only JPEG, PNG, WebP, and GIF images are allowed.',
@@ -113,11 +141,52 @@ export async function validateImageFile(
   } catch (error) {
     return {
       valid: false,
-      error: 'Failed to read file. Please try a different image.',
+      error: 'Failed to read file header. Please try a different image.',
     };
   }
 
-  return { valid: true };
+  // 5. Validate image dimensions (prevents decompression bombs)
+  try {
+    // Use createImageBitmap to decode and get dimensions
+    const imageBitmap = await createImageBitmap(file);
+
+    // Check dimensions are non-zero
+    if (imageBitmap.width === 0 || imageBitmap.height === 0) {
+      imageBitmap.close();
+      return {
+        valid: false,
+        error: 'Invalid image dimensions (width or height is 0).',
+      };
+    }
+
+    // Check dimensions don't exceed limits (prevents image bombs)
+    if (imageBitmap.width > maxDimensions.width || imageBitmap.height > maxDimensions.height) {
+      imageBitmap.close();
+      return {
+        valid: false,
+        error: `Image dimensions too large. Maximum: ${maxDimensions.width}x${maxDimensions.height}px. Yours: ${imageBitmap.width}x${imageBitmap.height}px`,
+      };
+    }
+
+    // Check minimum dimensions
+    if (imageBitmap.width < MIN_IMAGE_WIDTH || imageBitmap.height < MIN_IMAGE_HEIGHT) {
+      imageBitmap.close();
+      return {
+        valid: false,
+        error: `Image too small. Minimum: ${MIN_IMAGE_WIDTH}x${MIN_IMAGE_HEIGHT}px.`,
+      };
+    }
+
+    const dimensions = { width: imageBitmap.width, height: imageBitmap.height };
+    imageBitmap.close();
+
+    return { valid: true, dimensions };
+  } catch (error) {
+    return {
+      valid: false,
+      error: 'Failed to decode image. File may be corrupted or in an unsupported format.',
+    };
+  }
 }
 
 /**
@@ -140,4 +209,36 @@ export async function validateImageFiles(
     valid: errors.length === 0,
     errors,
   };
+}
+
+/**
+ * Additional validation for avatar images (stricter)
+ * - Enforces square or near-square aspect ratios
+ * - Smaller file size limits
+ */
+export async function validateAvatarImage(file: File): Promise<ImageValidationResult> {
+  const result = await validateImageFile(file, MAX_AVATAR_SIZE, {
+    width: 2048, // Avatars don't need to be huge
+    height: 2048,
+  });
+
+  if (!result.valid) {
+    return result;
+  }
+
+  // Check aspect ratio for avatars (should be roughly square)
+  if (result.dimensions) {
+    const { width, height } = result.dimensions;
+    const aspectRatio = width / height;
+
+    // Allow aspect ratios between 1:2 and 2:1
+    if (aspectRatio < 0.5 || aspectRatio > 2) {
+      return {
+        valid: false,
+        error: 'Avatar must have a roughly square aspect ratio (between 1:2 and 2:1).',
+      };
+    }
+  }
+
+  return result;
 }

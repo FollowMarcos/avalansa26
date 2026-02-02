@@ -33,7 +33,7 @@ function parseAspectRatio(aspectRatio: string): { w: number; h: number } {
  * Supports loading, success, and failed states
  */
 export function ImageNode({ data, selected, id }: ImageNodeProps & { id: string }) {
-  const { imageUrl, prompt, settings, timestamp, status = 'success', thinkingStep, error, generationId } = data;
+  const { imageUrl, prompt, negativePrompt, settings, timestamp, status = 'success', thinkingStep, error, generationId } = data;
   const { addReferenceImageFromUrl, deleteNode, retryGeneration, reuseImageSetup } = useCreate();
 
   // Calculate dimensions based on aspect ratio
@@ -114,7 +114,12 @@ export function ImageNode({ data, selected, id }: ImageNodeProps & { id: string 
       url: imageUrl,
       prompt,
       timestamp,
-      settings,
+      settings: {
+        ...settings,
+        // Add missing CreateSettings fields with defaults
+        styleStrength: 100, // Default to full strength
+        negativePrompt: negativePrompt || '', // Use stored negative prompt or empty
+      } as import('../create-context').CreateSettings,
     };
     await reuseImageSetup(generatedImage);
   };
