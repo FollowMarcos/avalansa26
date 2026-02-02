@@ -27,6 +27,12 @@ export interface ImageNodeData extends Record<string, unknown> {
   negativePrompt?: string;
   timestamp: number;
   settings: GenerationSettings;
+
+  // State management for loading/error states
+  status: 'loading' | 'success' | 'failed';
+  error?: string;            // Error message if status is 'failed'
+  thinkingStep?: string;     // Current thinking step if status is 'loading'
+  batchJobId?: string;       // Batch job ID for relaxed mode generations
 }
 
 /**

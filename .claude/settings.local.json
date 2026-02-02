@@ -18,7 +18,9 @@
       "WebFetch(domain:uselayouts.com)",
       "Bash(gh repo view:*)",
       "Bash(gh api:*)",
-      "Bash(tree:*)"
+      "Bash(tree:*)",
+      "Bash(npm run lint)",
+      "Bash(npm audit:*)"
     ]
   }
 }

@@ -102,6 +102,7 @@ export function PromptComposer() {
     selectedApiId,
     setSelectedApiId,
     isLoadingApis,
+    activeGenerations,
     // Admin settings
     allowedImageSizes,
     allowedAspectRatios,
@@ -544,13 +545,14 @@ export function PromptComposer() {
                     </div>
                   </div>
 
-                  {/* Status */}
-                  {isGenerating && (
+                  {/* Status - Show active generation count */}
+                  {activeGenerations > 0 && (
                     <span className="text-[10px] text-muted-foreground font-mono shrink-0 flex items-center gap-1.5 ml-2">
                       <span className="relative flex size-1.5">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
                         <span className="relative inline-flex rounded-full size-1.5 bg-amber-500" />
                       </span>
+                      <span>Generating {activeGenerations}</span>
                     </span>
                   )}
                 </div>

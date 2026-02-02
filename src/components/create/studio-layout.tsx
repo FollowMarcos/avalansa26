@@ -9,7 +9,6 @@ import { CanvasList } from "./canvas-list";
 import { PromptComposer } from "./prompt-composer";
 import { QuickToolbar } from "./quick-toolbar";
 import { GenerationGallery } from "./generation-gallery";
-import { GenerationProgress } from "./generation-progress";
 import { MaintenanceBanner } from "./maintenance-banner";
 import { motion } from "motion/react";
 
@@ -41,9 +40,6 @@ export function StudioLayout() {
 
             {/* Gallery View (overlay when active) */}
             <GenerationGallery />
-
-            {/* Generation Progress (shows during generation with 4 slots) */}
-            <GenerationProgress />
 
             {/* Prompt Composer */}
             <PromptComposer />

@@ -3,13 +3,13 @@
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useCreate } from "./create-context";
-import { Download, Copy, X, ImagePlus } from "lucide-react";
+import { Download, Copy, X, ImagePlus, RotateCw } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export function GenerationGallery() {
-  const { viewMode, setViewMode, history, selectedImage, selectImage, addReferenceImageFromUrl } = useCreate();
+  const { viewMode, setViewMode, history, selectedImage, selectImage, addReferenceImageFromUrl, reuseImageSetup } = useCreate();
 
   if (viewMode !== "gallery") return null;
 
@@ -41,6 +41,11 @@ export function GenerationGallery() {
   const handleUseAsReference = async (e: React.MouseEvent, url: string) => {
     e.stopPropagation();
     await addReferenceImageFromUrl(url);
+  };
+
+  const handleReuseSetup = async (e: React.MouseEvent, image: import('./create-context').GeneratedImage) => {
+    e.stopPropagation();
+    await reuseImageSetup(image);
   };
 
   const formatTime = (timestamp: number) => {
@@ -159,6 +164,15 @@ export function GenerationGallery() {
                           <Copy className="size-4" aria-hidden="true" />
                         </Button>
                       )}
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className="size-8 rounded-lg"
+                        aria-label="Reuse setup (image + prompt + settings)"
+                        onClick={(e) => handleReuseSetup(e, image)}
+                      >
+                        <RotateCw className="size-4" aria-hidden="true" />
+                      </Button>
                     </div>
                   </div>
 

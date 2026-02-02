@@ -18,6 +18,7 @@ import {
   MoreHorizontal,
   Pencil,
   FolderOpen,
+  RotateCw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -61,6 +62,7 @@ export function HistoryIsland() {
     setHistoryGroupedBySession,
     startNewSession,
     deleteSession,
+    reuseImageSetup,
   } = useCreate();
 
   const [showClearConfirm, setShowClearConfirm] = React.useState(false);
@@ -165,6 +167,11 @@ export function HistoryIsland() {
   const handleUseAsReference = async (e: React.MouseEvent, url: string) => {
     e.stopPropagation();
     await addReferenceImageFromUrl(url);
+  };
+
+  const handleReuseSetup = async (e: React.MouseEvent, image: GeneratedImage) => {
+    e.stopPropagation();
+    await reuseImageSetup(image);
   };
 
   // Group history by session for grouped view
@@ -282,6 +289,18 @@ export function HistoryIsland() {
                   <TooltipContent>Copy prompt</TooltipContent>
                 </Tooltip>
               )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={(e) => handleReuseSetup(e, image)}
+                    aria-label="Reuse setup (image + prompt + settings)"
+                    className="size-7 rounded-md bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
+                  >
+                    <RotateCw className="size-3.5 text-zinc-900" aria-hidden="true" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Reuse setup</TooltipContent>
+              </Tooltip>
             </div>
           </div>
         )}

@@ -14,6 +14,7 @@ import { Loader2, Upload, Sparkles, AlertCircle, Camera } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { PRESET_AVATARS, getPresetAsDataUri } from '@/components/ui/preset-avatars';
+import { getSanitizedSvgHtml } from '@/utils/svg-sanitizer';
 
 interface AvatarFormProps {
     initialAvatarUrl?: string | null;
@@ -30,8 +31,13 @@ export function AvatarForm({ initialAvatarUrl }: AvatarFormProps) {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        if (!file.type.startsWith('image/')) {
-            toast.error('Please upload an image file');
+        // Enhanced security validation with magic byte checking
+        const { validateImageFile, MAX_AVATAR_SIZE } = await import('@/utils/image-validation');
+        const validation = await validateImageFile(file, MAX_AVATAR_SIZE);
+
+        if (!validation.valid) {
+            toast.error(validation.error || 'Invalid image file');
+            if (fileInputRef.current) fileInputRef.current.value = '';
             return;
         }
 
@@ -151,7 +157,7 @@ export function AvatarForm({ initialAvatarUrl }: AvatarFormProps) {
                         >
                             <div
                                 className="w-full h-full"
-                                dangerouslySetInnerHTML={{ __html: preset.svg }}
+                                dangerouslySetInnerHTML={getSanitizedSvgHtml(preset.svg)}
                                 aria-hidden="true"
                             />
                         </button>

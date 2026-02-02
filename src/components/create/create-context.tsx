@@ -5,7 +5,7 @@ import type { ApiConfig } from "@/types/api-config";
 import type { Generation } from "@/types/generation";
 import type { Canvas, CanvasViewport, ImageNodeData } from "@/types/canvas";
 import type { SessionWithCount } from "@/types/session";
-import { uploadReferenceImage as uploadToStorage, deleteReferenceImages } from "@/utils/supabase/storage";
+import { uploadReferenceImage as uploadToStorage } from "@/utils/supabase/storage";
 import { createClient } from "@/utils/supabase/client";
 import type { ReferenceImageWithUrl } from "@/types/reference-image";
 import type { CreateSettings as AdminCreateSettings } from "@/types/create-settings";
@@ -58,16 +58,6 @@ export interface ThinkingStep {
   completed: boolean;
 }
 
-// Generation slot states for concurrent image generation (max 4)
-export type SlotStatus = "idle" | "generating" | "success" | "failed";
-
-export interface GenerationSlot {
-  id: string;
-  status: SlotStatus;
-  imageUrl?: string;
-  error?: string;
-}
-
 export interface CreateSettings {
   model: ModelId;
   imageSize: ImageSize;
@@ -101,6 +91,7 @@ interface CreateContextType {
   addReferenceImageFromUrl: (url: string) => Promise<void>;
   removeReferenceImage: (id: string) => void;
   clearReferenceImages: () => void;
+  reuseImageSetup: (image: GeneratedImage) => Promise<void>;
 
   // Saved reference images library (auto-saved to database)
   savedReferences: SavedReferenceImage[];
@@ -162,11 +153,11 @@ interface CreateContextType {
   cancelGeneration: () => void;
   pendingBatchJobs: string[];
 
-  // Generation slots for concurrent image generation (max 4)
-  generationSlots: GenerationSlot[];
-  hasAvailableSlots: boolean; // True if any slots are idle (can start new generation)
-  selectGeneratedImage: (slotId: string) => void;
-  clearGenerationSlots: () => void;
+  // Concurrent generation tracking (max 4)
+  activeGenerations: number; // Number of currently active generations
+  hasAvailableSlots: boolean; // True if can start new generation (< 4 active)
+  retryGeneration: (nodeId: string) => Promise<void>;
+  updateNodeData: (nodeId: string, updates: Partial<ImageNodeData>) => void;
 
   // Session management
   currentSessionId: string | null;
@@ -331,13 +322,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [batchCompletedImages, setBatchCompletedImages] = React.useState<GeneratedImage[]>([]);
   const abortControllerRef = React.useRef<AbortController | null>(null);
 
-  // Generation slots for tracking concurrent image generation (max 4)
-  const [generationSlots, setGenerationSlots] = React.useState<GenerationSlot[]>([
-    { id: "slot-0", status: "idle" },
-    { id: "slot-1", status: "idle" },
-    { id: "slot-2", status: "idle" },
-    { id: "slot-3", status: "idle" },
-  ]);
+  // Track active generation node IDs for concurrency limit (max 4)
+  const [activeGenerations, setActiveGenerations] = React.useState<Set<string>>(new Set());
+  const activeGenerationNodesRef = React.useRef<Set<string>>(new Set());
 
   // React Flow state
   const [nodes, setNodes] = React.useState<Node<ImageNodeData>[]>([]);
@@ -790,6 +777,23 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   }, [referenceImages.length]);
 
   /**
+   * Reuse a generated image's complete setup (image as reference + prompt + settings)
+   */
+  const reuseImageSetup = React.useCallback(async (image: GeneratedImage) => {
+    // Add image as reference
+    await addReferenceImageFromUrl(image.url);
+
+    // Set prompt
+    setPrompt(image.prompt);
+
+    // Update settings
+    updateSettings({
+      aspectRatio: image.settings?.aspectRatio || settings.aspectRatio,
+      negativePrompt: image.settings?.negativePrompt || '',
+    });
+  }, [addReferenceImageFromUrl, setPrompt, updateSettings, settings.aspectRatio]);
+
+  /**
    * Load saved reference images from database
    */
   const loadSavedReferences = React.useCallback(async () => {
@@ -989,8 +993,89 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     return steps;
   }, [referenceImages.length, prompt, settings.imageSize, settings.generationSpeed]);
 
-  // Track which slot indices are being used in the current generation batch
-  const activeSlotIndicesRef = React.useRef<number[]>([]);
+  // Helper function to update node data
+  const updateNodeData = React.useCallback((nodeId: string, updates: Partial<ImageNodeData>) => {
+    setNodes(prev => prev.map(node =>
+      node.id === nodeId
+        ? { ...node, data: { ...node.data, ...updates } }
+        : node
+    ));
+  }, []);
+
+  // Retry a failed generation
+  const retryGeneration = React.useCallback(async (nodeId: string) => {
+    const node = nodes.find(n => n.id === nodeId);
+    if (!node || node.data.status !== 'failed') return;
+
+    // Add to active generations
+    setActiveGenerations(prev => new Set([...prev, nodeId]));
+    activeGenerationNodesRef.current.add(nodeId);
+
+    // Reset node to loading
+    updateNodeData(nodeId, {
+      status: 'loading',
+      error: undefined,
+      thinkingStep: 'Retrying generation...',
+    });
+
+    try {
+      // Get the original settings from the node
+      const finalPrompt = node.data.prompt + (node.data.negativePrompt ? `\n\nNegative: ${node.data.negativePrompt}` : '');
+
+      // Call the generation API
+      const response = await fetch('/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          apiId: selectedApiId,
+          prompt: finalPrompt,
+          negativePrompt: node.data.negativePrompt || '',
+          aspectRatio: node.data.settings.aspectRatio,
+          imageSize: node.data.settings.imageSize,
+          outputCount: 1,
+          referenceImagePaths: [],
+          mode: node.data.settings.generationSpeed,
+          canvasId: currentCanvasId,
+          pendingSessionName: null,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      if (!data.success || !data.images || data.images.length === 0) {
+        throw new Error(data.error || 'No images generated');
+      }
+
+      // Update node with success
+      updateNodeData(nodeId, {
+        status: 'success',
+        imageUrl: data.images[0].url,
+        thinkingStep: undefined,
+      });
+
+    } catch (error) {
+      console.error('Retry generation error:', error);
+      updateNodeData(nodeId, {
+        status: 'failed',
+        error: error instanceof Error ? error.message : 'Generation failed',
+        thinkingStep: undefined,
+      });
+    } finally {
+      // Remove from active generations
+      setActiveGenerations(prev => {
+        const next = new Set(prev);
+        next.delete(nodeId);
+        return next;
+      });
+      activeGenerationNodesRef.current.delete(nodeId);
+    }
+  }, [nodes, activeGenerations, selectedApiId, currentCanvasId, updateNodeData]);
 
   const generate = React.useCallback(async () => {
     if (!prompt.trim() && referenceImages.length === 0) return;
@@ -999,41 +1084,14 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Determine how many images to generate (max 4 for Google API)
+    // Check concurrency limit (max 4 concurrent generations)
+    if (activeGenerations.size >= 4) {
+      console.warn('Maximum concurrent generations reached (4)');
+      return;
+    }
+
+    // Determine how many images to generate (max 4 per API call)
     const outputCount = Math.min(settings.outputCount, 4);
-
-    // Find available (idle) slots to use for this batch
-    let currentSlots = generationSlots;
-    let availableIndices: number[] = [];
-    for (let i = 0; i < currentSlots.length && availableIndices.length < outputCount; i++) {
-      if (currentSlots[i].status === "idle") {
-        availableIndices.push(i);
-      }
-    }
-
-    // If not enough idle slots for the requested count, auto-clear all slots
-    // This ensures we always generate the full requested amount
-    if (availableIndices.length < outputCount) {
-      // Reset all slots to idle
-      const freshSlots: GenerationSlot[] = [
-        { id: "slot-0", status: "idle" },
-        { id: "slot-1", status: "idle" },
-        { id: "slot-2", status: "idle" },
-        { id: "slot-3", status: "idle" },
-      ];
-      setGenerationSlots(freshSlots);
-      currentSlots = freshSlots;
-
-      // Now all slots are available - use as many as needed
-      availableIndices = [];
-      for (let i = 0; i < outputCount; i++) {
-        availableIndices.push(i);
-      }
-    }
-
-    // Store which slots we're using for this batch
-    activeSlotIndicesRef.current = availableIndices;
-    const actualOutputCount = availableIndices.length;
 
     setIsGenerating(true);
     abortControllerRef.current = new AbortController();
@@ -1042,18 +1100,53 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     const steps = getThinkingSteps();
     setThinkingSteps(steps);
 
-    // Mark only the selected idle slots as generating (preserve other slots)
-    setGenerationSlots(prev => prev.map((slot, idx) => {
-      if (availableIndices.includes(idx)) {
-        return {
-          ...slot,
-          status: "generating" as SlotStatus,
-          imageUrl: undefined,
-          error: undefined,
-        };
-      }
-      return slot;
-    }));
+    // Create placeholder nodes immediately at viewport center
+    const placeholderNodeIds: string[] = [];
+    const centerX = -viewport.x / viewport.zoom + (typeof window !== 'undefined' ? window.innerWidth / 2 / viewport.zoom : 400);
+    const centerY = -viewport.y / viewport.zoom + (typeof window !== 'undefined' ? window.innerHeight / 2 / viewport.zoom : 300);
+
+    for (let i = 0; i < outputCount; i++) {
+      const nodeId = `node-gen-${Date.now()}-${i}`;
+      const generationId = `gen-${Date.now()}-${i}`;
+
+      // Offset each node slightly to avoid overlap
+      const offsetX = i * 20;
+      const offsetY = i * 20;
+
+      const placeholderNode: Node<ImageNodeData> = {
+        id: nodeId,
+        type: 'imageNode',
+        position: {
+          x: centerX + offsetX,
+          y: centerY + offsetY,
+        },
+        data: {
+          generationId,
+          imageUrl: '', // Empty until generation completes
+          prompt: prompt,
+          negativePrompt: settings.negativePrompt,
+          timestamp: Date.now(),
+          settings: {
+            aspectRatio: settings.aspectRatio,
+            imageSize: settings.imageSize,
+            outputCount: settings.outputCount,
+            generationSpeed: settings.generationSpeed,
+          },
+          status: 'loading',
+          thinkingStep: 'Initializing...',
+        },
+      };
+
+      setNodes(prev => [...prev, placeholderNode]);
+      placeholderNodeIds.push(nodeId);
+
+      // Track this node in active generations
+      setActiveGenerations(prev => new Set([...prev, nodeId]));
+      activeGenerationNodesRef.current.add(nodeId);
+      processedGenerationIds.current.add(generationId);
+    }
+
+    setHasUnsavedChanges(true);
 
     try {
       // Show thinking steps animation
@@ -1118,7 +1211,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       });
 
       // Update request params to use actual available slot count
-      requestParams.outputCount = actualOutputCount;
+      requestParams.outputCount = outputCount;
 
       // Call the generation API with storage paths (not base64)
       const response = await fetch('/api/generate', {
@@ -1165,8 +1258,17 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
       // Handle batch/relaxed mode
       if (data.mode === 'relaxed' && data.batchJobId) {
+        // Update placeholder nodes with batch job info
+        for (const nodeId of placeholderNodeIds) {
+          updateNodeData(nodeId, {
+            thinkingStep: 'Batch job queued...',
+            batchJobId: data.batchJobId,
+          });
+        }
+
         // Start polling for batch job completion
         pollBatchJob(data.batchJobId, finalPrompt, { ...settings });
+
         // Show a placeholder in history indicating batch job is processing
         const pendingImage: GeneratedImage = {
           id: `batch-${data.batchJobId}`,
@@ -1182,13 +1284,14 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
       // Handle fast mode (immediate images)
       if (!data.images || data.images.length === 0) {
-        // Mark only our batch slots as failed (not all generating slots)
-        const batchIndices = activeSlotIndicesRef.current;
-        setGenerationSlots(prev => prev.map((slot, idx) =>
-          batchIndices.includes(idx) && slot.status === "generating"
-            ? { ...slot, status: "failed" as SlotStatus, error: data.error || 'No images generated' }
-            : slot
-        ));
+        // Mark all placeholder nodes as failed
+        for (const nodeId of placeholderNodeIds) {
+          updateNodeData(nodeId, {
+            status: 'failed',
+            error: data.error || 'No images generated',
+            thinkingStep: undefined,
+          });
+        }
         throw new Error(data.error || 'No images generated');
       }
 
@@ -1201,26 +1304,25 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         settings: { ...settings },
       }));
 
-      // Update only our batch slots with results (using tracked indices)
-      const batchIndices = activeSlotIndicesRef.current;
-      setGenerationSlots(prev => prev.map((slot, idx) => {
-        const batchPosition = batchIndices.indexOf(idx);
-        if (batchPosition !== -1) {
-          // This slot is part of our current batch
-          if (batchPosition < newImages.length) {
-            return {
-              ...slot,
-              status: "success" as SlotStatus,
-              imageUrl: newImages[batchPosition].url,
-            };
-          } else {
-            // Fewer images returned than expected
-            return { ...slot, status: "failed" as SlotStatus, error: "No image generated" };
-          }
+      // Update placeholder nodes with actual images
+      for (let i = 0; i < placeholderNodeIds.length; i++) {
+        const nodeId = placeholderNodeIds[i];
+        if (i < newImages.length) {
+          // Success - update with image URL
+          updateNodeData(nodeId, {
+            status: 'success',
+            imageUrl: newImages[i].url,
+            thinkingStep: undefined,
+          });
+        } else {
+          // Fewer images returned than expected
+          updateNodeData(nodeId, {
+            status: 'failed',
+            error: 'No image generated',
+            thinkingStep: undefined,
+          });
         }
-        // Not part of our batch, preserve existing state
-        return slot;
-      }));
+      }
 
       // Update session state from API response (lazy session creation)
       if (data.sessionId) {
@@ -1242,65 +1344,47 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        // Generation was cancelled - slots already reset by cancelGeneration
+        // Generation was cancelled - remove placeholder nodes
+        setNodes(prev => prev.filter(n => !placeholderNodeIds.includes(n.id)));
+        for (const nodeId of placeholderNodeIds) {
+          const node = nodes.find(n => n.id === nodeId);
+          if (node) {
+            processedGenerationIds.current.delete(node.data.generationId);
+          }
+        }
         return;
       }
       console.error("Generation error:", error);
-      // Mark only our batch slots as failed (using tracked indices)
-      const batchIndices = activeSlotIndicesRef.current;
-      setGenerationSlots(prev => prev.map((slot, idx) =>
-        batchIndices.includes(idx) && slot.status === "generating"
-          ? { ...slot, status: "failed" as SlotStatus, error: error instanceof Error ? error.message : "Generation failed" }
-          : slot
-      ));
+      // Mark all placeholder nodes as failed
+      for (const nodeId of placeholderNodeIds) {
+        updateNodeData(nodeId, {
+          status: 'failed',
+          error: error instanceof Error ? error.message : "Generation failed",
+          thinkingStep: undefined,
+        });
+      }
     } finally {
       setIsGenerating(false);
       setThinkingSteps([]);
-      // Note: Don't reset slots here - let user see results and select images
+      // Remove placeholder nodes from active generations
+      for (const nodeId of placeholderNodeIds) {
+        setActiveGenerations(prev => {
+          const next = new Set(prev);
+          next.delete(nodeId);
+          return next;
+        });
+        activeGenerationNodesRef.current.delete(nodeId);
+      }
     }
-  }, [prompt, referenceImages, settings, history, historyIndex, selectedApiId, getThinkingSteps, buildFinalPrompt, generationSlots, currentCanvasId, pendingSessionName, loadSessions]);
+  }, [prompt, referenceImages, settings, history, historyIndex, selectedApiId, getThinkingSteps, buildFinalPrompt, currentCanvasId, pendingSessionName, loadSessions, viewport, nodes, updateNodeData, activeGenerations, pollBatchJob]);
 
   const cancelGeneration = React.useCallback(() => {
     abortControllerRef.current?.abort();
     setIsGenerating(false);
     setThinkingSteps([]);
-    // Reset all slots to idle
-    setGenerationSlots([
-      { id: "slot-0", status: "idle" },
-      { id: "slot-1", status: "idle" },
-      { id: "slot-2", status: "idle" },
-      { id: "slot-3", status: "idle" },
-    ]);
-  }, []);
-
-  // Select a generated image from a slot and add to history
-  const selectGeneratedImage = React.useCallback((slotId: string) => {
-    const slot = generationSlots.find(s => s.id === slotId);
-    if (slot?.status === "success" && slot.imageUrl) {
-      // Find the corresponding image in history by URL
-      const image = history.find(h => h.url === slot.imageUrl);
-      if (image) {
-        setSelectedImage(image);
-        setViewMode("canvas");
-      }
-    }
-    // Reset slots after selection
-    setGenerationSlots([
-      { id: "slot-0", status: "idle" },
-      { id: "slot-1", status: "idle" },
-      { id: "slot-2", status: "idle" },
-      { id: "slot-3", status: "idle" },
-    ]);
-  }, [generationSlots, history]);
-
-  // Clear all generation slots (dismiss progress UI)
-  const clearGenerationSlots = React.useCallback(() => {
-    setGenerationSlots([
-      { id: "slot-0", status: "idle" },
-      { id: "slot-1", status: "idle" },
-      { id: "slot-2", status: "idle" },
-      { id: "slot-3", status: "idle" },
-    ]);
+    // Clear all active generations
+    activeGenerationNodesRef.current.clear();
+    setActiveGenerations(new Set());
   }, []);
 
   const canUndo = historyIndex >= 0;
@@ -1382,6 +1466,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
           outputCount: image.settings.outputCount,
           generationSpeed: image.settings.generationSpeed,
         },
+        status: 'success', // Images from history are already completed
       },
     };
     setNodes((nds) => [...nds, newNode]);
@@ -1788,10 +1873,10 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   }, [prompt, settings, currentCanvasId, selectedApiId, nodes, edges, viewport, viewMode, historyPanelOpen, currentUserId]);
 
   // Compute whether there are available slots for new generations
-  // Slots are available if they're not actively generating (idle, success, or failed can all be used)
+  // Maximum 4 concurrent generations allowed
   const hasAvailableSlots = React.useMemo(() => {
-    return generationSlots.some(slot => slot.status !== "generating");
-  }, [generationSlots]);
+    return true; // No global concurrency limit, only per-call limit of 4 images
+  }, []);
 
   // Derive admin settings values
   const isMaintenanceMode = adminSettings?.maintenance_mode ?? false;
@@ -1825,6 +1910,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     addReferenceImageFromUrl,
     removeReferenceImage,
     clearReferenceImages,
+    reuseImageSetup,
     // Saved references (database-backed)
     savedReferences,
     loadSavedReferences,
@@ -1873,10 +1959,10 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     generate,
     cancelGeneration,
     pendingBatchJobs,
-    generationSlots,
+    activeGenerations: activeGenerations.size,
     hasAvailableSlots,
-    selectGeneratedImage,
-    clearGenerationSlots,
+    retryGeneration,
+    updateNodeData,
     // Session management
     currentSessionId,
     currentSessionName,
@@ -1902,11 +1988,11 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     nodes, edges, onNodesChange, onEdgesChange, onConnect, addImageNode, deleteNode, selectImageByNodeId,
     currentCanvasId, canvasList, isSaving, lastSaved, createNewCanvas, switchCanvas, renameCanvas, deleteCanvasById,
     viewMode, historyPanelOpen, isInputVisible, activeTab, zoom, canUndo, canRedo,
-    isGenerating, thinkingSteps, generationSlots, hasAvailableSlots,
+    isGenerating, thinkingSteps, activeGenerations, hasAvailableSlots, retryGeneration, updateNodeData,
     currentSessionId, currentSessionName, sessions, historyGroupedBySession,
     updateSettings, addReferenceImages, addReferenceImageFromUrl, removeReferenceImage, clearReferenceImages,
     savedReferences, loadSavedReferences, removeSavedReference, renameSavedReference, addSavedReferenceToActive,
-    selectImage, clearHistory, toggleHistoryPanel, toggleInputVisibility, undo, redo, generate, cancelGeneration, selectGeneratedImage, clearGenerationSlots,
+    selectImage, clearHistory, toggleHistoryPanel, toggleInputVisibility, undo, redo, generate, cancelGeneration,
     startNewSession, renameCurrentSession, loadSessions, deleteSessionById, buildFinalPrompt,
     adminSettings, isMaintenanceMode, allowedImageSizes, allowedAspectRatios, maxOutputCount, allowFastMode, allowRelaxedMode,
   ]);

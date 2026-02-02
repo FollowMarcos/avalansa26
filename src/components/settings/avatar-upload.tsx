@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Camera, Loader2, X, Plus, History, Sparkles } from 'lucide-react';
 import { DefaultAvatar } from '@/components/ui/default-avatar';
 import { PRESET_AVATARS, getPresetAsDataUri } from '@/components/ui/preset-avatars';
+import { getSanitizedSvgHtml } from '@/utils/svg-sanitizer';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
@@ -45,13 +46,13 @@ export function AvatarUpload({
         const file = event.target.files?.[0];
         if (!file) return;
 
-        if (!file.type.startsWith('image/')) {
-            toast.error('Please upload an image file (JPG, PNG, GIF).');
-            return;
-        }
+        // Enhanced security validation with magic byte checking
+        const { validateImageFile, MAX_AVATAR_SIZE } = await import('@/utils/image-validation');
+        const validation = await validateImageFile(file, MAX_AVATAR_SIZE);
 
-        if (file.size > 2 * 1024 * 1024) {
-            toast.error('Image must be less than 2MB.');
+        if (!validation.valid) {
+            toast.error(validation.error || 'Invalid image file');
+            if (fileInputRef.current) fileInputRef.current.value = '';
             return;
         }
 
@@ -263,7 +264,7 @@ export function AvatarUpload({
                                     <div className="relative w-16 h-16 rounded-lg overflow-hidden border border-border group-hover:border-primary/30 transition-colors">
                                         <div
                                             className="w-full h-full"
-                                            dangerouslySetInnerHTML={{ __html: preset.svg }}
+                                            dangerouslySetInnerHTML={getSanitizedSvgHtml(preset.svg)}
                                         />
                                         {isActive && (
                                             <div className="absolute inset-0 bg-primary/10 flex items-center justify-center">
