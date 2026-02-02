@@ -205,76 +205,94 @@ export function HistoryIsland() {
   }, [history, sessions]);
 
   // Render a single image thumbnail
-  const renderImageThumbnail = (image: GeneratedImage) => (
-    <motion.button
-      key={image.id}
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      onClick={() => selectImage(image)}
-      className={cn(
-        "relative aspect-square rounded-lg overflow-hidden group",
-        "border border-border hover:border-foreground/30 transition-colors",
-        selectedImage?.id === image.id && "ring-2 ring-foreground"
-      )}
-    >
-      <Image
-        src={image.url}
-        alt={image.prompt || "Generated"}
-        fill
-        className="object-cover"
-        unoptimized
-      />
+  const renderImageThumbnail = (image: GeneratedImage) => {
+    const isPending = image.status === "pending" || !image.url;
 
-      {/* Hover overlay */}
-      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors">
-        <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={(e) => handleUseAsReference(e, image.url)}
-                aria-label="Use as reference image"
-                className="size-7 rounded-md bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
-              >
-                <ImagePlus className="size-3.5 text-zinc-900" aria-hidden="true" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>Use as reference</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                onClick={(e) => handleDownload(e, image.url, image.id)}
-                aria-label="Download image"
-                className="size-7 rounded-md bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
-              >
-                <Download className="size-3.5 text-zinc-900" aria-hidden="true" />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent>Download</TooltipContent>
-          </Tooltip>
-          {image.prompt && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={(e) => handleCopyPrompt(e, image.prompt)}
-                  aria-label="Copy prompt"
-                  className="size-7 rounded-md bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
-                >
-                  <Copy className="size-3.5 text-zinc-900" aria-hidden="true" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent>Copy prompt</TooltipContent>
-            </Tooltip>
-          )}
+    return (
+      <motion.button
+        key={image.id}
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        onClick={() => !isPending && selectImage(image)}
+        disabled={isPending}
+        className={cn(
+          "relative aspect-square rounded-lg overflow-hidden group",
+          "border border-border transition-colors",
+          isPending
+            ? "cursor-default border-dashed"
+            : "hover:border-foreground/30",
+          selectedImage?.id === image.id && !isPending && "ring-2 ring-foreground"
+        )}
+      >
+        {isPending ? (
+          // Pending/loading state
+          <div className="absolute inset-0 bg-muted/50 flex flex-col items-center justify-center gap-2">
+            <div className="size-6 border-2 border-muted-foreground/30 border-t-blue-500 rounded-full animate-spin" aria-hidden="true" />
+            <span className="text-[10px] font-mono text-muted-foreground">Generating…</span>
+          </div>
+        ) : (
+          <Image
+            src={image.url}
+            alt={image.prompt || "Generated"}
+            fill
+            className="object-cover"
+            unoptimized
+          />
+        )}
+
+        {/* Hover overlay - only for completed images */}
+        {!isPending && (
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors">
+            <div className="absolute inset-0 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={(e) => handleUseAsReference(e, image.url)}
+                    aria-label="Use as reference image"
+                    className="size-7 rounded-md bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
+                  >
+                    <ImagePlus className="size-3.5 text-zinc-900" aria-hidden="true" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Use as reference</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={(e) => handleDownload(e, image.url, image.id)}
+                    aria-label="Download image"
+                    className="size-7 rounded-md bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
+                  >
+                    <Download className="size-3.5 text-zinc-900" aria-hidden="true" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>Download</TooltipContent>
+              </Tooltip>
+              {image.prompt && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={(e) => handleCopyPrompt(e, image.prompt)}
+                      aria-label="Copy prompt"
+                      className="size-7 rounded-md bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
+                    >
+                      <Copy className="size-3.5 text-zinc-900" aria-hidden="true" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Copy prompt</TooltipContent>
+                </Tooltip>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Time badge or pending badge */}
+        <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/60 text-[10px] font-mono text-white">
+          {isPending ? "Queued" : formatTime(image.timestamp)}
         </div>
-      </div>
-
-      {/* Time badge */}
-      <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/60 text-[10px] font-mono text-white">
-        {formatTime(image.timestamp)}
-      </div>
-    </motion.button>
-  );
+      </motion.button>
+    );
+  };
 
   // Render a session group
   const renderSessionGroup = (session: SessionWithCount, images: GeneratedImage[]) => {

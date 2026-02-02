@@ -442,25 +442,34 @@ export function PromptComposer() {
 
                   {/* Speed - Toggle Pill (only show if both modes are allowed) */}
                   {showSpeedToggle && (
-                    <button
-                      onClick={() => updateSettings({ generationSpeed: settings.generationSpeed === "fast" ? "relaxed" : "fast" })}
-                      aria-label={`Generation speed: ${settings.generationSpeed === "fast" ? "Fast" : "Batch"}`}
-                      className={cn(
-                        "flex items-center gap-1.5 h-8 px-3 rounded-lg transition-all shrink-0 focus-visible:ring-2 focus-visible:ring-ring",
-                        settings.generationSpeed === "fast"
-                          ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25"
-                          : "bg-muted/50 dark:bg-zinc-800/50 text-muted-foreground hover:bg-muted dark:hover:bg-zinc-800"
-                      )}
-                    >
-                      {settings.generationSpeed === "fast" ? (
-                        <Zap className="size-3.5" />
-                      ) : (
-                        <Clock className="size-3.5" />
-                      )}
-                      <span className="text-xs font-medium">
-                        {settings.generationSpeed === "fast" ? "Fast" : "Batch"}
-                      </span>
-                    </button>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => updateSettings({ generationSpeed: settings.generationSpeed === "fast" ? "relaxed" : "fast" })}
+                          aria-label={`Generation speed: ${settings.generationSpeed === "fast" ? "Fast" : "Relax"}`}
+                          className={cn(
+                            "flex items-center gap-1.5 h-8 px-3 rounded-lg transition-all shrink-0 focus-visible:ring-2 focus-visible:ring-ring",
+                            settings.generationSpeed === "fast"
+                              ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25"
+                              : "bg-blue-500/15 text-blue-600 dark:text-blue-400 hover:bg-blue-500/25"
+                          )}
+                        >
+                          {settings.generationSpeed === "fast" ? (
+                            <Zap className="size-3.5" aria-hidden="true" />
+                          ) : (
+                            <Clock className="size-3.5" aria-hidden="true" />
+                          )}
+                          <span className="text-xs font-medium">
+                            {settings.generationSpeed === "fast" ? "Fast" : "Relax"}
+                          </span>
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[200px] text-xs">
+                        {settings.generationSpeed === "fast"
+                          ? "Generate images immediately"
+                          : "Queue images for background generation. Takes longer but doesn't block you."}
+                      </TooltipContent>
+                    </Tooltip>
                   )}
 
                   {/* Quantity - Stepper */}

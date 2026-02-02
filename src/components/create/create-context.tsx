@@ -49,6 +49,7 @@ export interface GeneratedImage {
   prompt: string;
   timestamp: number;
   settings: CreateSettings;
+  status?: "pending" | "completed" | "failed"; // For relax mode async generation
 }
 
 export interface ThinkingStep {
@@ -327,6 +328,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [historyIndex, setHistoryIndex] = React.useState(-1);
   const [historyStack, setHistoryStack] = React.useState<GeneratedImage[][]>([]);
   const [pendingBatchJobs, setPendingBatchJobs] = React.useState<string[]>([]);
+  const [batchCompletedImages, setBatchCompletedImages] = React.useState<GeneratedImage[]>([]);
   const abortControllerRef = React.useRef<AbortController | null>(null);
 
   // Generation slots for tracking concurrent image generation (max 4)
@@ -399,6 +401,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
               prompt: originalPrompt,
               timestamp: Date.now(),
               settings: originalSettings,
+              status: "completed" as const,
             }));
 
           if (completedImages.length > 0) {
@@ -409,6 +412,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
             });
             setSelectedImage(completedImages[0]);
             setViewMode("canvas");
+
+            // Mark these as needing canvas addition
+            setBatchCompletedImages(completedImages);
           }
         } else if (status === 'failed') {
           clearInterval(pollInterval);
@@ -1164,6 +1170,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
           prompt: finalPrompt,
           timestamp: Date.now(),
           settings: { ...settings },
+          status: "pending", // Mark as pending for UI to show loading state
         };
         setHistory(prev => [pendingImage, ...prev]);
         return;
@@ -1632,6 +1639,24 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     }
     prevHistoryLength.current = history.length;
   }, [history, nodes, addImageNode]);
+
+  // Add batch-completed images to canvas when they arrive
+  React.useEffect(() => {
+    if (batchCompletedImages.length === 0) return;
+
+    // Add each completed image to canvas
+    for (const img of batchCompletedImages) {
+      if (img.url) {
+        const exists = nodes.some((n) => n.data.generationId === img.id);
+        if (!exists) {
+          addImageNode(img);
+        }
+      }
+    }
+
+    // Clear the batch completed images after processing
+    setBatchCompletedImages([]);
+  }, [batchCompletedImages, nodes, addImageNode]);
 
   // Load persisted state from localStorage on mount (after userId is known)
   React.useEffect(() => {

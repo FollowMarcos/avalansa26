@@ -347,28 +347,11 @@ export async function deleteReferenceImage(id: string): Promise<boolean> {
 }
 
 /**
- * Verify the reference-images bucket exists
- * Bucket must be created via SQL migration (requires service_role permissions)
- * This function only checks for existence and logs a warning if missing
+ * No-op function kept for backwards compatibility
+ * Bucket creation/verification is handled via SQL migrations
+ * Regular users cannot list buckets (requires service_role)
  */
 export async function ensureReferenceImagesBucket(): Promise<void> {
-  const supabase = await createClient();
-
-  const { data: buckets, error } = await supabase.storage.listBuckets();
-
-  if (error) {
-    // User may not have permission to list buckets, which is fine
-    // The upload will fail with a clearer error if bucket doesn't exist
-    console.warn('[Storage] Could not list buckets:', error.message);
-    return;
-  }
-
-  const existingBucket = buckets?.find((b) => b.name === BUCKET_NAME);
-
-  if (!existingBucket) {
-    console.warn(
-      `[Storage] Bucket "${BUCKET_NAME}" does not exist. ` +
-      'Please run database migrations: npx supabase db push'
-    );
-  }
+  // Bucket must exist via migration - no runtime checks needed
+  // listBuckets() requires service_role permissions which users don't have
 }
