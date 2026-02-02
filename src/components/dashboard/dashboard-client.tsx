@@ -53,6 +53,7 @@ import type { Profile, AdminStats, UserRole } from '@/types/database';
 import { getAllProfiles, updateUserRole } from '@/utils/supabase/admin';
 import { DockManager } from './dock-manager';
 import { ApiManager } from './api-manager';
+import { CreateManager } from './create-manager';
 
 interface DashboardClientProps {
   initialProfiles: Profile[];
@@ -119,20 +120,20 @@ export function DashboardClient({
   const tabParam = searchParams.get('tab');
 
   // Use local state for instant switching, initialized from URL
-  const [activeTab, setActiveTabState] = useState<'users' | 'dock' | 'apis'>(
-    tabParam === 'dock' ? 'dock' : tabParam === 'apis' ? 'apis' : 'users'
+  const [activeTab, setActiveTabState] = useState<'users' | 'dock' | 'apis' | 'create'>(
+    tabParam === 'dock' ? 'dock' : tabParam === 'apis' ? 'apis' : tabParam === 'create' ? 'create' : 'users'
   );
 
   // Sync URL changes to local state (for sidebar navigation)
   useEffect(() => {
-    const newTab = tabParam === 'dock' ? 'dock' : tabParam === 'apis' ? 'apis' : 'users';
+    const newTab = tabParam === 'dock' ? 'dock' : tabParam === 'apis' ? 'apis' : tabParam === 'create' ? 'create' : 'users';
     if (newTab !== activeTab) {
       setActiveTabState(newTab);
     }
   }, [tabParam]);
 
   // Update URL shallowly without triggering navigation
-  const setActiveTab = (tab: 'users' | 'dock' | 'apis') => {
+  const setActiveTab = (tab: 'users' | 'dock' | 'apis' | 'create') => {
     setActiveTabState(tab);
     const url = new URL(window.location.href);
     url.searchParams.set('tab', tab);
@@ -291,14 +292,18 @@ export function DashboardClient({
                   ? 'User Management'
                   : activeTab === 'dock'
                   ? 'Site Dock Management'
-                  : 'API Configuration'}
+                  : activeTab === 'apis'
+                  ? 'API Configuration'
+                  : 'Create Feature Settings'}
               </CardTitle>
               <CardDescription>
                 {activeTab === 'users'
                   ? 'A complete directory of all registered users and their current status.'
                   : activeTab === 'dock'
                   ? 'Manage the navigation dock, rearrange icons, and configure dropdowns.'
-                  : 'Manage AI APIs for image generation and other features.'}
+                  : activeTab === 'apis'
+                  ? 'Manage AI APIs for image generation and other features.'
+                  : 'Control image generation options, quality limits, and maintenance mode.'}
               </CardDescription>
             </div>
 
@@ -329,6 +334,15 @@ export function DashboardClient({
                 )}
               >
                 APIs
+              </button>
+              <button
+                onClick={() => setActiveTab('create')}
+                className={cn(
+                  "px-4 py-1.5 text-sm font-medium rounded-md transition-all",
+                  activeTab === 'create' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Create
               </button>
             </div>
 
@@ -524,6 +538,11 @@ export function DashboardClient({
         {/* APIs Tab - Keep mounted, toggle visibility */}
         <div className={activeTab === 'apis' ? 'block p-6' : 'hidden'}>
           <ApiManager />
+        </div>
+
+        {/* Create Tab - Keep mounted, toggle visibility */}
+        <div className={activeTab === 'create' ? 'block p-6' : 'hidden'}>
+          <CreateManager />
         </div>
 
         {/* Pagination Footer - Only show if in Users tab */}

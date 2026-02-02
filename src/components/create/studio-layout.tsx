@@ -10,6 +10,7 @@ import { PromptComposer } from "./prompt-composer";
 import { QuickToolbar } from "./quick-toolbar";
 import { GenerationGallery } from "./generation-gallery";
 import { GenerationProgress } from "./generation-progress";
+import { MaintenanceBanner } from "./maintenance-banner";
 import { motion } from "motion/react";
 
 export function StudioLayout() {
@@ -22,6 +23,9 @@ export function StudioLayout() {
         animate={{ opacity: 1 }}
         className="relative h-dvh flex flex-col bg-background text-foreground overflow-hidden"
       >
+        {/* Maintenance mode banner (blocks entire page) */}
+        <MaintenanceBanner />
+
         {/* Grain texture overlay */}
         <div className="pointer-events-none fixed inset-0 z-50 bg-noise opacity-[0.03]" />
 

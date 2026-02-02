@@ -2,7 +2,7 @@
 
 import { useState, useEffect, createContext, useContext } from 'react';
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '@/lib/utils';
 import {
@@ -16,6 +16,7 @@ import {
   X,
   Menu,
   Server,
+  Palette,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -23,14 +24,14 @@ interface NavItem {
   icon: typeof LayoutDashboard;
   label: string;
   href: string;
-  tab?: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
   { icon: LayoutDashboard, label: 'Overview', href: '/dashboard' },
-  { icon: Users, label: 'Users', href: '/dashboard', tab: 'users' },
-  { icon: Dock, label: 'Site Dock', href: '/dashboard', tab: 'dock' },
-  { icon: Server, label: 'APIs', href: '/dashboard', tab: 'apis' },
+  { icon: Users, label: 'Users', href: '/dashboard/users' },
+  { icon: Dock, label: 'Site Dock', href: '/dashboard/dock' },
+  { icon: Server, label: 'APIs', href: '/dashboard/apis' },
+  { icon: Palette, label: 'Create', href: '/dashboard/create' },
   { icon: Settings, label: 'Settings', href: '/dashboard/settings' },
   { icon: BarChart3, label: 'Analytics', href: '/dashboard/analytics' },
 ];
@@ -96,21 +97,9 @@ export function DashboardSidebar() {
   const { isCollapsed, setIsCollapsed, isMobileOpen, setIsMobileOpen } =
     useSidebar();
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const currentTab = searchParams.get('tab');
 
   const isActiveItem = (item: NavItem): boolean => {
-    if (item.tab) {
-      return pathname === item.href && currentTab === item.tab;
-    }
-    return pathname === item.href && !currentTab;
-  };
-
-  const getItemHref = (item: NavItem): string => {
-    if (item.tab) {
-      return `${item.href}?tab=${item.tab}`;
-    }
-    return item.href;
+    return pathname === item.href;
   };
 
   const sidebarContent = (
@@ -162,13 +151,14 @@ export function DashboardSidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
+      <nav aria-label="Dashboard navigation" className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
         {NAV_ITEMS.map((item) => {
           const isActive = isActiveItem(item);
           return (
             <Link
               key={item.label}
-              href={getItemHref(item)}
+              href={item.href}
+              aria-current={isActive ? 'page' : undefined}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
                 'hover:bg-muted/80',
@@ -184,6 +174,7 @@ export function DashboardSidebar() {
                   'w-5 h-5 shrink-0',
                   isActive ? 'text-primary' : ''
                 )}
+                aria-hidden="true"
               />
               <AnimatePresence mode="wait">
                 {!isCollapsed && (

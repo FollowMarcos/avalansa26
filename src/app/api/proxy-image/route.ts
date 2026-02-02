@@ -24,24 +24,34 @@ export async function GET(request: NextRequest) {
   try {
     // Validate URL is from allowed domains (our storage or known image hosts)
     const url = new URL(imageUrl);
-    const allowedHosts = [
+
+    // Strict domain allowlist - must match exactly or be a subdomain
+    const allowedDomains = [
       'supabase.co',
       'supabase.in',
       'supabase.com',
       'storage.googleapis.com',
       'googleusercontent.com',
-      'cdn.supabase.co',
-      // Common CDN domains that Supabase might use
       'cloudflare.com',
       'cloudfront.net',
     ];
 
-    // Also allow any subdomain of supabase domains
-    const isAllowed = allowedHosts.some(host =>
-      url.hostname.endsWith(host) || url.hostname.includes('supabase')
-    );
+    /**
+     * Check if hostname is allowed using strict subdomain matching.
+     * Prevents SSRF bypasses like "supabase.evil.com" or "evilsupabase.com"
+     */
+    const isAllowedDomain = (hostname: string): boolean => {
+      const normalizedHost = hostname.toLowerCase();
+      return allowedDomains.some(domain => {
+        // Exact match
+        if (normalizedHost === domain) return true;
+        // Valid subdomain match (must have dot before the domain)
+        if (normalizedHost.endsWith(`.${domain}`)) return true;
+        return false;
+      });
+    };
 
-    if (!isAllowed) {
+    if (!isAllowedDomain(url.hostname)) {
       console.warn(`[proxy-image] Blocked domain: ${url.hostname}`);
       return NextResponse.json(
         { error: `Image URL not from allowed domain: ${url.hostname}` },

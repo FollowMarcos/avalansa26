@@ -8,6 +8,7 @@ import type { SessionWithCount } from "@/types/session";
 import { uploadReferenceImage as uploadToStorage, deleteReferenceImages } from "@/utils/supabase/storage";
 import { createClient } from "@/utils/supabase/client";
 import type { ReferenceImageWithUrl } from "@/types/reference-image";
+import type { CreateSettings as AdminCreateSettings } from "@/types/create-settings";
 import {
   type Node,
   type Edge,
@@ -179,6 +180,15 @@ interface CreateContextType {
 
   // Helper to build final prompt with negative injection
   buildFinalPrompt: () => string;
+
+  // Admin settings (for restricting features)
+  adminSettings: AdminCreateSettings | null;
+  isMaintenanceMode: boolean;
+  allowedImageSizes: ImageSize[];
+  allowedAspectRatios: AspectRatio[];
+  maxOutputCount: number;
+  allowFastMode: boolean;
+  allowRelaxedMode: boolean;
 }
 
 const defaultSettings: CreateSettings = {
@@ -348,6 +358,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   // Pending session name - set when user clicks "New Session" but no generation yet
   const [pendingSessionName, setPendingSessionName] = React.useState<string | null>(null);
 
+  // Admin settings for feature restrictions
+  const [adminSettings, setAdminSettings] = React.useState<AdminCreateSettings | null>(null);
+
   // localStorage persistence refs
   const persistTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
   const hasLoadedPersistedState = React.useRef(false);
@@ -456,12 +469,20 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
           return [] as ReferenceImageWithUrl[];
         });
 
+      const adminSettingsPromise = import("@/utils/supabase/create-settings.server")
+        .then(({ getCreateSettings }) => getCreateSettings())
+        .catch((error) => {
+          console.error("Failed to load admin settings:", error);
+          return null as AdminCreateSettings | null;
+        });
+
       // Wait for all to complete in parallel
-      const [apis, generations, userSessions, savedRefs] = await Promise.all([
+      const [apis, generations, userSessions, savedRefs, loadedAdminSettings] = await Promise.all([
         apisPromise,
         historyPromise,
         sessionsPromise,
         referencesPromise,
+        adminSettingsPromise,
       ]);
 
       // Process APIs
@@ -505,6 +526,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
       // Process saved reference images from database
       setSavedReferences(savedRefs);
+
+      // Process admin settings
+      setAdminSettings(loadedAdminSettings);
 
       // Check if we need to backfill sessions for existing generations
       // This runs once per user to migrate existing data
@@ -1709,6 +1733,20 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     return generationSlots.some(slot => slot.status !== "generating");
   }, [generationSlots]);
 
+  // Derive admin settings values
+  const isMaintenanceMode = adminSettings?.maintenance_mode ?? false;
+  const allowedImageSizes = React.useMemo<ImageSize[]>(() => {
+    return (adminSettings?.allowed_image_sizes as ImageSize[]) ?? ["1K", "2K", "4K"];
+  }, [adminSettings]);
+  const allowedAspectRatios = React.useMemo<AspectRatio[]>(() => {
+    return (adminSettings?.allowed_aspect_ratios as AspectRatio[]) ?? [
+      "1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"
+    ];
+  }, [adminSettings]);
+  const maxOutputCount = adminSettings?.max_output_count ?? 4;
+  const allowFastMode = adminSettings?.allow_fast_mode ?? true;
+  const allowRelaxedMode = adminSettings?.allow_relaxed_mode ?? true;
+
   const value = React.useMemo(() => ({
     // API selection
     availableApis,
@@ -1790,6 +1828,14 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     loadSessions,
     deleteSession: deleteSessionById,
     buildFinalPrompt,
+    // Admin settings
+    adminSettings,
+    isMaintenanceMode,
+    allowedImageSizes,
+    allowedAspectRatios,
+    maxOutputCount,
+    allowFastMode,
+    allowRelaxedMode,
   }), [
     availableApis, selectedApiId, isLoadingApis, pendingBatchJobs,
     prompt, isPromptExpanded, settings, referenceImages, history, selectedImage,
@@ -1802,6 +1848,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     savedReferences, loadSavedReferences, removeSavedReference, renameSavedReference, addSavedReferenceToActive,
     selectImage, clearHistory, toggleHistoryPanel, toggleInputVisibility, undo, redo, generate, cancelGeneration, selectGeneratedImage, clearGenerationSlots,
     startNewSession, renameCurrentSession, loadSessions, deleteSessionById, buildFinalPrompt,
+    adminSettings, isMaintenanceMode, allowedImageSizes, allowedAspectRatios, maxOutputCount, allowFastMode, allowRelaxedMode,
   ]);
 
   return (

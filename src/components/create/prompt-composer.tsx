@@ -102,7 +102,25 @@ export function PromptComposer() {
     selectedApiId,
     setSelectedApiId,
     isLoadingApis,
+    // Admin settings
+    allowedImageSizes,
+    allowedAspectRatios,
+    maxOutputCount,
+    allowFastMode,
+    allowRelaxedMode,
   } = useCreate();
+
+  // Filter options based on admin settings
+  const filteredAspectRatios = React.useMemo(() => {
+    return aspectRatioOptions.filter((opt) => allowedAspectRatios.includes(opt.value));
+  }, [allowedAspectRatios]);
+
+  const filteredImageSizes = React.useMemo(() => {
+    return imageSizeOptions.filter((opt) => allowedImageSizes.includes(opt.value));
+  }, [allowedImageSizes]);
+
+  // Show speed toggle only if both modes are allowed
+  const showSpeedToggle = allowFastMode && allowRelaxedMode;
 
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
 
@@ -256,8 +274,8 @@ export function PromptComposer() {
                       {/* Inline reference thumbnails */}
                       <div
                         className={cn(
-                          "grid transition-all duration-200",
-                          hasReferences ? "grid-rows-[1fr] opacity-100 mb-2" : "grid-rows-[0fr] opacity-0"
+                          "transition-all duration-200 origin-top",
+                          hasReferences ? "opacity-100 scale-y-100 mb-2" : "opacity-0 scale-y-0 h-0"
                         )}
                       >
                         <div className="overflow-hidden">
@@ -354,18 +372,21 @@ export function PromptComposer() {
                     <PopoverTrigger asChild>
                       <button
                         aria-label={`Aspect ratio: ${settings.aspectRatio}`}
+                        aria-haspopup="listbox"
                         className="flex items-center gap-2 h-8 px-2.5 rounded-lg bg-muted/50 dark:bg-zinc-800/50 hover:bg-muted dark:hover:bg-zinc-800 border border-transparent hover:border-border dark:hover:border-zinc-700 transition-all shrink-0 focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         <AspectRatioShape ratio={settings.aspectRatio} size="sm" className="text-muted-foreground" />
                         <span className="text-xs font-medium text-foreground dark:text-zinc-300">{settings.aspectRatio}</span>
-                        <ChevronDown className="size-3 text-muted-foreground" />
+                        <ChevronDown className="size-3 text-muted-foreground" aria-hidden="true" />
                       </button>
                     </PopoverTrigger>
                     <PopoverContent align="start" side="top" className="w-auto p-2">
-                      <div className="grid grid-cols-3 gap-1">
-                        {aspectRatioOptions.map((ratio) => (
+                      <div role="listbox" aria-label="Aspect ratio options" className="grid grid-cols-3 gap-1">
+                        {filteredAspectRatios.map((ratio) => (
                           <button
                             key={ratio.value}
+                            role="option"
+                            aria-selected={settings.aspectRatio === ratio.value}
                             onClick={() => updateSettings({ aspectRatio: ratio.value })}
                             className={cn(
                               "flex flex-col items-center gap-1.5 p-2.5 rounded-lg transition-all",
@@ -392,11 +413,17 @@ export function PromptComposer() {
                   </Popover>
 
                   {/* Quality - Segmented Control */}
-                  <div className="flex items-center h-8 p-0.5 rounded-lg bg-muted/50 dark:bg-zinc-800/50 shrink-0">
-                    {imageSizeOptions.map((size) => (
+                  <div
+                    role="radiogroup"
+                    aria-label="Image quality"
+                    className="flex items-center h-8 p-0.5 rounded-lg bg-muted/50 dark:bg-zinc-800/50 shrink-0"
+                  >
+                    {filteredImageSizes.map((size) => (
                       <Tooltip key={size.value}>
                         <TooltipTrigger asChild>
                           <button
+                            role="radio"
+                            aria-checked={settings.imageSize === size.value}
                             onClick={() => updateSettings({ imageSize: size.value })}
                             className={cn(
                               "h-7 px-3 rounded-md text-xs font-medium transition-all",
@@ -413,47 +440,58 @@ export function PromptComposer() {
                     ))}
                   </div>
 
-                  {/* Speed - Toggle Pill */}
-                  <button
-                    onClick={() => updateSettings({ generationSpeed: settings.generationSpeed === "fast" ? "relaxed" : "fast" })}
-                    aria-label={`Generation speed: ${settings.generationSpeed === "fast" ? "Fast" : "Batch"}`}
-                    className={cn(
-                      "flex items-center gap-1.5 h-8 px-3 rounded-lg transition-all shrink-0 focus-visible:ring-2 focus-visible:ring-ring",
-                      settings.generationSpeed === "fast"
-                        ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25"
-                        : "bg-muted/50 dark:bg-zinc-800/50 text-muted-foreground hover:bg-muted dark:hover:bg-zinc-800"
-                    )}
-                  >
-                    {settings.generationSpeed === "fast" ? (
-                      <Zap className="size-3.5" />
-                    ) : (
-                      <Clock className="size-3.5" />
-                    )}
-                    <span className="text-xs font-medium">
-                      {settings.generationSpeed === "fast" ? "Fast" : "Batch"}
-                    </span>
-                  </button>
+                  {/* Speed - Toggle Pill (only show if both modes are allowed) */}
+                  {showSpeedToggle && (
+                    <button
+                      onClick={() => updateSettings({ generationSpeed: settings.generationSpeed === "fast" ? "relaxed" : "fast" })}
+                      aria-label={`Generation speed: ${settings.generationSpeed === "fast" ? "Fast" : "Batch"}`}
+                      className={cn(
+                        "flex items-center gap-1.5 h-8 px-3 rounded-lg transition-all shrink-0 focus-visible:ring-2 focus-visible:ring-ring",
+                        settings.generationSpeed === "fast"
+                          ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25"
+                          : "bg-muted/50 dark:bg-zinc-800/50 text-muted-foreground hover:bg-muted dark:hover:bg-zinc-800"
+                      )}
+                    >
+                      {settings.generationSpeed === "fast" ? (
+                        <Zap className="size-3.5" />
+                      ) : (
+                        <Clock className="size-3.5" />
+                      )}
+                      <span className="text-xs font-medium">
+                        {settings.generationSpeed === "fast" ? "Fast" : "Batch"}
+                      </span>
+                    </button>
+                  )}
 
                   {/* Quantity - Stepper */}
-                  <div className="flex items-center h-8 rounded-lg bg-muted/50 dark:bg-zinc-800/50 shrink-0">
+                  <div
+                    role="spinbutton"
+                    aria-label="Number of images to generate"
+                    aria-valuenow={Math.min(settings.outputCount, maxOutputCount)}
+                    aria-valuemin={1}
+                    aria-valuemax={maxOutputCount}
+                    className="flex items-center h-8 rounded-lg bg-muted/50 dark:bg-zinc-800/50 shrink-0"
+                  >
                     <button
                       onClick={() => updateSettings({ outputCount: Math.max(1, settings.outputCount - 1) })}
                       disabled={settings.outputCount <= 1}
                       className="size-8 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                       aria-label="Decrease count"
+                      tabIndex={-1}
                     >
-                      <Minus className="size-3.5" />
+                      <Minus className="size-3.5" aria-hidden="true" />
                     </button>
                     <span className="w-6 text-center text-sm font-medium text-foreground dark:text-zinc-200 tabular-nums">
-                      {settings.outputCount}
+                      {Math.min(settings.outputCount, maxOutputCount)}
                     </span>
                     <button
-                      onClick={() => updateSettings({ outputCount: Math.min(4, settings.outputCount + 1) })}
-                      disabled={settings.outputCount >= 4}
+                      onClick={() => updateSettings({ outputCount: Math.min(maxOutputCount, settings.outputCount + 1) })}
+                      disabled={settings.outputCount >= maxOutputCount}
                       className="size-8 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                       aria-label="Increase count"
+                      tabIndex={-1}
                     >
-                      <Plus className="size-3.5" />
+                      <Plus className="size-3.5" aria-hidden="true" />
                     </button>
                   </div>
 
