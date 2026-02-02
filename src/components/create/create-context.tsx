@@ -352,6 +352,10 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
   const saveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
+  // Track which generation IDs have already been added as nodes to prevent duplicates
+  // This is declared early so it's available for canvas loading functions
+  const processedGenerationIds = React.useRef<Set<string>>(new Set());
+
   // Session management state
   const [currentSessionId, setCurrentSessionId] = React.useState<string | null>(null);
   const [currentSessionName, setCurrentSessionName] = React.useState<string | null>(null);
@@ -1469,6 +1473,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         setEdges([]);
         setViewport({ x: 0, y: 0, zoom: 1 });
         setHasUnsavedChanges(false);
+
+        // Clear processedGenerationIds for the new empty canvas
+        processedGenerationIds.current.clear();
       }
     } catch (error) {
       console.error("Failed to create canvas:", error);
@@ -1492,6 +1499,14 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         setEdges(canvas.edges || []);
         setViewport(canvas.viewport || { x: 0, y: 0, zoom: 1 });
         setHasUnsavedChanges(false);
+
+        // Clear and repopulate processedGenerationIds for the new canvas
+        processedGenerationIds.current.clear();
+        for (const node of (canvas.nodes || []) as Node<ImageNodeData>[]) {
+          if (node.data?.generationId) {
+            processedGenerationIds.current.add(node.data.generationId);
+          }
+        }
       }
     } catch (error) {
       console.error("Failed to switch canvas:", error);
@@ -1572,6 +1587,13 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
             setEdges(canvasToLoad.edges || []);
             setViewport(canvasToLoad.viewport || { x: 0, y: 0, zoom: 1 });
 
+            // Mark all existing nodes as processed to prevent history-to-nodes duplication
+            for (const node of (canvasToLoad.nodes || []) as Node<ImageNodeData>[]) {
+              if (node.data?.generationId) {
+                processedGenerationIds.current.add(node.data.generationId);
+              }
+            }
+
             // Check for pending nodes from localStorage (unsaved before refresh)
             const pendingNodesStr = sessionStorage.getItem("pending-nodes");
             const pendingEdgesStr = sessionStorage.getItem("pending-edges");
@@ -1591,6 +1613,13 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
                     !prev.some(existing => existing.id === e.id)
                   )]);
                   setHasUnsavedChanges(true);
+
+                  // Also mark pending nodes as processed
+                  for (const node of newNodes) {
+                    if (node.data?.generationId) {
+                      processedGenerationIds.current.add(node.data.generationId);
+                    }
+                  }
                 }
               } catch {
                 // Invalid JSON, ignore
@@ -1623,22 +1652,29 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     loadCanvases();
   }, [currentUserId]);
 
+  // Stable ref for addImageNode to avoid triggering effect re-runs
+  const addImageNodeRef = React.useRef(addImageNode);
+  React.useEffect(() => {
+    addImageNodeRef.current = addImageNode;
+  }, [addImageNode]);
+
   // Convert history to nodes when history changes (for new generations)
   const prevHistoryLength = React.useRef(history.length);
   React.useEffect(() => {
     // Only add nodes for new history items
     if (history.length > prevHistoryLength.current) {
-      const newItems = history.slice(0, history.length - prevHistoryLength.current);
+      const newCount = history.length - prevHistoryLength.current;
+      const newItems = history.slice(0, newCount);
       for (const item of newItems) {
-        // Check if node already exists
-        const exists = nodes.some((n) => n.data.generationId === item.id);
-        if (!exists && item.url) {
-          addImageNode(item);
+        // Check if this item has already been processed (prevents duplicates)
+        if (!processedGenerationIds.current.has(item.id) && item.url) {
+          processedGenerationIds.current.add(item.id);
+          addImageNodeRef.current(item);
         }
       }
     }
     prevHistoryLength.current = history.length;
-  }, [history, nodes, addImageNode]);
+  }, [history]); // Removed nodes and addImageNode from deps to prevent re-runs when nodes change
 
   // Add batch-completed images to canvas when they arrive
   React.useEffect(() => {
@@ -1646,17 +1682,16 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
     // Add each completed image to canvas
     for (const img of batchCompletedImages) {
-      if (img.url) {
-        const exists = nodes.some((n) => n.data.generationId === img.id);
-        if (!exists) {
-          addImageNode(img);
-        }
+      // Check if this item has already been processed (prevents duplicates)
+      if (!processedGenerationIds.current.has(img.id) && img.url) {
+        processedGenerationIds.current.add(img.id);
+        addImageNodeRef.current(img);
       }
     }
 
     // Clear the batch completed images after processing
     setBatchCompletedImages([]);
-  }, [batchCompletedImages, nodes, addImageNode]);
+  }, [batchCompletedImages]); // Removed nodes and addImageNode from deps
 
   // Load persisted state from localStorage on mount (after userId is known)
   React.useEffect(() => {
