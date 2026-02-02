@@ -144,6 +144,29 @@ export function PromptComposer() {
     }
   };
 
+  const handlePaste = React.useCallback((event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = event.clipboardData.items;
+    const imageFiles: File[] = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+
+      // Check if item is an image
+      if (item.type.startsWith('image/')) {
+        event.preventDefault(); // Prevent default paste behavior for images
+
+        const file = item.getAsFile();
+        if (file) {
+          imageFiles.push(file);
+        }
+      }
+    }
+
+    if (imageFiles.length > 0) {
+      addReferenceImages(imageFiles);
+    }
+  }, [addReferenceImages]);
+
   const hasReferences = referenceImages.length > 0;
   const maxVisibleRefs = 4;
   const hiddenRefCount = Math.max(0, referenceImages.length - maxVisibleRefs);
@@ -310,6 +333,7 @@ export function PromptComposer() {
                             value={prompt}
                             onChange={(e) => setPrompt(e.target.value)}
                             onKeyDown={handleKeyDown}
+                            onPaste={handlePaste}
                             placeholder={hasReferences ? "Describe how to transform your images…" : "What would you like to create?"}
                             aria-label="Image generation prompt"
                             rows={isPromptExpanded ? 5 : 1}
