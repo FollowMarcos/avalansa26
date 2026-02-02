@@ -1,13 +1,15 @@
--- Create storage bucket for temporary reference images
+-- Create storage bucket for reference images
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'reference-images',
   'reference-images',
-  false,  -- Private bucket, requires auth
-  5242880,  -- 5MB max per file
+  true,  -- Public bucket for accessible URLs
+  10485760,  -- 10MB max per file
   array['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 )
-on conflict (id) do nothing;
+on conflict (id) do update set
+  public = true,
+  file_size_limit = 10485760;
 
 -- Policy: Users can upload their own reference images
 create policy "Users can upload reference images"

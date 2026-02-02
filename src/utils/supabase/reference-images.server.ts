@@ -347,41 +347,28 @@ export async function deleteReferenceImage(id: string): Promise<boolean> {
 }
 
 /**
- * Create the reference-images bucket if it doesn't exist
- * Also ensures the bucket is public (updates if needed)
+ * Verify the reference-images bucket exists
+ * Bucket must be created via SQL migration (requires service_role permissions)
+ * This function only checks for existence and logs a warning if missing
  */
 export async function ensureReferenceImagesBucket(): Promise<void> {
   const supabase = await createClient();
 
-  const { data: buckets } = await supabase.storage.listBuckets();
+  const { data: buckets, error } = await supabase.storage.listBuckets();
+
+  if (error) {
+    // User may not have permission to list buckets, which is fine
+    // The upload will fail with a clearer error if bucket doesn't exist
+    console.warn('[Storage] Could not list buckets:', error.message);
+    return;
+  }
 
   const existingBucket = buckets?.find((b) => b.name === BUCKET_NAME);
 
   if (!existingBucket) {
-    // Create new public bucket
-    const { error } = await supabase.storage.createBucket(BUCKET_NAME, {
-      public: true, // Images need to be publicly accessible
-      fileSizeLimit: 10 * 1024 * 1024, // 10MB limit
-      allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
-    });
-
-    if (error) {
-      console.error('Error creating reference-images bucket:', error);
-    } else {
-      console.log('[Storage] Created reference-images bucket (public)');
-    }
-  } else if (!existingBucket.public) {
-    // Update existing bucket to be public
-    const { error } = await supabase.storage.updateBucket(BUCKET_NAME, {
-      public: true,
-      fileSizeLimit: 10 * 1024 * 1024,
-      allowedMimeTypes: ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
-    });
-
-    if (error) {
-      console.error('Error updating reference-images bucket to public:', error);
-    } else {
-      console.log('[Storage] Updated reference-images bucket to public');
-    }
+    console.warn(
+      `[Storage] Bucket "${BUCKET_NAME}" does not exist. ` +
+      'Please run database migrations: npx supabase db push'
+    );
   }
 }
