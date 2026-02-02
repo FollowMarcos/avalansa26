@@ -7,6 +7,10 @@ import { saveGeneration } from '@/utils/supabase/generations.server';
 import { getOrCreateSession, createNamedSession } from '@/utils/supabase/sessions.server';
 import type { BatchJobRequest } from '@/types/batch-job';
 
+// Extend serverless function timeout to 5 minutes (300 seconds)
+// Image generation with Gemini can take 30-60+ seconds per image
+export const maxDuration = 300;
+
 export interface GenerateRequest {
   apiId: string;
   prompt: string;
@@ -327,6 +331,36 @@ interface ProviderParams {
   referenceImages?: string[];
 }
 
+// Default timeout for API requests (90 seconds)
+const API_REQUEST_TIMEOUT = 90000;
+
+/**
+ * Helper function to fetch with timeout
+ */
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeout: number = API_REQUEST_TIMEOUT
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    clearTimeout(timeoutId);
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error(`API request timed out after ${timeout / 1000} seconds`);
+    }
+    throw error;
+  }
+}
+
 /**
  * Generate images using Google Gemini API
  * Supports both Gemini 2.0 Flash and Gemini 3 Pro Image Preview models
@@ -436,71 +470,89 @@ async function generateWithGemini(params: ProviderParams): Promise<GeneratedImag
   // Use the configured endpoint or default to Gemini API
   const apiEndpoint = endpoint || `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
+  // Timeout for individual Gemini API requests (90 seconds)
+  const REQUEST_TIMEOUT = 90000;
+
   // Helper function to make a single API call and extract image
   const makeSingleRequest = async (requestIndex: number): Promise<GeneratedImage | null> => {
     console.log(`[Gemini] Starting request ${requestIndex + 1}/${outputCount}`);
 
-    const response = await fetch(`${apiEndpoint}?key=${apiKey}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-    });
+    // Create AbortController with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
-    if (!response.ok) {
-      const error = await response.text();
-      console.error(`[Gemini] Request ${requestIndex + 1} failed:`, error);
-      throw new Error(`Gemini API error: ${error}`);
-    }
+    try {
+      const response = await fetch(`${apiEndpoint}?key=${apiKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
 
-    const data = await response.json();
+      clearTimeout(timeoutId);
 
-    // Debug: Log the response structure
-    console.log(`[Gemini] Response ${requestIndex + 1}:`, {
-      hasCandidate: !!data.candidates?.[0],
-      finishReason: data.candidates?.[0]?.finishReason,
-      partsCount: data.candidates?.[0]?.content?.parts?.length || 0,
-    });
+      if (!response.ok) {
+        const error = await response.text();
+        console.error(`[Gemini] Request ${requestIndex + 1} failed:`, error);
+        throw new Error(`Gemini API error: ${error}`);
+      }
 
-    // Check for content blocked by safety filters
-    if (data.promptFeedback?.blockReason) {
-      throw new Error(`Content blocked: ${data.promptFeedback.blockReason}`);
-    }
+      const data = await response.json();
 
-    // Check if the response was filtered
-    const finishReason = data.candidates?.[0]?.finishReason;
-    if (finishReason === 'SAFETY' || finishReason === 'IMAGE_SAFETY') {
-      throw new Error('Image generation blocked by safety filters. Try modifying your prompt or using a different reference image.');
-    }
-    if (finishReason === 'RECITATION') {
-      throw new Error('Content blocked due to potential copyright issues.');
-    }
+      // Debug: Log the response structure
+      console.log(`[Gemini] Response ${requestIndex + 1}:`, {
+        hasCandidate: !!data.candidates?.[0],
+        finishReason: data.candidates?.[0]?.finishReason,
+        partsCount: data.candidates?.[0]?.content?.parts?.length || 0,
+      });
 
-    // Extract image from response
-    if (data.candidates && data.candidates[0]?.content?.parts) {
-      for (const part of data.candidates[0].content.parts) {
-        if (part.inlineData) {
-          // Convert base64 to data URL
-          const dataUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-          return { url: dataUrl, base64: part.inlineData.data };
-        } else if (part.text) {
-          // Log any text response (model might be explaining why it can't generate)
-          console.log(`[Gemini] Request ${requestIndex + 1} text response:`, part.text.slice(0, 200));
+      // Check for content blocked by safety filters
+      if (data.promptFeedback?.blockReason) {
+        throw new Error(`Content blocked: ${data.promptFeedback.blockReason}`);
+      }
+
+      // Check if the response was filtered
+      const finishReason = data.candidates?.[0]?.finishReason;
+      if (finishReason === 'SAFETY' || finishReason === 'IMAGE_SAFETY') {
+        throw new Error('Image generation blocked by safety filters. Try modifying your prompt or using a different reference image.');
+      }
+      if (finishReason === 'RECITATION') {
+        throw new Error('Content blocked due to potential copyright issues.');
+      }
+
+      // Extract image from response
+      if (data.candidates && data.candidates[0]?.content?.parts) {
+        for (const part of data.candidates[0].content.parts) {
+          if (part.inlineData) {
+            // Convert base64 to data URL
+            const dataUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+            return { url: dataUrl, base64: part.inlineData.data };
+          } else if (part.text) {
+            // Log any text response (model might be explaining why it can't generate)
+            console.log(`[Gemini] Request ${requestIndex + 1} text response:`, part.text.slice(0, 200));
+          }
         }
       }
-    }
 
-    // If no image, check for text explanation
-    if (data.candidates?.[0]) {
-      const textParts = data.candidates[0].content?.parts?.filter((p: Record<string, unknown>) => p.text) || [];
-      if (textParts.length > 0) {
-        const textContent = textParts.map((p: { text: string }) => p.text).join(' ').slice(0, 200);
-        console.warn(`[Gemini] Request ${requestIndex + 1} returned text instead of image: "${textContent}..."`);
+      // If no image, check for text explanation
+      if (data.candidates?.[0]) {
+        const textParts = data.candidates[0].content?.parts?.filter((p: Record<string, unknown>) => p.text) || [];
+        if (textParts.length > 0) {
+          const textContent = textParts.map((p: { text: string }) => p.text).join(' ').slice(0, 200);
+          console.warn(`[Gemini] Request ${requestIndex + 1} returned text instead of image: "${textContent}..."`);
+        }
       }
-    }
 
-    return null;
+      return null;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error(`Gemini API request timed out after ${REQUEST_TIMEOUT / 1000} seconds`);
+      }
+      throw error;
+    }
   };
 
   // Make parallel API calls for outputCount images
@@ -582,7 +634,7 @@ async function generateWithFal(params: ProviderParams): Promise<GeneratedImage[]
 
   const apiEndpoint = endpoint || `https://fal.run/${modelId || 'fal-ai/flux/dev'}`;
 
-  const response = await fetch(apiEndpoint, {
+  const response = await fetchWithTimeout(apiEndpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -631,7 +683,7 @@ async function generateWithOpenAI(params: ProviderParams): Promise<GeneratedImag
 
   const apiEndpoint = endpoint || 'https://api.openai.com/v1/images/generations';
 
-  const response = await fetch(apiEndpoint, {
+  const response = await fetchWithTimeout(apiEndpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -678,7 +730,7 @@ async function generateWithStability(params: ProviderParams): Promise<GeneratedI
 
   const apiEndpoint = endpoint || `https://api.stability.ai/v1/generation/${modelId || 'stable-diffusion-xl-1024-v1-0'}/text-to-image`;
 
-  const response = await fetch(apiEndpoint, {
+  const response = await fetchWithTimeout(apiEndpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -728,7 +780,7 @@ async function generateWithCustomProvider(params: ProviderParams): Promise<Gener
     reference_images: referenceImages,
   };
 
-  const response = await fetch(endpoint, {
+  const response = await fetchWithTimeout(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
