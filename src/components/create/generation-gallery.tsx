@@ -7,7 +7,6 @@ import { useCreate, type GeneratedImage } from "./create-context";
 import { Download, Copy, X, ImagePlus, RotateCw, Check } from "lucide-react";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { GalleryToolbar } from "./gallery-toolbar";
 import { BulkActionBar } from "./bulk-action-bar";
 import { ImageDetailModal } from "./image-detail-modal";
@@ -18,7 +17,6 @@ export function GenerationGallery() {
     viewMode,
     setViewMode,
     selectedImage,
-    selectImage,
     addReferenceImageFromUrl,
     reuseImageSetup,
     galleryFilterState,
@@ -26,51 +24,8 @@ export function GenerationGallery() {
     getFilteredHistory,
   } = useCreate();
 
-  const parentRef = React.useRef<HTMLDivElement>(null);
-  const [columns, setColumns] = React.useState(5);
-  const [containerWidth, setContainerWidth] = React.useState(900);
   const [detailImage, setDetailImage] = React.useState<GeneratedImage | null>(null);
-
-  // Calculate columns based on container width
-  React.useEffect(() => {
-    if (!parentRef.current) return;
-
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const width = entry.contentRect.width;
-        setContainerWidth(width);
-        if (width < 400) setColumns(2);
-        else if (width < 600) setColumns(3);
-        else if (width < 900) setColumns(4);
-        else setColumns(5);
-      }
-    });
-
-    resizeObserver.observe(parentRef.current);
-    return () => resizeObserver.disconnect();
-  }, []);
-
   const filteredHistory = getFilteredHistory();
-  const rowCount = Math.ceil(filteredHistory.length / columns);
-
-  // Calculate row height based on item size (aspect-square) + vertical padding
-  const gap = 16; // 1rem gap between columns
-  const verticalPadding = 16; // 0.5rem top + 0.5rem bottom = 1rem total
-  const itemWidth = (containerWidth - gap * (columns - 1)) / columns;
-  const rowHeight = itemWidth + verticalPadding; // item height (square) + row vertical padding
-
-  // Virtualization
-  const rowVirtualizer = useVirtualizer({
-    count: rowCount,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => rowHeight,
-    overscan: 2,
-  });
-
-  // Force remeasure when row height changes
-  React.useEffect(() => {
-    rowVirtualizer.measure();
-  }, [rowHeight, rowVirtualizer]);
 
   if (viewMode !== "gallery") return null;
 
@@ -173,12 +128,8 @@ export function GenerationGallery() {
           <GalleryToolbar />
         </div>
 
-        {/* Gallery Grid with Virtualization */}
-        <div
-          ref={parentRef}
-          className="flex-1 overflow-auto px-6"
-          style={{ contain: "strict" }}
-        >
+        {/* Masonry Gallery Grid */}
+        <div className="flex-1 overflow-auto px-6 py-4">
           {filteredHistory.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center p-8">
               <p className="text-muted-foreground font-mono">
@@ -198,50 +149,25 @@ export function GenerationGallery() {
             </div>
           ) : (
             <div
-              style={{
-                height: `${rowVirtualizer.getTotalSize()}px`,
-                width: "100%",
-                position: "relative",
-              }}
+              className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-4"
+              style={{ columnFill: "balance" }}
             >
-              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-                const startIndex = virtualRow.index * columns;
-                const rowImages = filteredHistory.slice(startIndex, startIndex + columns);
-
-                return (
-                  <div
-                    key={virtualRow.key}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      transform: `translateY(${virtualRow.start}px)`,
-                      display: "grid",
-                      gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
-                      gap: "1rem",
-                      padding: "0.5rem 0",
-                    }}
-                  >
-                    {rowImages.map((image) => (
-                      <GalleryItem
-                        key={image.id}
-                        image={image}
-                        isSelected={isSelected(image.id)}
-                        isBulkMode={galleryFilterState.bulkSelection.enabled}
-                        isCurrentSelected={selectedImage?.id === image.id}
-                        onImageClick={handleImageClick}
-                        onDownload={handleDownload}
-                        onCopyPrompt={handleCopyPrompt}
-                        onUseAsReference={handleUseAsReference}
-                        onReuseSetup={handleReuseSetup}
-                        onToggleSelection={toggleImageSelection}
-                        formatTime={formatTime}
-                      />
-                    ))}
-                  </div>
-                );
-              })}
+              {filteredHistory.map((image) => (
+                <GalleryItem
+                  key={image.id}
+                  image={image}
+                  isSelected={isSelected(image.id)}
+                  isBulkMode={galleryFilterState.bulkSelection.enabled}
+                  isCurrentSelected={selectedImage?.id === image.id}
+                  onImageClick={handleImageClick}
+                  onDownload={handleDownload}
+                  onCopyPrompt={handleCopyPrompt}
+                  onUseAsReference={handleUseAsReference}
+                  onReuseSetup={handleReuseSetup}
+                  onToggleSelection={toggleImageSelection}
+                  formatTime={formatTime}
+                />
+              ))}
             </div>
           )}
         </div>
@@ -299,11 +225,12 @@ const GalleryItem = React.memo(function GalleryItem({
       tabIndex={0}
       aria-label={`${isBulkMode ? "Select" : "View"} image: ${image.prompt || "Generated image"}`}
       className={cn(
-        "relative group rounded-lg overflow-hidden bg-muted border cursor-pointer",
+        "relative group rounded-lg overflow-hidden bg-muted border cursor-pointer mb-4 break-inside-avoid",
         "focus:outline-none focus:ring-2 focus:ring-ring",
         isCurrentSelected && !isBulkMode && "ring-2 ring-foreground",
         isSelected && isBulkMode && "ring-2 ring-primary border-primary"
       )}
+      style={{ contentVisibility: "auto" }}
       onClick={() => onImageClick(image)}
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
@@ -312,14 +239,16 @@ const GalleryItem = React.memo(function GalleryItem({
         }
       }}
     >
-      <div className="aspect-square relative">
+      {/* Image container - using aspect ratio from settings */}
+      <div className="relative w-full">
         <Image
           src={image.url}
           alt={image.prompt || "Generated"}
-          fill
-          className="object-cover"
+          width={512}
+          height={512}
+          className="w-full h-auto object-cover"
           loading="lazy"
-          sizes="(max-width: 400px) 50vw, (max-width: 600px) 33vw, (max-width: 900px) 25vw, 20vw"
+          sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
           quality={75}
         />
       </div>
