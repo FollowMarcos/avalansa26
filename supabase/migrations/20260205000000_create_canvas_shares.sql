@@ -4,8 +4,9 @@ create table if not exists public.canvas_shares (
   canvas_id uuid references public.canvases(id) on delete cascade not null,
   user_id uuid references public.profiles(id) on delete cascade not null,
 
-  -- Cryptographically secure share token (32-char hex string)
-  share_token text unique not null default encode(gen_random_bytes(16), 'hex'),
+  -- Cryptographically secure share token (32-char hex using UUID)
+  -- Uses replace to remove dashes from UUID for cleaner token
+  share_token text unique not null default replace(gen_random_uuid()::text, '-', ''),
 
   -- Optional custom metadata for shared view
   title text,
