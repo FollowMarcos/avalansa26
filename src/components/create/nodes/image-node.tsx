@@ -49,7 +49,7 @@ export function ImageNode({ data, selected, id }: ImageNodeProps & { id: string 
 
   // Format relative time
   const timeAgo = React.useMemo(() => {
-    if (status === 'loading') return 'Generating...';
+    if (status === 'loading') return 'Generating…';
     const seconds = Math.floor((Date.now() - timestamp) / 1000);
     if (seconds < 60) return 'Just now';
     const minutes = Math.floor(seconds / 60);
@@ -154,7 +154,7 @@ export function ImageNode({ data, selected, id }: ImageNodeProps & { id: string 
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted/50 dark:bg-zinc-800/50 animate-pulse">
             <Loader size="lg" className="mb-3" />
             <p className="text-sm text-muted-foreground font-medium px-4 text-center">
-              {thinkingStep || 'Generating...'}
+              {thinkingStep || 'Generating…'}
             </p>
           </div>
         )}

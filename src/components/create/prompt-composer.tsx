@@ -21,7 +21,7 @@ import {
   Minus,
   Plus,
 } from "lucide-react";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -124,6 +124,7 @@ export function PromptComposer() {
   const showSpeedToggle = allowFastMode && allowRelaxedMode;
 
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const prefersReducedMotion = useReducedMotion();
 
   // Auto-expand when prompt exceeds 150 characters
   React.useEffect(() => {
@@ -175,8 +176,8 @@ export function PromptComposer() {
   return (
     <TooltipProvider delayDuration={300}>
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
+        animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
         className="absolute bottom-0 left-0 right-0 z-30 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
       >
         <div className="max-w-4xl mx-auto">
@@ -203,7 +204,7 @@ export function PromptComposer() {
                           <DropdownMenuTrigger asChild>
                             <button
                               className={cn(
-                                "size-11 rounded-2xl flex items-center justify-center transition-colors shrink-0 relative",
+                                "size-11 rounded-2xl flex items-center justify-center transition-colors shrink-0 relative focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
                                 hasReferences
                                   ? "bg-primary text-primary-foreground"
                                   : "bg-muted dark:bg-zinc-800 text-muted-foreground hover:text-foreground dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -298,9 +299,10 @@ export function PromptComposer() {
                       {/* Inline reference thumbnails */}
                       <div
                         className={cn(
-                          "transition-all duration-200 origin-top",
-                          hasReferences ? "opacity-100 scale-y-100 mb-2" : "opacity-0 scale-y-0 h-0"
+                          "transition-opacity duration-200 overflow-hidden",
+                          hasReferences ? "opacity-100 max-h-20 mb-2" : "opacity-0 max-h-0"
                         )}
+                        style={{ transitionProperty: 'opacity, max-height' }}
                       >
                         <div className="overflow-hidden">
                           <div className="flex items-center gap-1.5">
@@ -398,7 +400,7 @@ export function PromptComposer() {
                       <button
                         aria-label={`Aspect ratio: ${settings.aspectRatio}`}
                         aria-haspopup="listbox"
-                        className="flex items-center gap-2 h-8 px-2.5 rounded-lg bg-muted/50 dark:bg-zinc-800/50 hover:bg-muted dark:hover:bg-zinc-800 border border-transparent hover:border-border dark:hover:border-zinc-700 transition-all shrink-0 focus-visible:ring-2 focus-visible:ring-ring"
+                        className="flex items-center gap-2 h-8 px-2.5 rounded-lg bg-muted/50 dark:bg-zinc-800/50 hover:bg-muted dark:hover:bg-zinc-800 border border-transparent hover:border-border dark:hover:border-zinc-700 transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         <AspectRatioShape ratio={settings.aspectRatio} size="sm" className="text-muted-foreground" />
                         <span className="text-xs font-medium text-foreground dark:text-zinc-300">{settings.aspectRatio}</span>
@@ -414,7 +416,7 @@ export function PromptComposer() {
                             aria-selected={settings.aspectRatio === ratio.value}
                             onClick={() => updateSettings({ aspectRatio: ratio.value })}
                             className={cn(
-                              "flex flex-col items-center gap-1.5 p-2.5 rounded-lg transition-all",
+                              "flex flex-col items-center gap-1.5 p-2.5 rounded-lg transition-colors",
                               settings.aspectRatio === ratio.value
                                 ? "bg-primary/10 dark:bg-primary/20 ring-1 ring-primary"
                                 : "hover:bg-muted dark:hover:bg-zinc-800"
@@ -451,7 +453,7 @@ export function PromptComposer() {
                             aria-checked={settings.imageSize === size.value}
                             onClick={() => updateSettings({ imageSize: size.value })}
                             className={cn(
-                              "h-7 px-3 rounded-md text-xs font-medium transition-all",
+                              "h-7 px-3 rounded-md text-xs font-medium transition-colors",
                               settings.imageSize === size.value
                                 ? "bg-background dark:bg-zinc-700 text-foreground dark:text-zinc-100 shadow-sm"
                                 : "text-muted-foreground hover:text-foreground dark:hover:text-zinc-300"
@@ -473,7 +475,7 @@ export function PromptComposer() {
                           onClick={() => updateSettings({ generationSpeed: settings.generationSpeed === "fast" ? "relaxed" : "fast" })}
                           aria-label={`Generation speed: ${settings.generationSpeed === "fast" ? "Fast" : "Relax"}`}
                           className={cn(
-                            "flex items-center gap-1.5 h-8 px-3 rounded-lg transition-all shrink-0 focus-visible:ring-2 focus-visible:ring-ring",
+                            "flex items-center gap-1.5 h-8 px-3 rounded-lg transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-ring",
                             settings.generationSpeed === "fast"
                               ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25"
                               : "bg-blue-500/15 text-blue-600 dark:text-blue-400 hover:bg-blue-500/25"
@@ -504,16 +506,16 @@ export function PromptComposer() {
                     aria-valuenow={Math.min(settings.outputCount, maxOutputCount)}
                     aria-valuemin={1}
                     aria-valuemax={maxOutputCount}
-                    className="flex items-center h-8 rounded-lg bg-muted/50 dark:bg-zinc-800/50 shrink-0"
+                    className="flex items-center h-11 rounded-lg bg-muted/50 dark:bg-zinc-800/50 shrink-0"
                   >
                     <button
                       onClick={() => updateSettings({ outputCount: Math.max(1, settings.outputCount - 1) })}
                       disabled={settings.outputCount <= 1}
-                      className="size-8 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      className="size-11 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                       aria-label="Decrease count"
                       tabIndex={-1}
                     >
-                      <Minus className="size-3.5" aria-hidden="true" />
+                      <Minus className="size-4" aria-hidden="true" />
                     </button>
                     <span className="w-6 text-center text-sm font-medium text-foreground dark:text-zinc-200 tabular-nums">
                       {Math.min(settings.outputCount, maxOutputCount)}
@@ -521,11 +523,11 @@ export function PromptComposer() {
                     <button
                       onClick={() => updateSettings({ outputCount: Math.min(maxOutputCount, settings.outputCount + 1) })}
                       disabled={settings.outputCount >= maxOutputCount}
-                      className="size-8 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                      className="size-11 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
                       aria-label="Increase count"
                       tabIndex={-1}
                     >
-                      <Plus className="size-3.5" aria-hidden="true" />
+                      <Plus className="size-4" aria-hidden="true" />
                     </button>
                   </div>
 
@@ -549,7 +551,7 @@ export function PromptComposer() {
                   {activeGenerations > 0 && (
                     <span className="text-[10px] text-muted-foreground font-mono shrink-0 flex items-center gap-1.5 ml-2">
                       <span className="relative flex size-1.5">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+                        <span className={cn("absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75", !prefersReducedMotion && "animate-ping")} />
                         <span className="relative inline-flex rounded-full size-1.5 bg-amber-500" />
                       </span>
                       <span>Generating {activeGenerations}</span>

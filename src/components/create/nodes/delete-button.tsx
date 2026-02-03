@@ -50,13 +50,14 @@ export function DeleteButton({ onDelete, className }: DeleteButtonProps) {
         aria-label={isConfirming ? "Cancel deletion" : "Delete from canvas"}
         className={cn(
           'size-6 rounded-full flex items-center justify-center shadow-sm shrink-0',
-          'transition-all duration-150 ease-out active:scale-90',
+          'duration-150 ease-out active:scale-90 motion-reduce:transition-none motion-reduce:active:scale-100',
           'focus-visible:ring-2 focus-visible:ring-ring',
           isConfirming
             ? 'bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700'
             : 'bg-red-500/90 hover:bg-red-500 text-white',
           className
         )}
+        style={{ transition: 'background-color 150ms, transform 150ms' }}
       >
         {isConfirming ? (
           <X className="size-3 text-zinc-600 dark:text-zinc-400" aria-hidden="true" strokeWidth={2.5} />
@@ -75,12 +76,13 @@ export function DeleteButton({ onDelete, className }: DeleteButtonProps) {
           'h-6 px-2 rounded-full flex items-center gap-1',
           'bg-red-500 hover:bg-red-600 shadow-sm',
           'text-white text-[11px] font-medium whitespace-nowrap',
-          'transition-all duration-150 ease-out active:scale-95',
+          'duration-150 ease-out active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100',
           'focus-visible:ring-2 focus-visible:ring-ring',
           isConfirming
             ? 'opacity-100 translate-x-0'
             : 'opacity-0 -translate-x-2 pointer-events-none absolute'
         )}
+        style={{ transition: 'opacity 150ms, transform 150ms, background-color 150ms' }}
       >
         <Trash2 className="size-3" aria-hidden="true" strokeWidth={2.5} />
         <span>Delete</span>

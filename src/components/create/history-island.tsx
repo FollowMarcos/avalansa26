@@ -20,7 +20,7 @@ import {
   FolderOpen,
   RotateCw,
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import {
@@ -48,6 +48,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 export function HistoryIsland() {
+  const prefersReducedMotion = useReducedMotion();
   const {
     history,
     selectedImage,
@@ -218,13 +219,13 @@ export function HistoryIsland() {
     return (
       <motion.button
         key={image.id}
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
+        initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
+        animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
         onClick={() => !isPending && selectImage(image)}
         disabled={isPending}
         className={cn(
           "relative aspect-square rounded-lg overflow-hidden group",
-          "border border-border transition-colors",
+          "border border-border transition-colors focus-visible:ring-2 focus-visible:ring-ring",
           isPending
             ? "cursor-default border-dashed"
             : "hover:border-foreground/30",
@@ -234,7 +235,7 @@ export function HistoryIsland() {
         {isPending ? (
           // Pending/loading state
           <div className="absolute inset-0 bg-muted/50 flex flex-col items-center justify-center gap-2">
-            <div className="size-6 border-2 border-muted-foreground/30 border-t-blue-500 rounded-full animate-spin" aria-hidden="true" />
+            <div className={cn("size-6 border-2 border-muted-foreground/30 border-t-blue-500 rounded-full", !prefersReducedMotion && "animate-spin")} aria-hidden="true" />
             <span className="text-[10px] font-mono text-muted-foreground">Generating…</span>
           </div>
         ) : (
@@ -327,7 +328,7 @@ export function HistoryIsland() {
           aria-expanded={isExpanded}
           aria-label={`${sessionName}: ${session.generation_count} images, ${formatSessionTime(session.started_at)}`}
           className={cn(
-            "w-full flex items-center gap-2 px-3 py-2 hover:bg-muted/50 transition-colors text-left",
+            "w-full flex items-center gap-2 px-3 py-2 hover:bg-muted/50 transition-colors text-left focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
             isCurrentSession && "bg-muted/30"
           )}
         >
@@ -394,9 +395,10 @@ export function HistoryIsland() {
         {images.length > 0 && (
           <div
             className={cn(
-              "grid transition-all duration-200",
+              "grid duration-200",
               isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
             )}
+            style={{ transition: 'grid-template-rows 200ms, opacity 200ms' }}
           >
             <div className="overflow-hidden">
               <div className="grid grid-cols-2 gap-2 p-2 bg-muted/20">
@@ -490,10 +492,10 @@ export function HistoryIsland() {
             {historyPanelOpen ? (
               <motion.div
                 key="panel"
-                initial={{ opacity: 0, scale: 0.95, x: 20 }}
-                animate={{ opacity: 1, scale: 1, x: 0 }}
-                exit={{ opacity: 0, scale: 0.95, x: 20 }}
-                transition={{ duration: 0.2 }}
+                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, x: 20 }}
+                animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1, x: 0 }}
+                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, x: 20 }}
+                transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
                 className="w-72 bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-lg overflow-hidden"
               >
                 {/* Header */}
@@ -614,9 +616,9 @@ export function HistoryIsland() {
             ) : (
               <motion.div
                 key="button"
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
+                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
+                animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
+                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
               >
                 <Tooltip>
                   <TooltipTrigger asChild>

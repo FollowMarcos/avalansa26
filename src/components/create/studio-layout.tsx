@@ -10,9 +10,10 @@ import { PromptComposer } from "./prompt-composer";
 import { QuickToolbar } from "./quick-toolbar";
 import { GenerationGallery } from "./generation-gallery";
 import { MaintenanceBanner } from "./maintenance-banner";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 
 export function StudioLayout() {
+  const prefersReducedMotion = useReducedMotion();
   const { addReferenceImages } = useCreate();
 
   return (
@@ -20,6 +21,7 @@ export function StudioLayout() {
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
+        transition={{ duration: prefersReducedMotion ? 0 : 0.3 }}
         className="relative h-dvh flex flex-col bg-background text-foreground overflow-hidden"
       >
         {/* Maintenance mode banner (blocks entire page) */}

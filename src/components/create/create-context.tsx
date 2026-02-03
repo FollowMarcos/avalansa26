@@ -1304,6 +1304,12 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         settings: { ...settings },
       }));
 
+      // Mark these IDs as processed BEFORE updating history to prevent
+      // the history effect from creating duplicate nodes
+      for (const img of newImages) {
+        processedGenerationIds.current.add(img.id);
+      }
+
       // Update placeholder nodes with actual images
       for (let i = 0; i < placeholderNodeIds.length; i++) {
         const nodeId = placeholderNodeIds[i];

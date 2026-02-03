@@ -12,7 +12,7 @@ import {
   Check,
   Loader2,
 } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export function CanvasList() {
+  const prefersReducedMotion = useReducedMotion();
   const {
     canvasList,
     currentCanvasId,
@@ -119,10 +120,10 @@ export function CanvasList() {
           {isOpen ? (
             <motion.div
               key="panel"
-              initial={{ opacity: 0, scale: 0.95, x: -20 }}
-              animate={{ opacity: 1, scale: 1, x: 0 }}
-              exit={{ opacity: 0, scale: 0.95, x: -20 }}
-              transition={{ duration: 0.2 }}
+              initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, x: -20 }}
+              animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1, x: 0 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, x: -20 }}
+              transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
               className="w-64 bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-lg overflow-hidden"
             >
               {/* Header */}
@@ -324,9 +325,9 @@ export function CanvasList() {
           ) : (
             <motion.div
               key="button"
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
+              initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
+              animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
+              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
             >
               <Tooltip>
                 <TooltipTrigger asChild>

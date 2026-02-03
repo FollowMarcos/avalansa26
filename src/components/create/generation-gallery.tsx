@@ -4,11 +4,12 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useCreate } from "./create-context";
 import { Download, Copy, X, ImagePlus, RotateCw } from "lucide-react";
-import { motion, AnimatePresence } from "motion/react";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
 export function GenerationGallery() {
+  const prefersReducedMotion = useReducedMotion();
   const { viewMode, setViewMode, history, selectedImage, selectImage, addReferenceImageFromUrl, reuseImageSetup } = useCreate();
 
   if (viewMode !== "gallery") return null;
@@ -64,6 +65,7 @@ export function GenerationGallery() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
+        transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
         className="absolute inset-0 z-30 bg-background"
       >
         {/* Header */}
@@ -94,8 +96,8 @@ export function GenerationGallery() {
               {history.map((image) => (
                 <motion.div
                   key={image.id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
+                  initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
+                  animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
                   role="button"
                   tabIndex={0}
                   aria-label={`Select image: ${image.prompt || "Generated image"}`}
