@@ -1079,6 +1079,27 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     return steps;
   }, [referenceImages.length, prompt, settings.imageSize, settings.generationSpeed]);
 
+  // Helper function to clean up stale loading nodes after page refresh
+  // When a page is refreshed during generation, the generation process is lost
+  // but the node remains with status: 'loading'. This marks them as failed.
+  const cleanupStaleLoadingNodes = React.useCallback((loadedNodes: Node<ImageNodeData>[]): Node<ImageNodeData>[] => {
+    return loadedNodes.map(node => {
+      // If node is loading but has no image URL, generation was interrupted
+      if (node.data.status === 'loading' && !node.data.imageUrl) {
+        return {
+          ...node,
+          data: {
+            ...node.data,
+            status: 'failed' as const,
+            error: 'Generation was interrupted. Click retry to try again.',
+            thinkingStep: undefined,
+          },
+        };
+      }
+      return node;
+    });
+  }, []);
+
   // Helper function to update node data
   const updateNodeData = React.useCallback((nodeId: string, updates: Partial<ImageNodeData>) => {
     setNodes(prev => prev.map(node =>
@@ -1672,7 +1693,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
       if (canvas) {
         setCurrentCanvasId(canvas.id);
-        setNodes(canvas.nodes || []);
+        // Clean up any stale loading nodes from interrupted generations
+        setNodes(cleanupStaleLoadingNodes(canvas.nodes || []));
         setEdges(canvas.edges || []);
         setViewport(canvas.viewport || { x: 0, y: 0, zoom: 1 });
         setHasUnsavedChanges(false);
@@ -1760,7 +1782,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
           if (canvasToLoad) {
             setCurrentCanvasId(canvasToLoad.id);
-            setNodes(canvasToLoad.nodes || []);
+            // Clean up any stale loading nodes from interrupted generations
+            setNodes(cleanupStaleLoadingNodes(canvasToLoad.nodes || []));
             setEdges(canvasToLoad.edges || []);
             setViewport(canvasToLoad.viewport || { x: 0, y: 0, zoom: 1 });
 
@@ -1785,7 +1808,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
                 const newNodes = pendingNodes.filter(n => !existingNodeIds.has(n.id));
 
                 if (newNodes.length > 0) {
-                  setNodes(prev => [...prev, ...newNodes]);
+                  // Clean up any stale loading nodes from pending nodes as well
+                  setNodes(prev => [...prev, ...cleanupStaleLoadingNodes(newNodes)]);
                   setEdges(prev => [...prev, ...pendingEdges.filter(e =>
                     !prev.some(existing => existing.id === e.id)
                   )]);
