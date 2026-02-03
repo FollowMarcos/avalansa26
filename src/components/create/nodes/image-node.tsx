@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { cn } from '@/lib/utils';
 import { ImagePlus, Download, Copy, AlertCircle, RefreshCw, RotateCw } from 'lucide-react';
+import { toast } from 'sonner';
 import { Loader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
 import { DeleteButton } from './delete-button';
@@ -69,6 +70,7 @@ export function ImageNode({ data, selected, id }: ImageNodeProps & { id: string 
   const handleUseAsReference = async (e: React.MouseEvent) => {
     e.stopPropagation();
     await addReferenceImageFromUrl(imageUrl);
+    toast.success('Added as reference');
   };
 
   const handleDownload = async (e: React.MouseEvent) => {
@@ -84,8 +86,10 @@ export function ImageNode({ data, selected, id }: ImageNodeProps & { id: string 
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(downloadUrl);
+      toast.success('Download started');
     } catch (error) {
       console.error('Download failed:', error);
+      toast.error('Download failed');
     }
   };
 
@@ -93,8 +97,10 @@ export function ImageNode({ data, selected, id }: ImageNodeProps & { id: string 
     e.stopPropagation();
     try {
       await navigator.clipboard.writeText(prompt);
+      toast.success('Copied to clipboard');
     } catch (error) {
       console.error('Copy failed:', error);
+      toast.error('Failed to copy');
     }
   };
 
@@ -122,6 +128,7 @@ export function ImageNode({ data, selected, id }: ImageNodeProps & { id: string 
       } as import('../create-context').CreateSettings,
     };
     await reuseImageSetup(generatedImage);
+    toast.success('Setup restored');
   };
 
   return (

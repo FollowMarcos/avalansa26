@@ -85,6 +85,7 @@ export const viewport: Viewport = {
 };
 
 import { ThemeProvider } from "@/components/theme-provider";
+import { Toaster } from "sonner";
 
 export default function RootLayout({
   children,
@@ -101,6 +102,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <Toaster richColors position="bottom-right" />
         </ThemeProvider>
       </body>
     </html>

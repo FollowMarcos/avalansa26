@@ -13,6 +13,7 @@ import {
   Square,
   Maximize2,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   Tooltip,
   TooltipContent,
@@ -53,8 +54,10 @@ export function QuickToolbar() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+      toast.success("Download started");
     } catch (error) {
       console.error("Download failed:", error);
+      toast.error("Download failed");
     }
   };
 

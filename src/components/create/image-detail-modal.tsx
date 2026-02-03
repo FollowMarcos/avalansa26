@@ -18,6 +18,7 @@ import {
   ImageIcon,
   Sparkles,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -106,8 +107,10 @@ export function ImageDetailModal({
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(downloadUrl);
+      toast.success("Download started");
     } catch (error) {
       console.error("Download failed:", error);
+      toast.error("Download failed");
     }
   };
 
@@ -117,19 +120,23 @@ export function ImageDetailModal({
       await navigator.clipboard.writeText(image.prompt);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+      toast.success("Copied to clipboard");
     } catch (error) {
       console.error("Copy failed:", error);
+      toast.error("Failed to copy");
     }
   };
 
   const handleUseAsReference = async () => {
     await addReferenceImageFromUrl(image.url);
+    toast.success("Added as reference");
     onClose();
     setViewMode("canvas");
   };
 
   const handleReuseSetup = async () => {
     await reuseImageSetup(image);
+    toast.success("Setup restored");
     onClose();
     setViewMode("canvas");
   };
@@ -138,9 +145,11 @@ export function ImageDetailModal({
     setIsDeleting(true);
     try {
       await bulkDeleteImages([image.id]);
+      toast.success("Image deleted");
       onClose();
     } catch (error) {
       console.error("Delete failed:", error);
+      toast.error("Failed to delete image");
     } finally {
       setIsDeleting(false);
     }

@@ -20,6 +20,7 @@ import {
   FolderOpen,
   RotateCw,
 } from "lucide-react";
+import { toast } from "sonner";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
@@ -90,6 +91,7 @@ export function HistoryIsland() {
     startNewSession(newSessionName || undefined);
     setNewSessionName("");
     setShowNewSessionDialog(false);
+    toast.success("Session created");
   };
 
   const handleDeleteSession = async () => {
@@ -151,8 +153,10 @@ export function HistoryIsland() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(downloadUrl);
+      toast.success("Download started");
     } catch (error) {
       console.error("Download failed:", error);
+      toast.error("Download failed");
     }
   };
 
@@ -160,19 +164,23 @@ export function HistoryIsland() {
     e.stopPropagation();
     try {
       await navigator.clipboard.writeText(prompt);
+      toast.success("Copied to clipboard");
     } catch (error) {
       console.error("Copy failed:", error);
+      toast.error("Failed to copy");
     }
   };
 
   const handleUseAsReference = async (e: React.MouseEvent, url: string) => {
     e.stopPropagation();
     await addReferenceImageFromUrl(url);
+    toast.success("Added as reference");
   };
 
   const handleReuseSetup = async (e: React.MouseEvent, image: GeneratedImage) => {
     e.stopPropagation();
     await reuseImageSetup(image);
+    toast.success("Setup restored");
   };
 
   // Group history by session for grouped view

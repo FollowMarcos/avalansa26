@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Download, Trash2, X, Loader2, CheckSquare, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -78,8 +79,10 @@ export function BulkActionBar() {
       const content = await zip.generateAsync({ type: "blob" });
       const timestamp = new Date().toISOString().slice(0, 10);
       saveAs(content, `generations-${timestamp}.zip`);
+      toast.success(`Downloaded ${selectedCount} images`);
     } catch (error) {
       console.error("Failed to create ZIP:", error);
+      toast.error("Failed to download images");
     } finally {
       setIsDownloading(false);
       setDownloadProgress(0);
@@ -93,8 +96,10 @@ export function BulkActionBar() {
     try {
       const selectedIds = Array.from(galleryFilterState.bulkSelection.selectedIds);
       await bulkDeleteImages(selectedIds);
+      toast.success(`Deleted ${selectedIds.length} images`);
     } catch (error) {
       console.error("Failed to delete images:", error);
+      toast.error("Failed to delete images");
     } finally {
       setIsDeleting(false);
     }

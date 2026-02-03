@@ -5,6 +5,7 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useCreate, type GeneratedImage } from "./create-context";
 import { Download, Copy, X, ImagePlus, RotateCw, Check } from "lucide-react";
+import { toast } from "sonner";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { GalleryToolbar } from "./gallery-toolbar";
@@ -41,27 +42,33 @@ export function GenerationGallery() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(downloadUrl);
+      toast.success("Download started");
     } catch (error) {
       console.error("Download failed:", error);
+      toast.error("Download failed");
     }
   };
 
   const handleCopyPrompt = async (prompt: string) => {
     try {
       await navigator.clipboard.writeText(prompt);
+      toast.success("Copied to clipboard");
     } catch (error) {
       console.error("Copy failed:", error);
+      toast.error("Failed to copy");
     }
   };
 
   const handleUseAsReference = async (e: React.MouseEvent, url: string) => {
     e.stopPropagation();
     await addReferenceImageFromUrl(url);
+    toast.success("Added as reference");
   };
 
   const handleReuseSetup = async (e: React.MouseEvent, image: GeneratedImage) => {
     e.stopPropagation();
     await reuseImageSetup(image);
+    toast.success("Setup restored");
   };
 
   const handleImageClick = (image: GeneratedImage) => {
@@ -277,7 +284,18 @@ const GalleryItem = React.memo(function GalleryItem({
 
       {/* Hover overlay - hide in bulk mode */}
       {!isBulkMode && (
-        <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+        <div
+          className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150 cursor-pointer"
+          onClick={() => onImageClick(image)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onImageClick(image);
+            }
+          }}
+        >
           <div className="flex items-center gap-2">
             <Button
               variant="secondary"
