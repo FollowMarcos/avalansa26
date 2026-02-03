@@ -32,6 +32,25 @@ export type AspectRatio =
 export type GenerationSpeed = "fast" | "relaxed";
 export type ModelId = "nano-banana-pro";
 
+// Gallery filter types
+export type GallerySortOption = "newest" | "oldest" | "prompt-asc" | "prompt-desc";
+
+export interface GalleryFilters {
+  aspectRatio: AspectRatio[];
+  imageSize: ImageSize[];
+  sessionId: string | null;
+}
+
+export interface GalleryFilterState {
+  searchQuery: string;
+  sortBy: GallerySortOption;
+  filters: GalleryFilters;
+  bulkSelection: {
+    enabled: boolean;
+    selectedIds: Set<string>;
+  };
+}
+
 export interface ImageFile {
   id: string;
   file: File;
@@ -172,6 +191,19 @@ interface CreateContextType {
 
   // Helper to build final prompt with negative injection
   buildFinalPrompt: () => string;
+
+  // Gallery filters
+  galleryFilterState: GalleryFilterState;
+  setSearchQuery: (query: string) => void;
+  setSortBy: (sort: GallerySortOption) => void;
+  setGalleryFilters: (filters: Partial<GalleryFilters>) => void;
+  clearGalleryFilters: () => void;
+  toggleBulkSelection: () => void;
+  toggleImageSelection: (id: string) => void;
+  selectAllImages: () => void;
+  deselectAllImages: () => void;
+  getFilteredHistory: () => GeneratedImage[];
+  bulkDeleteImages: (ids: string[]) => Promise<void>;
 
   // Admin settings (for restricting features)
   adminSettings: AdminCreateSettings | null;
@@ -353,6 +385,21 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
   // Admin settings for feature restrictions
   const [adminSettings, setAdminSettings] = React.useState<AdminCreateSettings | null>(null);
+
+  // Gallery filter state
+  const [galleryFilterState, setGalleryFilterState] = React.useState<GalleryFilterState>({
+    searchQuery: "",
+    sortBy: "newest",
+    filters: {
+      aspectRatio: [],
+      imageSize: [],
+      sessionId: null,
+    },
+    bulkSelection: {
+      enabled: false,
+      selectedIds: new Set(),
+    },
+  });
 
   // localStorage persistence refs
   const persistTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -1884,6 +1931,167 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     return true; // No global concurrency limit, only per-call limit of 4 images
   }, []);
 
+  // Gallery filter actions
+  const setSearchQuery = React.useCallback((query: string) => {
+    setGalleryFilterState(prev => ({ ...prev, searchQuery: query }));
+  }, []);
+
+  const setSortBy = React.useCallback((sort: GallerySortOption) => {
+    setGalleryFilterState(prev => ({ ...prev, sortBy: sort }));
+  }, []);
+
+  const setGalleryFilters = React.useCallback((filters: Partial<GalleryFilters>) => {
+    setGalleryFilterState(prev => ({
+      ...prev,
+      filters: { ...prev.filters, ...filters },
+    }));
+  }, []);
+
+  const clearGalleryFilters = React.useCallback(() => {
+    setGalleryFilterState(prev => ({
+      ...prev,
+      searchQuery: "",
+      filters: {
+        aspectRatio: [],
+        imageSize: [],
+        sessionId: null,
+      },
+    }));
+  }, []);
+
+  const toggleBulkSelection = React.useCallback(() => {
+    setGalleryFilterState(prev => ({
+      ...prev,
+      bulkSelection: {
+        enabled: !prev.bulkSelection.enabled,
+        selectedIds: new Set(), // Clear selections when toggling
+      },
+    }));
+  }, []);
+
+  const toggleImageSelection = React.useCallback((id: string) => {
+    setGalleryFilterState(prev => {
+      const newSelectedIds = new Set(prev.bulkSelection.selectedIds);
+      if (newSelectedIds.has(id)) {
+        newSelectedIds.delete(id);
+      } else {
+        newSelectedIds.add(id);
+      }
+      return {
+        ...prev,
+        bulkSelection: {
+          ...prev.bulkSelection,
+          selectedIds: newSelectedIds,
+        },
+      };
+    });
+  }, []);
+
+  const selectAllImages = React.useCallback(() => {
+    setGalleryFilterState(prev => ({
+      ...prev,
+      bulkSelection: {
+        ...prev.bulkSelection,
+        selectedIds: new Set(history.map(img => img.id)),
+      },
+    }));
+  }, [history]);
+
+  const deselectAllImages = React.useCallback(() => {
+    setGalleryFilterState(prev => ({
+      ...prev,
+      bulkSelection: {
+        ...prev.bulkSelection,
+        selectedIds: new Set(),
+      },
+    }));
+  }, []);
+
+  // Get filtered and sorted history
+  // Memoize filtered history to avoid recomputing on every render
+  const filteredHistory = React.useMemo((): GeneratedImage[] => {
+    let result = [...history];
+
+    // Search filter
+    if (galleryFilterState.searchQuery) {
+      const query = galleryFilterState.searchQuery.toLowerCase();
+      result = result.filter(img =>
+        img.prompt?.toLowerCase().includes(query)
+      );
+    }
+
+    // Aspect ratio filter
+    if (galleryFilterState.filters.aspectRatio.length > 0) {
+      result = result.filter(img =>
+        galleryFilterState.filters.aspectRatio.includes(img.settings.aspectRatio)
+      );
+    }
+
+    // Image size filter
+    if (galleryFilterState.filters.imageSize.length > 0) {
+      result = result.filter(img =>
+        galleryFilterState.filters.imageSize.includes(img.settings.imageSize)
+      );
+    }
+
+    // Sorting
+    result.sort((a, b) => {
+      switch (galleryFilterState.sortBy) {
+        case "newest":
+          return b.timestamp - a.timestamp;
+        case "oldest":
+          return a.timestamp - b.timestamp;
+        case "prompt-asc":
+          return (a.prompt || "").localeCompare(b.prompt || "");
+        case "prompt-desc":
+          return (b.prompt || "").localeCompare(a.prompt || "");
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [history, galleryFilterState]);
+
+  // Getter function for backward compatibility
+  const getFilteredHistory = React.useCallback(
+    () => filteredHistory,
+    [filteredHistory]
+  );
+
+  // Bulk delete images
+  const bulkDeleteImages = React.useCallback(async (ids: string[]) => {
+    try {
+      const { deleteGeneration } = await import("@/utils/supabase/generations.server");
+
+      // Delete each generation from database
+      await Promise.all(ids.map(id => deleteGeneration(id)));
+
+      // Remove from local history
+      setHistory(prev => prev.filter(img => !ids.includes(img.id)));
+
+      // Remove from nodes if they exist
+      setNodes(prev => prev.filter(node => !ids.includes(node.data.generationId)));
+
+      // Clear selection
+      setGalleryFilterState(prev => ({
+        ...prev,
+        bulkSelection: {
+          ...prev.bulkSelection,
+          selectedIds: new Set(),
+        },
+      }));
+
+      // Clear selected image if it was deleted
+      if (selectedImage && ids.includes(selectedImage.id)) {
+        setSelectedImage(null);
+      }
+    } catch (error) {
+      console.error("Failed to delete images:", error);
+      throw error;
+    }
+  }, [selectedImage]);
+
   // Derive admin settings values
   const isMaintenanceMode = adminSettings?.maintenance_mode ?? false;
   const allowedImageSizes = React.useMemo<ImageSize[]>(() => {
@@ -1980,6 +2188,18 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     loadSessions,
     deleteSession: deleteSessionById,
     buildFinalPrompt,
+    // Gallery filters
+    galleryFilterState,
+    setSearchQuery,
+    setSortBy,
+    setGalleryFilters,
+    clearGalleryFilters,
+    toggleBulkSelection,
+    toggleImageSelection,
+    selectAllImages,
+    deselectAllImages,
+    getFilteredHistory,
+    bulkDeleteImages,
     // Admin settings
     adminSettings,
     isMaintenanceMode,
@@ -2000,6 +2220,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     savedReferences, loadSavedReferences, removeSavedReference, renameSavedReference, addSavedReferenceToActive,
     selectImage, clearHistory, toggleHistoryPanel, toggleInputVisibility, undo, redo, generate, cancelGeneration,
     startNewSession, renameCurrentSession, loadSessions, deleteSessionById, buildFinalPrompt,
+    galleryFilterState, setSearchQuery, setSortBy, setGalleryFilters, clearGalleryFilters,
+    toggleBulkSelection, toggleImageSelection, selectAllImages, deselectAllImages, getFilteredHistory, bulkDeleteImages,
     adminSettings, isMaintenanceMode, allowedImageSizes, allowedAspectRatios, maxOutputCount, allowFastMode, allowRelaxedMode,
   ]);
 
