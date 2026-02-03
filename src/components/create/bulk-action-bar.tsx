@@ -109,7 +109,7 @@ export function BulkActionBar() {
   };
 
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 pb-[env(safe-area-inset-bottom)]">
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 pb-[env(safe-area-inset-bottom)]">
       <div className="flex items-center gap-3 px-4 py-3 bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-lg">
         {/* Select All Toggle */}
         <Button

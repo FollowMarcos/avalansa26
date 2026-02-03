@@ -177,7 +177,7 @@ export function ImageDetailModal({
   if (isFullscreen) {
     return (
       <div
-        className="fixed inset-0 z-[100] bg-black flex items-center justify-center"
+        className="fixed inset-0 z-50 bg-black flex items-center justify-center"
         onClick={() => setIsFullscreen(false)}
       >
         <Button
@@ -316,7 +316,7 @@ export function ImageDetailModal({
                       )}
                     </Button>
                   </div>
-                  <p className="text-sm leading-relaxed">
+                  <p className="text-sm leading-relaxed break-words">
                     {image.prompt || <span className="text-muted-foreground italic">No prompt</span>}
                   </p>
                 </div>
@@ -327,7 +327,7 @@ export function ImageDetailModal({
                     <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
                       Negative Prompt
                     </span>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
+                    <p className="text-sm text-muted-foreground leading-relaxed break-words">
                       {image.settings.negativePrompt}
                     </p>
                   </div>

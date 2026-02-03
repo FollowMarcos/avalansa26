@@ -79,6 +79,8 @@ export function GalleryToolbar() {
         <div className="relative flex-1 min-w-[200px] max-w-[300px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" aria-hidden="true" />
           <Input
+            name="gallery-search"
+            autoComplete="off"
             placeholder="Search prompts…"
             aria-label="Search prompts"
             value={localSearch}

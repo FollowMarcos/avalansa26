@@ -28,6 +28,7 @@ export function GenerationGallery() {
 
   const parentRef = React.useRef<HTMLDivElement>(null);
   const [columns, setColumns] = React.useState(5);
+  const [containerWidth, setContainerWidth] = React.useState(900);
   const [detailImage, setDetailImage] = React.useState<GeneratedImage | null>(null);
 
   // Calculate columns based on container width
@@ -37,6 +38,7 @@ export function GenerationGallery() {
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const width = entry.contentRect.width;
+        setContainerWidth(width);
         if (width < 400) setColumns(2);
         else if (width < 600) setColumns(3);
         else if (width < 900) setColumns(4);
@@ -51,13 +53,24 @@ export function GenerationGallery() {
   const filteredHistory = getFilteredHistory();
   const rowCount = Math.ceil(filteredHistory.length / columns);
 
+  // Calculate row height based on item size (aspect-square) + vertical padding
+  const gap = 16; // 1rem gap between columns
+  const verticalPadding = 16; // 0.5rem top + 0.5rem bottom = 1rem total
+  const itemWidth = (containerWidth - gap * (columns - 1)) / columns;
+  const rowHeight = itemWidth + verticalPadding; // item height (square) + row vertical padding
+
   // Virtualization
   const rowVirtualizer = useVirtualizer({
     count: rowCount,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 200, // Approximate row height
+    estimateSize: () => rowHeight,
     overscan: 2,
   });
+
+  // Force remeasure when row height changes
+  React.useEffect(() => {
+    rowVirtualizer.measure();
+  }, [rowHeight, rowVirtualizer]);
 
   if (viewMode !== "gallery") return null;
 
@@ -139,11 +152,11 @@ export function GenerationGallery() {
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
-        className="absolute inset-0 z-30 bg-background flex flex-col"
+        className="absolute inset-0 z-40 bg-background flex flex-col"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <h2 className="text-lg font-mono font-medium">Gallery</h2>
+          <h2 className="text-lg font-mono font-medium text-balance">Gallery</h2>
           <Button
             variant="ghost"
             size="icon"
@@ -217,7 +230,6 @@ export function GenerationGallery() {
                         isSelected={isSelected(image.id)}
                         isBulkMode={galleryFilterState.bulkSelection.enabled}
                         isCurrentSelected={selectedImage?.id === image.id}
-                        prefersReducedMotion={!!prefersReducedMotion}
                         onImageClick={handleImageClick}
                         onDownload={handleDownload}
                         onCopyPrompt={handleCopyPrompt}
@@ -257,7 +269,6 @@ interface GalleryItemProps {
   isSelected: boolean;
   isBulkMode: boolean;
   isCurrentSelected: boolean;
-  prefersReducedMotion: boolean;
   onImageClick: (image: GeneratedImage) => void;
   onDownload: (url: string, id: string) => void;
   onCopyPrompt: (prompt: string) => void;
@@ -272,7 +283,6 @@ const GalleryItem = React.memo(function GalleryItem({
   isSelected,
   isBulkMode,
   isCurrentSelected,
-  prefersReducedMotion,
   onImageClick,
   onDownload,
   onCopyPrompt,
@@ -283,8 +293,8 @@ const GalleryItem = React.memo(function GalleryItem({
 }: GalleryItemProps) {
   return (
     <motion.div
-      initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
-      animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
       role="button"
       tabIndex={0}
       aria-label={`${isBulkMode ? "Select" : "View"} image: ${image.prompt || "Generated image"}`}
@@ -308,7 +318,9 @@ const GalleryItem = React.memo(function GalleryItem({
           alt={image.prompt || "Generated"}
           fill
           className="object-cover"
-          unoptimized
+          loading="lazy"
+          sizes="(max-width: 400px) 50vw, (max-width: 600px) 33vw, (max-width: 900px) 25vw, 20vw"
+          quality={75}
         />
       </div>
 
@@ -316,8 +328,9 @@ const GalleryItem = React.memo(function GalleryItem({
       {isBulkMode && (
         <div
           className={cn(
-            "absolute top-2 left-2 z-10 transition-opacity",
-            isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            "absolute top-2 left-2 z-10",
+            isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+            "transition-opacity duration-150"
           )}
           onClick={(e) => {
             e.stopPropagation();
@@ -326,7 +339,7 @@ const GalleryItem = React.memo(function GalleryItem({
         >
           <div
             className={cn(
-              "size-6 rounded-md border-2 flex items-center justify-center transition-colors",
+              "size-6 rounded-md border-2 flex items-center justify-center",
               isSelected
                 ? "bg-primary border-primary text-primary-foreground"
                 : "bg-background/80 border-border hover:border-primary"
@@ -339,7 +352,7 @@ const GalleryItem = React.memo(function GalleryItem({
 
       {/* Hover overlay - hide in bulk mode */}
       {!isBulkMode && (
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+        <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150">
           <div className="flex items-center gap-2">
             <Button
               variant="secondary"
