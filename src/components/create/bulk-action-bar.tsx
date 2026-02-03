@@ -129,7 +129,7 @@ export function BulkActionBar() {
         <div className="w-px h-6 bg-border" />
 
         {/* Selection count */}
-        <span className="font-mono text-sm text-muted-foreground min-w-[80px]">
+        <span className="font-mono text-sm tabular-nums text-muted-foreground min-w-[80px]">
           {selectedCount} selected
         </span>
 
@@ -144,10 +144,10 @@ export function BulkActionBar() {
           disabled={selectedCount === 0 || isDownloading}
         >
           {isDownloading ? (
-            <>
+            <span className="flex items-center gap-2">
               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-              {downloadProgress}%
-            </>
+              <span className="tabular-nums">{downloadProgress}%</span>
+            </span>
           ) : (
             <>
               <Download className="size-4" aria-hidden="true" />

@@ -218,27 +218,22 @@ const GalleryItem = React.memo(function GalleryItem({
   formatTime,
 }: GalleryItemProps) {
   return (
-    <motion.div
+    <motion.article
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      role="button"
-      tabIndex={0}
-      aria-label={`${isBulkMode ? "Select" : "View"} image: ${image.prompt || "Generated image"}`}
       className={cn(
-        "relative group rounded-lg overflow-hidden bg-muted border cursor-pointer mb-4 break-inside-avoid",
-        "focus:outline-none focus:ring-2 focus:ring-ring",
+        "relative group rounded-lg overflow-hidden bg-muted border mb-4 break-inside-avoid",
         isCurrentSelected && !isBulkMode && "ring-2 ring-foreground",
         isSelected && isBulkMode && "ring-2 ring-primary border-primary"
       )}
       style={{ contentVisibility: "auto" }}
-      onClick={() => onImageClick(image)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onImageClick(image);
-        }
-      }}
     >
+      <button
+        type="button"
+        aria-label={`${isBulkMode ? "Select" : "View"} image: ${image.prompt || "Generated image"}`}
+        className="w-full text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+        onClick={() => onImageClick(image)}
+      >
       {/* Image container - using aspect ratio from settings */}
       <div className="relative w-full">
         <Image
@@ -252,6 +247,7 @@ const GalleryItem = React.memo(function GalleryItem({
           quality={75}
         />
       </div>
+      </button>
 
       {/* Selection checkbox overlay */}
       {isBulkMode && (
@@ -333,13 +329,13 @@ const GalleryItem = React.memo(function GalleryItem({
 
       {/* Info badge */}
       <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
-        <span className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono">
+        <span className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono tabular-nums">
           {image.settings.imageSize}
         </span>
-        <span className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono text-muted-foreground">
+        <span className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono tabular-nums text-muted-foreground">
           {formatTime(image.timestamp)}
         </span>
       </div>
-    </motion.div>
+    </motion.article>
   );
 });

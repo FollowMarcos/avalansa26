@@ -177,14 +177,27 @@ export function ImageDetailModal({
   if (isFullscreen) {
     return (
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Fullscreen image view"
         className="fixed inset-0 z-50 bg-black flex items-center justify-center"
         onClick={() => setIsFullscreen(false)}
+        onKeyDown={(e) => {
+          if (e.key === "Escape") {
+            e.stopPropagation();
+            setIsFullscreen(false);
+          }
+        }}
+        tabIndex={-1}
       >
         <Button
           variant="ghost"
           size="icon"
-          className="absolute top-4 right-4 text-white hover:bg-white/20"
-          onClick={() => setIsFullscreen(false)}
+          className="absolute top-4 right-4 z-10 text-white hover:bg-white/20"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsFullscreen(false);
+          }}
           aria-label="Close fullscreen"
         >
           <X className="size-6" aria-hidden="true" />
@@ -195,7 +208,7 @@ export function ImageDetailModal({
           <Button
             variant="ghost"
             size="icon"
-            className="absolute left-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 size-12"
+            className="absolute left-4 top-1/2 -translate-y-1/2 z-10 text-white hover:bg-white/20 size-12"
             onClick={(e) => {
               e.stopPropagation();
               onNavigate("prev");
@@ -209,7 +222,7 @@ export function ImageDetailModal({
           <Button
             variant="ghost"
             size="icon"
-            className="absolute right-4 top-1/2 -translate-y-1/2 text-white hover:bg-white/20 size-12"
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-10 text-white hover:bg-white/20 size-12"
             onClick={(e) => {
               e.stopPropagation();
               onNavigate("next");
@@ -234,7 +247,7 @@ export function ImageDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-4xl max-h-[90vh] p-0 gap-0 overflow-hidden overscroll-contain">
         <div className="flex flex-col md:flex-row h-full max-h-[90vh]">
           {/* Image Section */}
           <div className="relative flex-1 min-h-[300px] md:min-h-0 bg-muted flex items-center justify-center group">
@@ -349,7 +362,7 @@ export function ImageDetailModal({
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Aspect Ratio</p>
-                        <p className="text-sm font-mono font-medium">{image.settings.aspectRatio}</p>
+                        <p className="text-sm font-mono font-medium tabular-nums">{image.settings.aspectRatio}</p>
                       </div>
                     </div>
 
@@ -360,7 +373,7 @@ export function ImageDetailModal({
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">Quality</p>
-                        <p className="text-sm font-mono font-medium">{image.settings.imageSize}</p>
+                        <p className="text-sm font-mono font-medium tabular-nums">{image.settings.imageSize}</p>
                       </div>
                     </div>
 

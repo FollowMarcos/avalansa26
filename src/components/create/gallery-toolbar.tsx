@@ -79,6 +79,7 @@ export function GalleryToolbar() {
         <div className="relative flex-1 min-w-[200px] max-w-[300px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" aria-hidden="true" />
           <Input
+            type="search"
             name="gallery-search"
             autoComplete="off"
             placeholder="Search prompts…"
@@ -131,7 +132,7 @@ export function GalleryToolbar() {
               <SlidersHorizontal className="size-4" aria-hidden="true" />
               Filters
               {activeFilterCount > 0 && (
-                <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs">
+                <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-xs tabular-nums">
                   {activeFilterCount}
                 </Badge>
               )}
@@ -161,6 +162,7 @@ export function GalleryToolbar() {
             <Badge variant="outline" className="gap-1 font-mono text-xs">
               Search: "{galleryFilterState.searchQuery}"
               <button
+                type="button"
                 onClick={() => {
                   setLocalSearch("");
                   setSearchQuery("");
@@ -177,6 +179,7 @@ export function GalleryToolbar() {
             <Badge key={ratio} variant="outline" className="gap-1 font-mono text-xs">
               {ratio}
               <button
+                type="button"
                 onClick={() => {
                   const newRatios = galleryFilterState.filters.aspectRatio.filter(r => r !== ratio);
                   setGalleryFilters({ aspectRatio: newRatios });
@@ -193,6 +196,7 @@ export function GalleryToolbar() {
             <Badge key={size} variant="outline" className="gap-1 font-mono text-xs">
               {size}
               <button
+                type="button"
                 onClick={() => {
                   const newSizes = galleryFilterState.filters.imageSize.filter(s => s !== size);
                   setGalleryFilters({ imageSize: newSizes });
@@ -216,7 +220,7 @@ export function GalleryToolbar() {
             </Button>
           )}
 
-          <span className="ml-auto text-xs text-muted-foreground font-mono">
+          <span className="ml-auto text-xs text-muted-foreground font-mono tabular-nums">
             {filteredCount} images
           </span>
         </div>
