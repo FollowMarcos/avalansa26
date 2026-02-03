@@ -24,8 +24,8 @@ import {
   WorkflowSaveConfig,
   NodeGroup,
   GroupColor,
-} from "@/types/create-lab";
-import { toast } from "sonner";
+} from "@/types";
+import { useToast } from "@/components/Toast";
 
 export type EdgeStyle = "angular" | "curved";
 
@@ -748,7 +748,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
           const pauseEdge = incomingEdges.find((e) => e.data?.hasPause);
           if (pauseEdge) {
             set({ pausedAtNodeId: node.id, isRunning: false, currentNodeId: null });
-            toast.warning("Workflow paused - click Run to continue");
+            useToast.getState().show("Workflow paused - click Run to continue", "warning");
             return;
           }
         }
@@ -810,7 +810,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
                 useGoogleSearch: nodeData.useGoogleSearch,
               };
 
-              const response = await fetch("/api/create-lab/generate", {
+              const response = await fetch("/api/generate", {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
@@ -918,7 +918,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
 
             try {
               const nodeData = node.data as LLMGenerateNodeData;
-              const response = await fetch("/api/create-lab/llm", {
+              const response = await fetch("/api/llm", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -1006,7 +1006,7 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
 
             try {
               // Import and use the grid splitter
-              const { splitWithDimensions } = await import("@/utils/create-lab/grid-splitter");
+              const { splitWithDimensions } = await import("@/utils/gridSplitter");
               const { images: splitImages } = await splitWithDimensions(
                 sourceImage,
                 nodeData.gridRows,
@@ -1378,9 +1378,10 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
       groups,
       workflowId,
       workflowName,
+      saveDirectoryPath,
     } = get();
 
-    if (!workflowId || !workflowName) {
+    if (!workflowId || !workflowName || !saveDirectoryPath) {
       return false;
     }
 
@@ -1397,33 +1398,48 @@ export const useWorkflowStore = create<WorkflowStore>((set, get) => ({
         groups: Object.keys(groups).length > 0 ? groups : undefined,
       };
 
-      // Save to localStorage instead of file system
-      if (typeof window !== "undefined") {
-        const workflowKey = `create-lab-workflow-${workflowId}`;
-        localStorage.setItem(workflowKey, JSON.stringify(workflow));
+      const response = await fetch("/api/workflow", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          directoryPath: saveDirectoryPath,
+          filename: workflowName,
+          workflow,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        const timestamp = Date.now();
+        set({
+          lastSavedAt: timestamp,
+          hasUnsavedChanges: false,
+          isSaving: false,
+        });
+
+        // Update localStorage
+        saveSaveConfig({
+          workflowId,
+          name: workflowName,
+          directoryPath: saveDirectoryPath,
+          generationsPath: get().generationsPath,
+          lastSavedAt: timestamp,
+        });
+
+        return true;
+      } else {
+        set({ isSaving: false });
+        useToast.getState().show(`Auto-save failed: ${result.error}`, "error");
+        return false;
       }
-
-      const timestamp = Date.now();
-      set({
-        lastSavedAt: timestamp,
-        hasUnsavedChanges: false,
-        isSaving: false,
-      });
-
-      // Update localStorage config
-      saveSaveConfig({
-        workflowId,
-        name: workflowName,
-        directoryPath: "", // Not used for localStorage
-        generationsPath: get().generationsPath,
-        lastSavedAt: timestamp,
-      });
-
-      return true;
     } catch (error) {
       set({ isSaving: false });
-      toast.error(
-          `Auto-save failed: ${error instanceof Error ? error.message : "Unknown error"}`
+      useToast
+        .getState()
+        .show(
+          `Auto-save failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+          "error"
         );
       return false;
     }
