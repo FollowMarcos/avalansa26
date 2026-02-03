@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Search, SlidersHorizontal, CheckSquare, X } from "lucide-react";
+import { Search, SlidersHorizontal, CheckSquare, X, Heart } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -60,7 +60,11 @@ export function GalleryToolbar() {
   const activeFilterCount =
     galleryFilterState.filters.aspectRatio.length +
     galleryFilterState.filters.imageSize.length +
-    (galleryFilterState.filters.sessionId ? 1 : 0);
+    (galleryFilterState.filters.sessionId ? 1 : 0) +
+    galleryFilterState.filters.tagIds.length +
+    (galleryFilterState.filters.collectionId ? 1 : 0);
+
+  const showFavoritesOnly = galleryFilterState.filters.showFavoritesOnly;
 
   const filteredCount = getFilteredHistory().length;
 
@@ -121,6 +125,21 @@ export function GalleryToolbar() {
           </SelectContent>
         </Select>
 
+        {/* Favorites Filter */}
+        <Button
+          variant={showFavoritesOnly ? "secondary" : "outline"}
+          size="sm"
+          className="h-9 gap-2 font-mono text-sm"
+          onClick={() => setGalleryFilters({ showFavoritesOnly: !showFavoritesOnly })}
+          aria-pressed={showFavoritesOnly}
+        >
+          <Heart
+            className={showFavoritesOnly ? "size-4 fill-red-500 text-red-500" : "size-4"}
+            aria-hidden="true"
+          />
+          Favorites
+        </Button>
+
         {/* Filters */}
         <Popover>
           <PopoverTrigger asChild>
@@ -156,8 +175,23 @@ export function GalleryToolbar() {
       </div>
 
       {/* Active filters row */}
-      {(activeFilterCount > 0 || galleryFilterState.searchQuery) && (
+      {(activeFilterCount > 0 || galleryFilterState.searchQuery || showFavoritesOnly) && (
         <div className="flex items-center gap-2 flex-wrap">
+          {showFavoritesOnly && (
+            <Badge variant="outline" className="gap-1 font-mono text-xs">
+              <Heart className="size-3 fill-red-500 text-red-500" aria-hidden="true" />
+              Favorites only
+              <button
+                type="button"
+                onClick={() => setGalleryFilters({ showFavoritesOnly: false })}
+                className="ml-1 hover:text-foreground"
+                aria-label="Clear favorites filter"
+              >
+                <X className="size-3" aria-hidden="true" />
+              </button>
+            </Badge>
+          )}
+
           {galleryFilterState.searchQuery && (
             <Badge variant="outline" className="gap-1 font-mono text-xs">
               Search: "{galleryFilterState.searchQuery}"
@@ -209,7 +243,7 @@ export function GalleryToolbar() {
             </Badge>
           ))}
 
-          {activeFilterCount > 0 && (
+          {(activeFilterCount > 0 || showFavoritesOnly) && (
             <Button
               variant="ghost"
               size="sm"

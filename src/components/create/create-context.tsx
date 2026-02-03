@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import type { ApiConfig } from "@/types/api-config";
-import type { Generation } from "@/types/generation";
+import type { Generation, Collection, Tag } from "@/types/generation";
 import type { Canvas, CanvasViewport, ImageNodeData } from "@/types/canvas";
 import type { SessionWithCount } from "@/types/session";
 import { uploadReferenceImage as uploadToStorage } from "@/utils/supabase/storage";
@@ -39,6 +39,9 @@ export interface GalleryFilters {
   aspectRatio: AspectRatio[];
   imageSize: ImageSize[];
   sessionId: string | null;
+  showFavoritesOnly: boolean;
+  tagIds: string[];
+  collectionId: string | null;
 }
 
 export interface GalleryFilterState {
@@ -69,6 +72,7 @@ export interface GeneratedImage {
   timestamp: number;
   settings: CreateSettings;
   status?: "pending" | "completed" | "failed"; // For relax mode async generation
+  isFavorite?: boolean;
 }
 
 export interface ThinkingStep {
@@ -204,6 +208,31 @@ interface CreateContextType {
   deselectAllImages: () => void;
   getFilteredHistory: () => GeneratedImage[];
   bulkDeleteImages: (ids: string[]) => Promise<void>;
+
+  // Favorites
+  toggleFavorite: (imageId: string) => Promise<void>;
+
+  // Collections
+  collections: Collection[];
+  createCollection: (name: string, color?: string, icon?: string) => Promise<Collection | null>;
+  updateCollection: (id: string, updates: { name?: string; color?: string; icon?: string }) => Promise<void>;
+  deleteCollection: (id: string) => Promise<void>;
+  addToCollection: (imageId: string, collectionId: string) => Promise<void>;
+  removeFromCollection: (imageId: string, collectionId: string) => Promise<void>;
+  getImageCollections: (imageId: string) => Collection[];
+
+  // Tags
+  tags: Tag[];
+  createTag: (name: string, color?: string) => Promise<Tag | null>;
+  deleteTag: (id: string) => Promise<void>;
+  addTagToImage: (imageId: string, tagId: string) => Promise<void>;
+  removeTagFromImage: (imageId: string, tagId: string) => Promise<void>;
+  createAndAddTag: (imageId: string, tagName: string, color?: string) => Promise<Tag | null>;
+  getImageTags: (imageId: string) => Tag[];
+
+  // Image organization data (cached per image)
+  imageOrganization: Map<string, { tagIds: string[]; collectionIds: string[] }>;
+  loadImageOrganization: (imageId: string) => Promise<void>;
 
   // Admin settings (for restricting features)
   adminSettings: AdminCreateSettings | null;
@@ -394,12 +423,20 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       aspectRatio: [],
       imageSize: [],
       sessionId: null,
+      showFavoritesOnly: false,
+      tagIds: [],
+      collectionId: null,
     },
     bulkSelection: {
       enabled: false,
       selectedIds: new Set(),
     },
   });
+
+  // Collections and Tags state
+  const [collections, setCollections] = React.useState<Collection[]>([]);
+  const [tags, setTags] = React.useState<Tag[]>([]);
+  const [imageOrganization, setImageOrganization] = React.useState<Map<string, { tagIds: string[]; collectionIds: string[] }>>(new Map());
 
   // localStorage persistence refs
   const persistTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
@@ -542,6 +579,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         url: gen.image_url,
         prompt: gen.prompt,
         timestamp: new Date(gen.created_at).getTime(),
+        isFavorite: gen.is_favorite ?? false,
         settings: {
           model: "nano-banana-pro" as ModelId,
           imageSize: (gen.settings.imageSize as ImageSize) || "2K",
@@ -997,6 +1035,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
           url: gen.image_url,
           prompt: gen.prompt,
           timestamp: new Date(gen.created_at).getTime(),
+          isFavorite: gen.is_favorite ?? false,
           settings: {
             model: "nano-banana-pro" as ModelId,
             imageSize: (gen.settings.imageSize as ImageSize) || "2K",
@@ -1955,6 +1994,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         aspectRatio: [],
         imageSize: [],
         sessionId: null,
+        showFavoritesOnly: false,
+        tagIds: [],
+        collectionId: null,
       },
     }));
   }, []);
@@ -2034,6 +2076,29 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       );
     }
 
+    // Favorites filter
+    if (galleryFilterState.filters.showFavoritesOnly) {
+      result = result.filter(img => img.isFavorite);
+    }
+
+    // Tags filter
+    if (galleryFilterState.filters.tagIds.length > 0) {
+      result = result.filter(img => {
+        const org = imageOrganization.get(img.id);
+        if (!org) return false;
+        return galleryFilterState.filters.tagIds.some(tagId => org.tagIds.includes(tagId));
+      });
+    }
+
+    // Collection filter
+    if (galleryFilterState.filters.collectionId) {
+      result = result.filter(img => {
+        const org = imageOrganization.get(img.id);
+        if (!org) return false;
+        return org.collectionIds.includes(galleryFilterState.filters.collectionId!);
+      });
+    }
+
     // Sorting
     result.sort((a, b) => {
       switch (galleryFilterState.sortBy) {
@@ -2051,7 +2116,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     });
 
     return result;
-  }, [history, galleryFilterState]);
+  }, [history, galleryFilterState, imageOrganization]);
 
   // Getter function for backward compatibility
   const getFilteredHistory = React.useCallback(
@@ -2091,6 +2156,343 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       throw error;
     }
   }, [selectedImage]);
+
+  // ============================================
+  // FAVORITES
+  // ============================================
+
+  const toggleFavorite = React.useCallback(async (imageId: string) => {
+    // Find current state
+    const image = history.find(img => img.id === imageId);
+    if (!image) return;
+
+    const newFavoriteState = !image.isFavorite;
+
+    // Optimistic update
+    setHistory(prev =>
+      prev.map(img =>
+        img.id === imageId ? { ...img, isFavorite: newFavoriteState } : img
+      )
+    );
+
+    // Update selected image if it's the one being toggled
+    if (selectedImage?.id === imageId) {
+      setSelectedImage(prev => prev ? { ...prev, isFavorite: newFavoriteState } : null);
+    }
+
+    try {
+      const { toggleFavorite: toggleFavoriteServer } = await import("@/utils/supabase/generations.server");
+      const success = await toggleFavoriteServer(imageId, newFavoriteState);
+
+      if (!success) {
+        // Revert on failure
+        setHistory(prev =>
+          prev.map(img =>
+            img.id === imageId ? { ...img, isFavorite: !newFavoriteState } : img
+          )
+        );
+        if (selectedImage?.id === imageId) {
+          setSelectedImage(prev => prev ? { ...prev, isFavorite: !newFavoriteState } : null);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to toggle favorite:", error);
+      // Revert on error
+      setHistory(prev =>
+        prev.map(img =>
+          img.id === imageId ? { ...img, isFavorite: !newFavoriteState } : img
+        )
+      );
+    }
+  }, [history, selectedImage]);
+
+  // ============================================
+  // COLLECTIONS
+  // ============================================
+
+  const loadCollections = React.useCallback(async () => {
+    try {
+      const { getCollections } = await import("@/utils/supabase/generations.server");
+      const userCollections = await getCollections();
+      setCollections(userCollections);
+    } catch (error) {
+      console.error("Failed to load collections:", error);
+    }
+  }, []);
+
+  const createCollectionFn = React.useCallback(async (name: string, color?: string, icon?: string): Promise<Collection | null> => {
+    try {
+      const { createCollection } = await import("@/utils/supabase/generations.server");
+      const collection = await createCollection({ name, color, icon });
+      if (collection) {
+        setCollections(prev => [...prev, collection]);
+      }
+      return collection;
+    } catch (error) {
+      console.error("Failed to create collection:", error);
+      return null;
+    }
+  }, []);
+
+  const updateCollectionFn = React.useCallback(async (id: string, updates: { name?: string; color?: string; icon?: string }) => {
+    try {
+      const { updateCollection } = await import("@/utils/supabase/generations.server");
+      const updated = await updateCollection(id, updates);
+      if (updated) {
+        setCollections(prev => prev.map(c => c.id === id ? updated : c));
+      }
+    } catch (error) {
+      console.error("Failed to update collection:", error);
+    }
+  }, []);
+
+  const deleteCollectionFn = React.useCallback(async (id: string) => {
+    try {
+      const { deleteCollection } = await import("@/utils/supabase/generations.server");
+      const success = await deleteCollection(id);
+      if (success) {
+        setCollections(prev => prev.filter(c => c.id !== id));
+        // Remove from image organization cache
+        setImageOrganization(prev => {
+          const next = new Map(prev);
+          next.forEach((org, imgId) => {
+            if (org.collectionIds.includes(id)) {
+              next.set(imgId, {
+                ...org,
+                collectionIds: org.collectionIds.filter(cId => cId !== id),
+              });
+            }
+          });
+          return next;
+        });
+      }
+    } catch (error) {
+      console.error("Failed to delete collection:", error);
+    }
+  }, []);
+
+  const addToCollectionFn = React.useCallback(async (imageId: string, collectionId: string) => {
+    try {
+      const { addToCollection } = await import("@/utils/supabase/generations.server");
+      const success = await addToCollection(imageId, collectionId);
+      if (success) {
+        setImageOrganization(prev => {
+          const next = new Map(prev);
+          const existing = next.get(imageId) || { tagIds: [], collectionIds: [] };
+          if (!existing.collectionIds.includes(collectionId)) {
+            next.set(imageId, {
+              ...existing,
+              collectionIds: [...existing.collectionIds, collectionId],
+            });
+          }
+          return next;
+        });
+      }
+    } catch (error) {
+      console.error("Failed to add to collection:", error);
+    }
+  }, []);
+
+  const removeFromCollectionFn = React.useCallback(async (imageId: string, collectionId: string) => {
+    try {
+      const { removeFromCollection } = await import("@/utils/supabase/generations.server");
+      const success = await removeFromCollection(imageId, collectionId);
+      if (success) {
+        setImageOrganization(prev => {
+          const next = new Map(prev);
+          const existing = next.get(imageId);
+          if (existing) {
+            next.set(imageId, {
+              ...existing,
+              collectionIds: existing.collectionIds.filter(id => id !== collectionId),
+            });
+          }
+          return next;
+        });
+      }
+    } catch (error) {
+      console.error("Failed to remove from collection:", error);
+    }
+  }, []);
+
+  const getImageCollections = React.useCallback((imageId: string): Collection[] => {
+    const org = imageOrganization.get(imageId);
+    if (!org) return [];
+    return collections.filter(c => org.collectionIds.includes(c.id));
+  }, [imageOrganization, collections]);
+
+  // ============================================
+  // TAGS
+  // ============================================
+
+  const loadTags = React.useCallback(async () => {
+    try {
+      const { getTags } = await import("@/utils/supabase/generations.server");
+      const userTags = await getTags();
+      setTags(userTags);
+    } catch (error) {
+      console.error("Failed to load tags:", error);
+    }
+  }, []);
+
+  const createTagFn = React.useCallback(async (name: string, color?: string): Promise<Tag | null> => {
+    try {
+      const { createTag } = await import("@/utils/supabase/generations.server");
+      const tag = await createTag({ name, color });
+      if (tag) {
+        // Only add if not already present (createTag may return existing)
+        setTags(prev => {
+          if (prev.some(t => t.id === tag.id)) return prev;
+          return [...prev, tag];
+        });
+      }
+      return tag;
+    } catch (error) {
+      console.error("Failed to create tag:", error);
+      return null;
+    }
+  }, []);
+
+  const deleteTagFn = React.useCallback(async (id: string) => {
+    try {
+      const { deleteTag } = await import("@/utils/supabase/generations.server");
+      const success = await deleteTag(id);
+      if (success) {
+        setTags(prev => prev.filter(t => t.id !== id));
+        // Remove from image organization cache
+        setImageOrganization(prev => {
+          const next = new Map(prev);
+          next.forEach((org, imgId) => {
+            if (org.tagIds.includes(id)) {
+              next.set(imgId, {
+                ...org,
+                tagIds: org.tagIds.filter(tId => tId !== id),
+              });
+            }
+          });
+          return next;
+        });
+      }
+    } catch (error) {
+      console.error("Failed to delete tag:", error);
+    }
+  }, []);
+
+  const addTagToImageFn = React.useCallback(async (imageId: string, tagId: string) => {
+    try {
+      const { addTagToGeneration } = await import("@/utils/supabase/generations.server");
+      const success = await addTagToGeneration(imageId, tagId);
+      if (success) {
+        setImageOrganization(prev => {
+          const next = new Map(prev);
+          const existing = next.get(imageId) || { tagIds: [], collectionIds: [] };
+          if (!existing.tagIds.includes(tagId)) {
+            next.set(imageId, {
+              ...existing,
+              tagIds: [...existing.tagIds, tagId],
+            });
+          }
+          return next;
+        });
+      }
+    } catch (error) {
+      console.error("Failed to add tag to image:", error);
+    }
+  }, []);
+
+  const removeTagFromImageFn = React.useCallback(async (imageId: string, tagId: string) => {
+    try {
+      const { removeTagFromGeneration } = await import("@/utils/supabase/generations.server");
+      const success = await removeTagFromGeneration(imageId, tagId);
+      if (success) {
+        setImageOrganization(prev => {
+          const next = new Map(prev);
+          const existing = next.get(imageId);
+          if (existing) {
+            next.set(imageId, {
+              ...existing,
+              tagIds: existing.tagIds.filter(id => id !== tagId),
+            });
+          }
+          return next;
+        });
+      }
+    } catch (error) {
+      console.error("Failed to remove tag from image:", error);
+    }
+  }, []);
+
+  const createAndAddTagFn = React.useCallback(async (imageId: string, tagName: string, color?: string): Promise<Tag | null> => {
+    try {
+      const { createAndAddTag } = await import("@/utils/supabase/generations.server");
+      const tag = await createAndAddTag(imageId, tagName, color);
+      if (tag) {
+        // Add tag to tags list if new
+        setTags(prev => {
+          if (prev.some(t => t.id === tag.id)) return prev;
+          return [...prev, tag];
+        });
+        // Update image organization
+        setImageOrganization(prev => {
+          const next = new Map(prev);
+          const existing = next.get(imageId) || { tagIds: [], collectionIds: [] };
+          if (!existing.tagIds.includes(tag.id)) {
+            next.set(imageId, {
+              ...existing,
+              tagIds: [...existing.tagIds, tag.id],
+            });
+          }
+          return next;
+        });
+      }
+      return tag;
+    } catch (error) {
+      console.error("Failed to create and add tag:", error);
+      return null;
+    }
+  }, []);
+
+  const getImageTags = React.useCallback((imageId: string): Tag[] => {
+    const org = imageOrganization.get(imageId);
+    if (!org) return [];
+    return tags.filter(t => org.tagIds.includes(t.id));
+  }, [imageOrganization, tags]);
+
+  // ============================================
+  // IMAGE ORGANIZATION LOADING
+  // ============================================
+
+  const loadImageOrganization = React.useCallback(async (imageId: string) => {
+    // Skip if already loaded
+    if (imageOrganization.has(imageId)) return;
+
+    try {
+      const { getGenerationTags, getGenerationCollections } = await import("@/utils/supabase/generations.server");
+      const [imageTags, imageCollections] = await Promise.all([
+        getGenerationTags(imageId),
+        getGenerationCollections(imageId),
+      ]);
+
+      setImageOrganization(prev => {
+        const next = new Map(prev);
+        next.set(imageId, {
+          tagIds: imageTags.map(t => t.id),
+          collectionIds: imageCollections.map(c => c.id),
+        });
+        return next;
+      });
+    } catch (error) {
+      console.error("Failed to load image organization:", error);
+    }
+  }, [imageOrganization]);
+
+  // Load collections and tags on mount
+  React.useEffect(() => {
+    if (currentUserId) {
+      loadCollections();
+      loadTags();
+    }
+  }, [currentUserId, loadCollections, loadTags]);
 
   // Derive admin settings values
   const isMaintenanceMode = adminSettings?.maintenance_mode ?? false;
@@ -2200,6 +2602,27 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     deselectAllImages,
     getFilteredHistory,
     bulkDeleteImages,
+    // Favorites
+    toggleFavorite,
+    // Collections
+    collections,
+    createCollection: createCollectionFn,
+    updateCollection: updateCollectionFn,
+    deleteCollection: deleteCollectionFn,
+    addToCollection: addToCollectionFn,
+    removeFromCollection: removeFromCollectionFn,
+    getImageCollections,
+    // Tags
+    tags,
+    createTag: createTagFn,
+    deleteTag: deleteTagFn,
+    addTagToImage: addTagToImageFn,
+    removeTagFromImage: removeTagFromImageFn,
+    createAndAddTag: createAndAddTagFn,
+    getImageTags,
+    // Image organization
+    imageOrganization,
+    loadImageOrganization,
     // Admin settings
     adminSettings,
     isMaintenanceMode,
@@ -2222,6 +2645,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     startNewSession, renameCurrentSession, loadSessions, deleteSessionById, buildFinalPrompt,
     galleryFilterState, setSearchQuery, setSortBy, setGalleryFilters, clearGalleryFilters,
     toggleBulkSelection, toggleImageSelection, selectAllImages, deselectAllImages, getFilteredHistory, bulkDeleteImages,
+    toggleFavorite, collections, createCollectionFn, updateCollectionFn, deleteCollectionFn, addToCollectionFn, removeFromCollectionFn, getImageCollections,
+    tags, createTagFn, deleteTagFn, addTagToImageFn, removeTagFromImageFn, createAndAddTagFn, getImageTags,
+    imageOrganization, loadImageOrganization,
     adminSettings, isMaintenanceMode, allowedImageSizes, allowedAspectRatios, maxOutputCount, allowFastMode, allowRelaxedMode,
   ]);
 

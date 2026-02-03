@@ -11,6 +11,19 @@
 
 import type { ProfileVisibility } from './visibility';
 import type { ApiConfig, ApiConfigInsert, ApiConfigUpdate, ApiAccessLevel } from './api-config';
+import type {
+  Generation,
+  GenerationInsert,
+  GenerationUpdate,
+  Collection,
+  CollectionInsert,
+  CollectionUpdate,
+  Tag,
+  TagInsert,
+  TagUpdate,
+  GenerationCollection,
+  GenerationTag,
+} from './generation';
 
 export type UserRole = 'user' | 'admin';
 
@@ -36,6 +49,31 @@ export interface Database {
         Row: ApiConfig;
         Insert: ApiConfigInsert;
         Update: ApiConfigUpdate;
+      };
+      generations: {
+        Row: Generation;
+        Insert: GenerationInsert;
+        Update: GenerationUpdate;
+      };
+      collections: {
+        Row: Collection;
+        Insert: CollectionInsert;
+        Update: CollectionUpdate;
+      };
+      tags: {
+        Row: Tag;
+        Insert: TagInsert;
+        Update: TagUpdate;
+      };
+      generation_collections: {
+        Row: GenerationCollection;
+        Insert: Omit<GenerationCollection, 'id' | 'added_at'>;
+        Update: never;
+      };
+      generation_tags: {
+        Row: GenerationTag;
+        Insert: Omit<GenerationTag, 'id' | 'added_at'>;
+        Update: never;
       };
     };
     Views: {
@@ -282,3 +320,18 @@ export type {
   ApiProvider,
 } from './api-config';
 export { API_PROVIDERS, API_ACCESS_LEVELS } from './api-config';
+export type {
+  Generation,
+  GenerationInsert,
+  GenerationUpdate,
+  GenerationSettings,
+  Collection,
+  CollectionInsert,
+  CollectionUpdate,
+  Tag,
+  TagInsert,
+  TagUpdate,
+  GenerationCollection,
+  GenerationTag,
+  GenerationWithOrganization,
+} from './generation';

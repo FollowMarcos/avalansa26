@@ -17,6 +17,9 @@ import {
   Ratio,
   ImageIcon,
   Sparkles,
+  Heart,
+  Tags,
+  FolderOpen,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -42,6 +45,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useCreate, type GeneratedImage } from "./create-context";
 import { cn } from "@/lib/utils";
+import { TagInput } from "./tag-input";
+import { CollectionSelector } from "./collection-selector";
 
 interface ImageDetailModalProps {
   image: GeneratedImage | null;
@@ -65,6 +70,7 @@ export function ImageDetailModal({
     reuseImageSetup,
     bulkDeleteImages,
     setViewMode,
+    toggleFavorite,
   } = useCreate();
 
   const [copied, setCopied] = React.useState(false);
@@ -354,6 +360,56 @@ export function ImageDetailModal({
                     </p>
                   </div>
                 )}
+
+                <Separator />
+
+                {/* Favorite */}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+                    Favorite
+                  </span>
+                  <Button
+                    variant={image.isFavorite ? "secondary" : "outline"}
+                    size="sm"
+                    className="h-8 gap-2"
+                    onClick={() => toggleFavorite(image.id)}
+                  >
+                    <Heart
+                      className={cn(
+                        "size-4",
+                        image.isFavorite && "fill-red-500 text-red-500"
+                      )}
+                      aria-hidden="true"
+                    />
+                    {image.isFavorite ? "Favorited" : "Add to favorites"}
+                  </Button>
+                </div>
+
+                <Separator />
+
+                {/* Tags */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Tags className="size-4 text-muted-foreground" aria-hidden="true" />
+                    <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+                      Tags
+                    </span>
+                  </div>
+                  <TagInput imageId={image.id} />
+                </div>
+
+                <Separator />
+
+                {/* Collections */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <FolderOpen className="size-4 text-muted-foreground" aria-hidden="true" />
+                    <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+                      Collections
+                    </span>
+                  </div>
+                  <CollectionSelector imageId={image.id} />
+                </div>
 
                 <Separator />
 

@@ -4,7 +4,7 @@ import * as React from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useCreate, type GeneratedImage } from "./create-context";
-import { Download, Copy, X, ImagePlus, RotateCw, Check } from "lucide-react";
+import { Download, Copy, X, ImagePlus, RotateCw, Check, Heart } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
@@ -23,6 +23,7 @@ export function GenerationGallery() {
     galleryFilterState,
     toggleImageSelection,
     getFilteredHistory,
+    toggleFavorite,
   } = useCreate();
 
   const [detailImage, setDetailImage] = React.useState<GeneratedImage | null>(null);
@@ -77,6 +78,11 @@ export function GenerationGallery() {
     } else {
       setDetailImage(image);
     }
+  };
+
+  const handleToggleFavorite = async (e: React.MouseEvent, imageId: string) => {
+    e.stopPropagation();
+    await toggleFavorite(imageId);
   };
 
   // Navigation for detail modal
@@ -172,6 +178,7 @@ export function GenerationGallery() {
                   onUseAsReference={handleUseAsReference}
                   onReuseSetup={handleReuseSetup}
                   onToggleSelection={toggleImageSelection}
+                  onToggleFavorite={handleToggleFavorite}
                   formatTime={formatTime}
                 />
               ))}
@@ -208,6 +215,7 @@ interface GalleryItemProps {
   onUseAsReference: (e: React.MouseEvent, url: string) => void;
   onReuseSetup: (e: React.MouseEvent, image: GeneratedImage) => void;
   onToggleSelection: (id: string) => void;
+  onToggleFavorite: (e: React.MouseEvent, id: string) => void;
   formatTime: (timestamp: number) => string;
 }
 
@@ -222,6 +230,7 @@ const GalleryItem = React.memo(function GalleryItem({
   onUseAsReference,
   onReuseSetup,
   onToggleSelection,
+  onToggleFavorite,
   formatTime,
 }: GalleryItemProps) {
   return (
@@ -256,17 +265,50 @@ const GalleryItem = React.memo(function GalleryItem({
       </div>
       </button>
 
+      {/* Favorite button - always visible on hover or when favorited */}
+      {!isBulkMode && (
+        <button
+          type="button"
+          className={cn(
+            "absolute top-1 right-1 z-10 size-11 rounded-full flex items-center justify-center",
+            "bg-background/80 hover:bg-background transition-all duration-150",
+            image.isFavorite ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus:opacity-100"
+          )}
+          aria-label={image.isFavorite ? "Remove from favorites" : "Add to favorites"}
+          onClick={(e) => onToggleFavorite(e, image.id)}
+        >
+          <Heart
+            className={cn(
+              "size-5 transition-colors",
+              image.isFavorite ? "fill-red-500 text-red-500" : "text-muted-foreground hover:text-red-500"
+            )}
+            aria-hidden="true"
+          />
+        </button>
+      )}
+
       {/* Selection checkbox overlay */}
       {isBulkMode && (
         <div
+          role="checkbox"
+          aria-checked={isSelected}
+          aria-label={`Select image: ${image.prompt || "Generated image"}`}
+          tabIndex={0}
           className={cn(
-            "absolute top-2 left-2 z-10",
-            isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100",
+            "absolute top-2 left-2 z-10 cursor-pointer",
+            isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus:opacity-100",
             "transition-opacity duration-150"
           )}
           onClick={(e) => {
             e.stopPropagation();
             onToggleSelection(image.id);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              e.stopPropagation();
+              onToggleSelection(image.id);
+            }
           }}
         >
           <div
@@ -285,18 +327,10 @@ const GalleryItem = React.memo(function GalleryItem({
       {/* Hover overlay - hide in bulk mode */}
       {!isBulkMode && (
         <div
-          className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150 cursor-pointer"
-          onClick={() => onImageClick(image)}
-          role="button"
-          tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              onImageClick(image);
-            }
-          }}
+          className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none"
+          aria-hidden="true"
         >
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 pointer-events-auto">
             <Button
               variant="secondary"
               size="icon"
