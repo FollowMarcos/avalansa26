@@ -12,16 +12,24 @@ export function CanvasViewport() {
     isGenerating,
     referenceImages,
     nodes,
+    setCanvasRef,
   } = useCreate();
 
+  const canvasRef = React.useRef<HTMLDivElement>(null);
   const hasNodes = nodes.length > 0;
+
+  // Store the canvas ref in context for export functionality
+  React.useEffect(() => {
+    setCanvasRef(canvasRef);
+    return () => setCanvasRef(null);
+  }, [setCanvasRef]);
 
   return (
     <div className="relative flex-1 flex items-center justify-center overflow-hidden bg-muted/30">
       {/* Show FlowCanvas when we have nodes (even during generation) */}
       {hasNodes && (
         <div className="absolute inset-0">
-          <FlowCanvas />
+          <FlowCanvas canvasRef={canvasRef} />
         </div>
       )}
 

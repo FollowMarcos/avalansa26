@@ -21,6 +21,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useReactFlow } from "@xyflow/react";
+import { ExportMenu } from "./export-menu";
 
 export function QuickToolbar() {
   const {
@@ -207,7 +208,7 @@ export function QuickToolbar() {
 
           <div className="w-px h-5 bg-border mx-1" />
 
-          {/* Download */}
+          {/* Download & Export */}
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -223,6 +224,8 @@ export function QuickToolbar() {
             </TooltipTrigger>
             <TooltipContent>Download</TooltipContent>
           </Tooltip>
+
+          <ExportMenu className="size-8 rounded-lg" />
         </div>
       </div>
     </TooltipProvider>

@@ -20,6 +20,7 @@ import {
   Heart,
   Tags,
   FolderOpen,
+  Link2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -47,6 +48,7 @@ import { useCreate, type GeneratedImage } from "./create-context";
 import { cn } from "@/lib/utils";
 import { TagInput } from "./tag-input";
 import { CollectionSelector } from "./collection-selector";
+import { SocialShareMenu } from "./social-share-menu";
 
 interface ImageDetailModalProps {
   image: GeneratedImage | null;
@@ -74,6 +76,7 @@ export function ImageDetailModal({
   } = useCreate();
 
   const [copied, setCopied] = React.useState(false);
+  const [urlCopied, setUrlCopied] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
 
@@ -130,6 +133,18 @@ export function ImageDetailModal({
     } catch (error) {
       console.error("Copy failed:", error);
       toast.error("Failed to copy");
+    }
+  };
+
+  const handleCopyUrl = async () => {
+    try {
+      await navigator.clipboard.writeText(image.url);
+      setUrlCopied(true);
+      setTimeout(() => setUrlCopied(false), 2000);
+      toast.success("Image URL copied");
+    } catch (error) {
+      console.error("Copy URL failed:", error);
+      toast.error("Failed to copy URL");
     }
   };
 
@@ -498,6 +513,25 @@ export function ImageDetailModal({
                       variant="outline"
                       size="sm"
                       className="gap-2 font-mono text-xs justify-start"
+                      onClick={handleCopyUrl}
+                    >
+                      {urlCopied ? (
+                        <>
+                          <Check className="size-4" aria-hidden="true" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Link2 className="size-4" aria-hidden="true" />
+                          Copy URL
+                        </>
+                      )}
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 font-mono text-xs justify-start"
                       onClick={handleUseAsReference}
                     >
                       <ImagePlus className="size-4" aria-hidden="true" />
@@ -507,12 +541,19 @@ export function ImageDetailModal({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="gap-2 font-mono text-xs justify-start col-span-2"
+                      className="gap-2 font-mono text-xs justify-start"
                       onClick={handleReuseSetup}
                     >
                       <RotateCw className="size-4" aria-hidden="true" />
-                      Reuse Setup (Image + Prompt + Settings)
+                      Reuse Setup
                     </Button>
+
+                    {/* Social Share */}
+                    <SocialShareMenu
+                      imageUrl={image.url}
+                      prompt={image.prompt}
+                      className="col-span-2 justify-start font-mono text-xs"
+                    />
                   </div>
                 </div>
 

@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { cn } from '@/lib/utils';
-import { ImagePlus, Download, Copy, AlertCircle, RefreshCw, RotateCw } from 'lucide-react';
+import { ImagePlus, Download, Copy, AlertCircle, RefreshCw, RotateCw, Link2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Loader } from '@/components/ui/loader';
 import { Button } from '@/components/ui/button';
@@ -101,6 +101,17 @@ export function ImageNode({ data, selected, id }: ImageNodeProps & { id: string 
     } catch (error) {
       console.error('Copy failed:', error);
       toast.error('Failed to copy');
+    }
+  };
+
+  const handleCopyUrl = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(imageUrl);
+      toast.success('Image URL copied');
+    } catch (error) {
+      console.error('Copy URL failed:', error);
+      toast.error('Failed to copy URL');
     }
   };
 
@@ -217,6 +228,18 @@ export function ImageNode({ data, selected, id }: ImageNodeProps & { id: string 
                     </button>
                   </TooltipTrigger>
                   <TooltipContent>Copy prompt</TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={handleCopyUrl}
+                      aria-label="Copy image URL"
+                      className="size-8 rounded-md bg-white/90 flex items-center justify-center hover:bg-white transition-colors"
+                    >
+                      <Link2 className="size-4 text-zinc-900" aria-hidden="true" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>Copy URL</TooltipContent>
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>

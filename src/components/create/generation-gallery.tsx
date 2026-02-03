@@ -4,7 +4,7 @@ import * as React from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useCreate, type GeneratedImage } from "./create-context";
-import { Download, Copy, X, ImagePlus, RotateCw, Check, Heart } from "lucide-react";
+import { Download, Copy, X, ImagePlus, RotateCw, Check, Heart, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
@@ -57,6 +57,17 @@ export function GenerationGallery() {
     } catch (error) {
       console.error("Copy failed:", error);
       toast.error("Failed to copy");
+    }
+  };
+
+  const handleCopyUrl = async (e: React.MouseEvent, url: string) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success("Image URL copied");
+    } catch (error) {
+      console.error("Copy URL failed:", error);
+      toast.error("Failed to copy URL");
     }
   };
 
@@ -175,6 +186,7 @@ export function GenerationGallery() {
                   onImageClick={handleImageClick}
                   onDownload={handleDownload}
                   onCopyPrompt={handleCopyPrompt}
+                  onCopyUrl={handleCopyUrl}
                   onUseAsReference={handleUseAsReference}
                   onReuseSetup={handleReuseSetup}
                   onToggleSelection={toggleImageSelection}
@@ -212,6 +224,7 @@ interface GalleryItemProps {
   onImageClick: (image: GeneratedImage) => void;
   onDownload: (url: string, id: string) => void;
   onCopyPrompt: (prompt: string) => void;
+  onCopyUrl: (e: React.MouseEvent, url: string) => void;
   onUseAsReference: (e: React.MouseEvent, url: string) => void;
   onReuseSetup: (e: React.MouseEvent, image: GeneratedImage) => void;
   onToggleSelection: (id: string) => void;
@@ -227,6 +240,7 @@ const GalleryItem = React.memo(function GalleryItem({
   onImageClick,
   onDownload,
   onCopyPrompt,
+  onCopyUrl,
   onUseAsReference,
   onReuseSetup,
   onToggleSelection,
@@ -351,6 +365,15 @@ const GalleryItem = React.memo(function GalleryItem({
               }}
             >
               <Download className="size-4" aria-hidden="true" />
+            </Button>
+            <Button
+              variant="secondary"
+              size="icon"
+              className="size-8 rounded-lg"
+              aria-label="Copy image URL"
+              onClick={(e) => onCopyUrl(e, image.url)}
+            >
+              <Link2 className="size-4" aria-hidden="true" />
             </Button>
             {image.prompt && (
               <Button

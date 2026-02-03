@@ -24,9 +24,10 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 
 interface FlowCanvasProps {
   className?: string;
+  canvasRef?: React.RefObject<HTMLDivElement | null>;
 }
 
-export function FlowCanvas({ className }: FlowCanvasProps) {
+export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
   const {
     nodes,
     edges,
@@ -85,7 +86,7 @@ export function FlowCanvas({ className }: FlowCanvasProps) {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className={cn('h-full w-full', className)}>
+      <div ref={canvasRef} className={cn('h-full w-full', className)}>
         <ReactFlow
           nodes={nodes}
           edges={edges}

@@ -234,6 +234,11 @@ interface CreateContextType {
   imageOrganization: Map<string, { tagIds: string[]; collectionIds: string[] }>;
   loadImageOrganization: (imageId: string) => Promise<void>;
 
+  // Canvas export
+  setCanvasRef: (ref: React.RefObject<HTMLDivElement | null> | null) => void;
+  exportCanvasAsPng: (filename?: string) => Promise<void>;
+  exportCanvasAsJpeg: (filename?: string) => Promise<void>;
+
   // Admin settings (for restricting features)
   adminSettings: AdminCreateSettings | null;
   isMaintenanceMode: boolean;
@@ -391,6 +396,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [nodes, setNodes] = React.useState<Node<ImageNodeData>[]>([]);
   const [edges, setEdges] = React.useState<Edge[]>([]);
   const [viewport, setViewport] = React.useState<CanvasViewport>({ x: 0, y: 0, zoom: 1 });
+
+  // Canvas ref for export functionality
+  const canvasRefHolder = React.useRef<React.RefObject<HTMLDivElement | null> | null>(null);
 
   // Canvas management state
   const [currentCanvasId, setCurrentCanvasId] = React.useState<string | null>(null);
@@ -2510,6 +2518,50 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     }
   }, [imageOrganization]);
 
+  // ============================================
+  // CANVAS EXPORT
+  // ============================================
+
+  const setCanvasRef = React.useCallback((ref: React.RefObject<HTMLDivElement | null> | null) => {
+    canvasRefHolder.current = ref;
+  }, []);
+
+  const exportCanvasAsPng = React.useCallback(async (filename?: string) => {
+    const canvasElement = canvasRefHolder.current?.current;
+    if (!canvasElement) {
+      console.error("Canvas element not available for export");
+      return;
+    }
+
+    try {
+      const { exportCanvasAsPng: exportPng } = await import("@/utils/canvas-export");
+      const canvas = canvasList.find(c => c.id === currentCanvasId);
+      const exportFilename = filename || canvas?.name || "canvas";
+      await exportPng(canvasElement, exportFilename);
+    } catch (error) {
+      console.error("Failed to export canvas as PNG:", error);
+      throw error;
+    }
+  }, [canvasList, currentCanvasId]);
+
+  const exportCanvasAsJpeg = React.useCallback(async (filename?: string) => {
+    const canvasElement = canvasRefHolder.current?.current;
+    if (!canvasElement) {
+      console.error("Canvas element not available for export");
+      return;
+    }
+
+    try {
+      const { exportCanvasAsJpeg: exportJpeg } = await import("@/utils/canvas-export");
+      const canvas = canvasList.find(c => c.id === currentCanvasId);
+      const exportFilename = filename || canvas?.name || "canvas";
+      await exportJpeg(canvasElement, exportFilename);
+    } catch (error) {
+      console.error("Failed to export canvas as JPEG:", error);
+      throw error;
+    }
+  }, [canvasList, currentCanvasId]);
+
   // Load collections and tags on mount
   React.useEffect(() => {
     if (currentUserId) {
@@ -2647,6 +2699,10 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     // Image organization
     imageOrganization,
     loadImageOrganization,
+    // Canvas export
+    setCanvasRef,
+    exportCanvasAsPng,
+    exportCanvasAsJpeg,
     // Admin settings
     adminSettings,
     isMaintenanceMode,
@@ -2672,6 +2728,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     toggleFavorite, collections, createCollectionFn, updateCollectionFn, deleteCollectionFn, addToCollectionFn, removeFromCollectionFn, getImageCollections,
     tags, createTagFn, deleteTagFn, addTagToImageFn, removeTagFromImageFn, createAndAddTagFn, getImageTags,
     imageOrganization, loadImageOrganization,
+    setCanvasRef, exportCanvasAsPng, exportCanvasAsJpeg,
     adminSettings, isMaintenanceMode, allowedImageSizes, allowedAspectRatios, maxOutputCount, allowFastMode, allowRelaxedMode,
   ]);
 
