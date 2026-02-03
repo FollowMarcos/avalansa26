@@ -391,7 +391,7 @@ export async function getGenerationsByCollection(
     return [];
   }
 
-  return (data?.map((item) => item.generations).filter(Boolean) as Generation[]) ?? [];
+  return (data?.map((item) => item.generations).filter(Boolean) as unknown as Generation[]) ?? [];
 }
 
 /**
@@ -412,7 +412,7 @@ export async function getGenerationCollections(
     return [];
   }
 
-  return (data?.map((item) => item.collections).filter(Boolean) as Collection[]) ?? [];
+  return (data?.map((item) => item.collections).filter(Boolean) as unknown as Collection[]) ?? [];
 }
 
 // ============================================
@@ -577,7 +577,7 @@ export async function getGenerationTags(generationId: string): Promise<Tag[]> {
     return [];
   }
 
-  return (data?.map((item) => item.tags).filter(Boolean) as Tag[]) ?? [];
+  return (data?.map((item) => item.tags).filter(Boolean) as unknown as Tag[]) ?? [];
 }
 
 /**
@@ -602,7 +602,7 @@ export async function getGenerationsByTag(
     return [];
   }
 
-  return (data?.map((item) => item.generations).filter(Boolean) as Generation[]) ?? [];
+  return (data?.map((item) => item.generations).filter(Boolean) as unknown as Generation[]) ?? [];
 }
 
 /**
