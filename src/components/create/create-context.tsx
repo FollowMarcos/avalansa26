@@ -1658,13 +1658,14 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     setNodes((nds) => nds.filter((n) => n.id !== nodeId));
     // Also remove any edges connected to this node
     setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
-    // Remove node from any groups it belongs to
+    // Remove node from any groups it belongs to (handle backwards compatibility)
     setGroups((prevGroups) =>
-      prevGroups.map((g) =>
-        g.nodeIds.includes(nodeId)
-          ? { ...g, nodeIds: g.nodeIds.filter((id) => id !== nodeId) }
-          : g
-      )
+      prevGroups.map((g) => {
+        const nodeIds = g.nodeIds || [];
+        return nodeIds.includes(nodeId)
+          ? { ...g, nodeIds: nodeIds.filter((id) => id !== nodeId) }
+          : g;
+      })
     );
     // Clear selection if the deleted node was selected
     setSelectedImage((prev) => {
@@ -1695,7 +1696,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     const group = groups.find((g) => g.id === groupId);
     if (!group) return [];
     // Return stored node IDs, filtering out any that no longer exist
-    return group.nodeIds.filter((nodeId) => nodes.some((n) => n.id === nodeId));
+    // Handle backwards compatibility where nodeIds might be undefined
+    const nodeIds = group.nodeIds || [];
+    return nodeIds.filter((nodeId) => nodes.some((n) => n.id === nodeId));
   }, [groups, nodes]);
 
   // Calculate bounds that encompass selected nodes (uses actual node dimensions)
@@ -1795,8 +1798,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     const group = groups.find((g) => g.id === groupId);
     if (!group) return;
 
-    // Get nodes from stored membership (not dynamic calculation)
-    const nodesInGroup = group.nodeIds;
+    // Get nodes from stored membership (handle backwards compatibility)
+    const nodesInGroup = group.nodeIds || [];
 
     // Update group bounds
     setGroups((prev) =>
@@ -1999,7 +2002,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         // Clean up any stale loading nodes from interrupted generations
         setNodes(cleanupStaleLoadingNodes(canvas.nodes || []));
         setEdges(canvas.edges || []);
-        setGroups(canvas.groups || []);
+        // Migrate groups to ensure nodeIds exists (for backwards compatibility)
+        setGroups((canvas.groups || []).map(g => ({ ...g, nodeIds: g.nodeIds || [] })));
         setSelectedGroupId(null);
         setSelectedNodeIds(new Set());
         setViewport(canvas.viewport || { x: 0, y: 0, zoom: 1 });
@@ -2091,7 +2095,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
             // Clean up any stale loading nodes from interrupted generations
             setNodes(cleanupStaleLoadingNodes(canvasToLoad.nodes || []));
             setEdges(canvasToLoad.edges || []);
-            setGroups(canvasToLoad.groups || []);
+            // Migrate groups to ensure nodeIds exists (for backwards compatibility)
+            setGroups((canvasToLoad.groups || []).map(g => ({ ...g, nodeIds: g.nodeIds || [] })));
             setViewport(canvasToLoad.viewport || { x: 0, y: 0, zoom: 1 });
 
             // Mark all existing nodes as processed to prevent history-to-nodes duplication

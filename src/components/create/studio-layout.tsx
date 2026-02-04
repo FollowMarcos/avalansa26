@@ -10,6 +10,7 @@ import { PromptComposer } from "./prompt-composer";
 import { QuickToolbar } from "./quick-toolbar";
 import { GenerationGallery } from "./generation-gallery";
 import { MaintenanceBanner } from "./maintenance-banner";
+import { HotkeysIsland } from "./hotkeys-island";
 import { motion, useReducedMotion } from "motion/react";
 
 export function StudioLayout() {
@@ -51,6 +52,9 @@ export function StudioLayout() {
 
             {/* Floating History Island (right side) */}
             <HistoryIsland />
+
+            {/* Floating Hotkeys Island (bottom left) */}
+            <HotkeysIsland />
           </div>
         </div>
 

@@ -251,7 +251,7 @@ export const GroupItem = React.memo(function GroupItem({
       {/* Group background */}
       <div
         className={cn(
-          "absolute inset-0 rounded-lg border-2 transition-all duration-150",
+          "absolute inset-0 rounded-lg border-2 transition-[background-color,border-color] duration-150",
           !group.isCollapsed && "overflow-hidden"
         )}
         style={{
@@ -434,7 +434,7 @@ export const GroupItem = React.memo(function GroupItem({
       {/* Selection indicator border (pulsing when selected) */}
       {isSelected && (
         <div
-          className="absolute inset-0 rounded-lg pointer-events-none animate-pulse"
+          className="absolute inset-0 rounded-lg pointer-events-none motion-safe:animate-pulse"
           style={{
             border: `2px solid ${hexToRgba(group.color, 0.5)}`,
             animationDuration: "2s",
