@@ -1608,6 +1608,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
           imageSize: image.settings.imageSize,
           outputCount: image.settings.outputCount,
           generationSpeed: image.settings.generationSpeed,
+          referenceImages: image.settings.referenceImages,
         },
         status: 'success', // Images from history are already completed
       },
