@@ -877,11 +877,18 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   }, [referenceImages.length]);
 
   /**
-   * Reuse a generated image's complete setup (image as reference + prompt + settings)
+   * Reuse a generated image's complete setup (original reference images + prompt + settings)
    */
   const reuseImageSetup = React.useCallback(async (image: GeneratedImage) => {
-    // Add image as reference
-    await addReferenceImageFromUrl(image.url);
+    // Clear existing reference images first
+    clearReferenceImages();
+
+    // Add the original reference images that were used for this generation
+    if (image.settings?.referenceImages && image.settings.referenceImages.length > 0) {
+      for (const ref of image.settings.referenceImages) {
+        await addReferenceImageFromUrl(ref.url);
+      }
+    }
 
     // Set prompt
     setPrompt(image.prompt);
@@ -891,7 +898,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       aspectRatio: image.settings?.aspectRatio || settings.aspectRatio,
       negativePrompt: image.settings?.negativePrompt || '',
     });
-  }, [addReferenceImageFromUrl, setPrompt, updateSettings, settings.aspectRatio]);
+  }, [addReferenceImageFromUrl, clearReferenceImages, setPrompt, updateSettings, settings.aspectRatio]);
 
   /**
    * Load saved reference images from database
