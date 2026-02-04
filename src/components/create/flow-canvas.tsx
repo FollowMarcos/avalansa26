@@ -329,6 +329,37 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
     [updateGroup]
   );
 
+  // Figma-style scroll behavior:
+  // - Regular scroll: vertical pan
+  // - Shift + scroll: horizontal pan
+  // - Ctrl/Cmd + scroll: zoom
+  const handleWheel = React.useCallback(
+    (e: React.WheelEvent) => {
+      const isMod = e.ctrlKey || e.metaKey;
+
+      // Ctrl/Cmd + scroll: zoom (let ReactFlow handle this by default)
+      if (isMod) {
+        return; // ReactFlow handles zoom on Ctrl+scroll
+      }
+
+      // Shift + scroll: horizontal pan
+      if (e.shiftKey) {
+        e.preventDefault();
+        const viewport = getViewport();
+        const delta = e.deltaY;
+        setViewport(
+          { x: viewport.x - delta, y: viewport.y, zoom: viewport.zoom },
+          { duration: 0 }
+        );
+        return;
+      }
+
+      // Regular scroll: vertical pan (ReactFlow default behavior)
+      // No need to handle - ReactFlow does this
+    },
+    [getViewport, setViewport]
+  );
+
   return (
     <TooltipProvider delayDuration={300}>
       <CanvasContextMenu
@@ -349,6 +380,7 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
             className={cn('h-full w-full', className)}
             role="application"
             aria-label="Image canvas. Press V for select, H for hand tool, Space to pan. Use arrow keys to navigate."
+            onWheel={handleWheel}
           >
             <ReactFlow
               nodes={nodes}
@@ -372,6 +404,9 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
               selectionOnDrag={interactionMode === 'select' && !isSpacePressed}
               selectionMode={SelectionMode.Partial}
               multiSelectionKeyCode="Shift"
+              // Enable scroll to pan and zoom
+              panOnScroll
+              zoomOnScroll
               defaultEdgeOptions={{
                 type: 'smoothstep',
                 animated: true,
@@ -380,6 +415,7 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
               className={cn(
                 "bg-transparent",
                 // Change cursor based on interaction mode
+                interactionMode === 'select' && !isSpacePressed && "cursor-default",
                 (interactionMode === 'hand' || isSpacePressed) && "cursor-grab active:cursor-grabbing"
               )}
             >
