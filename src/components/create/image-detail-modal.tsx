@@ -152,15 +152,15 @@ export function ImageDetailModal({
   const handleUseAsReference = async () => {
     await addReferenceImageFromUrl(image.url);
     toast.success("Added as reference");
-    onClose();
     setViewMode("canvas");
+    onClose();
   };
 
   const handleReuseSetup = async () => {
     await reuseImageSetup(image);
     toast.success("Setup restored");
-    onClose();
     setViewMode("canvas");
+    onClose();
   };
 
   const handleDelete = async () => {

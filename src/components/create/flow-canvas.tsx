@@ -8,6 +8,7 @@ import {
   MiniMap,
   useReactFlow,
   type Node,
+  type Viewport,
   BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -34,6 +35,7 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
     selectImageByNodeId,
     snapToGrid,
     gridSize,
+    onViewportChange,
   } = useCreate();
 
   // State for helper lines (alignment guides)
@@ -102,6 +104,18 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
     [selectImageByNodeId]
   );
 
+  // Handle viewport changes (pan/zoom) to track where user is focused
+  const handleMoveEnd = React.useCallback(
+    (_event: MouseEvent | TouchEvent | null, viewport: Viewport) => {
+      onViewportChange({
+        x: viewport.x,
+        y: viewport.y,
+        zoom: viewport.zoom,
+      });
+    },
+    [onViewportChange]
+  );
+
   // Track previous nodes to detect new additions
   const prevNodesRef = React.useRef<Node<ImageNodeData>[]>([]);
 
@@ -148,6 +162,7 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
           onConnect={onConnect}
           onSelectionChange={handleSelectionChange}
           onNodeDragStop={handleNodeDragStop}
+          onMoveEnd={handleMoveEnd}
           nodeTypes={nodeTypes}
           fitView
           fitViewOptions={{ padding: 0.2 }}

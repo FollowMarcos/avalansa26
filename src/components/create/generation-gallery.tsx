@@ -81,6 +81,7 @@ export function GenerationGallery() {
     e.stopPropagation();
     await reuseImageSetup(image);
     toast.success("Setup restored");
+    setViewMode("canvas");
   };
 
   const handleImageClick = (image: GeneratedImage) => {

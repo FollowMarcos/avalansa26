@@ -169,6 +169,9 @@ interface CreateContextType {
   zoom: number;
   setZoom: (zoom: number) => void;
 
+  // Viewport tracking (for placing nodes where user is looking)
+  onViewportChange: (viewport: CanvasViewport) => void;
+
   // Canvas layout
   snapToGrid: boolean;
   setSnapToGrid: (enabled: boolean) => void;
@@ -410,6 +413,12 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [nodes, setNodes] = React.useState<Node<ImageNodeData>[]>([]);
   const [edges, setEdges] = React.useState<Edge[]>([]);
   const [viewport, setViewport] = React.useState<CanvasViewport>({ x: 0, y: 0, zoom: 1 });
+
+  // Callback for FlowCanvas to report viewport changes (pan/zoom)
+  const onViewportChange = React.useCallback((newViewport: CanvasViewport) => {
+    setViewport(newViewport);
+    setHasUnsavedChanges(true);
+  }, []);
 
   // Canvas ref for export functionality
   const canvasRefHolder = React.useRef<React.RefObject<HTMLDivElement | null> | null>(null);
@@ -2699,6 +2708,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     setActiveTab,
     zoom,
     setZoom,
+    onViewportChange,
     // Canvas layout
     snapToGrid,
     setSnapToGrid,
