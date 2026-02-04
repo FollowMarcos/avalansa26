@@ -21,6 +21,7 @@ import {
   Tags,
   FolderOpen,
   Link2,
+  Images,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -277,8 +278,8 @@ export function ImageDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90vh] p-0 gap-0 overflow-hidden overscroll-contain">
-        <div className="flex flex-col md:flex-row h-full max-h-[90vh]">
+      <DialogContent className="max-w-4xl max-h-[90dvh] p-0 gap-0 overflow-hidden overscroll-contain">
+        <div className="flex flex-col md:flex-row h-full max-h-[90dvh]">
           {/* Image Section */}
           <div className="relative flex-1 min-h-[300px] md:min-h-0 bg-muted flex items-center justify-center group">
             <Image
@@ -336,7 +337,7 @@ export function ImageDetailModal({
                 {/* Prompt */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+                    <span className="text-xs font-mono text-muted-foreground uppercase">
                       Prompt
                     </span>
                     <Button
@@ -367,7 +368,7 @@ export function ImageDetailModal({
                 {/* Negative Prompt */}
                 {image.settings.negativePrompt && (
                   <div className="space-y-2">
-                    <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+                    <span className="text-xs font-mono text-muted-foreground uppercase">
                       Negative Prompt
                     </span>
                     <p className="text-sm text-muted-foreground leading-relaxed break-words">
@@ -376,11 +377,46 @@ export function ImageDetailModal({
                   </div>
                 )}
 
+                {/* Reference Images */}
+                {image.settings.referenceImages && image.settings.referenceImages.length > 0 && (
+                  <>
+                    <Separator />
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Images className="size-4 text-muted-foreground" aria-hidden="true" />
+                        <span className="text-xs font-mono text-muted-foreground uppercase">
+                          Reference Images ({image.settings.referenceImages.length})
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {image.settings.referenceImages.map((ref, index) => (
+                          <a
+                            key={ref.storagePath || index}
+                            href={ref.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="relative aspect-square rounded-md overflow-hidden border border-border hover:border-primary transition-colors group"
+                          >
+                            <Image
+                              src={ref.url}
+                              alt={`Reference image ${index + 1}`}
+                              fill
+                              className="object-cover"
+                              unoptimized
+                            />
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+
                 <Separator />
 
                 {/* Favorite */}
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+                  <span className="text-xs font-mono text-muted-foreground uppercase">
                     Favorite
                   </span>
                   <Button
@@ -406,7 +442,7 @@ export function ImageDetailModal({
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Tags className="size-4 text-muted-foreground" aria-hidden="true" />
-                    <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+                    <span className="text-xs font-mono text-muted-foreground uppercase">
                       Tags
                     </span>
                   </div>
@@ -419,7 +455,7 @@ export function ImageDetailModal({
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <FolderOpen className="size-4 text-muted-foreground" aria-hidden="true" />
-                    <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+                    <span className="text-xs font-mono text-muted-foreground uppercase">
                       Collections
                     </span>
                   </div>
@@ -430,7 +466,7 @@ export function ImageDetailModal({
 
                 {/* Metadata */}
                 <div className="space-y-3">
-                  <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+                  <span className="text-xs font-mono text-muted-foreground uppercase">
                     Details
                   </span>
 
@@ -494,7 +530,7 @@ export function ImageDetailModal({
 
                 {/* Actions */}
                 <div className="space-y-2">
-                  <span className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+                  <span className="text-xs font-mono text-muted-foreground uppercase">
                     Actions
                   </span>
 

@@ -9,7 +9,7 @@ import type {
   BatchJobResult,
 } from '@/types/batch-job';
 import { getDecryptedApiKey, getApiConfig } from './api-configs.server';
-import { getImagesAsBase64 } from './storage.server';
+import { getImagesAsBase64, getReferenceImageUrls } from './storage.server';
 import { saveGeneration } from './generations.server';
 
 /**
@@ -309,6 +309,11 @@ async function processGeminiBatchInBackground(
                 imageBase64: part.inlineData.data,
               });
 
+              // Get reference image URLs if any were used
+              const referenceImageInfo = req.referenceImagePaths && req.referenceImagePaths.length > 0
+                ? await getReferenceImageUrls(req.referenceImagePaths)
+                : [];
+
               // Save to user's generation history
               await saveGeneration({
                 user_id: batchJob.user_id,
@@ -320,6 +325,7 @@ async function processGeminiBatchInBackground(
                   aspectRatio: req.aspectRatio,
                   imageSize: req.imageSize,
                   generationSpeed: 'relaxed',
+                  referenceImages: referenceImageInfo.length > 0 ? referenceImageInfo : undefined,
                 },
               });
 

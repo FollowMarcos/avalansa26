@@ -46,6 +46,23 @@ export async function getImagesAsBase64(paths: string[]): Promise<string[]> {
 }
 
 /**
+ * Get public URLs for reference images from storage paths
+ */
+export async function getReferenceImageUrls(paths: string[]): Promise<{ url: string; storagePath: string }[]> {
+  if (paths.length === 0) return [];
+
+  const supabase = await createClient();
+
+  return paths.map((path) => {
+    const { data: { publicUrl } } = supabase.storage
+      .from(BUCKET_NAME)
+      .getPublicUrl(path);
+
+    return { url: publicUrl, storagePath: path };
+  });
+}
+
+/**
  * Delete reference images (cleanup after generation)
  */
 export async function deleteReferenceImagesServer(paths: string[]): Promise<void> {

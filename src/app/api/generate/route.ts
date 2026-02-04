@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { getDecryptedApiKey, getApiConfig } from '@/utils/supabase/api-configs.server';
 import { createBatchJob, submitGeminiBatchJob } from '@/utils/supabase/batch-jobs.server';
-import { getImagesAsBase64, uploadGeneratedImage } from '@/utils/supabase/storage.server';
+import { getImagesAsBase64, uploadGeneratedImage, getReferenceImageUrls } from '@/utils/supabase/storage.server';
 import { saveGeneration } from '@/utils/supabase/generations.server';
 import { getOrCreateSession, createNamedSession } from '@/utils/supabase/sessions.server';
 import type { BatchJobRequest } from '@/types/batch-job';
@@ -265,6 +265,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
       // Continue without session - generations will be unsessioned
     }
 
+    // Get public URLs for reference images to store with generation
+    const referenceImageInfo = referenceImagePaths && referenceImagePaths.length > 0
+      ? await getReferenceImageUrls(referenceImagePaths)
+      : [];
+
     // Upload base64 images to storage and get public URLs
     const processedImages: GeneratedImage[] = [];
     for (const image of images) {
@@ -303,6 +308,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
           imageSize,
           outputCount,
           generationSpeed: mode,
+          referenceImages: referenceImageInfo.length > 0 ? referenceImageInfo : undefined,
         },
       });
     }

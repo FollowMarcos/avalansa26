@@ -4,12 +4,18 @@
  * Types for storing user's generated images history
  */
 
+export interface ReferenceImageInfo {
+  url: string;
+  storagePath?: string;
+}
+
 export interface GenerationSettings {
   aspectRatio?: string;
   imageSize?: string;
   outputCount?: number;
   generationSpeed?: string;
   model?: string;
+  referenceImages?: ReferenceImageInfo[];
 }
 
 export interface Generation {

@@ -81,6 +81,11 @@ export interface ThinkingStep {
   completed: boolean;
 }
 
+export interface ReferenceImageInfo {
+  url: string;
+  storagePath?: string;
+}
+
 export interface CreateSettings {
   model: ModelId;
   imageSize: ImageSize;
@@ -89,6 +94,7 @@ export interface CreateSettings {
   generationSpeed: GenerationSpeed;
   styleStrength: number;
   negativePrompt: string;
+  referenceImages?: ReferenceImageInfo[];
 }
 
 interface CreateContextType {
@@ -596,6 +602,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
           generationSpeed: (gen.settings.generationSpeed as GenerationSpeed) || "fast",
           styleStrength: 75,
           negativePrompt: gen.negative_prompt || "",
+          referenceImages: gen.settings.referenceImages,
         },
       }));
 
