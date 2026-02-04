@@ -377,7 +377,7 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
         <ContextMenuTrigger asChild>
           <div
             ref={canvasRef}
-            className={cn('h-full w-full', className)}
+            className={cn('h-full w-full relative', className)}
             role="application"
             aria-label="Image canvas. Press V for select, H for hand tool, Space to pan. Use arrow keys to navigate."
             onWheel={handleWheel}
@@ -419,16 +419,6 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
                 (interactionMode === 'hand' || isSpacePressed) && "[&_.react-flow__pane]:cursor-grab [&_.react-flow__pane]:active:cursor-grabbing"
               )}
             >
-              {/* Group layer (rendered behind nodes) */}
-              <GroupLayer
-                groups={groups}
-                selectedGroupId={selectedGroupId}
-                onSelectGroup={selectGroup}
-                onMoveGroup={moveGroup}
-                onResizeGroup={handleGroupResize}
-                onUpdateGroup={updateGroup}
-                onToggleGroupCollapse={toggleGroupCollapse}
-              />
               {/* Helper lines for alignment guides */}
               <HelperLines
                 horizontal={helperLineHorizontal}
@@ -459,6 +449,16 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
                 zoomable
               />
             </ReactFlow>
+            {/* Group layer - rendered OUTSIDE ReactFlow to receive mouse events */}
+            <GroupLayer
+              groups={groups}
+              selectedGroupId={selectedGroupId}
+              onSelectGroup={selectGroup}
+              onMoveGroup={moveGroup}
+              onResizeGroup={handleGroupResize}
+              onUpdateGroup={updateGroup}
+              onToggleGroupCollapse={toggleGroupCollapse}
+            />
           </div>
         </ContextMenuTrigger>
       </CanvasContextMenu>

@@ -74,13 +74,17 @@ export const GroupLayer = React.memo(function GroupLayer({
     [toScreen, transform.zoom]
   );
 
-  // Handle mouse down on a group (start drag or resize)
+  // Handle mouse down on a group (select, start drag, or resize)
   const handleMouseDown = React.useCallback(
-    (groupId: string, e: React.MouseEvent, action: "move" | "resize", handle?: string) => {
+    (groupId: string, e: React.MouseEvent, action: "move" | "resize" | "select", handle?: string) => {
       const group = groups.find((g) => g.id === groupId);
       if (!group) return;
 
       onSelectGroup(groupId);
+
+      // If just selecting (clicked on background), don't start drag
+      if (action === "select") return;
+
       setDragState({
         groupId,
         action,
@@ -161,23 +165,13 @@ export const GroupLayer = React.memo(function GroupLayer({
     };
   }, [dragState, transform.zoom, onMoveGroup, onResizeGroup]);
 
-  // Handle click on a group
-  const handleClick = React.useCallback(
-    (groupId: string, e: React.MouseEvent) => {
-      e.stopPropagation();
-      onSelectGroup(groupId);
-    },
-    [onSelectGroup]
-  );
-
   if (groups.length === 0) {
     return null;
   }
 
   return (
     <div
-      className="absolute inset-0 pointer-events-none"
-      style={{ zIndex: 0 }}
+      className="absolute inset-0 pointer-events-none z-10"
       aria-label="Node groups layer"
     >
       {groups.map((group) => {
@@ -196,7 +190,6 @@ export const GroupLayer = React.memo(function GroupLayer({
             onTitleChange={(title) => onUpdateGroup(group.id, { title })}
             onToggleCollapse={() => onToggleGroupCollapse(group.id)}
             onMouseDown={(e, action, handle) => handleMouseDown(group.id, e, action, handle)}
-            onClick={(e) => handleClick(group.id, e)}
           />
         );
       })}

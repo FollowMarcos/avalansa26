@@ -15,8 +15,7 @@ interface GroupItemProps {
   zoom: number;
   onTitleChange: (title: string) => void;
   onToggleCollapse: () => void;
-  onMouseDown: (e: React.MouseEvent, action: "move" | "resize", handle?: string) => void;
-  onClick: (e: React.MouseEvent) => void;
+  onMouseDown: (e: React.MouseEvent, action: "move" | "resize" | "select", handle?: string) => void;
 }
 
 /**
@@ -33,7 +32,6 @@ export const GroupItem = React.memo(function GroupItem({
   onTitleChange,
   onToggleCollapse,
   onMouseDown,
-  onClick,
 }: GroupItemProps) {
   const [isEditing, setIsEditing] = React.useState(false);
   const [editValue, setEditValue] = React.useState(group.title);
@@ -85,16 +83,25 @@ export const GroupItem = React.memo(function GroupItem({
     }
   };
 
-  const handleMoveStart = (e: React.MouseEvent) => {
+  // Handle mousedown on the group background - just selects
+  const handleBackgroundMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return; // Only left click
+    e.stopPropagation();
+    onMouseDown(e, "select");
+  };
+
+  // Handle mousedown on title bar - selects and starts drag
+  const handleTitleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return; // Only left click
     if (isEditing) return;
     e.stopPropagation();
-    e.preventDefault();
     onMouseDown(e, "move");
   };
 
-  const handleResizeStart = (handle: string) => (e: React.MouseEvent) => {
+  // Handle resize handle mousedown
+  const handleResizeMouseDown = (handle: string) => (e: React.MouseEvent) => {
+    if (e.button !== 0) return; // Only left click
     e.stopPropagation();
-    e.preventDefault();
     onMouseDown(e, "resize", handle);
   };
 
@@ -119,7 +126,7 @@ export const GroupItem = React.memo(function GroupItem({
       role="region"
       aria-label={`Group: ${group.title}`}
       className={cn(
-        "absolute pointer-events-auto",
+        "absolute",
         isSelected || isDragging || isResizing ? "z-10" : "z-0"
       )}
       style={{
@@ -131,19 +138,19 @@ export const GroupItem = React.memo(function GroupItem({
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      onClick={onClick}
     >
-      {/* Background */}
+      {/* Background - captures clicks for selection */}
       <div
-        className="absolute inset-0 rounded-lg border-2"
+        className="absolute inset-0 rounded-lg border-2 cursor-pointer"
         style={{
           backgroundColor: hexToRgba(group.color, isHovered || isSelected ? 0.15 : 0.08),
           borderColor: hexToRgba(group.color, isSelected ? 0.9 : isHovered ? 0.6 : 0.35),
           borderStyle: isSelected ? "solid" : "dashed",
         }}
+        onMouseDown={handleBackgroundMouseDown}
       />
 
-      {/* Title bar */}
+      {/* Title bar - captures clicks for drag */}
       <div
         className={cn(
           "absolute top-0 left-0 right-0 flex items-center gap-2 px-3 rounded-t-lg",
@@ -154,7 +161,7 @@ export const GroupItem = React.memo(function GroupItem({
           height: titleHeight,
           backgroundColor: hexToRgba(group.color, isHovered || isSelected ? 0.35 : 0.2),
         }}
-        onMouseDown={handleMoveStart}
+        onMouseDown={handleTitleMouseDown}
         onMouseEnter={() => setIsTitleHovered(true)}
         onMouseLeave={() => setIsTitleHovered(false)}
         onDoubleClick={startEditing}
@@ -229,14 +236,15 @@ export const GroupItem = React.memo(function GroupItem({
         handles.map(({ id, style }) => (
           <div
             key={id}
-            className="absolute bg-white border-2 rounded-sm z-20 hover:scale-110"
+            className="absolute bg-white border-2 rounded-sm z-20 hover:scale-110 cursor-pointer"
             style={{
               ...style,
               width: handleSize,
               height: handleSize,
               borderColor: group.color,
+              cursor: style.cursor,
             }}
-            onMouseDown={handleResizeStart(id)}
+            onMouseDown={handleResizeMouseDown(id)}
           />
         ))}
 
