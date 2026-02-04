@@ -88,7 +88,7 @@ export function HotkeysIsland() {
   }, []);
 
   return (
-    <div className="fixed bottom-4 left-4 z-[100] pointer-events-auto">
+    <div className="fixed bottom-4 right-4 z-[100] pointer-events-auto">
       <div
         className={cn(
           "bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-lg",

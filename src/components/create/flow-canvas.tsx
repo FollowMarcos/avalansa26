@@ -4,7 +4,6 @@ import * as React from 'react';
 import {
   ReactFlow,
   Background,
-  Controls,
   MiniMap,
   useReactFlow,
   type Node,
@@ -441,21 +440,15 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
                 size={snapToGrid ? 1 : 1}
                 className={cn("opacity-30", snapToGrid && "opacity-50")}
               />
-              <Controls
-                showZoom
-                showFitView
-                showInteractive={false}
-                position="bottom-left"
-                style={{ left: '5rem' }}
-                className="!bg-background/95 !backdrop-blur-xl !border-border !shadow-lg !rounded-xl !mb-4 [&>button]:!bg-transparent [&>button]:!border-0 [&>button]:!rounded-lg [&>button:hover]:!bg-muted [&>button]:!w-9 [&>button]:!h-9 [&>button]:!cursor-pointer [&>button]:transition-colors [&>button>svg]:!fill-foreground [&>button>svg]:!max-w-4 [&>button>svg]:!max-h-4"
-              />
               <MiniMap
                 nodeColor={(node) => {
                   if (node.selected) return 'hsl(var(--primary))';
                   return 'hsl(var(--muted-foreground))';
                 }}
                 maskColor="hsl(var(--background) / 0.8)"
-                className="!bg-background !border-border"
+                className="!bg-background !border-border !rounded-xl !shadow-lg"
+                position="bottom-left"
+                style={{ left: '1rem', bottom: '1rem' }}
                 pannable
                 zoomable
               />

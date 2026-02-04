@@ -115,7 +115,7 @@ export function CanvasList() {
       </AlertDialogContent>
     </AlertDialog>
     <TooltipProvider delayDuration={300}>
-      <div className="absolute top-4 left-20 z-20">
+      <div className="absolute top-4 left-4 z-20">
         <AnimatePresence initial={false} mode="wait">
           {isOpen ? (
             <motion.div
