@@ -52,13 +52,19 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
     selectGroup,
     selectNodes,
     clearNodeSelection,
+    // Interaction mode
+    interactionMode,
+    setInteractionMode,
   } = useCreate();
 
   // State for helper lines (alignment guides)
   const [helperLineHorizontal, setHelperLineHorizontal] = React.useState<number | undefined>(undefined);
   const [helperLineVertical, setHelperLineVertical] = React.useState<number | undefined>(undefined);
 
-  const { setCenter, getZoom } = useReactFlow();
+  // State for temporary hand tool (Space key held)
+  const [isSpacePressed, setIsSpacePressed] = React.useState(false);
+
+  const { setCenter, getZoom, zoomIn, zoomOut, fitView, setViewport, getViewport } = useReactFlow();
 
   // Calculate helper lines when a node is being dragged
   const customOnNodesChange: typeof onNodesChange = React.useCallback(
@@ -131,20 +137,142 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
     [selectImageByNodeId, selectNodes, clearNodeSelection, selectGroup]
   );
 
-  // Keyboard shortcut: Ctrl+G to create group
+  // Figma-style keyboard shortcuts for tools, zoom, and navigation
   React.useEffect(() => {
+    const PAN_STEP = 50; // Pixels to pan per arrow key press
+    const PAN_STEP_SHIFT = 200; // Larger step when holding Shift
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'g') {
+      // Don't trigger shortcuts when typing in inputs
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+
+      const isMod = e.ctrlKey || e.metaKey;
+
+      // === ZOOM CONTROLS (Figma-style) ===
+
+      // Ctrl/Cmd + Plus/Equal: Zoom in
+      if (isMod && (e.key === '+' || e.key === '=')) {
+        e.preventDefault();
+        zoomIn({ duration: 200 });
+        return;
+      }
+
+      // Ctrl/Cmd + Minus: Zoom out
+      if (isMod && e.key === '-') {
+        e.preventDefault();
+        zoomOut({ duration: 200 });
+        return;
+      }
+
+      // Ctrl/Cmd + 0: Zoom to 100%
+      if (isMod && e.key === '0') {
+        e.preventDefault();
+        const viewport = getViewport();
+        setViewport({ x: viewport.x, y: viewport.y, zoom: 1 }, { duration: 200 });
+        return;
+      }
+
+      // Ctrl/Cmd + 1: Fit view (zoom to fit all)
+      if (isMod && e.key === '1') {
+        e.preventDefault();
+        fitView({ padding: 0.2, duration: 300 });
+        return;
+      }
+
+      // Ctrl/Cmd + 2: Zoom to selection
+      if (isMod && e.key === '2') {
+        e.preventDefault();
+        if (selectedNodeIds.size > 0) {
+          const selectedNodes = nodes.filter(n => selectedNodeIds.has(n.id));
+          if (selectedNodes.length > 0) {
+            fitView({ nodes: selectedNodes, padding: 0.5, duration: 300 });
+          }
+        }
+        return;
+      }
+
+      // === TOOL SHORTCUTS ===
+
+      // Ctrl+G: Create group from selected nodes
+      if (isMod && e.key === 'g') {
         e.preventDefault();
         if (selectedNodeIds.size >= 2) {
           createGroup(Array.from(selectedNodeIds));
         }
+        return;
+      }
+
+      // V: Switch to select/move tool (Figma-style)
+      if (e.key === 'v' || e.key === 'V') {
+        e.preventDefault();
+        setInteractionMode('select');
+        return;
+      }
+
+      // H: Switch to hand/pan tool (Figma-style)
+      if (e.key === 'h' || e.key === 'H') {
+        e.preventDefault();
+        setInteractionMode('hand');
+        return;
+      }
+
+      // Space: Temporary hand tool (hold to pan)
+      if (e.key === ' ' && !e.repeat) {
+        e.preventDefault();
+        setIsSpacePressed(true);
+        return;
+      }
+
+      // === ARROW KEY PANNING (Figma-style) ===
+      // Only pan when no nodes are selected (otherwise arrows move nodes)
+      if (selectedNodeIds.size === 0 && !isMod) {
+        const step = e.shiftKey ? PAN_STEP_SHIFT : PAN_STEP;
+        const viewport = getViewport();
+        let newX = viewport.x;
+        let newY = viewport.y;
+
+        switch (e.key) {
+          case 'ArrowUp':
+            e.preventDefault();
+            newY += step;
+            break;
+          case 'ArrowDown':
+            e.preventDefault();
+            newY -= step;
+            break;
+          case 'ArrowLeft':
+            e.preventDefault();
+            newX += step;
+            break;
+          case 'ArrowRight':
+            e.preventDefault();
+            newX -= step;
+            break;
+          default:
+            return;
+        }
+
+        setViewport({ x: newX, y: newY, zoom: viewport.zoom }, { duration: 100 });
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      // Release Space: Return to previous mode
+      if (e.key === ' ') {
+        setIsSpacePressed(false);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedNodeIds, createGroup]);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [selectedNodeIds, nodes, createGroup, setInteractionMode, zoomIn, zoomOut, fitView, setViewport, getViewport]);
 
   // Handle viewport changes (pan/zoom) to track where user is focused
   const handleMoveEnd = React.useCallback(
@@ -220,7 +348,7 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
             ref={canvasRef}
             className={cn('h-full w-full', className)}
             role="application"
-            aria-label="Image generation canvas - use mouse to pan and zoom, Shift+click to multi-select nodes"
+            aria-label="Image canvas. Press V for select, H for hand tool, Space to pan. Use arrow keys to navigate."
           >
             <ReactFlow
               nodes={nodes}
@@ -238,7 +366,10 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
               maxZoom={2}
               snapToGrid={snapToGrid}
               snapGrid={[gridSize, gridSize]}
-              selectionOnDrag
+              // Figma-style interaction: pan with hand tool or space held
+              panOnDrag={interactionMode === 'hand' || isSpacePressed}
+              // Selection drag only in select mode when space not held
+              selectionOnDrag={interactionMode === 'select' && !isSpacePressed}
               selectionMode={SelectionMode.Partial}
               multiSelectionKeyCode="Shift"
               defaultEdgeOptions={{
@@ -246,7 +377,11 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
                 animated: true,
               }}
               proOptions={{ hideAttribution: true }}
-              className="bg-transparent"
+              className={cn(
+                "bg-transparent",
+                // Change cursor based on interaction mode
+                (interactionMode === 'hand' || isSpacePressed) && "cursor-grab active:cursor-grabbing"
+              )}
             >
               {/* Group layer (rendered behind nodes) */}
               <GroupLayer

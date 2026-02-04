@@ -32,6 +32,9 @@ export type AspectRatio =
 export type GenerationSpeed = "fast" | "relaxed";
 export type ModelId = "nano-banana-pro";
 
+// Canvas interaction modes (Figma-style)
+export type InteractionMode = "select" | "hand";
+
 // Gallery filter types
 export type GallerySortOption = "newest" | "oldest" | "prompt-asc" | "prompt-desc";
 
@@ -192,6 +195,10 @@ interface CreateContextType {
   setSnapToGrid: (enabled: boolean) => void;
   autoLayoutNodes: () => void;
   gridSize: number;
+
+  // Interaction mode (Figma-style: V for select, H for hand/pan)
+  interactionMode: InteractionMode;
+  setInteractionMode: (mode: InteractionMode) => void;
 
   // Undo/Redo
   canUndo: boolean;
@@ -413,6 +420,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [zoom, setZoom] = React.useState(100);
   const [snapToGrid, setSnapToGrid] = React.useState(false);
   const GRID_SIZE = 20; // Grid size in pixels for snap-to-grid
+  const [interactionMode, setInteractionMode] = React.useState<InteractionMode>("select");
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [thinkingSteps, setThinkingSteps] = React.useState<ThinkingStep[]>([]);
   const [historyIndex, setHistoryIndex] = React.useState(-1);
@@ -2928,6 +2936,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     setSnapToGrid,
     autoLayoutNodes,
     gridSize: GRID_SIZE,
+    // Interaction mode
+    interactionMode,
+    setInteractionMode,
     canUndo,
     canRedo,
     undo,
@@ -3003,7 +3014,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     nodes, edges, onNodesChange, onEdgesChange, onConnect, addImageNode, deleteNode, selectImageByNodeId,
     groups, selectedGroupId, selectedNodeIds, createGroup, deleteGroup, updateGroup, moveGroup, toggleGroupCollapse, selectGroup, toggleNodeSelection, selectNodes, clearNodeSelection, getNodesInGroup,
     currentCanvasId, canvasList, isSaving, lastSaved, createNewCanvas, switchCanvas, renameCanvas, deleteCanvasById,
-    viewMode, historyPanelOpen, isInputVisible, activeTab, zoom, snapToGrid, autoLayoutNodes, canUndo, canRedo,
+    viewMode, historyPanelOpen, isInputVisible, activeTab, zoom, snapToGrid, interactionMode, autoLayoutNodes, canUndo, canRedo,
     isGenerating, thinkingSteps, activeGenerations, hasAvailableSlots, retryGeneration, updateNodeData,
     currentSessionId, currentSessionName, sessions, historyGroupedBySession,
     updateSettings, addReferenceImages, addReferenceImageFromUrl, removeReferenceImage, clearReferenceImages,

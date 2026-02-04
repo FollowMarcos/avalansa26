@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { cn } from "@/lib/utils";
 import { useCreate } from "./create-context";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,10 @@ import {
   Grid3X3,
   Magnet,
   Group,
+  MousePointer2,
+  Hand,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -25,6 +30,8 @@ import {
 } from "@/components/ui/tooltip";
 import { useReactFlow } from "@xyflow/react";
 import { ExportMenu } from "./export-menu";
+
+const TOOLBAR_COLLAPSED_KEY = "canvas-toolbar-collapsed";
 
 export function QuickToolbar() {
   const {
@@ -41,10 +48,27 @@ export function QuickToolbar() {
     autoLayoutNodes,
     selectedNodeIds,
     createGroup,
+    interactionMode,
+    setInteractionMode,
   } = useCreate();
 
   const { zoomIn, zoomOut, fitView, getZoom } = useReactFlow();
   const currentZoom = Math.round(getZoom() * 100);
+
+  // Collapsed state with localStorage persistence
+  const [isCollapsed, setIsCollapsed] = React.useState(() => {
+    if (typeof window === "undefined") return false;
+    const saved = localStorage.getItem(TOOLBAR_COLLAPSED_KEY);
+    return saved === "true";
+  });
+
+  const toggleCollapsed = React.useCallback(() => {
+    setIsCollapsed((prev) => {
+      const newValue = !prev;
+      localStorage.setItem(TOOLBAR_COLLAPSED_KEY, String(newValue));
+      return newValue;
+    });
+  }, []);
 
   const handleZoomIn = () => zoomIn({ duration: 200 });
   const handleZoomOut = () => zoomOut({ duration: 200 });
@@ -86,7 +110,85 @@ export function QuickToolbar() {
   return (
     <TooltipProvider delayDuration={300}>
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
-        <div className="flex items-center gap-1 px-2 py-1.5 rounded-xl bg-background border border-border shadow-sm">
+        <div
+          className={cn(
+            "flex items-center gap-1 rounded-xl bg-background border border-border shadow-sm transition-all duration-200 ease-out",
+            isCollapsed ? "px-1.5 py-1.5" : "px-2 py-1.5"
+          )}
+        >
+          {/* Collapse/Expand Toggle */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleCollapsed}
+                aria-label={isCollapsed ? "Expand toolbar" : "Collapse toolbar"}
+                aria-expanded={!isCollapsed}
+                className="size-8 rounded-lg"
+              >
+                {isCollapsed ? (
+                  <ChevronDown className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                ) : (
+                  <ChevronUp className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{isCollapsed ? "Expand Toolbar" : "Collapse Toolbar"}</TooltipContent>
+          </Tooltip>
+
+          {/* Collapsible content */}
+          <div
+            className={cn(
+              "flex items-center gap-1 overflow-hidden transition-all duration-200 ease-out",
+              isCollapsed ? "max-w-0 opacity-0" : "max-w-[800px] opacity-100"
+            )}
+          >
+            <div className="w-px h-5 bg-border mx-1" />
+
+            {/* Tool Switcher (Figma-style) */}
+            <div className="flex items-center" role="group" aria-label="Interaction tools">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setInteractionMode("select")}
+                  aria-label="Select tool (V)"
+                  aria-pressed={interactionMode === "select"}
+                  className={cn(
+                    "size-8 rounded-lg",
+                    interactionMode === "select" && "bg-muted"
+                  )}
+                >
+                  <MousePointer2 className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Select Tool (V)</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setInteractionMode("hand")}
+                  aria-label="Hand tool (H)"
+                  aria-pressed={interactionMode === "hand"}
+                  className={cn(
+                    "size-8 rounded-lg",
+                    interactionMode === "hand" && "bg-muted"
+                  )}
+                >
+                  <Hand className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Hand Tool (H) – Hold Space for temporary</TooltipContent>
+            </Tooltip>
+          </div>
+
+          <div className="w-px h-5 bg-border mx-1" />
+
           {/* Undo/Redo */}
           <div className="flex items-center">
             <Tooltip>
@@ -146,7 +248,7 @@ export function QuickToolbar() {
               onClick={handleFitView}
               disabled={nodes.length === 0}
               aria-label={`Current zoom ${currentZoom}%, click to fit view`}
-              className="px-2 py-1 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors min-w-[3rem] text-center disabled:opacity-50 rounded focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+              className="px-2 py-1 min-h-[32px] text-xs font-mono text-muted-foreground hover:text-foreground transition-color min-w-[3rem] text-center disabled:opacity-50 rounded focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
             >
               {currentZoom}%
             </button>
@@ -312,6 +414,7 @@ export function QuickToolbar() {
           </Tooltip>
 
           <ExportMenu className="size-8 rounded-lg" />
+          </div>
         </div>
       </div>
     </TooltipProvider>
