@@ -169,6 +169,12 @@ interface CreateContextType {
   zoom: number;
   setZoom: (zoom: number) => void;
 
+  // Canvas layout
+  snapToGrid: boolean;
+  setSnapToGrid: (enabled: boolean) => void;
+  autoLayoutNodes: () => void;
+  gridSize: number;
+
   // Undo/Redo
   canUndo: boolean;
   canRedo: boolean;
@@ -386,6 +392,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [isInputVisible, setIsInputVisible] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState("create");
   const [zoom, setZoom] = React.useState(100);
+  const [snapToGrid, setSnapToGrid] = React.useState(false);
+  const GRID_SIZE = 20; // Grid size in pixels for snap-to-grid
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [thinkingSteps, setThinkingSteps] = React.useState<ThinkingStep[]>([]);
   const [historyIndex, setHistoryIndex] = React.useState(-1);
@@ -1635,6 +1643,40 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     }
   }, [nodes, history]);
 
+  // Auto-layout nodes in a grid pattern
+  const autoLayoutNodes = React.useCallback(() => {
+    if (nodes.length === 0) return;
+
+    const COLS = 4;
+    const SPACING_X = 300;
+    const SPACING_Y = 380;
+    const OFFSET_X = 50;
+    const OFFSET_Y = 50;
+
+    // Sort nodes by creation time (using timestamp in data) for consistent ordering
+    const sortedNodes = [...nodes].sort((a, b) => {
+      const timeA = a.data.timestamp || 0;
+      const timeB = b.data.timestamp || 0;
+      return timeA - timeB;
+    });
+
+    // Calculate new positions in a grid
+    const updatedNodes = sortedNodes.map((node, index) => {
+      const row = Math.floor(index / COLS);
+      const col = index % COLS;
+      return {
+        ...node,
+        position: {
+          x: col * SPACING_X + OFFSET_X,
+          y: row * SPACING_Y + OFFSET_Y,
+        },
+      };
+    });
+
+    setNodes(updatedNodes);
+    setHasUnsavedChanges(true);
+  }, [nodes]);
+
   // Auto-save canvas with debounce
   const autoSaveCanvas = React.useCallback(async () => {
     if (!currentCanvasId || !hasUnsavedChanges) return;
@@ -2656,6 +2698,11 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     setActiveTab,
     zoom,
     setZoom,
+    // Canvas layout
+    snapToGrid,
+    setSnapToGrid,
+    autoLayoutNodes,
+    gridSize: GRID_SIZE,
     canUndo,
     canRedo,
     undo,
@@ -2730,7 +2777,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     prompt, isPromptExpanded, settings, referenceImages, history, selectedImage,
     nodes, edges, onNodesChange, onEdgesChange, onConnect, addImageNode, deleteNode, selectImageByNodeId,
     currentCanvasId, canvasList, isSaving, lastSaved, createNewCanvas, switchCanvas, renameCanvas, deleteCanvasById,
-    viewMode, historyPanelOpen, isInputVisible, activeTab, zoom, canUndo, canRedo,
+    viewMode, historyPanelOpen, isInputVisible, activeTab, zoom, snapToGrid, autoLayoutNodes, canUndo, canRedo,
     isGenerating, thinkingSteps, activeGenerations, hasAvailableSlots, retryGeneration, updateNodeData,
     currentSessionId, currentSessionName, sessions, historyGroupedBySession,
     updateSettings, addReferenceImages, addReferenceImageFromUrl, removeReferenceImage, clearReferenceImages,

@@ -12,6 +12,8 @@ import {
   LayoutGrid,
   Square,
   Maximize2,
+  Grid3X3,
+  Magnet,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -33,6 +35,9 @@ export function QuickToolbar() {
     setViewMode,
     selectedImage,
     nodes,
+    snapToGrid,
+    setSnapToGrid,
+    autoLayoutNodes,
   } = useCreate();
 
   const { zoomIn, zoomOut, fitView, getZoom } = useReactFlow();
@@ -41,6 +46,19 @@ export function QuickToolbar() {
   const handleZoomIn = () => zoomIn({ duration: 200 });
   const handleZoomOut = () => zoomOut({ duration: 200 });
   const handleFitView = () => fitView({ padding: 0.2, duration: 300 });
+
+  const handleAutoLayout = () => {
+    autoLayoutNodes();
+    // Fit view after layout to show all nodes
+    setTimeout(() => fitView({ padding: 0.2, duration: 300 }), 50);
+    toast.success("Canvas organized");
+  };
+
+  const handleSnapToGridToggle = () => {
+    const newValue = !snapToGrid;
+    setSnapToGrid(newValue);
+    toast.success(newValue ? "Snap to grid enabled" : "Snap to grid disabled");
+  };
 
   const handleDownload = async () => {
     if (!selectedImage) return;
@@ -125,7 +143,7 @@ export function QuickToolbar() {
               onClick={handleFitView}
               disabled={nodes.length === 0}
               aria-label={`Current zoom ${currentZoom}%, click to fit view`}
-              className="px-2 py-1 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors min-w-[3rem] text-center disabled:opacity-50"
+              className="px-2 py-1 text-xs font-mono text-muted-foreground hover:text-foreground transition-colors min-w-[3rem] text-center disabled:opacity-50 rounded focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
             >
               {currentZoom}%
             </button>
@@ -160,6 +178,46 @@ export function QuickToolbar() {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Fit View</TooltipContent>
+            </Tooltip>
+          </div>
+
+          <div className="w-px h-5 bg-border mx-1" />
+
+          {/* Layout Controls */}
+          <div className="flex items-center">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleAutoLayout}
+                  disabled={nodes.length === 0}
+                  aria-label="Auto-layout nodes in grid"
+                  className="size-8 rounded-lg"
+                >
+                  <Grid3X3 className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Auto-Layout Grid</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleSnapToGridToggle}
+                  aria-label={snapToGrid ? "Disable snap to grid" : "Enable snap to grid"}
+                  aria-pressed={snapToGrid}
+                  className={cn(
+                    "size-8 rounded-lg",
+                    snapToGrid && "bg-muted"
+                  )}
+                >
+                  <Magnet className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{snapToGrid ? "Snap to Grid: On" : "Snap to Grid: Off"}</TooltipContent>
             </Tooltip>
           </div>
 

@@ -7,11 +7,7 @@ import {
   Controls,
   MiniMap,
   useReactFlow,
-  type OnNodesChange,
-  type OnEdgesChange,
-  type OnConnect,
   type Node,
-  type Edge,
   BackgroundVariant,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -21,6 +17,7 @@ import { nodeTypes } from './nodes';
 import { useCreate } from './create-context';
 import type { ImageNodeData } from '@/types/canvas';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { HelperLines } from './helper-lines';
 
 interface FlowCanvasProps {
   className?: string;
@@ -35,9 +32,65 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
     onEdgesChange,
     onConnect,
     selectImageByNodeId,
+    snapToGrid,
+    gridSize,
   } = useCreate();
 
+  // State for helper lines (alignment guides)
+  const [helperLineHorizontal, setHelperLineHorizontal] = React.useState<number | undefined>(undefined);
+  const [helperLineVertical, setHelperLineVertical] = React.useState<number | undefined>(undefined);
+
   const { setCenter, getZoom } = useReactFlow();
+
+  // Calculate helper lines when a node is being dragged
+  const customOnNodesChange: typeof onNodesChange = React.useCallback(
+    (changes) => {
+      // Reset helper lines
+      setHelperLineHorizontal(undefined);
+      setHelperLineVertical(undefined);
+
+      // Check if any node is being dragged
+      const positionChange = changes.find(
+        (change) => change.type === 'position' && change.dragging && change.position
+      );
+
+      if (positionChange && positionChange.type === 'position' && positionChange.position) {
+        const draggingNode = nodes.find((n) => n.id === positionChange.id);
+        if (!draggingNode) {
+          onNodesChange(changes);
+          return;
+        }
+
+        const SNAP_THRESHOLD = 5; // Pixels threshold for snapping to alignment
+        const draggingX = positionChange.position.x;
+        const draggingY = positionChange.position.y;
+
+        // Check alignment with other nodes
+        for (const node of nodes) {
+          if (node.id === positionChange.id) continue;
+
+          // Check vertical alignment (x positions match)
+          if (Math.abs(node.position.x - draggingX) < SNAP_THRESHOLD) {
+            setHelperLineVertical(node.position.x);
+          }
+
+          // Check horizontal alignment (y positions match)
+          if (Math.abs(node.position.y - draggingY) < SNAP_THRESHOLD) {
+            setHelperLineHorizontal(node.position.y);
+          }
+        }
+      }
+
+      onNodesChange(changes);
+    },
+    [nodes, onNodesChange]
+  );
+
+  // Clear helper lines when dragging ends
+  const handleNodeDragStop = React.useCallback(() => {
+    setHelperLineHorizontal(undefined);
+    setHelperLineVertical(undefined);
+  }, []);
 
   // Handle node selection
   const handleSelectionChange = React.useCallback(
@@ -90,15 +143,18 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
         <ReactFlow
           nodes={nodes}
           edges={edges}
-          onNodesChange={onNodesChange}
+          onNodesChange={customOnNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onSelectionChange={handleSelectionChange}
+          onNodeDragStop={handleNodeDragStop}
           nodeTypes={nodeTypes}
           fitView
           fitViewOptions={{ padding: 0.2 }}
           minZoom={0.1}
           maxZoom={2}
+          snapToGrid={snapToGrid}
+          snapGrid={[gridSize, gridSize]}
           defaultEdgeOptions={{
             type: 'smoothstep',
             animated: true,
@@ -106,11 +162,16 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
           proOptions={{ hideAttribution: true }}
           className="bg-transparent"
         >
+          {/* Helper lines for alignment guides */}
+          <HelperLines
+            horizontal={helperLineHorizontal}
+            vertical={helperLineVertical}
+          />
           <Background
-            variant={BackgroundVariant.Dots}
-            gap={20}
-            size={1}
-            className="opacity-30"
+            variant={snapToGrid ? BackgroundVariant.Lines : BackgroundVariant.Dots}
+            gap={snapToGrid ? gridSize : 20}
+            size={snapToGrid ? 1 : 1}
+            className={cn("opacity-30", snapToGrid && "opacity-50")}
           />
           <Controls
             showZoom
