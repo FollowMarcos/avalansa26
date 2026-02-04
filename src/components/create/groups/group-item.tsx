@@ -141,7 +141,7 @@ export const GroupItem = React.memo(function GroupItem({
     >
       {/* Background - captures clicks for selection */}
       <div
-        className="absolute inset-0 rounded-lg border-2 cursor-pointer"
+        className="absolute inset-0 rounded-lg border-2 cursor-pointer pointer-events-auto"
         style={{
           backgroundColor: hexToRgba(group.color, isHovered || isSelected ? 0.15 : 0.08),
           borderColor: hexToRgba(group.color, isSelected ? 0.9 : isHovered ? 0.6 : 0.35),
@@ -153,7 +153,7 @@ export const GroupItem = React.memo(function GroupItem({
       {/* Title bar - captures clicks for drag */}
       <div
         className={cn(
-          "absolute top-0 left-0 right-0 flex items-center gap-2 px-3 rounded-t-lg",
+          "absolute top-0 left-0 right-0 flex items-center gap-2 px-3 rounded-t-lg pointer-events-auto",
           !isEditing && "cursor-grab",
           isDragging && "cursor-grabbing"
         )}
@@ -236,7 +236,7 @@ export const GroupItem = React.memo(function GroupItem({
         handles.map(({ id, style }) => (
           <div
             key={id}
-            className="absolute bg-white border-2 rounded-sm z-20 hover:scale-110 cursor-pointer"
+            className="absolute bg-white border-2 rounded-sm z-20 hover:scale-110 pointer-events-auto"
             style={{
               ...style,
               width: handleSize,
