@@ -85,11 +85,11 @@ export function HotkeysIsland() {
   }, []);
 
   return (
-    <div className="absolute bottom-4 left-4 z-20">
+    <div className="absolute bottom-4 left-4 z-50 pointer-events-auto">
       <div
         className={cn(
           "bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-lg",
-          "transition-[max-height,opacity] duration-200 ease-out overflow-hidden"
+          "overflow-hidden"
         )}
       >
         {/* Header */}
@@ -107,16 +107,16 @@ export function HotkeysIsland() {
           <Keyboard className="size-4 text-muted-foreground" aria-hidden="true" />
           <span className="text-sm font-medium">Hotkeys</span>
           {isCollapsed ? (
-            <ChevronUp className="size-4 text-muted-foreground ml-auto" aria-hidden="true" />
-          ) : (
             <ChevronDown className="size-4 text-muted-foreground ml-auto" aria-hidden="true" />
+          ) : (
+            <ChevronUp className="size-4 text-muted-foreground ml-auto" aria-hidden="true" />
           )}
         </button>
 
         {/* Content */}
         <div
           className={cn(
-            "transition-all duration-200 ease-out",
+            "transition-[max-height,opacity] duration-200 ease-out",
             isCollapsed ? "max-h-0 opacity-0" : "max-h-[400px] opacity-100"
           )}
         >

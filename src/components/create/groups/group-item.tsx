@@ -17,15 +17,15 @@ interface GroupItemProps {
   transform: { x: number; y: number; zoom: number };
 }
 
-type ResizeHandle =
-  | "nw"
-  | "n"
-  | "ne"
-  | "w"
-  | "e"
-  | "sw"
-  | "s"
-  | "se";
+type ResizeHandle = "nw" | "n" | "ne" | "w" | "e" | "sw" | "s" | "se";
+
+interface DragState {
+  type: "move" | "resize";
+  handle?: ResizeHandle;
+  startX: number;
+  startY: number;
+  initialBounds: { x: number; y: number; width: number; height: number };
+}
 
 export const GroupItem = React.memo(function GroupItem({
   group,
@@ -39,21 +39,12 @@ export const GroupItem = React.memo(function GroupItem({
 }: GroupItemProps) {
   const [isEditing, setIsEditing] = React.useState(false);
   const [editValue, setEditValue] = React.useState(group.title);
-  const [isDragging, setIsDragging] = React.useState(false);
   const [isHovered, setIsHovered] = React.useState(false);
   const [isTitleHovered, setIsTitleHovered] = React.useState(false);
-  const [resizeHandle, setResizeHandle] = React.useState<ResizeHandle | null>(null);
-  const dragStartRef = React.useRef<{ x: number; y: number } | null>(null);
-  const initialBoundsRef = React.useRef(group.bounds);
-  const currentBoundsRef = React.useRef(group.bounds);
+  const [dragState, setDragState] = React.useState<DragState | null>(null);
   const inputRef = React.useRef<HTMLInputElement>(null);
 
-  // Keep current bounds ref in sync with props (for stale closure fix)
-  React.useEffect(() => {
-    currentBoundsRef.current = group.bounds;
-  }, [group.bounds]);
-
-  // Calculate position in screen coordinates
+  // Calculate screen coordinates
   const screenX = group.bounds.x * transform.zoom + transform.x;
   const screenY = group.bounds.y * transform.zoom + transform.y;
   const screenWidth = group.bounds.width * transform.zoom;
@@ -99,7 +90,6 @@ export const GroupItem = React.memo(function GroupItem({
   // Focus input when editing starts
   React.useEffect(() => {
     if (isEditing && inputRef.current) {
-      // Small delay to ensure the input is rendered
       requestAnimationFrame(() => {
         inputRef.current?.focus();
         inputRef.current?.select();
@@ -107,74 +97,81 @@ export const GroupItem = React.memo(function GroupItem({
     }
   }, [isEditing]);
 
-  // Handle drag start
+  // Handle drag start (move)
   const handleDragStart = React.useCallback((e: React.MouseEvent) => {
     if (isEditing) return;
     e.stopPropagation();
     e.preventDefault();
-    setIsDragging(true);
-    dragStartRef.current = { x: e.clientX, y: e.clientY };
-    // Use currentBoundsRef to avoid stale closure
-    initialBoundsRef.current = { ...currentBoundsRef.current };
     onSelect();
-  }, [isEditing, onSelect]);
+    setDragState({
+      type: "move",
+      startX: e.clientX,
+      startY: e.clientY,
+      initialBounds: { ...group.bounds },
+    });
+  }, [isEditing, onSelect, group.bounds]);
 
   // Handle resize start
   const handleResizeStart = React.useCallback((handle: ResizeHandle) => (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    setResizeHandle(handle);
-    dragStartRef.current = { x: e.clientX, y: e.clientY };
-    // Use currentBoundsRef to avoid stale closure
-    initialBoundsRef.current = { ...currentBoundsRef.current };
     onSelect();
-  }, [onSelect]);
+    setDragState({
+      type: "resize",
+      handle,
+      startX: e.clientX,
+      startY: e.clientY,
+      initialBounds: { ...group.bounds },
+    });
+  }, [onSelect, group.bounds]);
 
-  // Handle mouse move (drag or resize)
+  // Handle mouse move and mouse up
   React.useEffect(() => {
-    if (!isDragging && !resizeHandle) return;
+    if (!dragState) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      if (!dragStartRef.current) return;
+      const deltaX = (e.clientX - dragState.startX) / transform.zoom;
+      const deltaY = (e.clientY - dragState.startY) / transform.zoom;
 
-      const deltaX = (e.clientX - dragStartRef.current.x) / transform.zoom;
-      const deltaY = (e.clientY - dragStartRef.current.y) / transform.zoom;
-
-      if (isDragging) {
-        // Update drag start for continuous movement
-        dragStartRef.current = { x: e.clientX, y: e.clientY };
+      if (dragState.type === "move") {
         onMove({ x: deltaX, y: deltaY });
-      } else if (resizeHandle) {
-        const bounds = { ...initialBoundsRef.current };
+        // Update start position for continuous movement
+        setDragState(prev => prev ? { ...prev, startX: e.clientX, startY: e.clientY } : null);
+      } else if (dragState.type === "resize" && dragState.handle) {
+        const handle = dragState.handle;
+        const bounds = { ...dragState.initialBounds };
 
         // Apply resize based on handle position
-        if (resizeHandle.includes("n")) {
-          bounds.y = initialBoundsRef.current.y + deltaY;
-          bounds.height = initialBoundsRef.current.height - deltaY;
+        if (handle.includes("n")) {
+          bounds.y = dragState.initialBounds.y + deltaY;
+          bounds.height = dragState.initialBounds.height - deltaY;
         }
-        if (resizeHandle.includes("s")) {
-          bounds.height = initialBoundsRef.current.height + deltaY;
+        if (handle.includes("s")) {
+          bounds.height = dragState.initialBounds.height + deltaY;
         }
-        if (resizeHandle.includes("w")) {
-          bounds.x = initialBoundsRef.current.x + deltaX;
-          bounds.width = initialBoundsRef.current.width - deltaX;
+        if (handle.includes("w")) {
+          bounds.x = dragState.initialBounds.x + deltaX;
+          bounds.width = dragState.initialBounds.width - deltaX;
         }
-        if (resizeHandle.includes("e")) {
-          bounds.width = initialBoundsRef.current.width + deltaX;
+        if (handle.includes("e")) {
+          bounds.width = dragState.initialBounds.width + deltaX;
         }
 
-        // Ensure minimum dimensions
-        if (bounds.width < 150) {
-          if (resizeHandle.includes("w")) {
-            bounds.x = initialBoundsRef.current.x + initialBoundsRef.current.width - 150;
+        // Enforce minimum dimensions
+        const minWidth = 150;
+        const minHeight = 80;
+
+        if (bounds.width < minWidth) {
+          if (handle.includes("w")) {
+            bounds.x = dragState.initialBounds.x + dragState.initialBounds.width - minWidth;
           }
-          bounds.width = 150;
+          bounds.width = minWidth;
         }
-        if (bounds.height < 80) {
-          if (resizeHandle.includes("n")) {
-            bounds.y = initialBoundsRef.current.y + initialBoundsRef.current.height - 80;
+        if (bounds.height < minHeight) {
+          if (handle.includes("n")) {
+            bounds.y = dragState.initialBounds.y + dragState.initialBounds.height - minHeight;
           }
-          bounds.height = 80;
+          bounds.height = minHeight;
         }
 
         onResize(bounds);
@@ -182,28 +179,19 @@ export const GroupItem = React.memo(function GroupItem({
     };
 
     const handleMouseUp = () => {
-      setIsDragging(false);
-      setResizeHandle(null);
-      dragStartRef.current = null;
+      setDragState(null);
     };
 
-    // Add listeners to window for better drag handling
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
-
-    // Prevent text selection during drag
-    document.body.style.userSelect = "none";
-    document.body.style.cursor = isDragging ? "grabbing" : (resizeHandle ? `${resizeHandle}-resize` : "default");
 
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.userSelect = "";
-      document.body.style.cursor = "";
     };
-  }, [isDragging, resizeHandle, onMove, onResize, transform.zoom]);
+  }, [dragState, transform.zoom, onMove, onResize]);
 
-  // Resize handle positions - larger handles (12px)
+  // Resize handle positions
   const handleSize = 12;
   const handles: { handle: ResizeHandle; style: React.CSSProperties }[] = [
     { handle: "nw", style: { top: -handleSize / 2, left: -handleSize / 2, cursor: "nwse-resize" } },
@@ -216,24 +204,26 @@ export const GroupItem = React.memo(function GroupItem({
     { handle: "se", style: { bottom: -handleSize / 2, right: -handleSize / 2, cursor: "nwse-resize" } },
   ];
 
+  const isDragging = dragState?.type === "move";
+  const isResizing = dragState?.type === "resize";
+
   return (
     <div
       role="region"
       aria-label={`Group: ${group.title}`}
       className={cn(
-        "absolute pointer-events-auto",
-        "transition-[box-shadow,opacity] duration-150",
-        // Base z-index for groups, higher when selected/interacting
-        isSelected || isDragging || resizeHandle ? "z-10" : "z-0",
+        "absolute pointer-events-auto select-none",
+        isSelected || isDragging || isResizing ? "z-10" : "z-0",
         isDragging && "opacity-90",
-        resizeHandle && "opacity-95"
+        isResizing && "opacity-95",
+        isDragging && "cursor-grabbing"
       )}
       style={{
         left: screenX,
         top: screenY,
         width: screenWidth,
         height: screenHeight,
-        boxShadow: (isDragging || resizeHandle)
+        boxShadow: (isDragging || isResizing)
           ? `0 8px 32px ${hexToRgba(group.color, 0.3)}`
           : isSelected
             ? `0 4px 16px ${hexToRgba(group.color, 0.2)}`
@@ -251,7 +241,7 @@ export const GroupItem = React.memo(function GroupItem({
       {/* Group background */}
       <div
         className={cn(
-          "absolute inset-0 rounded-lg border-2 transition-[background-color,border-color] duration-150",
+          "absolute inset-0 rounded-lg border-2",
           !group.isCollapsed && "overflow-hidden"
         )}
         style={{
@@ -267,9 +257,9 @@ export const GroupItem = React.memo(function GroupItem({
         tabIndex={0}
         className={cn(
           "absolute top-0 left-0 right-0 flex items-center gap-2 px-3 rounded-t-lg select-none",
-          "transition-colors duration-150",
-          "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-inset",
-          !isEditing && "cursor-grab active:cursor-grabbing"
+          "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+          !isEditing && "cursor-grab",
+          isDragging && "cursor-grabbing"
         )}
         style={{
           height: GROUP_TITLE_HEIGHT * transform.zoom,
@@ -294,8 +284,8 @@ export const GroupItem = React.memo(function GroupItem({
         <button
           type="button"
           className={cn(
-            "flex items-center justify-center size-6 rounded transition-colors",
-            "hover:bg-black/10 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+            "flex items-center justify-center size-6 rounded",
+            "hover:bg-black/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
           )}
           onClick={(e) => {
             e.stopPropagation();
@@ -315,7 +305,7 @@ export const GroupItem = React.memo(function GroupItem({
 
         {/* Drag handle icon */}
         <GripHorizontal
-          className={cn("size-4 transition-opacity", isTitleHovered ? "opacity-60" : "opacity-30")}
+          className={cn("size-4", isTitleHovered ? "opacity-60" : "opacity-30")}
           style={{
             color: group.color,
             transform: `scale(${Math.min(transform.zoom, 1.2)})`,
@@ -364,8 +354,8 @@ export const GroupItem = React.memo(function GroupItem({
           <button
             type="button"
             className={cn(
-              "flex items-center justify-center size-6 rounded transition-opacity",
-              "hover:bg-black/10 focus:outline-none focus:ring-2 focus:ring-ring"
+              "flex items-center justify-center size-6 rounded",
+              "hover:bg-black/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             )}
             onClick={startEditing}
             onMouseDown={(e) => e.stopPropagation()}
@@ -388,8 +378,7 @@ export const GroupItem = React.memo(function GroupItem({
             aria-orientation={handle === "n" || handle === "s" ? "horizontal" : "vertical"}
             className={cn(
               "absolute bg-white border-2 rounded-sm z-20",
-              "transition-transform duration-100",
-              "hover:scale-125 focus:outline-none focus:ring-2 focus:ring-ring"
+              "hover:scale-125 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             )}
             style={{
               ...style,
@@ -431,13 +420,12 @@ export const GroupItem = React.memo(function GroupItem({
           />
         ))}
 
-      {/* Selection indicator border (pulsing when selected) */}
+      {/* Selection indicator border */}
       {isSelected && (
         <div
-          className="absolute inset-0 rounded-lg pointer-events-none motion-safe:animate-pulse"
+          className="absolute inset-0 rounded-lg pointer-events-none"
           style={{
             border: `2px solid ${hexToRgba(group.color, 0.5)}`,
-            animationDuration: "2s",
           }}
         />
       )}
