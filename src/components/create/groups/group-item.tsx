@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import type { GroupData } from "@/types/canvas";
 import { hexToRgba, GROUP_COLLAPSED_HEIGHT, GROUP_TITLE_HEIGHT } from "./group-utils";
-import { ChevronDown, ChevronRight, GripHorizontal } from "lucide-react";
+import { ChevronDown, ChevronRight, GripHorizontal, Pencil } from "lucide-react";
 
 interface GroupItemProps {
   group: GroupData;
@@ -41,6 +41,8 @@ export function GroupItem({
   const [isEditing, setIsEditing] = React.useState(false);
   const [editValue, setEditValue] = React.useState(group.title);
   const [isDragging, setIsDragging] = React.useState(false);
+  const [isHovered, setIsHovered] = React.useState(false);
+  const [isTitleHovered, setIsTitleHovered] = React.useState(false);
   const [resizeHandle, setResizeHandle] = React.useState<ResizeHandle | null>(null);
   const dragStartRef = React.useRef<{ x: number; y: number } | null>(null);
   const initialBoundsRef = React.useRef(group.bounds);
@@ -54,55 +56,72 @@ export function GroupItem({
     ? GROUP_COLLAPSED_HEIGHT * transform.zoom
     : group.bounds.height * transform.zoom;
 
+  // Sync editValue with group.title when not editing
+  React.useEffect(() => {
+    if (!isEditing) {
+      setEditValue(group.title);
+    }
+  }, [group.title, isEditing]);
+
   // Handle title editing
-  const handleTitleDoubleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const startEditing = React.useCallback((e?: React.MouseEvent) => {
+    e?.stopPropagation();
     setIsEditing(true);
     setEditValue(group.title);
-  };
+  }, [group.title]);
 
-  const handleTitleBlur = () => {
+  const handleTitleBlur = React.useCallback(() => {
     setIsEditing(false);
-    if (editValue.trim() && editValue !== group.title) {
-      onTitleChange(editValue.trim());
+    const trimmed = editValue.trim();
+    if (trimmed && trimmed !== group.title) {
+      onTitleChange(trimmed);
+    } else {
+      setEditValue(group.title);
     }
-  };
+  }, [editValue, group.title, onTitleChange]);
 
-  const handleTitleKeyDown = (e: React.KeyboardEvent) => {
+  const handleTitleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
+      e.preventDefault();
       handleTitleBlur();
     } else if (e.key === "Escape") {
+      e.preventDefault();
       setIsEditing(false);
       setEditValue(group.title);
     }
-  };
+  }, [handleTitleBlur, group.title]);
 
   // Focus input when editing starts
   React.useEffect(() => {
     if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
+      // Small delay to ensure the input is rendered
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      });
     }
   }, [isEditing]);
 
   // Handle drag start
-  const handleDragStart = (e: React.MouseEvent) => {
+  const handleDragStart = React.useCallback((e: React.MouseEvent) => {
     if (isEditing) return;
     e.stopPropagation();
+    e.preventDefault();
     setIsDragging(true);
     dragStartRef.current = { x: e.clientX, y: e.clientY };
-    initialBoundsRef.current = group.bounds;
+    initialBoundsRef.current = { ...group.bounds };
     onSelect();
-  };
+  }, [isEditing, group.bounds, onSelect]);
 
   // Handle resize start
-  const handleResizeStart = (handle: ResizeHandle) => (e: React.MouseEvent) => {
+  const handleResizeStart = React.useCallback((handle: ResizeHandle) => (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     setResizeHandle(handle);
     dragStartRef.current = { x: e.clientX, y: e.clientY };
-    initialBoundsRef.current = group.bounds;
+    initialBoundsRef.current = { ...group.bounds };
     onSelect();
-  };
+  }, [group.bounds, onSelect]);
 
   // Handle mouse move (drag or resize)
   React.useEffect(() => {
@@ -115,6 +134,8 @@ export function GroupItem({
       const deltaY = (e.clientY - dragStartRef.current.y) / transform.zoom;
 
       if (isDragging) {
+        // Update drag start for continuous movement
+        dragStartRef.current = { x: e.clientX, y: e.clientY };
         onMove({ x: deltaX, y: deltaY });
       } else if (resizeHandle) {
         const bounds = { ...initialBoundsRef.current };
@@ -136,8 +157,18 @@ export function GroupItem({
         }
 
         // Ensure minimum dimensions
-        if (bounds.width < 100) bounds.width = 100;
-        if (bounds.height < 60) bounds.height = 60;
+        if (bounds.width < 150) {
+          if (resizeHandle.includes("w")) {
+            bounds.x = initialBoundsRef.current.x + initialBoundsRef.current.width - 150;
+          }
+          bounds.width = 150;
+        }
+        if (bounds.height < 80) {
+          if (resizeHandle.includes("n")) {
+            bounds.y = initialBoundsRef.current.y + initialBoundsRef.current.height - 80;
+          }
+          bounds.height = 80;
+        }
 
         onResize(bounds);
       }
@@ -149,17 +180,24 @@ export function GroupItem({
       dragStartRef.current = null;
     };
 
+    // Add listeners to window for better drag handling
     window.addEventListener("mousemove", handleMouseMove);
     window.addEventListener("mouseup", handleMouseUp);
+
+    // Prevent text selection during drag
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = isDragging ? "grabbing" : (resizeHandle ? `${resizeHandle}-resize` : "default");
 
     return () => {
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
     };
   }, [isDragging, resizeHandle, onMove, onResize, transform.zoom]);
 
-  // Resize handle positions
-  const handleSize = 8;
+  // Resize handle positions - larger handles (12px)
+  const handleSize = 12;
   const handles: { handle: ResizeHandle; style: React.CSSProperties }[] = [
     { handle: "nw", style: { top: -handleSize / 2, left: -handleSize / 2, cursor: "nwse-resize" } },
     { handle: "n", style: { top: -handleSize / 2, left: "50%", marginLeft: -handleSize / 2, cursor: "ns-resize" } },
@@ -176,26 +214,42 @@ export function GroupItem({
       role="region"
       aria-label={`Group: ${group.title}`}
       className={cn(
-        "absolute pointer-events-auto transition-shadow duration-200",
-        isSelected && "z-10"
+        "absolute pointer-events-auto",
+        "transition-[box-shadow,opacity] duration-150",
+        isSelected && "z-10",
+        isDragging && "opacity-90",
+        resizeHandle && "opacity-95"
       )}
       style={{
         left: screenX,
         top: screenY,
         width: screenWidth,
         height: screenHeight,
+        boxShadow: (isDragging || resizeHandle)
+          ? `0 8px 32px ${hexToRgba(group.color, 0.3)}`
+          : isSelected
+            ? `0 4px 16px ${hexToRgba(group.color, 0.2)}`
+            : "none",
       }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       onClick={(e) => {
         e.stopPropagation();
-        onSelect();
+        if (!isEditing) {
+          onSelect();
+        }
       }}
     >
       {/* Group background */}
       <div
-        className="absolute inset-0 rounded-lg border-2"
+        className={cn(
+          "absolute inset-0 rounded-lg border-2 transition-all duration-150",
+          !group.isCollapsed && "overflow-hidden"
+        )}
         style={{
-          backgroundColor: hexToRgba(group.color, 0.1),
-          borderColor: hexToRgba(group.color, isSelected ? 0.8 : 0.4),
+          backgroundColor: hexToRgba(group.color, isHovered || isSelected ? 0.15 : 0.08),
+          borderColor: hexToRgba(group.color, isSelected ? 0.9 : isHovered ? 0.6 : 0.35),
+          borderStyle: isSelected ? "solid" : "dashed",
         }}
       />
 
@@ -204,42 +258,43 @@ export function GroupItem({
         role="button"
         tabIndex={0}
         className={cn(
-          "absolute top-0 left-0 right-0 flex items-center gap-2 px-3 rounded-t-lg cursor-move select-none",
-          "transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-inset"
+          "absolute top-0 left-0 right-0 flex items-center gap-2 px-3 rounded-t-lg select-none",
+          "transition-colors duration-150",
+          "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-inset",
+          !isEditing && "cursor-grab active:cursor-grabbing"
         )}
         style={{
           height: GROUP_TITLE_HEIGHT * transform.zoom,
-          backgroundColor: hexToRgba(group.color, 0.25),
+          backgroundColor: hexToRgba(group.color, isHovered || isSelected ? 0.35 : 0.2),
         }}
         onMouseDown={handleDragStart}
-        onDoubleClick={handleTitleDoubleClick}
+        onMouseEnter={() => setIsTitleHovered(true)}
+        onMouseLeave={() => setIsTitleHovered(false)}
+        onDoubleClick={startEditing}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
             onSelect();
           } else if (e.key === "F2") {
             e.preventDefault();
-            setIsEditing(true);
-            setEditValue(group.title);
+            startEditing();
           }
         }}
-        aria-label={`${group.title} group - press Enter to select, F2 to rename`}
+        aria-label={`${group.title} group - double-click or F2 to rename, drag to move`}
       >
         {/* Collapse toggle */}
         <button
-          className="flex items-center justify-center size-5 rounded hover:bg-black/10 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+          type="button"
+          className={cn(
+            "flex items-center justify-center size-6 rounded transition-colors",
+            "hover:bg-black/10 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+          )}
           onClick={(e) => {
             e.stopPropagation();
             onToggleCollapse();
           }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              e.stopPropagation();
-              onToggleCollapse();
-            }
-          }}
-          style={{ transform: `scale(${transform.zoom})`, transformOrigin: "center" }}
+          onMouseDown={(e) => e.stopPropagation()}
+          style={{ transform: `scale(${Math.min(transform.zoom, 1.2)})`, transformOrigin: "center" }}
           aria-label={group.isCollapsed ? "Expand group" : "Collapse group"}
           aria-expanded={!group.isCollapsed}
         >
@@ -252,12 +307,13 @@ export function GroupItem({
 
         {/* Drag handle icon */}
         <GripHorizontal
-          className="size-4 opacity-40"
+          className={cn("size-4 transition-opacity", isTitleHovered ? "opacity-60" : "opacity-30")}
           style={{
             color: group.color,
-            transform: `scale(${transform.zoom})`,
+            transform: `scale(${Math.min(transform.zoom, 1.2)})`,
             transformOrigin: "center",
           }}
+          aria-hidden="true"
         />
 
         {/* Title */}
@@ -269,24 +325,47 @@ export function GroupItem({
             onChange={(e) => setEditValue(e.target.value)}
             onBlur={handleTitleBlur}
             onKeyDown={handleTitleKeyDown}
-            className="flex-1 bg-white/80 px-1 rounded text-sm font-medium outline-none focus:ring-2 focus:ring-ring"
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            className={cn(
+              "flex-1 min-w-0 bg-white dark:bg-gray-800 px-2 py-0.5 rounded text-sm font-medium",
+              "outline-none ring-2 ring-ring"
+            )}
             style={{
-              fontSize: 14 * transform.zoom,
+              fontSize: Math.max(12, 14 * Math.min(transform.zoom, 1.2)),
               color: group.color,
             }}
-            onClick={(e) => e.stopPropagation()}
+            spellCheck={false}
+            autoComplete="off"
             aria-label="Group name"
           />
         ) : (
           <span
-            className="flex-1 font-medium truncate"
+            className="flex-1 min-w-0 font-medium truncate"
             style={{
-              fontSize: 14 * transform.zoom,
+              fontSize: Math.max(12, 14 * Math.min(transform.zoom, 1.2)),
               color: group.color,
             }}
           >
             {group.title}
           </span>
+        )}
+
+        {/* Edit button (show on hover) */}
+        {!isEditing && isTitleHovered && (
+          <button
+            type="button"
+            className={cn(
+              "flex items-center justify-center size-6 rounded transition-opacity",
+              "hover:bg-black/10 focus:outline-none focus:ring-2 focus:ring-ring"
+            )}
+            onClick={startEditing}
+            onMouseDown={(e) => e.stopPropagation()}
+            style={{ transform: `scale(${Math.min(transform.zoom, 1.2)})`, transformOrigin: "center" }}
+            aria-label="Rename group"
+          >
+            <Pencil className="size-3" style={{ color: group.color }} aria-hidden="true" />
+          </button>
         )}
       </div>
 
@@ -295,16 +374,21 @@ export function GroupItem({
         handles.map(({ handle, style }) => (
           <div
             key={handle}
-            role="slider"
+            role="separator"
             tabIndex={0}
-            aria-label={`Resize ${handle} handle`}
-            aria-valuetext="Drag to resize group"
-            className="absolute bg-white border-2 rounded-sm z-20 focus:outline-none focus:ring-2 focus:ring-ring"
+            aria-label={`Resize ${handle}`}
+            aria-orientation={handle === "n" || handle === "s" ? "horizontal" : "vertical"}
+            className={cn(
+              "absolute bg-white border-2 rounded-sm z-20",
+              "transition-transform duration-100",
+              "hover:scale-125 focus:outline-none focus:ring-2 focus:ring-ring"
+            )}
             style={{
               ...style,
               width: handleSize,
               height: handleSize,
               borderColor: group.color,
+              boxShadow: `0 2px 4px ${hexToRgba(group.color, 0.3)}`,
             }}
             onMouseDown={handleResizeStart(handle)}
             onKeyDown={(e) => {
@@ -321,19 +405,34 @@ export function GroupItem({
               e.preventDefault();
               const bounds = { ...group.bounds };
 
-              if (handle.includes("n")) bounds.y += deltaY;
+              if (handle.includes("n")) {
+                bounds.y += deltaY;
+                bounds.height -= deltaY;
+              }
               if (handle.includes("s")) bounds.height += deltaY;
-              if (handle.includes("w")) bounds.x += deltaX;
+              if (handle.includes("w")) {
+                bounds.x += deltaX;
+                bounds.width -= deltaX;
+              }
               if (handle.includes("e")) bounds.width += deltaX;
-              if (handle.includes("n")) bounds.height -= deltaY;
-              if (handle.includes("w")) bounds.width -= deltaX;
 
-              if (bounds.width >= 100 && bounds.height >= 60) {
+              if (bounds.width >= 150 && bounds.height >= 80) {
                 onResize(bounds);
               }
             }}
           />
         ))}
+
+      {/* Selection indicator border (pulsing when selected) */}
+      {isSelected && (
+        <div
+          className="absolute inset-0 rounded-lg pointer-events-none animate-pulse"
+          style={{
+            border: `2px solid ${hexToRgba(group.color, 0.5)}`,
+            animationDuration: "2s",
+          }}
+        />
+      )}
     </div>
   );
 }
