@@ -83,13 +83,6 @@ export const GroupItem = React.memo(function GroupItem({
     }
   };
 
-  // Handle mousedown on the group background - just selects
-  const handleBackgroundMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 0) return; // Only left click
-    e.stopPropagation();
-    onMouseDown(e, "select");
-  };
-
   // Handle mousedown on title bar - selects and starts drag
   const handleTitleMouseDown = (e: React.MouseEvent) => {
     if (e.button !== 0) return; // Only left click
@@ -139,15 +132,14 @@ export const GroupItem = React.memo(function GroupItem({
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Background - captures clicks for selection */}
+      {/* Background - pointer-events-none so clicks pass through to nodes */}
       <div
-        className="absolute inset-0 rounded-lg border-2 cursor-pointer pointer-events-auto"
+        className="absolute inset-0 rounded-lg border-2 pointer-events-none"
         style={{
           backgroundColor: hexToRgba(group.color, isHovered || isSelected ? 0.15 : 0.08),
           borderColor: hexToRgba(group.color, isSelected ? 0.9 : isHovered ? 0.6 : 0.35),
           borderStyle: isSelected ? "solid" : "dashed",
         }}
-        onMouseDown={handleBackgroundMouseDown}
       />
 
       {/* Title bar - captures clicks for drag */}
