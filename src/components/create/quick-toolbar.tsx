@@ -14,6 +14,7 @@ import {
   Maximize2,
   Grid3X3,
   Magnet,
+  Group,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -38,6 +39,8 @@ export function QuickToolbar() {
     snapToGrid,
     setSnapToGrid,
     autoLayoutNodes,
+    selectedNodeIds,
+    createGroup,
   } = useCreate();
 
   const { zoomIn, zoomOut, fitView, getZoom } = useReactFlow();
@@ -218,6 +221,31 @@ export function QuickToolbar() {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{snapToGrid ? "Snap to Grid: On" : "Snap to Grid: Off"}</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    if (selectedNodeIds.size >= 2) {
+                      createGroup(Array.from(selectedNodeIds));
+                      toast.success("Group created");
+                    }
+                  }}
+                  disabled={selectedNodeIds.size < 2}
+                  aria-label="Create group from selected nodes"
+                  className="size-8 rounded-lg"
+                >
+                  <Group className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {selectedNodeIds.size >= 2
+                  ? `Create Group (${selectedNodeIds.size} nodes)`
+                  : "Select 2+ nodes to group (Ctrl+G)"}
+              </TooltipContent>
             </Tooltip>
           </div>
 

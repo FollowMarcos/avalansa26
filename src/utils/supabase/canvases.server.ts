@@ -19,6 +19,7 @@ export async function createCanvas(
       thumbnail_url: data.thumbnail_url || null,
       nodes: data.nodes || [],
       edges: data.edges || [],
+      groups: data.groups || [],
       viewport: data.viewport || { x: 0, y: 0, zoom: 1 },
     })
     .select()

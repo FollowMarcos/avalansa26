@@ -10,6 +10,7 @@ import {
   type Node,
   type Viewport,
   BackgroundVariant,
+  SelectionMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -19,6 +20,9 @@ import { useCreate } from './create-context';
 import type { ImageNodeData } from '@/types/canvas';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { HelperLines } from './helper-lines';
+import { GroupLayer } from './groups';
+import { CanvasContextMenu } from './canvas-context-menu';
+import { ContextMenuTrigger } from '@/components/ui/context-menu';
 
 interface FlowCanvasProps {
   className?: string;
@@ -36,6 +40,18 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
     snapToGrid,
     gridSize,
     onViewportChange,
+    // Node groups
+    groups,
+    selectedGroupId,
+    selectedNodeIds,
+    createGroup,
+    deleteGroup,
+    updateGroup,
+    moveGroup,
+    toggleGroupCollapse,
+    selectGroup,
+    selectNodes,
+    clearNodeSelection,
   } = useCreate();
 
   // State for helper lines (alignment guides)
@@ -94,15 +110,41 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
     setHelperLineVertical(undefined);
   }, []);
 
-  // Handle node selection
+  // Handle node selection (supports both single and multi-select)
   const handleSelectionChange = React.useCallback(
     ({ nodes: selectedNodes }: { nodes: Node<ImageNodeData>[] }) => {
       if (selectedNodes.length === 1) {
         selectImageByNodeId(selectedNodes[0].id);
+        selectNodes([selectedNodes[0].id]);
+      } else if (selectedNodes.length > 1) {
+        // Multi-select: track all selected node IDs
+        selectNodes(selectedNodes.map((n) => n.id));
+      } else {
+        // No nodes selected
+        clearNodeSelection();
+      }
+      // Deselect any group when nodes are selected
+      if (selectedNodes.length > 0) {
+        selectGroup(null);
       }
     },
-    [selectImageByNodeId]
+    [selectImageByNodeId, selectNodes, clearNodeSelection, selectGroup]
   );
+
+  // Keyboard shortcut: Ctrl+G to create group
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'g') {
+        e.preventDefault();
+        if (selectedNodeIds.size >= 2) {
+          createGroup(Array.from(selectedNodeIds));
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedNodeIds, createGroup]);
 
   // Handle viewport changes (pan/zoom) to track where user is focused
   const handleMoveEnd = React.useCallback(
@@ -151,63 +193,105 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
     prevNodesRef.current = nodes;
   }, [nodes, setCenter, getZoom]);
 
+  // Handle group resize
+  const handleGroupResize = React.useCallback(
+    (groupId: string, bounds: { x: number; y: number; width: number; height: number }) => {
+      updateGroup(groupId, { bounds });
+    },
+    [updateGroup]
+  );
+
   return (
     <TooltipProvider delayDuration={300}>
-      <div ref={canvasRef} className={cn('h-full w-full', className)}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          onNodesChange={customOnNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onSelectionChange={handleSelectionChange}
-          onNodeDragStop={handleNodeDragStop}
-          onMoveEnd={handleMoveEnd}
-          nodeTypes={nodeTypes}
-          fitView
-          fitViewOptions={{ padding: 0.2 }}
-          minZoom={0.1}
-          maxZoom={2}
-          snapToGrid={snapToGrid}
-          snapGrid={[gridSize, gridSize]}
-          defaultEdgeOptions={{
-            type: 'smoothstep',
-            animated: true,
-          }}
-          proOptions={{ hideAttribution: true }}
-          className="bg-transparent"
-        >
-          {/* Helper lines for alignment guides */}
-          <HelperLines
-            horizontal={helperLineHorizontal}
-            vertical={helperLineVertical}
-          />
-          <Background
-            variant={snapToGrid ? BackgroundVariant.Lines : BackgroundVariant.Dots}
-            gap={snapToGrid ? gridSize : 20}
-            size={snapToGrid ? 1 : 1}
-            className={cn("opacity-30", snapToGrid && "opacity-50")}
-          />
-          <Controls
-            showZoom
-            showFitView
-            showInteractive={false}
-            position="bottom-left"
-            style={{ left: '5rem' }}
-            className="!bg-background/95 !backdrop-blur-xl !border-border !shadow-lg !rounded-xl !mb-4 [&>button]:!bg-transparent [&>button]:!border-0 [&>button]:!rounded-lg [&>button:hover]:!bg-muted [&>button]:!w-9 [&>button]:!h-9 [&>button]:!cursor-pointer [&>button]:transition-colors [&>button>svg]:!fill-foreground [&>button>svg]:!max-w-4 [&>button>svg]:!max-h-4"
-          />
-          <MiniMap
-            nodeColor={(node) => {
-              if (node.selected) return 'hsl(var(--primary))';
-              return 'hsl(var(--muted-foreground))';
-            }}
-            maskColor="hsl(var(--background) / 0.8)"
-            className="!bg-background !border-border"
-            pannable
-            zoomable
-          />
-        </ReactFlow>
-      </div>
+      <CanvasContextMenu
+        selectedNodeIds={selectedNodeIds}
+        selectedGroupId={selectedGroupId}
+        groups={groups}
+        onCreateGroup={createGroup}
+        onDeleteGroup={deleteGroup}
+        onUpdateGroup={updateGroup}
+        onClearSelection={() => {
+          clearNodeSelection();
+          selectGroup(null);
+        }}
+      >
+        <ContextMenuTrigger asChild>
+          <div
+            ref={canvasRef}
+            className={cn('h-full w-full', className)}
+            role="application"
+            aria-label="Image generation canvas - use mouse to pan and zoom, Shift+click to multi-select nodes"
+          >
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={customOnNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              onSelectionChange={handleSelectionChange}
+              onNodeDragStop={handleNodeDragStop}
+              onMoveEnd={handleMoveEnd}
+              nodeTypes={nodeTypes}
+              fitView
+              fitViewOptions={{ padding: 0.2 }}
+              minZoom={0.1}
+              maxZoom={2}
+              snapToGrid={snapToGrid}
+              snapGrid={[gridSize, gridSize]}
+              selectionOnDrag
+              selectionMode={SelectionMode.Partial}
+              multiSelectionKeyCode="Shift"
+              defaultEdgeOptions={{
+                type: 'smoothstep',
+                animated: true,
+              }}
+              proOptions={{ hideAttribution: true }}
+              className="bg-transparent"
+            >
+              {/* Group layer (rendered behind nodes) */}
+              <GroupLayer
+                groups={groups}
+                selectedGroupId={selectedGroupId}
+                onSelectGroup={selectGroup}
+                onMoveGroup={moveGroup}
+                onResizeGroup={handleGroupResize}
+                onUpdateGroup={updateGroup}
+                onToggleGroupCollapse={toggleGroupCollapse}
+                onDeleteGroup={deleteGroup}
+              />
+              {/* Helper lines for alignment guides */}
+              <HelperLines
+                horizontal={helperLineHorizontal}
+                vertical={helperLineVertical}
+              />
+              <Background
+                variant={snapToGrid ? BackgroundVariant.Lines : BackgroundVariant.Dots}
+                gap={snapToGrid ? gridSize : 20}
+                size={snapToGrid ? 1 : 1}
+                className={cn("opacity-30", snapToGrid && "opacity-50")}
+              />
+              <Controls
+                showZoom
+                showFitView
+                showInteractive={false}
+                position="bottom-left"
+                style={{ left: '5rem' }}
+                className="!bg-background/95 !backdrop-blur-xl !border-border !shadow-lg !rounded-xl !mb-4 [&>button]:!bg-transparent [&>button]:!border-0 [&>button]:!rounded-lg [&>button:hover]:!bg-muted [&>button]:!w-9 [&>button]:!h-9 [&>button]:!cursor-pointer [&>button]:transition-colors [&>button>svg]:!fill-foreground [&>button>svg]:!max-w-4 [&>button>svg]:!max-h-4"
+              />
+              <MiniMap
+                nodeColor={(node) => {
+                  if (node.selected) return 'hsl(var(--primary))';
+                  return 'hsl(var(--muted-foreground))';
+                }}
+                maskColor="hsl(var(--background) / 0.8)"
+                className="!bg-background !border-border"
+                pannable
+                zoomable
+              />
+            </ReactFlow>
+          </div>
+        </ContextMenuTrigger>
+      </CanvasContextMenu>
     </TooltipProvider>
   );
 }

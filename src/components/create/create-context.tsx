@@ -3,7 +3,7 @@
 import * as React from "react";
 import type { ApiConfig } from "@/types/api-config";
 import type { Generation, Collection, Tag } from "@/types/generation";
-import type { Canvas, CanvasViewport, ImageNodeData } from "@/types/canvas";
+import type { Canvas, CanvasViewport, ImageNodeData, GroupData, GroupBounds } from "@/types/canvas";
 import type { SessionWithCount } from "@/types/session";
 import { uploadReferenceImage as uploadToStorage } from "@/utils/supabase/storage";
 import { createClient } from "@/utils/supabase/client";
@@ -144,6 +144,21 @@ interface CreateContextType {
   addImageNode: (image: GeneratedImage) => void;
   deleteNode: (nodeId: string) => void;
   selectImageByNodeId: (nodeId: string) => void;
+
+  // Node groups
+  groups: GroupData[];
+  selectedGroupId: string | null;
+  selectedNodeIds: Set<string>;
+  createGroup: (nodeIds: string[]) => void;
+  deleteGroup: (groupId: string) => void;
+  updateGroup: (groupId: string, updates: Partial<GroupData>) => void;
+  moveGroup: (groupId: string, delta: { x: number; y: number }) => void;
+  toggleGroupCollapse: (groupId: string) => void;
+  selectGroup: (groupId: string | null) => void;
+  toggleNodeSelection: (nodeId: string) => void;
+  selectNodes: (nodeIds: string[]) => void;
+  clearNodeSelection: () => void;
+  getNodesInGroup: (groupId: string) => string[];
 
   // Canvas management
   currentCanvasId: string | null;
@@ -298,6 +313,7 @@ interface PersistedState {
   selectedApiId: string | null;
   nodes: Node<ImageNodeData>[];
   edges: Edge[];
+  groups: GroupData[];
   viewport: CanvasViewport;
   viewMode: "canvas" | "gallery";
   historyPanelOpen: boolean;
@@ -412,6 +428,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   // React Flow state
   const [nodes, setNodes] = React.useState<Node<ImageNodeData>[]>([]);
   const [edges, setEdges] = React.useState<Edge[]>([]);
+  const [groups, setGroups] = React.useState<GroupData[]>([]);
+  const [selectedGroupId, setSelectedGroupId] = React.useState<string | null>(null);
+  const [selectedNodeIds, setSelectedNodeIds] = React.useState<Set<string>>(new Set());
   const [viewport, setViewport] = React.useState<CanvasViewport>({ x: 0, y: 0, zoom: 1 });
 
   // Callback for FlowCanvas to report viewport changes (pan/zoom)
@@ -1653,6 +1672,177 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     }
   }, [nodes, history]);
 
+  // ========== Node Groups ==========
+
+  // Check if a node's center is within a group's bounds
+  const isNodeInBounds = React.useCallback((node: Node<ImageNodeData>, bounds: GroupBounds): boolean => {
+    const nodeWidth = 240; // Default node width
+    const nodeHeight = 300; // Default node height
+    const centerX = node.position.x + nodeWidth / 2;
+    const centerY = node.position.y + nodeHeight / 2;
+    return (
+      centerX >= bounds.x &&
+      centerX <= bounds.x + bounds.width &&
+      centerY >= bounds.y &&
+      centerY <= bounds.y + bounds.height
+    );
+  }, []);
+
+  // Get all node IDs that are within a group's bounds
+  const getNodesInGroup = React.useCallback((groupId: string): string[] => {
+    const group = groups.find((g) => g.id === groupId);
+    if (!group) return [];
+    return nodes.filter((node) => isNodeInBounds(node, group.bounds)).map((n) => n.id);
+  }, [groups, nodes, isNodeInBounds]);
+
+  // Calculate bounds that encompass selected nodes
+  const calculateGroupBounds = React.useCallback((nodeIds: string[]): GroupBounds => {
+    const selectedNodes = nodes.filter((n) => nodeIds.includes(n.id));
+    if (selectedNodes.length === 0) {
+      return { x: 0, y: 0, width: 300, height: 200 };
+    }
+
+    const padding = 40;
+    const titleHeight = 32;
+    const nodeWidth = 240;
+    const nodeHeight = 300;
+
+    const minX = Math.min(...selectedNodes.map((n) => n.position.x)) - padding;
+    const minY = Math.min(...selectedNodes.map((n) => n.position.y)) - padding - titleHeight;
+    const maxX = Math.max(...selectedNodes.map((n) => n.position.x + nodeWidth)) + padding;
+    const maxY = Math.max(...selectedNodes.map((n) => n.position.y + nodeHeight)) + padding;
+
+    return {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY,
+    };
+  }, [nodes]);
+
+  // Create a new group from selected nodes
+  const createGroup = React.useCallback((nodeIds: string[]) => {
+    if (nodeIds.length < 2) return;
+
+    const bounds = calculateGroupBounds(nodeIds);
+    const newGroup: GroupData = {
+      id: `group-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      title: "New Group",
+      color: "#3b82f6", // Default blue
+      bounds,
+      isCollapsed: false,
+      createdAt: Date.now(),
+    };
+
+    setGroups((prev) => [...prev, newGroup]);
+    setSelectedGroupId(newGroup.id);
+    setSelectedNodeIds(new Set());
+    setHasUnsavedChanges(true);
+  }, [calculateGroupBounds]);
+
+  // Delete a group (keeps the nodes)
+  const deleteGroup = React.useCallback((groupId: string) => {
+    setGroups((prev) => prev.filter((g) => g.id !== groupId));
+    if (selectedGroupId === groupId) {
+      setSelectedGroupId(null);
+    }
+    setHasUnsavedChanges(true);
+  }, [selectedGroupId]);
+
+  // Update group properties
+  const updateGroup = React.useCallback((groupId: string, updates: Partial<GroupData>) => {
+    setGroups((prev) =>
+      prev.map((g) => (g.id === groupId ? { ...g, ...updates } : g))
+    );
+    setHasUnsavedChanges(true);
+  }, []);
+
+  // Move a group and all contained nodes
+  const moveGroup = React.useCallback((groupId: string, delta: { x: number; y: number }) => {
+    const group = groups.find((g) => g.id === groupId);
+    if (!group || group.isCollapsed) return;
+
+    // Get nodes inside the group
+    const nodesInGroup = getNodesInGroup(groupId);
+
+    // Update group bounds
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.id === groupId
+          ? {
+              ...g,
+              bounds: {
+                ...g.bounds,
+                x: g.bounds.x + delta.x,
+                y: g.bounds.y + delta.y,
+              },
+            }
+          : g
+      )
+    );
+
+    // Move all nodes inside the group
+    setNodes((prev) =>
+      prev.map((node) =>
+        nodesInGroup.includes(node.id)
+          ? {
+              ...node,
+              position: {
+                x: node.position.x + delta.x,
+                y: node.position.y + delta.y,
+              },
+            }
+          : node
+      )
+    );
+
+    setHasUnsavedChanges(true);
+  }, [groups, getNodesInGroup]);
+
+  // Toggle group collapse state
+  const toggleGroupCollapse = React.useCallback((groupId: string) => {
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.id === groupId ? { ...g, isCollapsed: !g.isCollapsed } : g
+      )
+    );
+    setHasUnsavedChanges(true);
+  }, []);
+
+  // Select a group
+  const selectGroup = React.useCallback((groupId: string | null) => {
+    setSelectedGroupId(groupId);
+    if (groupId) {
+      setSelectedNodeIds(new Set());
+      setSelectedImage(null);
+    }
+  }, []);
+
+  // Toggle a node in the selection
+  const toggleNodeSelection = React.useCallback((nodeId: string) => {
+    setSelectedNodeIds((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(nodeId)) {
+        newSet.delete(nodeId);
+      } else {
+        newSet.add(nodeId);
+      }
+      return newSet;
+    });
+    setSelectedGroupId(null);
+  }, []);
+
+  // Select multiple nodes
+  const selectNodes = React.useCallback((nodeIds: string[]) => {
+    setSelectedNodeIds(new Set(nodeIds));
+    setSelectedGroupId(null);
+  }, []);
+
+  // Clear node selection
+  const clearNodeSelection = React.useCallback(() => {
+    setSelectedNodeIds(new Set());
+  }, []);
+
   // Auto-layout nodes in a grid pattern
   const autoLayoutNodes = React.useCallback(() => {
     if (nodes.length === 0) return;
@@ -1697,6 +1887,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       await updateCanvas(currentCanvasId, {
         nodes,
         edges,
+        groups,
         viewport,
       });
       setLastSaved(new Date());
@@ -1706,7 +1897,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsSaving(false);
     }
-  }, [currentCanvasId, hasUnsavedChanges, nodes, edges, viewport]);
+  }, [currentCanvasId, hasUnsavedChanges, nodes, edges, groups, viewport]);
 
   // Debounced auto-save effect
   React.useEffect(() => {
@@ -1743,6 +1934,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         setCurrentCanvasId(canvas.id);
         setNodes([]);
         setEdges([]);
+        setGroups([]);
+        setSelectedGroupId(null);
+        setSelectedNodeIds(new Set());
         setViewport({ x: 0, y: 0, zoom: 1 });
         setHasUnsavedChanges(false);
 
@@ -1770,6 +1964,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         // Clean up any stale loading nodes from interrupted generations
         setNodes(cleanupStaleLoadingNodes(canvas.nodes || []));
         setEdges(canvas.edges || []);
+        setGroups(canvas.groups || []);
+        setSelectedGroupId(null);
+        setSelectedNodeIds(new Set());
         setViewport(canvas.viewport || { x: 0, y: 0, zoom: 1 });
         setHasUnsavedChanges(false);
 
@@ -1859,6 +2056,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
             // Clean up any stale loading nodes from interrupted generations
             setNodes(cleanupStaleLoadingNodes(canvasToLoad.nodes || []));
             setEdges(canvasToLoad.edges || []);
+            setGroups(canvasToLoad.groups || []);
             setViewport(canvasToLoad.viewport || { x: 0, y: 0, zoom: 1 });
 
             // Mark all existing nodes as processed to prevent history-to-nodes duplication
@@ -2024,6 +2222,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         selectedApiId,
         nodes,
         edges,
+        groups,
         viewport,
         viewMode,
         historyPanelOpen,
@@ -2037,7 +2236,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         clearTimeout(persistTimeoutRef.current);
       }
     };
-  }, [prompt, settings, currentCanvasId, selectedApiId, nodes, edges, viewport, viewMode, historyPanelOpen, currentUserId]);
+  }, [prompt, settings, currentCanvasId, selectedApiId, nodes, edges, groups, viewport, viewMode, historyPanelOpen, currentUserId]);
 
   // Save state immediately before page unload
   React.useEffect(() => {
@@ -2050,6 +2249,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         selectedApiId,
         nodes,
         edges,
+        groups,
         viewport,
         viewMode,
         historyPanelOpen,
@@ -2060,7 +2260,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [prompt, settings, currentCanvasId, selectedApiId, nodes, edges, viewport, viewMode, historyPanelOpen, currentUserId]);
+  }, [prompt, settings, currentCanvasId, selectedApiId, nodes, edges, groups, viewport, viewMode, historyPanelOpen, currentUserId]);
 
   // Compute whether there are available slots for new generations
   // Maximum 4 concurrent generations allowed
@@ -2688,6 +2888,20 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     addImageNode,
     deleteNode,
     selectImageByNodeId,
+    // Node groups
+    groups,
+    selectedGroupId,
+    selectedNodeIds,
+    createGroup,
+    deleteGroup,
+    updateGroup,
+    moveGroup,
+    toggleGroupCollapse,
+    selectGroup,
+    toggleNodeSelection,
+    selectNodes,
+    clearNodeSelection,
+    getNodesInGroup,
     // Canvas management
     currentCanvasId,
     canvasList,
@@ -2787,6 +3001,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     availableApis, selectedApiId, isLoadingApis, pendingBatchJobs,
     prompt, isPromptExpanded, settings, referenceImages, history, selectedImage,
     nodes, edges, onNodesChange, onEdgesChange, onConnect, addImageNode, deleteNode, selectImageByNodeId,
+    groups, selectedGroupId, selectedNodeIds, createGroup, deleteGroup, updateGroup, moveGroup, toggleGroupCollapse, selectGroup, toggleNodeSelection, selectNodes, clearNodeSelection, getNodesInGroup,
     currentCanvasId, canvasList, isSaving, lastSaved, createNewCanvas, switchCanvas, renameCanvas, deleteCanvasById,
     viewMode, historyPanelOpen, isInputVisible, activeTab, zoom, snapToGrid, autoLayoutNodes, canUndo, canRedo,
     isGenerating, thinkingSteps, activeGenerations, hasAvailableSlots, retryGeneration, updateNodeData,

@@ -17,6 +17,28 @@ export interface CanvasViewport {
 }
 
 /**
+ * Bounds for a group's position and size
+ */
+export interface GroupBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * Data for a node group (visual container)
+ */
+export interface GroupData {
+  id: string;
+  title: string;
+  color: string;
+  bounds: GroupBounds;
+  isCollapsed: boolean;
+  createdAt: number;
+}
+
+/**
  * Data stored in an image node
  * Uses index signature to satisfy React Flow's Record<string, unknown> constraint
  */
@@ -45,6 +67,7 @@ export interface Canvas {
   thumbnail_url: string | null;
   nodes: Node<ImageNodeData>[];
   edges: Edge[];
+  groups: GroupData[];
   viewport: CanvasViewport;
   created_at: string;
   updated_at: string;
@@ -59,6 +82,7 @@ export interface CanvasInsert {
   thumbnail_url?: string | null;
   nodes?: Node<ImageNodeData>[];
   edges?: Edge[];
+  groups?: GroupData[];
   viewport?: CanvasViewport;
 }
 
@@ -70,5 +94,6 @@ export interface CanvasUpdate {
   thumbnail_url?: string | null;
   nodes?: Node<ImageNodeData>[];
   edges?: Edge[];
+  groups?: GroupData[];
   viewport?: CanvasViewport;
 }
