@@ -13,7 +13,6 @@ interface GroupLayerProps {
   onResizeGroup: (groupId: string, bounds: { x: number; y: number; width: number; height: number }) => void;
   onUpdateGroup: (groupId: string, updates: Partial<GroupData>) => void;
   onToggleGroupCollapse: (groupId: string) => void;
-  onDeleteGroup: (groupId: string) => void;
 }
 
 // Selector for viewport transform
@@ -23,7 +22,7 @@ const transformSelector = (state: ReactFlowState) => ({
   zoom: state.transform[2],
 });
 
-export function GroupLayer({
+export const GroupLayer = React.memo(function GroupLayer({
   groups,
   selectedGroupId,
   onSelectGroup,
@@ -31,7 +30,6 @@ export function GroupLayer({
   onResizeGroup,
   onUpdateGroup,
   onToggleGroupCollapse,
-  onDeleteGroup,
 }: GroupLayerProps) {
   const transform = useStore(transformSelector);
 
@@ -42,7 +40,7 @@ export function GroupLayer({
   return (
     <div
       className="absolute inset-0 pointer-events-none"
-      style={{ zIndex: -1 }}
+      style={{ zIndex: 0 }}
       aria-label="Node groups layer"
     >
       {groups.map((group) => (
@@ -55,10 +53,9 @@ export function GroupLayer({
           onResize={(bounds) => onResizeGroup(group.id, bounds)}
           onTitleChange={(title) => onUpdateGroup(group.id, { title })}
           onToggleCollapse={() => onToggleGroupCollapse(group.id)}
-          onDelete={() => onDeleteGroup(group.id)}
           transform={transform}
         />
       ))}
     </div>
   );
-}
+});

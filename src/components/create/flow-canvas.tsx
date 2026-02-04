@@ -331,19 +331,14 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
 
   // Figma-style scroll behavior:
   // - Regular scroll: vertical pan
-  // - Shift + scroll: horizontal pan
+  // - Shift + Ctrl/Cmd + scroll: horizontal pan
   // - Ctrl/Cmd + scroll: zoom
   const handleWheel = React.useCallback(
     (e: React.WheelEvent) => {
       const isMod = e.ctrlKey || e.metaKey;
 
-      // Ctrl/Cmd + scroll: zoom (let ReactFlow handle this by default)
-      if (isMod) {
-        return; // ReactFlow handles zoom on Ctrl+scroll
-      }
-
-      // Shift + scroll: horizontal pan
-      if (e.shiftKey) {
+      // Shift + Ctrl/Cmd + scroll: horizontal pan
+      if (e.shiftKey && isMod) {
         e.preventDefault();
         const viewport = getViewport();
         const delta = e.deltaY;
@@ -352,6 +347,11 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
           { duration: 0 }
         );
         return;
+      }
+
+      // Ctrl/Cmd + scroll: zoom (let ReactFlow handle this by default)
+      if (isMod) {
+        return; // ReactFlow handles zoom on Ctrl+scroll
       }
 
       // Regular scroll: vertical pan (ReactFlow default behavior)
@@ -414,9 +414,9 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
               proOptions={{ hideAttribution: true }}
               className={cn(
                 "bg-transparent",
-                // Change cursor based on interaction mode
-                interactionMode === 'select' && !isSpacePressed && "cursor-default",
-                (interactionMode === 'hand' || isSpacePressed) && "cursor-grab active:cursor-grabbing"
+                // Change cursor based on interaction mode - target ReactFlow's internal pane
+                interactionMode === 'select' && !isSpacePressed && "[&_.react-flow__pane]:!cursor-default [&_.react-flow__node]:cursor-default",
+                (interactionMode === 'hand' || isSpacePressed) && "[&_.react-flow__pane]:cursor-grab [&_.react-flow__pane]:active:cursor-grabbing"
               )}
             >
               {/* Group layer (rendered behind nodes) */}
@@ -428,7 +428,6 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
                 onResizeGroup={handleGroupResize}
                 onUpdateGroup={updateGroup}
                 onToggleGroupCollapse={toggleGroupCollapse}
-                onDeleteGroup={deleteGroup}
               />
               {/* Helper lines for alignment guides */}
               <HelperLines

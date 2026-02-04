@@ -6,7 +6,7 @@ import type { GroupBounds } from "@/types/canvas";
 import type { Node } from "@xyflow/react";
 import type { ImageNodeData } from "@/types/canvas";
 
-// Default node dimensions (used for bounds calculations)
+// Default node dimensions (fallback if measured dimensions unavailable)
 export const DEFAULT_NODE_WIDTH = 240;
 export const DEFAULT_NODE_HEIGHT = 300;
 
@@ -14,6 +14,29 @@ export const DEFAULT_NODE_HEIGHT = 300;
 export const GROUP_PADDING = 40;
 export const GROUP_TITLE_HEIGHT = 32;
 export const GROUP_COLLAPSED_HEIGHT = 40;
+
+/**
+ * Get the actual dimensions of a node (uses measured if available, otherwise calculates from aspect ratio)
+ */
+export function getNodeDimensions(node: Node<ImageNodeData>): { width: number; height: number } {
+  // Use measured dimensions if available (React Flow provides these after render)
+  if (node.measured?.width && node.measured?.height) {
+    return { width: node.measured.width, height: node.measured.height };
+  }
+
+  // Calculate from aspect ratio like image-node.tsx does
+  const aspectRatio = node.data.settings?.aspectRatio || "1:1";
+  const [w, h] = aspectRatio.split(":").map(Number);
+  const baseWidth = 240;
+  const aspectHeight = Math.round((baseWidth / (w || 1)) * (h || 1));
+  const clampedHeight = Math.min(400, Math.max(160, aspectHeight));
+  const adjustedWidth = Math.round((clampedHeight / (h || 1)) * (w || 1));
+  const finalWidth = Math.min(320, Math.max(160, adjustedWidth));
+  const finalHeight = Math.round((finalWidth / (w || 1)) * (h || 1));
+
+  // Add ~50px for the info section below the image
+  return { width: finalWidth, height: finalHeight + 50 };
+}
 
 // ComfyUI-inspired color palette for groups
 export const GROUP_COLORS = [
@@ -30,12 +53,13 @@ export const GROUP_COLORS = [
 export type GroupColor = (typeof GROUP_COLORS)[number];
 
 /**
- * Get the center point of a node
+ * Get the center point of a node (uses actual dimensions)
  */
 export function getNodeCenter(node: Node<ImageNodeData>): { x: number; y: number } {
+  const { width, height } = getNodeDimensions(node);
   return {
-    x: node.position.x + DEFAULT_NODE_WIDTH / 2,
-    y: node.position.y + DEFAULT_NODE_HEIGHT / 2,
+    x: node.position.x + width / 2,
+    y: node.position.y + height / 2,
   };
 }
 
@@ -66,7 +90,7 @@ export function isNodeInBounds(
 }
 
 /**
- * Calculate bounds that encompass a set of nodes
+ * Calculate bounds that encompass a set of nodes (uses actual dimensions)
  */
 export function calculateBoundsForNodes(
   nodes: Node<ImageNodeData>[]
@@ -81,11 +105,15 @@ export function calculateBoundsForNodes(
     GROUP_PADDING -
     GROUP_TITLE_HEIGHT;
   const maxX =
-    Math.max(...nodes.map((n) => n.position.x + DEFAULT_NODE_WIDTH)) +
-    GROUP_PADDING;
+    Math.max(...nodes.map((n) => {
+      const { width } = getNodeDimensions(n);
+      return n.position.x + width;
+    })) + GROUP_PADDING;
   const maxY =
-    Math.max(...nodes.map((n) => n.position.y + DEFAULT_NODE_HEIGHT)) +
-    GROUP_PADDING;
+    Math.max(...nodes.map((n) => {
+      const { height } = getNodeDimensions(n);
+      return n.position.y + height;
+    })) + GROUP_PADDING;
 
   return {
     x: minX,

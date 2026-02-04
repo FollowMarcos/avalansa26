@@ -14,7 +14,6 @@ interface GroupItemProps {
   onResize: (bounds: { x: number; y: number; width: number; height: number }) => void;
   onTitleChange: (title: string) => void;
   onToggleCollapse: () => void;
-  onDelete: () => void;
   transform: { x: number; y: number; zoom: number };
 }
 
@@ -28,7 +27,7 @@ type ResizeHandle =
   | "s"
   | "se";
 
-export function GroupItem({
+export const GroupItem = React.memo(function GroupItem({
   group,
   isSelected,
   onSelect,
@@ -46,7 +45,13 @@ export function GroupItem({
   const [resizeHandle, setResizeHandle] = React.useState<ResizeHandle | null>(null);
   const dragStartRef = React.useRef<{ x: number; y: number } | null>(null);
   const initialBoundsRef = React.useRef(group.bounds);
+  const currentBoundsRef = React.useRef(group.bounds);
   const inputRef = React.useRef<HTMLInputElement>(null);
+
+  // Keep current bounds ref in sync with props (for stale closure fix)
+  React.useEffect(() => {
+    currentBoundsRef.current = group.bounds;
+  }, [group.bounds]);
 
   // Calculate position in screen coordinates
   const screenX = group.bounds.x * transform.zoom + transform.x;
@@ -109,9 +114,10 @@ export function GroupItem({
     e.preventDefault();
     setIsDragging(true);
     dragStartRef.current = { x: e.clientX, y: e.clientY };
-    initialBoundsRef.current = { ...group.bounds };
+    // Use currentBoundsRef to avoid stale closure
+    initialBoundsRef.current = { ...currentBoundsRef.current };
     onSelect();
-  }, [isEditing, group.bounds, onSelect]);
+  }, [isEditing, onSelect]);
 
   // Handle resize start
   const handleResizeStart = React.useCallback((handle: ResizeHandle) => (e: React.MouseEvent) => {
@@ -119,9 +125,10 @@ export function GroupItem({
     e.preventDefault();
     setResizeHandle(handle);
     dragStartRef.current = { x: e.clientX, y: e.clientY };
-    initialBoundsRef.current = { ...group.bounds };
+    // Use currentBoundsRef to avoid stale closure
+    initialBoundsRef.current = { ...currentBoundsRef.current };
     onSelect();
-  }, [group.bounds, onSelect]);
+  }, [onSelect]);
 
   // Handle mouse move (drag or resize)
   React.useEffect(() => {
@@ -216,7 +223,8 @@ export function GroupItem({
       className={cn(
         "absolute pointer-events-auto",
         "transition-[box-shadow,opacity] duration-150",
-        isSelected && "z-10",
+        // Base z-index for groups, higher when selected/interacting
+        isSelected || isDragging || resizeHandle ? "z-10" : "z-0",
         isDragging && "opacity-90",
         resizeHandle && "opacity-95"
       )}
@@ -435,4 +443,4 @@ export function GroupItem({
       )}
     </div>
   );
-}
+});

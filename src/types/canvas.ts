@@ -36,6 +36,8 @@ export interface GroupData {
   bounds: GroupBounds;
   isCollapsed: boolean;
   createdAt: number;
+  /** Node IDs that belong to this group (stable membership) */
+  nodeIds: string[];
 }
 
 /**

@@ -1658,6 +1658,14 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     setNodes((nds) => nds.filter((n) => n.id !== nodeId));
     // Also remove any edges connected to this node
     setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+    // Remove node from any groups it belongs to
+    setGroups((prevGroups) =>
+      prevGroups.map((g) =>
+        g.nodeIds.includes(nodeId)
+          ? { ...g, nodeIds: g.nodeIds.filter((id) => id !== nodeId) }
+          : g
+      )
+    );
     // Clear selection if the deleted node was selected
     setSelectedImage((prev) => {
       const node = nodes.find((n) => n.id === nodeId);
@@ -1682,28 +1690,15 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
   // ========== Node Groups ==========
 
-  // Check if a node's center is within a group's bounds
-  const isNodeInBounds = React.useCallback((node: Node<ImageNodeData>, bounds: GroupBounds): boolean => {
-    const nodeWidth = 240; // Default node width
-    const nodeHeight = 300; // Default node height
-    const centerX = node.position.x + nodeWidth / 2;
-    const centerY = node.position.y + nodeHeight / 2;
-    return (
-      centerX >= bounds.x &&
-      centerX <= bounds.x + bounds.width &&
-      centerY >= bounds.y &&
-      centerY <= bounds.y + bounds.height
-    );
-  }, []);
-
-  // Get all node IDs that are within a group's bounds
+  // Get all node IDs that belong to a group (from stored membership)
   const getNodesInGroup = React.useCallback((groupId: string): string[] => {
     const group = groups.find((g) => g.id === groupId);
     if (!group) return [];
-    return nodes.filter((node) => isNodeInBounds(node, group.bounds)).map((n) => n.id);
-  }, [groups, nodes, isNodeInBounds]);
+    // Return stored node IDs, filtering out any that no longer exist
+    return group.nodeIds.filter((nodeId) => nodes.some((n) => n.id === nodeId));
+  }, [groups, nodes]);
 
-  // Calculate bounds that encompass selected nodes
+  // Calculate bounds that encompass selected nodes (uses actual node dimensions)
   const calculateGroupBounds = React.useCallback((nodeIds: string[]): GroupBounds => {
     const selectedNodes = nodes.filter((n) => nodeIds.includes(n.id));
     if (selectedNodes.length === 0) {
@@ -1712,13 +1707,38 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
     const padding = 40;
     const titleHeight = 32;
-    const nodeWidth = 240;
-    const nodeHeight = 300;
 
-    const minX = Math.min(...selectedNodes.map((n) => n.position.x)) - padding;
-    const minY = Math.min(...selectedNodes.map((n) => n.position.y)) - padding - titleHeight;
-    const maxX = Math.max(...selectedNodes.map((n) => n.position.x + nodeWidth)) + padding;
-    const maxY = Math.max(...selectedNodes.map((n) => n.position.y + nodeHeight)) + padding;
+    // Calculate actual dimensions for each node
+    const nodeBounds = selectedNodes.map((node) => {
+      // Use measured dimensions if available, otherwise calculate from aspect ratio
+      let width = 240;
+      let height = 300;
+
+      if (node.measured?.width && node.measured?.height) {
+        width = node.measured.width;
+        height = node.measured.height;
+      } else if (node.data.settings?.aspectRatio) {
+        const [w, h] = node.data.settings.aspectRatio.split(":").map(Number);
+        const baseWidth = 240;
+        const aspectHeight = Math.round((baseWidth / (w || 1)) * (h || 1));
+        const clampedHeight = Math.min(400, Math.max(160, aspectHeight));
+        const adjustedWidth = Math.round((clampedHeight / (h || 1)) * (w || 1));
+        width = Math.min(320, Math.max(160, adjustedWidth));
+        height = Math.round((width / (w || 1)) * (h || 1)) + 50; // +50 for info section
+      }
+
+      return {
+        x: node.position.x,
+        y: node.position.y,
+        width,
+        height,
+      };
+    });
+
+    const minX = Math.min(...nodeBounds.map((b) => b.x)) - padding;
+    const minY = Math.min(...nodeBounds.map((b) => b.y)) - padding - titleHeight;
+    const maxX = Math.max(...nodeBounds.map((b) => b.x + b.width)) + padding;
+    const maxY = Math.max(...nodeBounds.map((b) => b.y + b.height)) + padding;
 
     return {
       x: minX,
@@ -1732,7 +1752,11 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const createGroup = React.useCallback((nodeIds: string[]) => {
     if (nodeIds.length < 2) return;
 
-    const bounds = calculateGroupBounds(nodeIds);
+    // Validate that all node IDs exist
+    const validNodeIds = nodeIds.filter((id) => nodes.some((n) => n.id === id));
+    if (validNodeIds.length < 2) return;
+
+    const bounds = calculateGroupBounds(validNodeIds);
     const newGroup: GroupData = {
       id: `group-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
       title: "New Group",
@@ -1740,13 +1764,14 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       bounds,
       isCollapsed: false,
       createdAt: Date.now(),
+      nodeIds: validNodeIds, // Store the node IDs in the group
     };
 
     setGroups((prev) => [...prev, newGroup]);
     setSelectedGroupId(newGroup.id);
     setSelectedNodeIds(new Set());
     setHasUnsavedChanges(true);
-  }, [calculateGroupBounds]);
+  }, [calculateGroupBounds, nodes]);
 
   // Delete a group (keeps the nodes)
   const deleteGroup = React.useCallback((groupId: string) => {
@@ -1768,10 +1793,10 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   // Move a group and all contained nodes
   const moveGroup = React.useCallback((groupId: string, delta: { x: number; y: number }) => {
     const group = groups.find((g) => g.id === groupId);
-    if (!group || group.isCollapsed) return;
+    if (!group) return;
 
-    // Get nodes inside the group
-    const nodesInGroup = getNodesInGroup(groupId);
+    // Get nodes from stored membership (not dynamic calculation)
+    const nodesInGroup = group.nodeIds;
 
     // Update group bounds
     setGroups((prev) =>
@@ -1789,23 +1814,25 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       )
     );
 
-    // Move all nodes inside the group
-    setNodes((prev) =>
-      prev.map((node) =>
-        nodesInGroup.includes(node.id)
-          ? {
-              ...node,
-              position: {
-                x: node.position.x + delta.x,
-                y: node.position.y + delta.y,
-              },
-            }
-          : node
-      )
-    );
+    // Move all nodes in the group (even if collapsed)
+    if (nodesInGroup.length > 0) {
+      setNodes((prev) =>
+        prev.map((node) =>
+          nodesInGroup.includes(node.id)
+            ? {
+                ...node,
+                position: {
+                  x: node.position.x + delta.x,
+                  y: node.position.y + delta.y,
+                },
+              }
+            : node
+        )
+      );
+    }
 
     setHasUnsavedChanges(true);
-  }, [groups, getNodesInGroup]);
+  }, [groups]);
 
   // Toggle group collapse state
   const toggleGroupCollapse = React.useCallback((groupId: string) => {
