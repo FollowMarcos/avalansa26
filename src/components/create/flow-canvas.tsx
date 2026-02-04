@@ -57,6 +57,17 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
     setInteractionMode,
   } = useCreate();
 
+  // Filter out nodes that belong to collapsed groups
+  const visibleNodes = React.useMemo(() => {
+    const collapsedGroupNodeIds = new Set<string>();
+    groups.forEach(group => {
+      if (group.isCollapsed && group.nodeIds) {
+        group.nodeIds.forEach(id => collapsedGroupNodeIds.add(id));
+      }
+    });
+    return nodes.filter(node => !collapsedGroupNodeIds.has(node.id));
+  }, [nodes, groups]);
+
   // State for helper lines (alignment guides)
   const [helperLineHorizontal, setHelperLineHorizontal] = React.useState<number | undefined>(undefined);
   const [helperLineVertical, setHelperLineVertical] = React.useState<number | undefined>(undefined);
@@ -383,7 +394,7 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
             onWheel={handleWheel}
           >
             <ReactFlow
-              nodes={nodes}
+              nodes={visibleNodes}
               edges={edges}
               onNodesChange={customOnNodesChange}
               onEdgesChange={onEdgesChange}

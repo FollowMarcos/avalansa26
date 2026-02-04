@@ -49,6 +49,9 @@ const HOTKEY_SECTIONS: HotkeySection[] = [
     title: "Groups",
     items: [
       { keys: ["Ctrl", "G"], description: "Create group" },
+      { keys: ["Delete"], description: "Delete group" },
+      { keys: ["Double-click"], description: "Edit title" },
+      { keys: ["F2"], description: "Rename group" },
     ],
   },
 ];
@@ -85,7 +88,7 @@ export function HotkeysIsland() {
   }, []);
 
   return (
-    <div className="absolute bottom-4 left-4 z-50 pointer-events-auto">
+    <div className="absolute bottom-4 left-4 z-[100] pointer-events-auto">
       <div
         className={cn(
           "bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-lg",
