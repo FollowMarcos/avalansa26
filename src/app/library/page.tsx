@@ -21,7 +21,7 @@ export const metadata: Metadata = {
 
 export default function LibraryPage() {
   return (
-    <PageShell showDock={true} dockPosition="left">
+    <PageShell showDock={true} dockPosition="bottom">
       <PromptLibraryPage />
     </PageShell>
   );

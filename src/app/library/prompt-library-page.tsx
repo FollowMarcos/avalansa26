@@ -15,7 +15,12 @@ import {
   createPromptTag,
   getReceivedPromptShares,
   markShareAsSeen,
+  savePrompt,
+  addPromptToFolder,
+  addTagToPrompt,
+  sharePromptWithUser,
 } from "@/utils/supabase/prompts.server";
+import { createClient } from "@/utils/supabase/client";
 import {
   BookMarked,
   Search,
@@ -68,6 +73,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import Image from "next/image";
 
 type ViewMode = "grid" | "list";
 type ActiveTab = "my-prompts" | "shared";
@@ -92,6 +99,24 @@ export function PromptLibraryPage() {
   const [newFolderDialogOpen, setNewFolderDialogOpen] = React.useState(false);
   const [newFolderName, setNewFolderName] = React.useState("");
   const [isCreatingFolder, setIsCreatingFolder] = React.useState(false);
+
+  // Add prompt dialog state
+  const [addPromptDialogOpen, setAddPromptDialogOpen] = React.useState(false);
+  const [newPromptName, setNewPromptName] = React.useState("");
+  const [newPromptText, setNewPromptText] = React.useState("");
+  const [newPromptDescription, setNewPromptDescription] = React.useState("");
+  const [isSavingPrompt, setIsSavingPrompt] = React.useState(false);
+
+  // Share dialog state
+  const [shareDialogOpen, setShareDialogOpen] = React.useState(false);
+  const [promptToShare, setPromptToShare] = React.useState<Prompt | null>(null);
+  const [shareSearchQuery, setShareSearchQuery] = React.useState("");
+  const [shareSearchResults, setShareSearchResults] = React.useState<Array<{ id: string; username: string | null; avatar_url: string | null }>>([]);
+  const [selectedShareUsers, setSelectedShareUsers] = React.useState<Array<{ id: string; username: string | null; avatar_url: string | null }>>([]);
+  const [shareMessage, setShareMessage] = React.useState("");
+  const [isSearchingUsers, setIsSearchingUsers] = React.useState(false);
+  const [isSharing, setIsSharing] = React.useState(false);
+  const shareSearchTimeoutRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Load data on mount
   React.useEffect(() => {
@@ -224,6 +249,123 @@ export function PromptLibraryPage() {
     }
   };
 
+  // Add new prompt handler
+  const handleAddPrompt = async () => {
+    if (!newPromptName.trim() || !newPromptText.trim()) {
+      toast.error("Please enter a name and prompt text");
+      return;
+    }
+
+    setIsSavingPrompt(true);
+    try {
+      const prompt = await savePrompt({
+        name: newPromptName.trim(),
+        description: newPromptDescription.trim() || undefined,
+        prompt_text: newPromptText.trim(),
+      });
+
+      if (prompt) {
+        setPrompts((prev) => [prompt, ...prev]);
+        setNewPromptName("");
+        setNewPromptText("");
+        setNewPromptDescription("");
+        setAddPromptDialogOpen(false);
+        toast.success("Prompt added to library");
+      }
+    } catch {
+      toast.error("Failed to add prompt");
+    } finally {
+      setIsSavingPrompt(false);
+    }
+  };
+
+  // Share dialog handlers
+  const handleOpenShareDialog = (prompt: Prompt) => {
+    setPromptToShare(prompt);
+    setShareDialogOpen(true);
+    setShareSearchQuery("");
+    setShareSearchResults([]);
+    setSelectedShareUsers([]);
+    setShareMessage("");
+  };
+
+  const handleCloseShareDialog = () => {
+    setShareDialogOpen(false);
+    setPromptToShare(null);
+    setShareSearchQuery("");
+    setShareSearchResults([]);
+    setSelectedShareUsers([]);
+    setShareMessage("");
+  };
+
+  // User search for sharing
+  React.useEffect(() => {
+    if (shareSearchTimeoutRef.current) {
+      clearTimeout(shareSearchTimeoutRef.current);
+    }
+
+    if (!shareSearchQuery.trim()) {
+      setShareSearchResults([]);
+      return;
+    }
+
+    setIsSearchingUsers(true);
+    shareSearchTimeoutRef.current = setTimeout(async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, username, avatar_url")
+        .ilike("username", `%${shareSearchQuery}%`)
+        .limit(10);
+
+      if (!error && data) {
+        // Filter out already selected users
+        const selectedIds = new Set(selectedShareUsers.map((u) => u.id));
+        setShareSearchResults(data.filter((u) => !selectedIds.has(u.id)));
+      }
+      setIsSearchingUsers(false);
+    }, 300);
+
+    return () => {
+      if (shareSearchTimeoutRef.current) {
+        clearTimeout(shareSearchTimeoutRef.current);
+      }
+    };
+  }, [shareSearchQuery, selectedShareUsers]);
+
+  const handleSelectShareUser = (user: { id: string; username: string | null; avatar_url: string | null }) => {
+    setSelectedShareUsers((prev) => [...prev, user]);
+    setShareSearchQuery("");
+    setShareSearchResults([]);
+  };
+
+  const handleRemoveShareUser = (userId: string) => {
+    setSelectedShareUsers((prev) => prev.filter((u) => u.id !== userId));
+  };
+
+  const handleSharePrompt = async () => {
+    if (!promptToShare || selectedShareUsers.length === 0) return;
+
+    setIsSharing(true);
+    try {
+      await Promise.all(
+        selectedShareUsers.map((user) =>
+          sharePromptWithUser({
+            prompt_id: promptToShare.id,
+            shared_with: user.id,
+            message: shareMessage.trim() || undefined,
+          })
+        )
+      );
+      toast.success(`Shared with ${selectedShareUsers.length} user${selectedShareUsers.length > 1 ? "s" : ""}`);
+      handleCloseShareDialog();
+    } catch {
+      toast.error("Failed to share prompt");
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
   return (
     <TooltipProvider delayDuration={300}>
       <div className="min-h-screen bg-background">
@@ -269,6 +411,14 @@ export function PromptLibraryPage() {
                     <List className="size-4" />
                   </Button>
                 </div>
+
+                <Button
+                  variant="outline"
+                  onClick={() => setAddPromptDialogOpen(true)}
+                >
+                  <Plus className="size-4 mr-2" />
+                  Add Prompt
+                </Button>
 
                 <Button asChild>
                   <Link href="/create">
@@ -437,6 +587,7 @@ export function PromptLibraryPage() {
                   onToggleFavorite={handleToggleFavorite}
                   onCopy={handleCopyPrompt}
                   onUseInCreate={handleUseInCreate}
+                  onShare={handleOpenShareDialog}
                   prefersReducedMotion={prefersReducedMotion}
                 />
               ) : (
@@ -504,6 +655,208 @@ export function PromptLibraryPage() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Add Prompt Dialog */}
+        <Dialog open={addPromptDialogOpen} onOpenChange={setAddPromptDialogOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Plus className="size-4" />
+                Add New Prompt
+              </DialogTitle>
+              <DialogDescription>
+                Create a new prompt to save in your library
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-prompt-name">Name</Label>
+                <Input
+                  id="new-prompt-name"
+                  value={newPromptName}
+                  onChange={(e) => setNewPromptName(e.target.value)}
+                  placeholder="My awesome prompt"
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="new-prompt-text">Prompt</Label>
+                <Textarea
+                  id="new-prompt-text"
+                  value={newPromptText}
+                  onChange={(e) => setNewPromptText(e.target.value)}
+                  placeholder="Enter your prompt text..."
+                  rows={4}
+                  className="font-mono text-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="new-prompt-description">
+                  Description{" "}
+                  <span className="text-muted-foreground font-normal">(optional)</span>
+                </Label>
+                <Input
+                  id="new-prompt-description"
+                  value={newPromptDescription}
+                  onChange={(e) => setNewPromptDescription(e.target.value)}
+                  placeholder="What is this prompt for?"
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setAddPromptDialogOpen(false)}
+                disabled={isSavingPrompt}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleAddPrompt}
+                disabled={!newPromptName.trim() || !newPromptText.trim() || isSavingPrompt}
+              >
+                {isSavingPrompt ? (
+                  <>
+                    <Loader2 className="size-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <BookMarked className="size-4 mr-2" />
+                    Add to Library
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Share Prompt Dialog */}
+        <Dialog open={shareDialogOpen} onOpenChange={(open) => !open && handleCloseShareDialog()}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Share2 className="size-4" />
+                Share Prompt
+              </DialogTitle>
+              <DialogDescription>
+                Share "{promptToShare?.name}" with other users
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              {/* User search */}
+              <div className="space-y-2">
+                <Label>Share with</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <Input
+                    value={shareSearchQuery}
+                    onChange={(e) => setShareSearchQuery(e.target.value)}
+                    placeholder="Search users by username..."
+                    className="pl-9"
+                  />
+                </div>
+
+                {/* Search results */}
+                {shareSearchResults.length > 0 && (
+                  <div className="border rounded-lg divide-y max-h-32 overflow-y-auto">
+                    {shareSearchResults.map((user) => (
+                      <button
+                        key={user.id}
+                        onClick={() => handleSelectShareUser(user)}
+                        className="w-full flex items-center gap-2 px-3 py-2 hover:bg-muted transition-colors"
+                      >
+                        {user.avatar_url ? (
+                          <Image
+                            src={user.avatar_url}
+                            alt=""
+                            width={24}
+                            height={24}
+                            className="rounded-full"
+                          />
+                        ) : (
+                          <div className="size-6 rounded-full bg-muted" />
+                        )}
+                        <span className="text-sm">{user.username || "Unknown"}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {isSearchingUsers && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin" />
+                    Searching...
+                  </div>
+                )}
+
+                {/* Selected users */}
+                {selectedShareUsers.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedShareUsers.map((user) => (
+                      <Badge key={user.id} variant="secondary" className="gap-1 pr-1">
+                        {user.username || "Unknown"}
+                        <button
+                          onClick={() => handleRemoveShareUser(user.id)}
+                          className="size-4 rounded-full hover:bg-foreground/10 flex items-center justify-center"
+                        >
+                          <X className="size-2.5" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Optional message */}
+              <div className="space-y-2">
+                <Label htmlFor="share-message">
+                  Message{" "}
+                  <span className="text-muted-foreground font-normal">(optional)</span>
+                </Label>
+                <Textarea
+                  id="share-message"
+                  value={shareMessage}
+                  onChange={(e) => setShareMessage(e.target.value)}
+                  placeholder="Add a note for the recipient..."
+                  rows={2}
+                  className="resize-none"
+                />
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={handleCloseShareDialog}
+                disabled={isSharing}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSharePrompt}
+                disabled={selectedShareUsers.length === 0 || isSharing}
+              >
+                {isSharing ? (
+                  <>
+                    <Loader2 className="size-4 mr-2 animate-spin" />
+                    Sharing...
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="size-4 mr-2" />
+                    Share
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </TooltipProvider>
   );
@@ -520,6 +873,7 @@ interface MyPromptsViewProps {
   onToggleFavorite: (id: string, isFavorite: boolean) => void;
   onCopy: (text: string) => void;
   onUseInCreate: (prompt: Prompt) => void;
+  onShare: (prompt: Prompt) => void;
   prefersReducedMotion: boolean | null;
 }
 
@@ -530,6 +884,7 @@ function MyPromptsView({
   onToggleFavorite,
   onCopy,
   onUseInCreate,
+  onShare,
   prefersReducedMotion,
 }: MyPromptsViewProps) {
   if (prompts.length === 0) {
@@ -570,6 +925,7 @@ function MyPromptsView({
             }
             onCopy={() => onCopy(prompt.prompt_text)}
             onUseInCreate={() => onUseInCreate(prompt)}
+            onShare={() => onShare(prompt)}
             prefersReducedMotion={prefersReducedMotion}
           />
         ))}
@@ -647,6 +1003,7 @@ interface PromptLibraryCardProps {
   onToggleFavorite: () => void;
   onCopy: () => void;
   onUseInCreate: () => void;
+  onShare: () => void;
   prefersReducedMotion: boolean | null;
 }
 
@@ -657,6 +1014,7 @@ function PromptLibraryCard({
   onToggleFavorite,
   onCopy,
   onUseInCreate,
+  onShare,
   prefersReducedMotion,
 }: PromptLibraryCardProps) {
   return (
@@ -761,6 +1119,10 @@ function PromptLibraryCard({
                 )}
               />
               {prompt.is_favorite ? "Unfavorite" : "Favorite"}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onShare}>
+              <Share2 className="size-3.5 mr-2" />
+              Share
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
