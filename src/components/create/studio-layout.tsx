@@ -11,11 +11,29 @@ import { QuickToolbar } from "./quick-toolbar";
 import { GenerationGallery } from "./generation-gallery";
 import { MaintenanceBanner } from "./maintenance-banner";
 import { HotkeysIsland } from "./hotkeys-island";
+import { PromptVaultIsland } from "./prompt-vault-island";
+import { SavePromptDialog } from "./save-prompt-dialog";
+import { SharePromptDialog } from "./share-prompt-dialog";
+import { usePromptVault } from "./use-prompt-vault";
 import { motion, useReducedMotion } from "motion/react";
 
 export function StudioLayout() {
   const prefersReducedMotion = useReducedMotion();
-  const { addReferenceImages } = useCreate();
+  const { addReferenceImages, prompt, setPrompt, settings, updateSettings } = useCreate();
+
+  // Prompt vault hook
+  const promptVault = usePromptVault({
+    onPromptSelected: (selectedPrompt) => {
+      // Load the prompt into the composer
+      setPrompt(selectedPrompt.prompt_text);
+      if (selectedPrompt.settings) {
+        updateSettings({
+          ...selectedPrompt.settings,
+          negativePrompt: selectedPrompt.negative_prompt || "",
+        });
+      }
+    },
+  });
 
   return (
     <ReactFlowProvider>
@@ -45,10 +63,23 @@ export function StudioLayout() {
             <GenerationGallery />
 
             {/* Prompt Composer */}
-            <PromptComposer />
+            <PromptComposer onSaveToVault={promptVault.openSaveDialog} />
 
             {/* Floating Canvas List (left side) */}
             <CanvasList />
+
+            {/* Floating Prompt Vault Island (top left, below canvas list) */}
+            <PromptVaultIsland
+              open={promptVault.vaultOpen}
+              onToggle={promptVault.toggleVault}
+              prompts={promptVault.prompts}
+              folders={promptVault.folders}
+              tags={promptVault.tags}
+              onSelectPrompt={promptVault.usePrompt}
+              onToggleFavorite={promptVault.toggleFavorite}
+              onSharePrompt={promptVault.openShareDialog}
+              onDeletePrompt={promptVault.deletePrompt}
+            />
 
             {/* Floating History Island (right side) */}
             <HistoryIsland />
@@ -60,6 +91,47 @@ export function StudioLayout() {
 
         {/* Drag overlay for file uploads */}
         <DragOverlay onDrop={addReferenceImages} />
+
+        {/* Save Prompt Dialog */}
+        <SavePromptDialog
+          open={promptVault.saveDialogOpen}
+          onOpenChange={(open) => !open && promptVault.closeSaveDialog()}
+          promptText={prompt}
+          negativePrompt={settings.negativePrompt}
+          settings={settings}
+          folders={promptVault.folders}
+          tags={promptVault.tags}
+          onSave={async (data) => {
+            await promptVault.saveNewPrompt({
+              name: data.name,
+              description: data.description,
+              promptText: prompt,
+              negativePrompt: settings.negativePrompt,
+              settings,
+              folderIds: data.folderIds,
+              tagIds: data.tagIds,
+            });
+          }}
+          onCreateFolder={promptVault.createFolder}
+          onCreateTag={promptVault.createTag}
+        />
+
+        {/* Share Prompt Dialog */}
+        <SharePromptDialog
+          open={promptVault.shareDialogOpen}
+          onOpenChange={(open) => !open && promptVault.closeShareDialog()}
+          prompt={promptVault.promptToShare}
+          onShare={async (userIds, message) => {
+            if (promptVault.promptToShare) {
+              await promptVault.shareWithUsers(
+                promptVault.promptToShare.id,
+                userIds,
+                message
+              );
+            }
+          }}
+          onSearchUsers={promptVault.searchUsers}
+        />
       </motion.div>
     </ReactFlowProvider>
   );

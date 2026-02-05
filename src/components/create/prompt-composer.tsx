@@ -20,6 +20,7 @@ import {
   ChevronDown,
   Minus,
   Plus,
+  Bookmark,
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import {
@@ -81,7 +82,11 @@ function AspectRatioShape({ ratio, size = "sm", className }: { ratio: AspectRati
   );
 }
 
-export function PromptComposer() {
+interface PromptComposerProps {
+  onSaveToVault?: () => void;
+}
+
+export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
   const {
     prompt,
     setPrompt,
@@ -354,6 +359,26 @@ export function PromptComposer() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Save to Vault Button */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={onSaveToVault}
+                          disabled={!prompt.trim()}
+                          variant="ghost"
+                          className={cn(
+                            "size-9 rounded-xl flex items-center justify-center transition-colors shrink-0 p-0",
+                            "hover:bg-muted dark:hover:bg-zinc-800",
+                            "disabled:opacity-50 disabled:cursor-not-allowed"
+                          )}
+                          aria-label="Save prompt to vault"
+                        >
+                          <Bookmark className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">Save to Vault</TooltipContent>
+                    </Tooltip>
 
                     {/* Generate Button */}
                     <Tooltip>
