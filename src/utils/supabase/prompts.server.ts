@@ -1069,3 +1069,196 @@ export async function uploadPromptImage(
 
   return image;
 }
+
+// ============================================
+// PROMPT DETAIL PAGE
+// ============================================
+
+/**
+ * Get a single prompt by ID with images (for detail page)
+ */
+export async function getPromptWithImages(promptId: string): Promise<Prompt | null> {
+  const supabase = await createClient();
+
+  const { data: prompt, error } = await supabase
+    .from('prompts')
+    .select('*')
+    .eq('id', promptId)
+    .single();
+
+  if (error) {
+    console.error('Error fetching prompt:', error.message);
+    return null;
+  }
+
+  if (!prompt) return null;
+
+  // Get images for this prompt
+  const { data: images } = await supabase
+    .from('prompt_images')
+    .select('*')
+    .eq('prompt_id', promptId)
+    .order('position', { ascending: true });
+
+  return {
+    ...prompt,
+    images: images ?? [],
+  };
+}
+
+/**
+ * Share history entry type
+ */
+export interface PromptShareHistoryEntry {
+  id: string;
+  shared_with: string;
+  message: string | null;
+  is_seen: boolean;
+  created_at: string;
+  recipient: {
+    id: string;
+    username: string | null;
+    avatar_url: string | null;
+  };
+}
+
+/**
+ * Get share history for a prompt (who the prompt was shared with)
+ * Only the prompt owner can see this
+ */
+export async function getPromptShareHistory(promptId: string): Promise<PromptShareHistoryEntry[]> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  // First verify the user owns this prompt
+  const { data: prompt } = await supabase
+    .from('prompts')
+    .select('user_id')
+    .eq('id', promptId)
+    .single();
+
+  if (!prompt || prompt.user_id !== user.id) {
+    return [];
+  }
+
+  // Get shares for this prompt
+  const { data: shares, error } = await supabase
+    .from('prompt_shares')
+    .select(`
+      id,
+      shared_with,
+      message,
+      is_seen,
+      created_at,
+      profiles!prompt_shares_shared_with_fkey(id, username, avatar_url)
+    `)
+    .eq('prompt_id', promptId)
+    .eq('shared_by', user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching share history:', error.message);
+    return [];
+  }
+
+  return (
+    shares?.map((share) => ({
+      id: share.id,
+      shared_with: share.shared_with,
+      message: share.message,
+      is_seen: share.is_seen,
+      created_at: share.created_at,
+      recipient: share.profiles as unknown as {
+        id: string;
+        username: string | null;
+        avatar_url: string | null;
+      },
+    })) ?? []
+  );
+}
+
+/**
+ * Info about who shared a prompt with the current user
+ */
+export interface PromptShareSource {
+  shared_by: string;
+  message: string | null;
+  created_at: string;
+  sharer: {
+    id: string;
+    username: string | null;
+    avatar_url: string | null;
+  };
+}
+
+/**
+ * Get info about who shared a prompt with the current user (if applicable)
+ * Returns null if the user owns the prompt or it wasn't shared with them
+ */
+export async function getPromptShareSource(promptId: string): Promise<PromptShareSource | null> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  // Find if this prompt was shared with the user
+  const { data: share, error } = await supabase
+    .from('prompt_shares')
+    .select(`
+      shared_by,
+      message,
+      created_at,
+      profiles!prompt_shares_shared_by_fkey(id, username, avatar_url)
+    `)
+    .eq('prompt_id', promptId)
+    .eq('shared_with', user.id)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Error fetching share source:', error.message);
+    return null;
+  }
+
+  if (!share) return null;
+
+  return {
+    shared_by: share.shared_by,
+    message: share.message,
+    created_at: share.created_at,
+    sharer: share.profiles as unknown as {
+      id: string;
+      username: string | null;
+      avatar_url: string | null;
+    },
+  };
+}
+
+/**
+ * Get the original author info for a copied prompt
+ */
+export async function getOriginalAuthor(authorId: string): Promise<{
+  id: string;
+  username: string | null;
+  avatar_url: string | null;
+} | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('id, username, avatar_url')
+    .eq('id', authorId)
+    .single();
+
+  if (error) {
+    console.error('Error fetching original author:', error.message);
+    return null;
+  }
+
+  return data;
+}

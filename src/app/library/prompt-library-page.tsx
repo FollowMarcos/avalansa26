@@ -1158,25 +1158,26 @@ function PromptLibraryCard({
   const hasImages = prompt.images && prompt.images.length > 0;
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      transition={{
-        duration: prefersReducedMotion ? 0 : 0.2,
-        delay: prefersReducedMotion ? 0 : index * 0.03,
-        ease: EASE_OUT,
-      }}
-      whileHover={prefersReducedMotion ? undefined : { scale: 1.02, y: -2 }}
-      className={cn(
-        "group relative rounded-2xl border bg-card overflow-hidden",
-        "transition-shadow duration-200",
-        viewMode === "list"
-          ? "flex items-center gap-4 p-3 hover:bg-accent/50"
-          : "flex flex-col hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 hover:z-10"
-      )}
-    >
+    <Link href={`/library/${prompt.id}`} className="block">
+      <motion.div
+        layout
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{
+          duration: prefersReducedMotion ? 0 : 0.2,
+          delay: prefersReducedMotion ? 0 : index * 0.03,
+          ease: EASE_OUT,
+        }}
+        whileHover={prefersReducedMotion ? undefined : { scale: 1.02, y: -2 }}
+        className={cn(
+          "group relative rounded-2xl border bg-card overflow-hidden",
+          "transition-shadow duration-200",
+          viewMode === "list"
+            ? "flex items-center gap-4 p-3 hover:bg-accent/50"
+            : "flex flex-col hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 hover:z-10"
+        )}
+      >
       {/* Image thumbnails (grid view only) */}
       {viewMode === "grid" && hasImages && (
         <div className="relative aspect-[16/9] bg-muted overflow-hidden">
@@ -1257,66 +1258,76 @@ function PromptLibraryCard({
         </div>
       </div>
 
-      {/* Actions */}
-      <div
-        className={cn(
-          "flex items-center gap-1",
-          viewMode === "grid"
-            ? "absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-            : ""
-        )}
-      >
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-7 px-2"
-              onClick={onUseInCreate}
-            >
-              <ExternalLink className="size-3.5 mr-1" />
-              Use
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Use in Create</TooltipContent>
-        </Tooltip>
+        {/* Actions */}
+        <div
+          className={cn(
+            "flex items-center gap-1",
+            viewMode === "grid"
+              ? "absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+              : ""
+          )}
+          onClick={(e) => e.preventDefault()}
+        >
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-7 px-2"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onUseInCreate();
+                }}
+              >
+                <ExternalLink className="size-3.5 mr-1" />
+                Use
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Use in Create</TooltipContent>
+          </Tooltip>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-7">
-              <MoreHorizontal className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onCopy}>
-              <Copy className="size-3.5 mr-2" />
-              Copy prompt
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onToggleFavorite}>
-              <Heart
-                className={cn(
-                  "size-3.5 mr-2",
-                  prompt.is_favorite && "fill-current"
-                )}
-              />
-              {prompt.is_favorite ? "Unfavorite" : "Favorite"}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onShare}>
-              <Share2 className="size-3.5 mr-2" />
-              Share
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={onDelete}
-              className="text-destructive focus:text-destructive"
-            >
-              <Trash2 className="size-3.5 mr-2" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </motion.div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7"
+                onClick={(e) => e.preventDefault()}
+              >
+                <MoreHorizontal className="size-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onCopy}>
+                <Copy className="size-3.5 mr-2" />
+                Copy prompt
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onToggleFavorite}>
+                <Heart
+                  className={cn(
+                    "size-3.5 mr-2",
+                    prompt.is_favorite && "fill-current"
+                  )}
+                />
+                {prompt.is_favorite ? "Unfavorite" : "Favorite"}
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={onShare}>
+                <Share2 className="size-3.5 mr-2" />
+                Share
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={onDelete}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="size-3.5 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </motion.div>
+    </Link>
   );
 }
 
@@ -1356,26 +1367,27 @@ function SharedPromptCard({
   }, [is_seen, onMarkSeen]);
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      transition={{
-        duration: prefersReducedMotion ? 0 : 0.2,
-        delay: prefersReducedMotion ? 0 : index * 0.03,
-        ease: EASE_OUT,
-      }}
-      whileHover={prefersReducedMotion ? undefined : { scale: 1.02, y: -2 }}
-      className={cn(
-        "group relative rounded-2xl border bg-card overflow-hidden",
-        "transition-shadow duration-200",
-        viewMode === "list"
-          ? "flex items-center gap-4 p-3 hover:bg-accent/50"
-          : "flex flex-col hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 hover:z-10",
-        !is_seen && "ring-2 ring-primary/50"
-      )}
-    >
+    <Link href={`/library/${prompt.id}`} className="block">
+      <motion.div
+        layout
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{
+          duration: prefersReducedMotion ? 0 : 0.2,
+          delay: prefersReducedMotion ? 0 : index * 0.03,
+          ease: EASE_OUT,
+        }}
+        whileHover={prefersReducedMotion ? undefined : { scale: 1.02, y: -2 }}
+        className={cn(
+          "group relative rounded-2xl border bg-card overflow-hidden",
+          "transition-shadow duration-200",
+          viewMode === "list"
+            ? "flex items-center gap-4 p-3 hover:bg-accent/50"
+            : "flex flex-col hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 hover:z-10",
+          !is_seen && "ring-2 ring-primary/50"
+        )}
+      >
       {/* New badge */}
       {!is_seen && (
         <Badge className="absolute top-3 right-3 z-10 text-[10px]">New</Badge>
@@ -1447,40 +1459,53 @@ function SharedPromptCard({
         </div>
       </div>
 
-      {/* Actions */}
-      <div
-        className={cn(
-          "flex items-center gap-1",
-          viewMode === "grid"
-            ? "absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
-            : "",
-          !is_seen && viewMode === "grid" && "right-16"
-        )}
-      >
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="secondary"
-              size="sm"
-              className="h-7 px-2"
-              onClick={onUseInCreate}
-            >
-              <ExternalLink className="size-3.5 mr-1" />
-              Use
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Use in Create</TooltipContent>
-        </Tooltip>
+        {/* Actions */}
+        <div
+          className={cn(
+            "flex items-center gap-1",
+            viewMode === "grid"
+              ? "absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+              : "",
+            !is_seen && viewMode === "grid" && "right-16"
+          )}
+          onClick={(e) => e.preventDefault()}
+        >
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="secondary"
+                size="sm"
+                className="h-7 px-2"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onUseInCreate();
+                }}
+              >
+                <ExternalLink className="size-3.5 mr-1" />
+                Use
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Use in Create</TooltipContent>
+          </Tooltip>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-7" onClick={onCopy}>
-              <Copy className="size-3.5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Copy prompt</TooltipContent>
-        </Tooltip>
-      </div>
-    </motion.div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7"
+                onClick={(e) => {
+                  e.preventDefault();
+                  onCopy();
+                }}
+              >
+                <Copy className="size-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Copy prompt</TooltipContent>
+          </Tooltip>
+        </div>
+      </motion.div>
+    </Link>
   );
 }
