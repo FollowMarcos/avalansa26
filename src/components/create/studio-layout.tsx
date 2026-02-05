@@ -27,10 +27,18 @@ export function StudioLayout() {
       // Load the prompt into the composer
       setPrompt(selectedPrompt.prompt_text);
       if (selectedPrompt.settings) {
+        // Apply saved settings - cast to satisfy type checker since
+        // GenerationSettings uses string types but context uses literals
+        const savedSettings = selectedPrompt.settings;
         updateSettings({
-          ...selectedPrompt.settings,
           negativePrompt: selectedPrompt.negative_prompt || "",
-        });
+          ...(savedSettings.aspectRatio && { aspectRatio: savedSettings.aspectRatio }),
+          ...(savedSettings.imageSize && { imageSize: savedSettings.imageSize }),
+          ...(savedSettings.outputCount && { outputCount: savedSettings.outputCount }),
+          ...(savedSettings.generationSpeed && { generationSpeed: savedSettings.generationSpeed }),
+          ...(savedSettings.referenceImages && { referenceImages: savedSettings.referenceImages }),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        } as any);
       }
     },
   });
