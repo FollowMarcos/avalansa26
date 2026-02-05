@@ -462,6 +462,10 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   // This is declared early so it's available for canvas loading functions
   const processedGenerationIds = React.useRef<Set<string>>(new Set());
 
+  // Track whether initial canvas loading has completed to prevent race conditions
+  // History effect should wait for this before processing
+  const canvasLoadedRef = React.useRef(false);
+
   // Session management state
   const [currentSessionId, setCurrentSessionId] = React.useState<string | null>(null);
   const [currentSessionName, setCurrentSessionName] = React.useState<string | null>(null);
@@ -1628,30 +1632,52 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
   // Add a new image node from a generated image
   const addImageNode = React.useCallback((image: GeneratedImage) => {
-    const position = getNextNodePosition();
-    const newNode: Node<ImageNodeData> = {
-      id: `node-${image.id}`,
-      type: 'imageNode',
-      position,
-      data: {
-        generationId: image.id,
-        imageUrl: image.url,
-        prompt: image.prompt,
-        negativePrompt: image.settings.negativePrompt,
-        timestamp: image.timestamp,
-        settings: {
-          aspectRatio: image.settings.aspectRatio,
-          imageSize: image.settings.imageSize,
-          outputCount: image.settings.outputCount,
-          generationSpeed: image.settings.generationSpeed,
-          referenceImages: image.settings.referenceImages,
+    const nodeId = `node-${image.id}`;
+
+    setNodes((nds) => {
+      // Check if node already exists - prevents duplicates from race conditions
+      if (nds.some(n => n.id === nodeId)) {
+        return nds;
+      }
+
+      // Grid layout constants
+      const COLS = 4;
+      const SPACING_X = 300;
+      const SPACING_Y = 380;
+
+      // Calculate position based on current node count (inside callback for accuracy)
+      const nodeCount = nds.length;
+      const row = Math.floor(nodeCount / COLS);
+      const col = nodeCount % COLS;
+      const position = {
+        x: col * SPACING_X + 50,
+        y: row * SPACING_Y + 50,
+      };
+
+      const newNode: Node<ImageNodeData> = {
+        id: nodeId,
+        type: 'imageNode',
+        position,
+        data: {
+          generationId: image.id,
+          imageUrl: image.url,
+          prompt: image.prompt,
+          negativePrompt: image.settings.negativePrompt,
+          timestamp: image.timestamp,
+          settings: {
+            aspectRatio: image.settings.aspectRatio,
+            imageSize: image.settings.imageSize,
+            outputCount: image.settings.outputCount,
+            generationSpeed: image.settings.generationSpeed,
+            referenceImages: image.settings.referenceImages,
+          },
+          status: 'success', // Images from history are already completed
         },
-        status: 'success', // Images from history are already completed
-      },
-    };
-    setNodes((nds) => [...nds, newNode]);
+      };
+      return [...nds, newNode];
+    });
     setHasUnsavedChanges(true);
-  }, [getNextNodePosition]);
+  }, []);
 
   // Delete a node from the canvas
   const deleteNode = React.useCallback((nodeId: string) => {
@@ -2158,8 +2184,12 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
             }
           }
         }
+        // Mark canvas loading as complete so history effect can proceed
+        canvasLoadedRef.current = true;
       } catch (error) {
         console.error("Failed to load canvases:", error);
+        // Still mark as loaded on error so we don't block forever
+        canvasLoadedRef.current = true;
       }
     }
     loadCanvases();
@@ -2174,6 +2204,14 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   // Convert history to nodes when history changes (for new generations)
   const prevHistoryLength = React.useRef(history.length);
   React.useEffect(() => {
+    // Wait for canvas to load first - initial history items come from the loaded canvas
+    // This effect should only handle NEW generations that happen during the session
+    if (!canvasLoadedRef.current) {
+      // Update ref to current length so we don't process initial history later
+      prevHistoryLength.current = history.length;
+      return;
+    }
+
     // Only add nodes for new history items
     if (history.length > prevHistoryLength.current) {
       const newCount = history.length - prevHistoryLength.current;
