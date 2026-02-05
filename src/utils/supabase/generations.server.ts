@@ -78,11 +78,36 @@ export async function getGeneration(id: string): Promise<Generation | null> {
 }
 
 /**
- * Delete a generation by ID
+ * Delete a generation by ID (removes from both storage and database)
  */
 export async function deleteGeneration(id: string): Promise<boolean> {
   const supabase = await createClient();
 
+  // First, fetch the image_path so we can delete from storage
+  const { data: generation, error: fetchError } = await supabase
+    .from('generations')
+    .select('image_path')
+    .eq('id', id)
+    .single();
+
+  if (fetchError) {
+    console.error('Error fetching generation for deletion:', fetchError.message);
+    return false;
+  }
+
+  // Delete from storage if image_path exists
+  if (generation?.image_path) {
+    const { error: storageError } = await supabase.storage
+      .from('generations')
+      .remove([generation.image_path]);
+
+    if (storageError) {
+      console.error('Error deleting image from storage:', storageError.message);
+      // Continue to delete DB record anyway
+    }
+  }
+
+  // Delete database record
   const { error } = await supabase
     .from('generations')
     .delete()
@@ -97,7 +122,7 @@ export async function deleteGeneration(id: string): Promise<boolean> {
 }
 
 /**
- * Clear all user's generations
+ * Clear all user's generations (removes from both storage and database)
  */
 export async function clearGenerationHistory(): Promise<boolean> {
   const supabase = await createClient();
@@ -105,6 +130,30 @@ export async function clearGenerationHistory(): Promise<boolean> {
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
+
+  // Fetch all image paths for storage cleanup
+  const { data: generations } = await supabase
+    .from('generations')
+    .select('image_path')
+    .eq('user_id', user.id);
+
+  // Delete from storage in bulk
+  if (generations && generations.length > 0) {
+    const paths = generations
+      .map((g) => g.image_path)
+      .filter((p): p is string => p !== null);
+
+    if (paths.length > 0) {
+      const { error: storageError } = await supabase.storage
+        .from('generations')
+        .remove(paths);
+
+      if (storageError) {
+        console.error('Error deleting images from storage:', storageError.message);
+        // Continue to delete DB records anyway
+      }
+    }
+  }
 
   const { error } = await supabase
     .from('generations')
@@ -160,12 +209,36 @@ export async function getGenerationsBySession(
 }
 
 /**
- * Delete all generations in a session
+ * Delete all generations in a session (removes from both storage and database)
  */
 export async function deleteGenerationsBySession(
   sessionId: string
 ): Promise<boolean> {
   const supabase = await createClient();
+
+  // Fetch all image paths for storage cleanup
+  const { data: generations } = await supabase
+    .from('generations')
+    .select('image_path')
+    .eq('session_id', sessionId);
+
+  // Delete from storage in bulk
+  if (generations && generations.length > 0) {
+    const paths = generations
+      .map((g) => g.image_path)
+      .filter((p): p is string => p !== null);
+
+    if (paths.length > 0) {
+      const { error: storageError } = await supabase.storage
+        .from('generations')
+        .remove(paths);
+
+      if (storageError) {
+        console.error('Error deleting session images from storage:', storageError.message);
+        // Continue to delete DB records anyway
+      }
+    }
+  }
 
   const { error } = await supabase
     .from('generations')

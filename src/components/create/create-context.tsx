@@ -466,6 +466,10 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   // History effect should wait for this before processing
   const canvasLoadedRef = React.useRef(false);
 
+  // Track whether the initial history batch has been skipped after canvas load
+  // Prevents pre-existing history items from being re-added as new nodes
+  const initialHistoryProcessedRef = React.useRef(false);
+
   // Session management state
   const [currentSessionId, setCurrentSessionId] = React.useState<string | null>(null);
   const [currentSessionName, setCurrentSessionName] = React.useState<string | null>(null);
@@ -2201,23 +2205,30 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     addImageNodeRef.current = addImageNode;
   }, [addImageNode]);
 
-  // Convert history to nodes when history changes (for new generations)
+  // Convert history to nodes when history changes (for new generations only)
   const prevHistoryLength = React.useRef(history.length);
   React.useEffect(() => {
     // Wait for canvas to load first - initial history items come from the loaded canvas
     // This effect should only handle NEW generations that happen during the session
     if (!canvasLoadedRef.current) {
-      // Update ref to current length so we don't process initial history later
       prevHistoryLength.current = history.length;
       return;
     }
 
-    // Only add nodes for new history items
+    // Skip the first history batch after canvas loads - these are pre-existing items,
+    // not new generations. Without this, a race condition where canvas loads before
+    // history causes all history items to be re-added as duplicate nodes.
+    if (!initialHistoryProcessedRef.current) {
+      initialHistoryProcessedRef.current = true;
+      prevHistoryLength.current = history.length;
+      return;
+    }
+
+    // Only add nodes for new history items (generated during this session)
     if (history.length > prevHistoryLength.current) {
       const newCount = history.length - prevHistoryLength.current;
       const newItems = history.slice(0, newCount);
       for (const item of newItems) {
-        // Check if this item has already been processed (prevents duplicates)
         if (!processedGenerationIds.current.has(item.id) && item.url) {
           processedGenerationIds.current.add(item.id);
           addImageNodeRef.current(item);
@@ -2225,7 +2236,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       }
     }
     prevHistoryLength.current = history.length;
-  }, [history]); // Removed nodes and addImageNode from deps to prevent re-runs when nodes change
+  }, [history]);
 
   // Add batch-completed images to canvas when they arrive
   React.useEffect(() => {
