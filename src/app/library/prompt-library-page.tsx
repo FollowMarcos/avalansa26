@@ -4,9 +4,9 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import type { Prompt, PromptFolder, PromptTag, PromptShareWithDetails } from "@/types/prompt";
+import type { Prompt, PromptFolder, PromptTag, PromptShareWithDetails, PromptImage } from "@/types/prompt";
 import {
-  getPrompts,
+  getPromptsWithImages,
   getPromptFolders,
   getPromptTags,
   deletePrompt,
@@ -19,6 +19,8 @@ import {
   addPromptToFolder,
   addTagToPrompt,
   sharePromptWithUser,
+  uploadPromptImage,
+  deletePromptImage,
 } from "@/utils/supabase/prompts.server";
 import { createClient } from "@/utils/supabase/client";
 import {
@@ -36,14 +38,14 @@ import {
   Loader2,
   LayoutGrid,
   List,
-  Filter,
-  Tag,
   Trash2,
   Share2,
   Copy,
   MoreHorizontal,
   ExternalLink,
+  ImagePlus,
 } from "lucide-react";
+import { resizeImageToSize, PROMPT_IMAGE_MAX_SIZE } from "@/lib/image-utils";
 import { toast } from "sonner";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -106,6 +108,9 @@ export function PromptLibraryPage() {
   const [newPromptText, setNewPromptText] = React.useState("");
   const [newPromptDescription, setNewPromptDescription] = React.useState("");
   const [isSavingPrompt, setIsSavingPrompt] = React.useState(false);
+  const [newPromptImages, setNewPromptImages] = React.useState<File[]>([]);
+  const [imagePreviewUrls, setImagePreviewUrls] = React.useState<string[]>([]);
+  const imageInputRef = React.useRef<HTMLInputElement>(null);
 
   // Share dialog state
   const [shareDialogOpen, setShareDialogOpen] = React.useState(false);
@@ -127,7 +132,7 @@ export function PromptLibraryPage() {
     setIsLoading(true);
     try {
       const [promptsData, foldersData, tagsData, sharesData] = await Promise.all([
-        getPrompts(200, 0),
+        getPromptsWithImages(200, 0),
         getPromptFolders(),
         getPromptTags(),
         getReceivedPromptShares(),
@@ -249,6 +254,52 @@ export function PromptLibraryPage() {
     }
   };
 
+  // Handle image file selection
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    // Limit to 3 images total
+    const remainingSlots = 3 - newPromptImages.length;
+    const filesToAdd = files.slice(0, remainingSlots);
+
+    if (files.length > remainingSlots) {
+      toast.error(`Only ${remainingSlots} more image${remainingSlots !== 1 ? "s" : ""} allowed`);
+    }
+
+    // Resize images and create preview URLs
+    const resizedFiles: File[] = [];
+    const previewUrls: string[] = [];
+
+    for (const file of filesToAdd) {
+      try {
+        const { blob } = await resizeImageToSize(file, PROMPT_IMAGE_MAX_SIZE);
+        const resizedFile = new File([blob], file.name, { type: "image/jpeg" });
+        resizedFiles.push(resizedFile);
+        previewUrls.push(URL.createObjectURL(blob));
+      } catch (error) {
+        console.error("Failed to resize image:", error);
+        toast.error(`Failed to process ${file.name}`);
+      }
+    }
+
+    setNewPromptImages((prev) => [...prev, ...resizedFiles]);
+    setImagePreviewUrls((prev) => [...prev, ...previewUrls]);
+
+    // Reset input
+    if (imageInputRef.current) {
+      imageInputRef.current.value = "";
+    }
+  };
+
+  // Remove an image from selection
+  const handleRemoveImage = (index: number) => {
+    // Revoke the object URL to free memory
+    URL.revokeObjectURL(imagePreviewUrls[index]);
+    setNewPromptImages((prev) => prev.filter((_, i) => i !== index));
+    setImagePreviewUrls((prev) => prev.filter((_, i) => i !== index));
+  };
+
   // Add new prompt handler
   const handleAddPrompt = async () => {
     if (!newPromptName.trim() || !newPromptText.trim()) {
@@ -258,6 +309,7 @@ export function PromptLibraryPage() {
 
     setIsSavingPrompt(true);
     try {
+      // Save prompt first
       const prompt = await savePrompt({
         name: newPromptName.trim(),
         description: newPromptDescription.trim() || undefined,
@@ -265,11 +317,30 @@ export function PromptLibraryPage() {
       });
 
       if (prompt) {
-        setPrompts((prev) => [prompt, ...prev]);
+        // Upload images if any
+        const uploadedImages: PromptImage[] = [];
+        for (const file of newPromptImages) {
+          const formData = new FormData();
+          formData.append("file", file);
+          const image = await uploadPromptImage(prompt.id, formData);
+          if (image) {
+            uploadedImages.push(image);
+          }
+        }
+
+        // Add prompt with images to state
+        setPrompts((prev) => [{ ...prompt, images: uploadedImages }, ...prev]);
+
+        // Reset form
         setNewPromptName("");
         setNewPromptText("");
         setNewPromptDescription("");
+        // Clean up preview URLs
+        imagePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+        setNewPromptImages([]);
+        setImagePreviewUrls([]);
         setAddPromptDialogOpen(false);
+
         toast.success("Prompt added to library");
       }
     } catch {
@@ -705,6 +776,65 @@ export function PromptLibraryPage() {
                   placeholder="What is this prompt for?"
                 />
               </div>
+
+              {/* Image Upload Section */}
+              <div className="space-y-2">
+                <Label>
+                  Images{" "}
+                  <span className="text-muted-foreground font-normal">(up to 3, optional)</span>
+                </Label>
+
+                {/* Image previews */}
+                {imagePreviewUrls.length > 0 && (
+                  <div className="grid grid-cols-3 gap-2">
+                    {imagePreviewUrls.map((url, index) => (
+                      <div key={index} className="relative aspect-square rounded-lg overflow-hidden bg-muted">
+                        <Image
+                          src={url}
+                          alt={`Preview ${index + 1}`}
+                          fill
+                          className="object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(index)}
+                          className="absolute top-1 right-1 size-5 rounded-full bg-background/80 flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Upload button */}
+                {newPromptImages.length < 3 && (
+                  <div>
+                    <input
+                      ref={imageInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      multiple
+                      onChange={handleImageSelect}
+                      className="hidden"
+                      id="prompt-image-upload"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => imageInputRef.current?.click()}
+                      className="w-full"
+                    >
+                      <ImagePlus className="size-4 mr-2" />
+                      Add Images ({newPromptImages.length}/3)
+                    </Button>
+                    <p className="text-[10px] text-muted-foreground mt-1 text-center">
+                      Images will be resized to 500KB max
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             <DialogFooter>
@@ -866,9 +996,8 @@ export function PromptLibraryPage() {
 // My Prompts View
 // ============================================
 
-// Staggered rotation pattern for card animations (stats-cards style)
-const CARD_ROTATIONS = [-3, 2, 5, -2, 3, -4, 1, -1];
-const EASE_IN_OUT: [number, number, number, number] = [0.4, 0, 0.2, 1];
+// Smooth easing for card animations
+const EASE_OUT: [number, number, number, number] = [0, 0, 0.2, 1];
 
 interface MyPromptsViewProps {
   prompts: Prompt[];
@@ -1025,65 +1154,68 @@ function PromptLibraryCard({
   onShare,
   prefersReducedMotion,
 }: PromptLibraryCardProps) {
-  const [isHovered, setIsHovered] = React.useState(false);
-
-  // Get staggered rotation based on index (stats-cards style)
-  const initialRotation = CARD_ROTATIONS[index % CARD_ROTATIONS.length];
-
-  // Animation variants for grid view
-  const cardVariants = {
-    initial: prefersReducedMotion
-      ? { opacity: 0 }
-      : { opacity: 0, scale: 0.95, rotate: initialRotation },
-    animate: prefersReducedMotion
-      ? { opacity: 1 }
-      : {
-          opacity: 1,
-          scale: isHovered ? 1.03 : 1,
-          rotate: isHovered ? 0 : initialRotation,
-          transition: {
-            duration: 0.3,
-            ease: EASE_IN_OUT,
-          },
-        },
-    exit: prefersReducedMotion
-      ? { opacity: 0 }
-      : { opacity: 0, scale: 0.95 },
-  };
-
-  // List view uses simpler animations
-  const listVariants = {
-    initial: { opacity: 0, x: -10 },
-    animate: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: -10 },
-  };
+  // Check if prompt has images
+  const hasImages = prompt.images && prompt.images.length > 0;
 
   return (
     <motion.div
       layout
-      variants={viewMode === "grid" ? cardVariants : listVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      transition={{ duration: 0.3, ease: EASE_IN_OUT }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{
+        duration: prefersReducedMotion ? 0 : 0.2,
+        delay: prefersReducedMotion ? 0 : index * 0.03,
+        ease: EASE_OUT,
+      }}
+      whileHover={prefersReducedMotion ? undefined : { scale: 1.02, y: -2 }}
       className={cn(
-        "group relative rounded-xl border bg-card transition-colors",
+        "group relative rounded-2xl border bg-card overflow-hidden",
+        "transition-shadow duration-200",
         viewMode === "list"
           ? "flex items-center gap-4 p-3 hover:bg-accent/50"
-          : "p-4 hover:shadow-lg hover:border-foreground/20 cursor-pointer"
+          : "flex flex-col hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 hover:z-10"
       )}
-      style={{
-        transformOrigin: "center center",
-      }}
     >
+      {/* Image thumbnails (grid view only) */}
+      {viewMode === "grid" && hasImages && (
+        <div className="relative aspect-[16/9] bg-muted overflow-hidden">
+          {prompt.images!.length === 1 ? (
+            <Image
+              src={prompt.images![0].url}
+              alt=""
+              fill
+              className="object-cover"
+            />
+          ) : prompt.images!.length === 2 ? (
+            <div className="absolute inset-0 grid grid-cols-2 gap-0.5">
+              {prompt.images!.slice(0, 2).map((img, i) => (
+                <div key={img.id} className="relative">
+                  <Image src={img.url} alt="" fill className="object-cover" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="absolute inset-0 grid grid-cols-3 gap-0.5">
+              {prompt.images!.slice(0, 3).map((img, i) => (
+                <div key={img.id} className="relative">
+                  <Image src={img.url} alt="" fill className="object-cover" />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Content */}
-      <div className={cn("flex-1 min-w-0", viewMode === "list" && "flex items-center gap-4")}>
+      <div className={cn(
+        "flex-1 min-w-0",
+        viewMode === "list" ? "flex items-center gap-4" : "p-4"
+      )}>
         <div className={cn("flex-1 min-w-0", viewMode === "list" && "flex items-center gap-4")}>
           {/* Header */}
-          <div className={cn(viewMode === "list" ? "flex items-center gap-2 min-w-0" : "mb-2")}>
-            <h3 className="font-medium truncate">{prompt.name}</h3>
+          <div className={cn(viewMode === "list" ? "flex items-center gap-2 min-w-0" : "mb-1.5")}>
+            <h3 className="font-semibold tracking-tight truncate">{prompt.name}</h3>
             {prompt.is_favorite && (
               <Heart className="size-3.5 text-red-500 fill-red-500 shrink-0" />
             )}
@@ -1091,7 +1223,7 @@ function PromptLibraryCard({
 
           {/* Description */}
           {prompt.description && viewMode === "grid" && (
-            <p className="text-sm text-muted-foreground truncate mb-2">
+            <p className="text-sm text-muted-foreground truncate mb-2 leading-tight">
               {prompt.description}
             </p>
           )}
@@ -1099,7 +1231,7 @@ function PromptLibraryCard({
           {/* Prompt preview */}
           <p
             className={cn(
-              "text-xs text-muted-foreground font-mono bg-muted/50 rounded-lg px-2 py-1.5",
+              "text-xs text-muted-foreground font-mono bg-muted/50 rounded-lg px-2.5 py-2 leading-relaxed",
               viewMode === "grid" ? "line-clamp-2" : "line-clamp-1 flex-1"
             )}
           >
@@ -1110,13 +1242,13 @@ function PromptLibraryCard({
           {viewMode === "grid" && (
             <div className="flex items-center gap-2 mt-3">
               {prompt.use_count > 0 && (
-                <Badge variant="outline" className="text-[10px]">
+                <Badge variant="outline" className="text-[10px] font-medium">
                   <Sparkles className="size-2.5 mr-1" />
                   Used {prompt.use_count}x
                 </Badge>
               )}
               {prompt.original_author_id && (
-                <Badge variant="secondary" className="text-[10px]">
+                <Badge variant="secondary" className="text-[10px] font-medium">
                   Shared
                 </Badge>
               )}
@@ -1212,10 +1344,9 @@ function SharedPromptCard({
   prefersReducedMotion,
 }: SharedPromptCardProps) {
   const { prompt, sharer, is_seen, message } = share;
-  const [isHovered, setIsHovered] = React.useState(false);
 
-  // Get staggered rotation based on index (stats-cards style)
-  const initialRotation = CARD_ROTATIONS[index % CARD_ROTATIONS.length];
+  // Check if prompt has images
+  const hasImages = prompt.images && prompt.images.length > 0;
 
   // Mark as seen when card is rendered and not yet seen
   React.useEffect(() => {
@@ -1224,89 +1355,96 @@ function SharedPromptCard({
     }
   }, [is_seen, onMarkSeen]);
 
-  // Animation variants for grid view
-  const cardVariants = {
-    initial: prefersReducedMotion
-      ? { opacity: 0 }
-      : { opacity: 0, scale: 0.95, rotate: initialRotation },
-    animate: prefersReducedMotion
-      ? { opacity: 1 }
-      : {
-          opacity: 1,
-          scale: isHovered ? 1.03 : 1,
-          rotate: isHovered ? 0 : initialRotation,
-          transition: {
-            duration: 0.3,
-            ease: EASE_IN_OUT,
-          },
-        },
-    exit: prefersReducedMotion
-      ? { opacity: 0 }
-      : { opacity: 0, scale: 0.95 },
-  };
-
-  // List view uses simpler animations
-  const listVariants = {
-    initial: { opacity: 0, x: -10 },
-    animate: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: -10 },
-  };
-
   return (
     <motion.div
       layout
-      variants={viewMode === "grid" ? cardVariants : listVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      transition={{ duration: 0.3, ease: EASE_IN_OUT }}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{
+        duration: prefersReducedMotion ? 0 : 0.2,
+        delay: prefersReducedMotion ? 0 : index * 0.03,
+        ease: EASE_OUT,
+      }}
+      whileHover={prefersReducedMotion ? undefined : { scale: 1.02, y: -2 }}
       className={cn(
-        "group relative rounded-xl border bg-card transition-colors",
+        "group relative rounded-2xl border bg-card overflow-hidden",
+        "transition-shadow duration-200",
         viewMode === "list"
           ? "flex items-center gap-4 p-3 hover:bg-accent/50"
-          : "p-4 hover:shadow-lg hover:border-foreground/20 cursor-pointer",
+          : "flex flex-col hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 hover:z-10",
         !is_seen && "ring-2 ring-primary/50"
       )}
-      style={{
-        transformOrigin: "center center",
-      }}
     >
       {/* New badge */}
       {!is_seen && (
-        <Badge className="absolute -top-2 -right-2 text-[10px]">New</Badge>
+        <Badge className="absolute top-3 right-3 z-10 text-[10px]">New</Badge>
+      )}
+
+      {/* Image thumbnails (grid view only) */}
+      {viewMode === "grid" && hasImages && (
+        <div className="relative aspect-[16/9] bg-muted overflow-hidden">
+          {prompt.images!.length === 1 ? (
+            <Image
+              src={prompt.images![0].url}
+              alt=""
+              fill
+              className="object-cover"
+            />
+          ) : prompt.images!.length === 2 ? (
+            <div className="absolute inset-0 grid grid-cols-2 gap-0.5">
+              {prompt.images!.slice(0, 2).map((img) => (
+                <div key={img.id} className="relative">
+                  <Image src={img.url} alt="" fill className="object-cover" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="absolute inset-0 grid grid-cols-3 gap-0.5">
+              {prompt.images!.slice(0, 3).map((img) => (
+                <div key={img.id} className="relative">
+                  <Image src={img.url} alt="" fill className="object-cover" />
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Content */}
-      <div className={cn("flex-1 min-w-0", viewMode === "list" && "flex items-center gap-4")}>
-        {/* Header */}
-        <div className={cn(viewMode === "list" ? "flex items-center gap-2 min-w-0" : "mb-2")}>
-          <h3 className="font-medium truncate">{prompt.name}</h3>
-        </div>
+      <div className={cn(
+        "flex-1 min-w-0",
+        viewMode === "list" ? "flex items-center gap-4" : "p-4"
+      )}>
+        <div className={cn("flex-1 min-w-0", viewMode === "list" && "flex items-center gap-4")}>
+          {/* Header */}
+          <div className={cn(viewMode === "list" ? "flex items-center gap-2 min-w-0" : "mb-1.5")}>
+            <h3 className="font-semibold tracking-tight truncate">{prompt.name}</h3>
+          </div>
 
-        {/* Sharer info */}
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
-          <Users className="size-3" />
-          <span>From {sharer.username || "Unknown"}</span>
-        </div>
+          {/* Sharer info */}
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
+            <Users className="size-3" />
+            <span>From {sharer.username || "Unknown"}</span>
+          </div>
 
-        {/* Message */}
-        {message && viewMode === "grid" && (
-          <p className="text-sm text-muted-foreground italic mb-2 line-clamp-2">
-            "{message}"
-          </p>
-        )}
-
-        {/* Prompt preview */}
-        <p
-          className={cn(
-            "text-xs text-muted-foreground font-mono bg-muted/50 rounded-lg px-2 py-1.5",
-            viewMode === "grid" ? "line-clamp-2" : "line-clamp-1 flex-1"
+          {/* Message */}
+          {message && viewMode === "grid" && (
+            <p className="text-sm text-muted-foreground italic mb-2 line-clamp-2 leading-tight">
+              "{message}"
+            </p>
           )}
-        >
-          {prompt.prompt_text}
-        </p>
+
+          {/* Prompt preview */}
+          <p
+            className={cn(
+              "text-xs text-muted-foreground font-mono bg-muted/50 rounded-lg px-2.5 py-2 leading-relaxed",
+              viewMode === "grid" ? "line-clamp-2" : "line-clamp-1 flex-1"
+            )}
+          >
+            {prompt.prompt_text}
+          </p>
+        </div>
       </div>
 
       {/* Actions */}
@@ -1314,8 +1452,9 @@ function SharedPromptCard({
         className={cn(
           "flex items-center gap-1",
           viewMode === "grid"
-            ? "absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-            : ""
+            ? "absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
+            : "",
+          !is_seen && viewMode === "grid" && "right-16"
         )}
       >
         <Tooltip>

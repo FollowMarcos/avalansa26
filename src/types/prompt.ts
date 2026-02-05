@@ -25,6 +25,28 @@ export interface Prompt {
   use_count: number;
   created_at: string;
   updated_at: string;
+  // Optional images (populated from prompt_images table)
+  images?: PromptImage[];
+}
+
+// ============================================
+// Prompt Image Types
+// ============================================
+
+export interface PromptImage {
+  id: string;
+  prompt_id: string;
+  url: string;
+  storage_path: string;
+  position: number;
+  created_at: string;
+}
+
+export interface PromptImageInsert {
+  prompt_id: string;
+  url: string;
+  storage_path: string;
+  position?: number;
 }
 
 export interface PromptInsert {

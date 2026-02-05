@@ -14,6 +14,8 @@ import type {
   PromptShare,
   PromptShareInsert,
   PromptShareWithDetails,
+  PromptImage,
+  PromptImageInsert,
 } from '@/types/prompt';
 
 // ============================================
@@ -858,4 +860,212 @@ export async function getMostUsedPrompts(limit: number = 10): Promise<Prompt[]> 
   }
 
   return prompts ?? [];
+}
+
+// ============================================
+// PROMPT IMAGES
+// ============================================
+
+/**
+ * Get images for a prompt
+ */
+export async function getPromptImages(promptId: string): Promise<PromptImage[]> {
+  const supabase = await createClient();
+
+  const { data: images, error } = await supabase
+    .from('prompt_images')
+    .select('*')
+    .eq('prompt_id', promptId)
+    .order('position', { ascending: true });
+
+  if (error) {
+    console.error('Error fetching prompt images:', error.message);
+    return [];
+  }
+
+  return images ?? [];
+}
+
+/**
+ * Add an image to a prompt
+ */
+export async function addPromptImage(
+  data: Omit<PromptImageInsert, 'position'>,
+  position?: number
+): Promise<PromptImage | null> {
+  const supabase = await createClient();
+
+  // Get current image count to determine position
+  const { count } = await supabase
+    .from('prompt_images')
+    .select('*', { count: 'exact', head: true })
+    .eq('prompt_id', data.prompt_id);
+
+  const imagePosition = position ?? (count ?? 0);
+
+  if (imagePosition >= 3) {
+    console.error('Maximum of 3 images per prompt allowed');
+    return null;
+  }
+
+  const { data: image, error } = await supabase
+    .from('prompt_images')
+    .insert({ ...data, position: imagePosition })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error adding prompt image:', error.message);
+    return null;
+  }
+
+  return image;
+}
+
+/**
+ * Delete a prompt image
+ */
+export async function deletePromptImage(imageId: string): Promise<boolean> {
+  const supabase = await createClient();
+
+  // First get the image to get the storage path
+  const { data: image, error: fetchError } = await supabase
+    .from('prompt_images')
+    .select('storage_path')
+    .eq('id', imageId)
+    .single();
+
+  if (fetchError || !image) {
+    console.error('Error fetching prompt image:', fetchError?.message);
+    return false;
+  }
+
+  // Delete from storage
+  const { error: storageError } = await supabase.storage
+    .from('prompt-images')
+    .remove([image.storage_path]);
+
+  if (storageError) {
+    console.error('Error deleting image from storage:', storageError.message);
+    // Continue to delete from database anyway
+  }
+
+  // Delete from database
+  const { error } = await supabase
+    .from('prompt_images')
+    .delete()
+    .eq('id', imageId);
+
+  if (error) {
+    console.error('Error deleting prompt image:', error.message);
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Get prompts with their images (for library display)
+ */
+export async function getPromptsWithImages(
+  limit: number = 50,
+  offset: number = 0
+): Promise<Prompt[]> {
+  const supabase = await createClient();
+
+  // Get prompts
+  const { data: prompts, error } = await supabase
+    .from('prompts')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) {
+    console.error('Error fetching prompts:', error.message);
+    return [];
+  }
+
+  if (!prompts || prompts.length === 0) {
+    return [];
+  }
+
+  // Get all images for these prompts in one query
+  const promptIds = prompts.map((p) => p.id);
+  const { data: images, error: imagesError } = await supabase
+    .from('prompt_images')
+    .select('*')
+    .in('prompt_id', promptIds)
+    .order('position', { ascending: true });
+
+  if (imagesError) {
+    console.error('Error fetching prompt images:', imagesError.message);
+    // Return prompts without images
+    return prompts;
+  }
+
+  // Attach images to prompts
+  const imagesByPromptId = new Map<string, PromptImage[]>();
+  for (const image of images ?? []) {
+    const existing = imagesByPromptId.get(image.prompt_id) ?? [];
+    existing.push(image);
+    imagesByPromptId.set(image.prompt_id, existing);
+  }
+
+  return prompts.map((prompt) => ({
+    ...prompt,
+    images: imagesByPromptId.get(prompt.id) ?? [],
+  }));
+}
+
+/**
+ * Upload a prompt image to storage and create database record
+ * This is a helper that combines storage upload + database insert
+ */
+export async function uploadPromptImage(
+  promptId: string,
+  formData: FormData
+): Promise<PromptImage | null> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const file = formData.get('file') as File;
+  if (!file) {
+    console.error('No file provided');
+    return null;
+  }
+
+  // Generate unique filename
+  const ext = file.name.split('.').pop() || 'jpg';
+  const filename = `${user.id}/${promptId}/${Date.now()}.${ext}`;
+
+  // Upload to storage
+  const { error: uploadError } = await supabase.storage
+    .from('prompt-images')
+    .upload(filename, file, {
+      contentType: file.type,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    console.error('Error uploading image:', uploadError.message);
+    return null;
+  }
+
+  // Get public URL
+  const { data: urlData } = supabase.storage
+    .from('prompt-images')
+    .getPublicUrl(filename);
+
+  // Create database record
+  const image = await addPromptImage({
+    prompt_id: promptId,
+    url: urlData.publicUrl,
+    storage_path: filename,
+  });
+
+  return image;
 }
