@@ -57,7 +57,7 @@ export function SharePromptDialog({
   const [message, setMessage] = React.useState("");
   const [isSearching, setIsSearching] = React.useState(false);
   const [isSharing, setIsSharing] = React.useState(false);
-  const searchTimeoutRef = React.useRef<NodeJS.Timeout>();
+  const searchTimeoutRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Reset state when dialog closes
   React.useEffect(() => {
