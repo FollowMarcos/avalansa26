@@ -141,7 +141,7 @@ export async function uploadGeneratedImage(
   base64Data: string,
   userId: string,
   mimeType: string = 'image/png'
-): Promise<{ url: string; error?: string }> {
+): Promise<{ url: string; path?: string; error?: string }> {
   try {
     const supabase = await createClient();
 
@@ -188,7 +188,7 @@ export async function uploadGeneratedImage(
       .from(GENERATIONS_BUCKET)
       .getPublicUrl(data.path);
 
-    return { url: urlData.publicUrl };
+    return { url: urlData.publicUrl, path: data.path };
   } catch (error) {
     console.error('Upload generated image error:', error);
     return {

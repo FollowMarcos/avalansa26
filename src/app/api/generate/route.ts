@@ -275,6 +275,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
     for (const image of images) {
       let imageUrl = image.url;
 
+      let imagePath: string | undefined;
+
       // Check if the URL is a base64 data URL
       if (image.url.startsWith('data:') || image.base64) {
         const base64Data = image.base64 || image.url;
@@ -283,13 +285,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
         const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
 
         // Upload to storage
-        const { url, error } = await uploadGeneratedImage(base64Data, user.id, mimeType);
+        const { url, path, error } = await uploadGeneratedImage(base64Data, user.id, mimeType);
         if (error) {
           console.error('Failed to upload generated image:', error);
           // Fall back to base64 URL (will be large but still works)
           imageUrl = image.url;
         } else {
           imageUrl = url;
+          imagePath = path;
         }
       }
 
@@ -303,6 +306,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
         prompt: prompt || '',
         negative_prompt: negativePrompt,
         image_url: imageUrl,
+        image_path: imagePath,
         settings: {
           aspectRatio,
           imageSize,
