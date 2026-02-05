@@ -24,7 +24,8 @@
       "Bash(for file in WorkflowCanvas.tsx FloatingActionBar.tsx Header.tsx AnnotationModal.tsx ConnectionDropMenu.tsx MultiSelectToolbar.tsx GlobalImageHistory.tsx GroupsOverlay.tsx)",
       "Bash(do cp \"C:/Users/world/Downloads/node-banana-master/node-banana-master/src/components/$file\" \"c:/Users/world/OneDrive/Desktop/newos/src/components/create-lab/\")",
       "Bash(done)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "WebFetch(domain:chamaac.com)"
     ]
   }
 }

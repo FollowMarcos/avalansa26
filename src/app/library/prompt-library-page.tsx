@@ -866,6 +866,10 @@ export function PromptLibraryPage() {
 // My Prompts View
 // ============================================
 
+// Staggered rotation pattern for card animations (stats-cards style)
+const CARD_ROTATIONS = [-3, 2, 5, -2, 3, -4, 1, -1];
+const EASE_IN_OUT: [number, number, number, number] = [0.4, 0, 0.2, 1];
+
 interface MyPromptsViewProps {
   prompts: Prompt[];
   viewMode: ViewMode;
@@ -914,10 +918,11 @@ function MyPromptsView({
       )}
     >
       <AnimatePresence mode="popLayout">
-        {prompts.map((prompt) => (
+        {prompts.map((prompt, index) => (
           <PromptLibraryCard
             key={prompt.id}
             prompt={prompt}
+            index={index}
             viewMode={viewMode}
             onDelete={() => onDelete(prompt.id)}
             onToggleFavorite={() =>
@@ -976,10 +981,11 @@ function SharedPromptsView({
       )}
     >
       <AnimatePresence mode="popLayout">
-        {shares.map((share) => (
+        {shares.map((share, index) => (
           <SharedPromptCard
             key={share.id}
             share={share}
+            index={index}
             viewMode={viewMode}
             onMarkSeen={() => onMarkSeen(share.id)}
             onCopy={() => onCopy(share.prompt.prompt_text)}
@@ -998,6 +1004,7 @@ function SharedPromptsView({
 
 interface PromptLibraryCardProps {
   prompt: Prompt;
+  index: number;
   viewMode: ViewMode;
   onDelete: () => void;
   onToggleFavorite: () => void;
@@ -1009,6 +1016,7 @@ interface PromptLibraryCardProps {
 
 function PromptLibraryCard({
   prompt,
+  index,
   viewMode,
   onDelete,
   onToggleFavorite,
@@ -1017,17 +1025,58 @@ function PromptLibraryCard({
   onShare,
   prefersReducedMotion,
 }: PromptLibraryCardProps) {
+  const [isHovered, setIsHovered] = React.useState(false);
+
+  // Get staggered rotation based on index (stats-cards style)
+  const initialRotation = CARD_ROTATIONS[index % CARD_ROTATIONS.length];
+
+  // Animation variants for grid view
+  const cardVariants = {
+    initial: prefersReducedMotion
+      ? { opacity: 0 }
+      : { opacity: 0, scale: 0.95, rotate: initialRotation },
+    animate: prefersReducedMotion
+      ? { opacity: 1 }
+      : {
+          opacity: 1,
+          scale: isHovered ? 1.03 : 1,
+          rotate: isHovered ? 0 : initialRotation,
+          transition: {
+            duration: 0.3,
+            ease: EASE_IN_OUT,
+          },
+        },
+    exit: prefersReducedMotion
+      ? { opacity: 0 }
+      : { opacity: 0, scale: 0.95 },
+  };
+
+  // List view uses simpler animations
+  const listVariants = {
+    initial: { opacity: 0, x: -10 },
+    animate: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: -10 },
+  };
+
   return (
     <motion.div
       layout
-      initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
-      animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
-      exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.15 }}
+      variants={viewMode === "grid" ? cardVariants : listVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={{ duration: 0.3, ease: EASE_IN_OUT }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       className={cn(
-        "group relative rounded-xl border bg-card transition-all hover:shadow-md hover:border-foreground/20",
-        viewMode === "list" ? "flex items-center gap-4 p-3" : "p-4"
+        "group relative rounded-xl border bg-card transition-colors",
+        viewMode === "list"
+          ? "flex items-center gap-4 p-3 hover:bg-accent/50"
+          : "p-4 hover:shadow-lg hover:border-foreground/20 cursor-pointer"
       )}
+      style={{
+        transformOrigin: "center center",
+      }}
     >
       {/* Content */}
       <div className={cn("flex-1 min-w-0", viewMode === "list" && "flex items-center gap-4")}>
@@ -1145,6 +1194,7 @@ function PromptLibraryCard({
 
 interface SharedPromptCardProps {
   share: PromptShareWithDetails;
+  index: number;
   viewMode: ViewMode;
   onMarkSeen: () => void;
   onCopy: () => void;
@@ -1154,6 +1204,7 @@ interface SharedPromptCardProps {
 
 function SharedPromptCard({
   share,
+  index,
   viewMode,
   onMarkSeen,
   onCopy,
@@ -1161,6 +1212,10 @@ function SharedPromptCard({
   prefersReducedMotion,
 }: SharedPromptCardProps) {
   const { prompt, sharer, is_seen, message } = share;
+  const [isHovered, setIsHovered] = React.useState(false);
+
+  // Get staggered rotation based on index (stats-cards style)
+  const initialRotation = CARD_ROTATIONS[index % CARD_ROTATIONS.length];
 
   // Mark as seen when card is rendered and not yet seen
   React.useEffect(() => {
@@ -1169,18 +1224,54 @@ function SharedPromptCard({
     }
   }, [is_seen, onMarkSeen]);
 
+  // Animation variants for grid view
+  const cardVariants = {
+    initial: prefersReducedMotion
+      ? { opacity: 0 }
+      : { opacity: 0, scale: 0.95, rotate: initialRotation },
+    animate: prefersReducedMotion
+      ? { opacity: 1 }
+      : {
+          opacity: 1,
+          scale: isHovered ? 1.03 : 1,
+          rotate: isHovered ? 0 : initialRotation,
+          transition: {
+            duration: 0.3,
+            ease: EASE_IN_OUT,
+          },
+        },
+    exit: prefersReducedMotion
+      ? { opacity: 0 }
+      : { opacity: 0, scale: 0.95 },
+  };
+
+  // List view uses simpler animations
+  const listVariants = {
+    initial: { opacity: 0, x: -10 },
+    animate: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: -10 },
+  };
+
   return (
     <motion.div
       layout
-      initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
-      animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1 }}
-      exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.15 }}
+      variants={viewMode === "grid" ? cardVariants : listVariants}
+      initial="initial"
+      animate="animate"
+      exit="exit"
+      transition={{ duration: 0.3, ease: EASE_IN_OUT }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       className={cn(
-        "group relative rounded-xl border bg-card transition-all hover:shadow-md hover:border-foreground/20",
-        viewMode === "list" ? "flex items-center gap-4 p-3" : "p-4",
+        "group relative rounded-xl border bg-card transition-colors",
+        viewMode === "list"
+          ? "flex items-center gap-4 p-3 hover:bg-accent/50"
+          : "p-4 hover:shadow-lg hover:border-foreground/20 cursor-pointer",
         !is_seen && "ring-2 ring-primary/50"
       )}
+      style={{
+        transformOrigin: "center center",
+      }}
     >
       {/* New badge */}
       {!is_seen && (
