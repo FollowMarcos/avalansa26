@@ -1117,7 +1117,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
             outputCount: gen.settings.outputCount || 1,
             generationSpeed: (gen.settings.generationSpeed as GenerationSpeed) || "fast",
             styleStrength: 75,
-            negativePrompt: "",
+            negativePrompt: gen.negative_prompt || "",
+            referenceImages: gen.settings.referenceImages,
           },
         }));
         setHistory(historyImages);
