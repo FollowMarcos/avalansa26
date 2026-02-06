@@ -13,6 +13,10 @@ import { ImageGenerateNode, imageGenerateDefinition, imageGenerateExecutor } fro
 import { ImagePreviewNode, imagePreviewDefinition, imagePreviewExecutor } from './image-preview-node';
 import { ImageToImageNode, imageToImageDefinition, imageToImageExecutor } from './image-to-image-node';
 import { PromptMergeNode, promptMergeDefinition, promptMergeExecutor } from './prompt-merge-node';
+import { PromptVaultNode, promptVaultDefinition, promptVaultExecutor } from './prompt-vault-node';
+import { AvaNode, avaDefinition, avaExecutor } from './ava-node';
+import { ImageGridNode, imageGridDefinition, imageGridExecutor } from './image-grid-node';
+import { NoteNode, noteDefinition, noteExecutor } from './note-node';
 
 registerNode({ definition: promptInputDefinition, component: PromptInputNode, executor: promptInputExecutor });
 registerNode({ definition: settingsDefinition, component: SettingsNode, executor: settingsExecutor });
@@ -20,3 +24,7 @@ registerNode({ definition: imageGenerateDefinition, component: ImageGenerateNode
 registerNode({ definition: imagePreviewDefinition, component: ImagePreviewNode, executor: imagePreviewExecutor });
 registerNode({ definition: imageToImageDefinition, component: ImageToImageNode, executor: imageToImageExecutor });
 registerNode({ definition: promptMergeDefinition, component: PromptMergeNode, executor: promptMergeExecutor });
+registerNode({ definition: promptVaultDefinition, component: PromptVaultNode, executor: promptVaultExecutor });
+registerNode({ definition: avaDefinition, component: AvaNode, executor: avaExecutor });
+registerNode({ definition: imageGridDefinition, component: ImageGridNode, executor: imageGridExecutor });
+registerNode({ definition: noteDefinition, component: NoteNode, executor: noteExecutor });

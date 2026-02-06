@@ -30,7 +30,8 @@
       "Bash(git push:*)",
       "Bash(del \"src\\\\types\\\\session.ts\")",
       "Bash(del \"src\\\\utils\\\\supabase\\\\sessions.server.ts\")",
-      "Bash(del \"supabase\\\\migrations\\\\20260201000000_create_sessions.sql\")"
+      "Bash(del \"supabase\\\\migrations\\\\20260201000000_create_sessions.sql\")",
+      "Bash(npx next build:*)"
     ]
   }
 }
