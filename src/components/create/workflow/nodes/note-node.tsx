@@ -59,8 +59,8 @@ export function NoteNode({ data, id, selected }: NoteNodeProps) {
         <textarea
           value={(config.text as string) || ''}
           onChange={handleChange}
-          placeholder="Add a note..."
-          className="nodrag nowheel w-full flex-1 min-h-[2.5rem] resize-none rounded-md bg-amber-50/50 dark:bg-amber-950/20 border-0 px-2.5 py-1.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none"
+          placeholder="Add a note&#8230;"
+          className="nodrag nowheel w-full flex-1 min-h-[2.5rem] resize-none rounded-md bg-amber-50/50 dark:bg-amber-950/20 border-0 px-2.5 py-1.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           aria-label="Note text"
         />
       </div>

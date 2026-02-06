@@ -96,20 +96,20 @@ export function PromptVaultNode({ data, id, selected }: PromptVaultNodeProps) {
           }}
           className={cn(
             'flex items-center justify-between w-full px-2.5 py-1.5 rounded-md border border-border',
-            'bg-muted/30 text-xs hover:bg-muted/50 transition-colors',
+            'bg-muted/30 text-xs hover:bg-muted/50 transition-[background-color]',
           )}
         >
           <span className={cn('truncate', !selectedName && 'text-muted-foreground')}>
-            {selectedName || 'Select a prompt...'}
+            {selectedName || 'Select a prompt\u2026'}
           </span>
-          <ChevronDown className="size-3 text-muted-foreground flex-shrink-0 ml-1" />
+          <ChevronDown aria-hidden="true" className="size-3 text-muted-foreground flex-shrink-0 ml-1" />
         </button>
 
         {/* Dropdown list */}
         {isOpen && (
           <div className="rounded-md border border-border overflow-hidden max-h-40 overflow-y-auto bg-background">
             {isLoading ? (
-              <p className="text-[10px] text-muted-foreground text-center py-3">Loading...</p>
+              <p className="text-[10px] text-muted-foreground text-center py-3">Loading\u2026</p>
             ) : prompts.length === 0 ? (
               <p className="text-[10px] text-muted-foreground text-center py-3">No saved prompts</p>
             ) : (
@@ -119,14 +119,14 @@ export function PromptVaultNode({ data, id, selected }: PromptVaultNodeProps) {
                   type="button"
                   onClick={() => handleSelect(prompt)}
                   className={cn(
-                    'w-full text-left px-2.5 py-1.5 text-xs hover:bg-muted/50 transition-colors border-b border-border last:border-b-0',
+                    'w-full text-left px-2.5 py-1.5 text-xs hover:bg-muted/50 transition-[background-color] border-b border-border last:border-b-0',
                     prompt.id === config.promptId && 'bg-accent',
                   )}
                 >
                   <span className="font-medium truncate block">{prompt.name}</span>
                   <span className="text-[10px] text-muted-foreground truncate block">
                     {prompt.prompt_text.slice(0, 60)}
-                    {prompt.prompt_text.length > 60 ? '...' : ''}
+                    {prompt.prompt_text.length > 60 ? '\u2026' : ''}
                   </span>
                 </button>
               ))

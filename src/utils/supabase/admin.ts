@@ -50,8 +50,9 @@ export async function getAllProfiles(
 
   // Apply search filter
   if (search) {
+    const sanitizedSearch = search.replace(/[%_,]/g, '\\$&');
     query = query.or(
-      `name.ilike.%${search}%,username.ilike.%${search}%`
+      `name.ilike.%${sanitizedSearch}%,username.ilike.%${sanitizedSearch}%`
     );
   }
 

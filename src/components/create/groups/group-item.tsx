@@ -181,6 +181,7 @@ export const GroupItem = React.memo(function GroupItem({
 
         {/* Drag handle */}
         <GripHorizontal
+          aria-hidden="true"
           className={cn("size-4", isTitleHovered ? "opacity-60" : "opacity-30")}
           style={{ color: group.color, transform: `scale(${iconScale})` }}
         />
@@ -200,6 +201,7 @@ export const GroupItem = React.memo(function GroupItem({
             style={{ fontSize: Math.max(12, 14 * iconScale), color: group.color }}
             spellCheck={false}
             autoComplete="off"
+            aria-label="Group title"
           />
         ) : (
           <span
@@ -251,6 +253,7 @@ export const GroupItem = React.memo(function GroupItem({
         handles.map(({ id, style }) => (
           <div
             key={id}
+            aria-hidden="true"
             className="absolute bg-white border-2 rounded-sm z-20 hover:scale-110 pointer-events-auto"
             style={{
               ...style,

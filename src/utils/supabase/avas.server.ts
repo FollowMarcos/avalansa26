@@ -724,10 +724,11 @@ export async function searchAvas(
 ): Promise<Ava[]> {
   const supabase = await createClient();
 
+  const sanitizedQuery = query.replace(/[%_,]/g, '\\$&');
   const { data: avas, error } = await supabase
     .from('avas')
     .select('*')
-    .or(`name.ilike.%${query}%,instructions.ilike.%${query}%,description.ilike.%${query}%`)
+    .or(`name.ilike.%${sanitizedQuery}%,instructions.ilike.%${sanitizedQuery}%,description.ilike.%${sanitizedQuery}%`)
     .order('created_at', { ascending: false })
     .limit(limit);
 

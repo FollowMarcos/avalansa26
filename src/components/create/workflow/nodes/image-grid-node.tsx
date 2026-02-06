@@ -137,6 +137,8 @@ export function ImageGridNode({ data, id, selected }: ImageGridNodeProps) {
             <img
               src={outputImage}
               alt="Image grid"
+              width={1024}
+              height={1024}
               className="w-full h-32 object-cover"
               draggable={false}
             />
@@ -156,7 +158,7 @@ export function ImageGridNode({ data, id, selected }: ImageGridNodeProps) {
           {status === 'idle'
             ? 'Connect 2-4 images'
             : status === 'running'
-              ? 'Compositing...'
+              ? 'Compositing\u2026'
               : status === 'success'
                 ? `${Object.values(data.outputValues ?? {}).length > 0 ? 'Grid ready' : ''}`
                 : ''}

@@ -124,20 +124,20 @@ export function AvaNode({ data, id, selected }: AvaNodeProps) {
           }}
           className={cn(
             'flex items-center justify-between w-full px-2.5 py-1.5 rounded-md border border-border',
-            'bg-muted/30 text-xs hover:bg-muted/50 transition-colors',
+            'bg-muted/30 text-xs hover:bg-muted/50 transition-[background-color]',
           )}
         >
           <span className={cn('truncate', !selectedName && 'text-muted-foreground')}>
-            {selectedName || 'Select an Ava...'}
+            {selectedName || 'Select an Ava\u2026'}
           </span>
-          <ChevronDown className="size-3 text-muted-foreground flex-shrink-0 ml-1" />
+          <ChevronDown aria-hidden="true" className="size-3 text-muted-foreground flex-shrink-0 ml-1" />
         </button>
 
         {/* Dropdown */}
         {isOpen && (
           <div className="rounded-md border border-border overflow-hidden max-h-36 overflow-y-auto bg-background">
             {isLoading ? (
-              <p className="text-[10px] text-muted-foreground text-center py-3">Loading...</p>
+              <p className="text-[10px] text-muted-foreground text-center py-3">Loading\u2026</p>
             ) : avas.length === 0 ? (
               <p className="text-[10px] text-muted-foreground text-center py-3">No Avas created</p>
             ) : (
@@ -147,7 +147,7 @@ export function AvaNode({ data, id, selected }: AvaNodeProps) {
                   type="button"
                   onClick={() => handleSelect(ava)}
                   className={cn(
-                    'w-full text-left px-2.5 py-1.5 text-xs hover:bg-muted/50 transition-colors border-b border-border last:border-b-0',
+                    'w-full text-left px-2.5 py-1.5 text-xs hover:bg-muted/50 transition-[background-color] border-b border-border last:border-b-0',
                     ava.id === config.avaId && 'bg-accent',
                   )}
                 >
@@ -168,9 +168,9 @@ export function AvaNode({ data, id, selected }: AvaNodeProps) {
           <textarea
             value={(config.seedText as string) || ''}
             onChange={handleSeedChange}
-            placeholder="Seed text (optional)..."
+            placeholder="Seed text (optional)&#8230;"
             rows={2}
-            className="w-full resize-none rounded-md border border-border bg-muted/30 px-2.5 py-1.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+            className="w-full resize-none rounded-md border border-border bg-muted/30 px-2.5 py-1.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             aria-label="Seed text for Ava"
           />
         )}
@@ -178,8 +178,8 @@ export function AvaNode({ data, id, selected }: AvaNodeProps) {
         {/* Running state */}
         {status === 'running' && (
           <div className="flex items-center gap-2 py-1">
-            <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
-            <span className="text-[10px] text-muted-foreground">Generating prompt...</span>
+            <Loader2 aria-hidden="true" className="size-3.5 animate-spin text-muted-foreground" />
+            <span className="text-[10px] text-muted-foreground">Generating prompt\u2026</span>
           </div>
         )}
 
