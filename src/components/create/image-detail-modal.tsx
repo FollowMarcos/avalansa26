@@ -22,7 +22,6 @@ import {
   FolderOpen,
   Link2,
   Images,
-  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -51,8 +50,6 @@ import { cn } from "@/lib/utils";
 import { TagInput } from "./tag-input";
 import { CollectionSelector } from "./collection-selector";
 import { SocialShareMenu } from "./social-share-menu";
-import { InlineCharacterSelector } from "./character-selector";
-import { useCharacterVault } from "./use-character-vault";
 
 interface ImageDetailModalProps {
   image: GeneratedImage | null;
@@ -84,45 +81,6 @@ export function ImageDetailModal({
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
 
-  // Character vault for linking
-  const characterVault = useCharacterVault();
-  const [linkedCharacterIds, setLinkedCharacterIds] = React.useState<string[]>([]);
-  const [isLoadingCharacters, setIsLoadingCharacters] = React.useState(false);
-
-  // Load linked characters when modal opens with a new image
-  React.useEffect(() => {
-    if (isOpen && image?.id) {
-      setIsLoadingCharacters(true);
-      characterVault.getCharactersForGeneration(image.id)
-        .then((characters) => {
-          setLinkedCharacterIds(characters.map((c) => c.id));
-        })
-        .finally(() => setIsLoadingCharacters(false));
-
-      // Also ensure character vault is loaded
-      if (characterVault.characters.length === 0) {
-        characterVault.loadVault();
-      }
-    }
-  }, [isOpen, image?.id]);
-
-  const handleLinkCharacter = async (characterId: string) => {
-    if (!image?.id) return false;
-    const success = await characterVault.linkGenerationToCharacter(image.id, characterId);
-    if (success) {
-      setLinkedCharacterIds((prev) => [...prev, characterId]);
-    }
-    return success;
-  };
-
-  const handleUnlinkCharacter = async (characterId: string) => {
-    if (!image?.id) return false;
-    const success = await characterVault.unlinkGenerationFromCharacter(image.id, characterId);
-    if (success) {
-      setLinkedCharacterIds((prev) => prev.filter((id) => id !== characterId));
-    }
-    return success;
-  };
 
   // Keyboard navigation
   React.useEffect(() => {
@@ -503,24 +461,6 @@ export function ImageDetailModal({
                     </span>
                   </div>
                   <CollectionSelector imageId={image.id} />
-                </div>
-
-                <Separator />
-
-                {/* Characters */}
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Users className="size-4 text-muted-foreground" aria-hidden="true" />
-                    <span className="text-xs font-mono text-muted-foreground uppercase">
-                      Characters
-                    </span>
-                  </div>
-                  <InlineCharacterSelector
-                    characters={characterVault.characters}
-                    linkedCharacterIds={linkedCharacterIds}
-                    onLink={handleLinkCharacter}
-                    onUnlink={handleUnlinkCharacter}
-                  />
                 </div>
 
                 <Separator />

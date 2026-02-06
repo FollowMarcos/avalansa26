@@ -15,9 +15,6 @@ import { PromptVaultIsland } from "./prompt-vault-island";
 import { SavePromptDialog } from "./save-prompt-dialog";
 import { SharePromptDialog } from "./share-prompt-dialog";
 import { usePromptVault } from "./use-prompt-vault";
-import { CharacterVaultIsland } from "./character-vault-island";
-import { SaveCharacterDialog } from "./save-character-dialog";
-import { useCharacterVault } from "./use-character-vault";
 import { useAvaVault } from "./use-ava-vault";
 import { CreateAvaDialog } from "./create-ava-dialog";
 import { RunAvaDialog } from "./run-ava-dialog";
@@ -26,7 +23,7 @@ import { motion, useReducedMotion } from "motion/react";
 
 export function StudioLayout() {
   const prefersReducedMotion = useReducedMotion();
-  const { addReferenceImages, addReferenceImageFromUrl, prompt, setPrompt, settings, updateSettings, selectedApiId } = useCreate();
+  const { addReferenceImages, prompt, setPrompt, settings, updateSettings, selectedApiId } = useCreate();
 
   // Prompt vault hook
   const promptVault = usePromptVault({
@@ -68,32 +65,6 @@ export function StudioLayout() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [promptVault.vaultOpen]);
 
-  // Character vault hook
-  const characterVault = useCharacterVault({
-    onCharacterSelected: (result) => {
-      // MERGE/APPEND behavior: append character prompt to current prompt
-      setPrompt(result.mergedPrompt);
-
-      // Apply merged settings (character defaults + user overrides)
-      if (result.mergedSettings) {
-        const mergedSettings = result.mergedSettings;
-        updateSettings({
-          ...(mergedSettings.aspectRatio && { aspectRatio: mergedSettings.aspectRatio }),
-          ...(mergedSettings.imageSize && { imageSize: mergedSettings.imageSize }),
-          ...(mergedSettings.outputCount && { outputCount: mergedSettings.outputCount }),
-          ...(mergedSettings.generationSpeed && { generationSpeed: mergedSettings.generationSpeed }),
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        } as any);
-      }
-
-      // Load reference images from character
-      if (result.referenceImages.length > 0) {
-        for (const img of result.referenceImages) {
-          addReferenceImageFromUrl(img.url);
-        }
-      }
-    },
-  });
 
   return (
     <ReactFlowProvider>
@@ -151,22 +122,6 @@ export function StudioLayout() {
               }}
             />
 
-            {/* Floating Character Vault Island (below prompt vault) */}
-            <CharacterVaultIsland
-              open={characterVault.vaultOpen}
-              onToggle={characterVault.toggleVault}
-              characters={characterVault.characters}
-              folders={characterVault.folders}
-              tags={characterVault.tags}
-              selectedCharacter={characterVault.selectedCharacter}
-              onSelectCharacter={(character) =>
-                characterVault.selectCharacter(character, prompt, settings)
-              }
-              onToggleFavorite={characterVault.toggleFavorite}
-              onEditCharacter={characterVault.openSaveDialog}
-              onDeleteCharacter={characterVault.deleteCharacter}
-              onCreateNew={() => characterVault.openSaveDialog()}
-            />
 
             {/* Floating History Island (right side) */}
             <HistoryIsland />
@@ -278,31 +233,6 @@ export function StudioLayout() {
           onSearchUsers={avaVault.searchUsers}
         />
 
-        {/* Save/Edit Character Dialog */}
-        <SaveCharacterDialog
-          open={characterVault.saveDialogOpen}
-          onOpenChange={(open) => !open && characterVault.closeSaveDialog()}
-          character={characterVault.editingCharacter}
-          promptTemplate={prompt}
-          negativePrompt={settings.negativePrompt}
-          settings={settings}
-          folders={characterVault.folders}
-          tags={characterVault.tags}
-          onSave={async (data) => {
-            if (characterVault.editingCharacter) {
-              return await characterVault.updateCharacter(
-                characterVault.editingCharacter.id,
-                data
-              );
-            } else {
-              return await characterVault.saveNewCharacter(data);
-            }
-          }}
-          onCreateFolder={characterVault.createFolder}
-          onCreateTag={characterVault.createTag}
-          onAddImage={characterVault.addImageToCharacter}
-          onRemoveImage={characterVault.removeImageFromCharacter}
-        />
       </motion.div>
     </ReactFlowProvider>
   );
