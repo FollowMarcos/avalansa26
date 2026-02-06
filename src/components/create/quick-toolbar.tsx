@@ -20,6 +20,7 @@ import {
   Hand,
   ChevronUp,
   ChevronDown,
+  GitBranch,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -391,6 +392,25 @@ export function QuickToolbar() {
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Gallery View</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setViewMode("workflow")}
+                  aria-label="Workflow view"
+                  aria-pressed={viewMode === "workflow"}
+                  className={cn(
+                    "size-8 rounded-lg",
+                    viewMode === "workflow" && "bg-muted"
+                  )}
+                >
+                  <GitBranch className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Workflow View</TooltipContent>
             </Tooltip>
           </div>
 

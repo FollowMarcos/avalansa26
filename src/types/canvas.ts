@@ -38,6 +38,8 @@ export interface GroupData {
   createdAt: number;
   /** Node IDs that belong to this group (stable membership) */
   nodeIds: string[];
+  /** When true, nodes in this group are skipped during workflow execution */
+  locked?: boolean;
 }
 
 /**

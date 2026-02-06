@@ -20,10 +20,17 @@ import { CreateAvaDialog } from "./create-ava-dialog";
 import { RunAvaDialog } from "./run-ava-dialog";
 import { ShareAvaDialog } from "./share-ava-dialog";
 import { motion, useReducedMotion } from "motion/react";
+import { useWorkflow } from "./workflow/use-workflow";
+import { WorkflowCanvas } from "./workflow/workflow-canvas";
+import { NodePalette } from "./workflow/node-palette";
+import { WorkflowToolbar } from "./workflow/workflow-toolbar";
 
 export function StudioLayout() {
   const prefersReducedMotion = useReducedMotion();
-  const { addReferenceImages, prompt, setPrompt, settings, updateSettings, selectedApiId } = useCreate();
+  const { addReferenceImages, prompt, setPrompt, settings, updateSettings, selectedApiId, viewMode } = useCreate();
+
+  // Workflow hook
+  const workflow = useWorkflow({ apiId: selectedApiId ?? '' });
 
   // Prompt vault hook
   const promptVault = usePromptVault({
@@ -87,17 +94,51 @@ export function StudioLayout() {
             {/* Quick Toolbar */}
             <QuickToolbar />
 
-            {/* Canvas Viewport */}
-            <CanvasViewport />
+            {/* Canvas Viewport — passes workflow canvas when in workflow mode */}
+            <CanvasViewport
+              workflowCanvas={
+                viewMode === "workflow" ? (
+                  <WorkflowCanvas
+                    nodes={workflow.nodes}
+                    edges={workflow.edges}
+                    onNodesChange={workflow.onNodesChange}
+                    onEdgesChange={workflow.onEdgesChange}
+                    onConnect={workflow.onConnect}
+                    onDrop={workflow.onDrop}
+                    onDragOver={workflow.onDragOver}
+                  />
+                ) : undefined
+              }
+            />
 
             {/* Gallery View (overlay when active) */}
-            <GenerationGallery />
+            {viewMode !== "workflow" && <GenerationGallery />}
 
-            {/* Prompt Composer */}
-            <PromptComposer onSaveToVault={promptVault.openSaveDialog} />
+            {/* Prompt Composer — hidden in workflow mode */}
+            {viewMode !== "workflow" && (
+              <PromptComposer onSaveToVault={promptVault.openSaveDialog} />
+            )}
 
-            {/* Floating Canvas List (left side) */}
-            <CanvasList />
+            {/* Workflow-specific UI */}
+            {viewMode === "workflow" && <NodePalette />}
+            {viewMode === "workflow" && (
+              <WorkflowToolbar
+                isExecuting={workflow.isExecuting}
+                executionProgress={workflow.executionProgress}
+                savedWorkflows={workflow.savedWorkflows}
+                workflowName={workflow.workflowName}
+                onRun={workflow.runWorkflow}
+                onStop={workflow.stopWorkflow}
+                onSave={workflow.saveWorkflow}
+                onLoad={workflow.loadWorkflow}
+                onExport={workflow.exportWorkflowJSON}
+                onImport={workflow.importWorkflowJSON}
+                onNameChange={workflow.setWorkflowName}
+              />
+            )}
+
+            {/* Floating Canvas List (left side) — hidden in workflow mode */}
+            {viewMode !== "workflow" && <CanvasList />}
 
             {/* Floating Prompt Vault Island (top left, below canvas list) */}
             <PromptVaultIsland
@@ -123,8 +164,8 @@ export function StudioLayout() {
             />
 
 
-            {/* Floating History Island (right side) */}
-            <HistoryIsland />
+            {/* Floating History Island (right side) — hidden in workflow mode */}
+            {viewMode !== "workflow" && <HistoryIsland />}
 
             {/* Floating Hotkeys Island (bottom left) */}
             <HotkeysIsland />

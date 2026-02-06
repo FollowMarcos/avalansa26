@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import type { GroupData } from "@/types/canvas";
 import { hexToRgba, GROUP_TITLE_HEIGHT } from "./group-utils";
-import { ChevronDown, ChevronRight, GripHorizontal, Pencil } from "lucide-react";
+import { ChevronDown, ChevronRight, GripHorizontal, Pencil, Lock, Unlock } from "lucide-react";
 
 interface GroupItemProps {
   group: GroupData;
@@ -15,6 +15,7 @@ interface GroupItemProps {
   zoom: number;
   onTitleChange: (title: string) => void;
   onToggleCollapse: () => void;
+  onToggleLock?: () => void;
   onMouseDown: (e: React.MouseEvent, action: "move" | "resize" | "select", handle?: string) => void;
 }
 
@@ -31,6 +32,7 @@ export const GroupItem = React.memo(function GroupItem({
   zoom,
   onTitleChange,
   onToggleCollapse,
+  onToggleLock,
   onMouseDown,
 }: GroupItemProps) {
   const [isEditing, setIsEditing] = React.useState(false);
@@ -219,6 +221,27 @@ export const GroupItem = React.memo(function GroupItem({
             aria-label="Rename group"
           >
             <Pencil className="size-3" style={{ color: group.color }} />
+          </button>
+        )}
+
+        {/* Lock toggle — skip group during workflow execution */}
+        {onToggleLock && isTitleHovered && (
+          <button
+            type="button"
+            className="flex items-center justify-center size-6 rounded hover:bg-black/10"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleLock();
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+            style={{ transform: `scale(${iconScale})` }}
+            aria-label={group.locked ? "Unlock group" : "Lock group (skip during execution)"}
+          >
+            {group.locked ? (
+              <Lock className="size-3" style={{ color: group.color }} />
+            ) : (
+              <Unlock className="size-3" style={{ color: group.color }} />
+            )}
           </button>
         )}
       </div>

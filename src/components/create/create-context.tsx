@@ -172,8 +172,8 @@ interface CreateContextType {
   deleteCanvas: (id: string) => Promise<void>;
 
   // UI state
-  viewMode: "canvas" | "gallery";
-  setViewMode: (mode: "canvas" | "gallery") => void;
+  viewMode: "canvas" | "gallery" | "workflow";
+  setViewMode: (mode: "canvas" | "gallery" | "workflow") => void;
   historyPanelOpen: boolean;
   toggleHistoryPanel: () => void;
   isInputVisible: boolean;
@@ -309,7 +309,7 @@ interface PersistedState {
   edges: Edge[];
   groups: GroupData[];
   viewport: CanvasViewport;
-  viewMode: "canvas" | "gallery";
+  viewMode: "canvas" | "gallery" | "workflow";
   historyPanelOpen: boolean;
   timestamp: number; // For cache invalidation
 }
@@ -400,7 +400,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [savedReferences, setSavedReferences] = React.useState<SavedReferenceImage[]>([]);
   const [history, setHistory] = React.useState<GeneratedImage[]>([]);
   const [selectedImage, setSelectedImage] = React.useState<GeneratedImage | null>(null);
-  const [viewMode, setViewMode] = React.useState<"canvas" | "gallery">("canvas");
+  const [viewMode, setViewMode] = React.useState<"canvas" | "gallery" | "workflow">("canvas");
   const [historyPanelOpen, setHistoryPanelOpen] = React.useState(true);
   const [isInputVisible, setIsInputVisible] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState("create");

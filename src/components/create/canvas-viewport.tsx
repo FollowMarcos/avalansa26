@@ -7,12 +7,18 @@ import { ImagePlus, Sparkles, Type, Images } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { FlowCanvas } from "./flow-canvas";
 
-export function CanvasViewport() {
+interface CanvasViewportProps {
+  /** When in workflow mode, render the workflow canvas instead */
+  workflowCanvas?: React.ReactNode;
+}
+
+export function CanvasViewport({ workflowCanvas }: CanvasViewportProps) {
   const {
     isGenerating,
     referenceImages,
     nodes,
     setCanvasRef,
+    viewMode,
   } = useCreate();
 
   const canvasRef = React.useRef<HTMLDivElement>(null);
@@ -23,6 +29,15 @@ export function CanvasViewport() {
     setCanvasRef(canvasRef);
     return () => setCanvasRef(null);
   }, [setCanvasRef]);
+
+  // Workflow mode: render the workflow canvas
+  if (viewMode === "workflow" && workflowCanvas) {
+    return (
+      <div className="relative flex-1 flex items-center justify-center overflow-hidden bg-muted/30">
+        <div className="absolute inset-0">{workflowCanvas}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex-1 flex items-center justify-center overflow-hidden bg-muted/30">
