@@ -9,6 +9,8 @@ import {
   Eye,
   ImagePlus,
   Merge,
+  Combine,
+  LayoutGrid,
   Search,
   ChevronDown,
   ChevronRight,
@@ -37,6 +39,8 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   Eye: <Eye className="size-4" />,
   ImagePlus: <ImagePlus className="size-4" />,
   Merge: <Merge className="size-4" />,
+  Combine: <Combine className="size-4" />,
+  LayoutGrid: <LayoutGrid className="size-4" />,
 };
 
 interface NodePaletteProps {

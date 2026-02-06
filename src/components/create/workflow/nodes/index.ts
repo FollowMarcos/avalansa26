@@ -17,6 +17,7 @@ import { PromptVaultNode, promptVaultDefinition, promptVaultExecutor } from './p
 import { AvaNode, avaDefinition, avaExecutor } from './ava-node';
 import { ImageGridNode, imageGridDefinition, imageGridExecutor } from './image-grid-node';
 import { NoteNode, noteDefinition, noteExecutor } from './note-node';
+import { CollageComposerNode, collageComposerDefinition, collageComposerExecutor } from './collage-composer-node';
 
 registerNode({ definition: promptInputDefinition, component: PromptInputNode, executor: promptInputExecutor });
 registerNode({ definition: settingsDefinition, component: SettingsNode, executor: settingsExecutor });
@@ -28,3 +29,4 @@ registerNode({ definition: promptVaultDefinition, component: PromptVaultNode, ex
 registerNode({ definition: avaDefinition, component: AvaNode, executor: avaExecutor });
 registerNode({ definition: imageGridDefinition, component: ImageGridNode, executor: imageGridExecutor });
 registerNode({ definition: noteDefinition, component: NoteNode, executor: noteExecutor });
+registerNode({ definition: collageComposerDefinition, component: CollageComposerNode, executor: collageComposerExecutor });
