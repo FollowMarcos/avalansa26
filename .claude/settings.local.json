@@ -25,7 +25,9 @@
       "Bash(do cp \"C:/Users/world/Downloads/node-banana-master/node-banana-master/src/components/$file\" \"c:/Users/world/OneDrive/Desktop/newos/src/components/create-lab/\")",
       "Bash(done)",
       "Bash(ls:*)",
-      "WebFetch(domain:chamaac.com)"
+      "WebFetch(domain:chamaac.com)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }
