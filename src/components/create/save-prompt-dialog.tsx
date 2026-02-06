@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { safeColor } from "@/lib/validations/color";
 import type { PromptFolder, PromptTag } from "@/types/prompt";
 import type { GenerationSettings } from "@/types/generation";
 import {
@@ -288,7 +289,7 @@ export function SavePromptDialog({
                           />
                           <Folder
                             className="mr-2 size-4"
-                            style={{ color: folder.color || undefined }}
+                            style={{ color: safeColor(folder.color) }}
                           />
                           {folder.name}
                         </CommandItem>
@@ -341,8 +342,8 @@ export function SavePromptDialog({
                       variant="secondary"
                       className="gap-1 pr-1"
                       style={{
-                        backgroundColor: folder.color
-                          ? `${folder.color}20`
+                        backgroundColor: safeColor(folder.color)
+                          ? `${safeColor(folder.color)}20`
                           : undefined,
                       }}
                     >
@@ -408,7 +409,7 @@ export function SavePromptDialog({
                           />
                           <Tag
                             className="mr-2 size-4"
-                            style={{ color: tag.color || undefined }}
+                            style={{ color: safeColor(tag.color) }}
                           />
                           {tag.name}
                         </CommandItem>
@@ -461,7 +462,7 @@ export function SavePromptDialog({
                       variant="secondary"
                       className="gap-1 pr-1"
                       style={{
-                        backgroundColor: tag.color ? `${tag.color}20` : undefined,
+                        backgroundColor: safeColor(tag.color) ? `${safeColor(tag.color)}20` : undefined,
                       }}
                     >
                       <Tag className="size-3" />

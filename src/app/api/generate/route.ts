@@ -64,18 +64,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
     const body: GenerateRequest = await request.json();
     const { apiId, prompt, negativePrompt, aspectRatio, imageSize, outputCount = 1, referenceImagePaths, mode = 'fast', canvasId, pendingSessionName } = body;
 
-    // Debug: Log received parameters
-    console.log('[API /generate] Received params:', {
-      apiId,
-      aspectRatio,
-      imageSize,
-      outputCount,
-      mode,
-      promptLength: prompt?.length,
-      hasReferenceImages: referenceImagePaths?.length || 0,
-    });
+    // ========================================================================
+    // INPUT VALIDATION
+    // ========================================================================
 
-    if (!apiId) {
+    if (!apiId || typeof apiId !== 'string') {
       return NextResponse.json(
         { success: false, error: 'API ID is required' },
         { status: 400 }
@@ -89,16 +82,87 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
       );
     }
 
-    // Fetch reference images from storage (if any)
+    // Validate prompt length
+    const MAX_PROMPT_LENGTH = 10000;
+    const MAX_NEGATIVE_PROMPT_LENGTH = 2000;
+
+    if (prompt && prompt.length > MAX_PROMPT_LENGTH) {
+      return NextResponse.json(
+        { success: false, error: `Prompt must be under ${MAX_PROMPT_LENGTH} characters` },
+        { status: 400 }
+      );
+    }
+
+    if (negativePrompt && negativePrompt.length > MAX_NEGATIVE_PROMPT_LENGTH) {
+      return NextResponse.json(
+        { success: false, error: `Negative prompt must be under ${MAX_NEGATIVE_PROMPT_LENGTH} characters` },
+        { status: 400 }
+      );
+    }
+
+    // Validate outputCount
+    const MAX_OUTPUT_COUNT = 10;
+    if (!Number.isInteger(outputCount) || outputCount < 1 || outputCount > MAX_OUTPUT_COUNT) {
+      return NextResponse.json(
+        { success: false, error: `Output count must be between 1 and ${MAX_OUTPUT_COUNT}` },
+        { status: 400 }
+      );
+    }
+
+    // Validate aspect ratio (allowlist)
+    const VALID_ASPECT_RATIOS = ['1:1', '4:3', '3:4', '16:9', '9:16', '3:2', '2:3', '5:4', '4:5', '21:9', '9:21'];
+    if (aspectRatio && !VALID_ASPECT_RATIOS.includes(aspectRatio)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid aspect ratio' },
+        { status: 400 }
+      );
+    }
+
+    // Validate reference image paths
+    const MAX_REFERENCE_IMAGES = 5;
+    if (referenceImagePaths && referenceImagePaths.length > MAX_REFERENCE_IMAGES) {
+      return NextResponse.json(
+        { success: false, error: `Maximum ${MAX_REFERENCE_IMAGES} reference images allowed` },
+        { status: 400 }
+      );
+    }
+
+    // Validate reference image paths don't contain traversal sequences
+    if (referenceImagePaths) {
+      for (const path of referenceImagePaths) {
+        if (typeof path !== 'string' || path.includes('..') || path.startsWith('/')) {
+          return NextResponse.json(
+            { success: false, error: 'Invalid reference image path' },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    // Validate session name
+    const MAX_SESSION_NAME_LENGTH = 100;
+    if (pendingSessionName && (typeof pendingSessionName !== 'string' || pendingSessionName.length > MAX_SESSION_NAME_LENGTH)) {
+      return NextResponse.json(
+        { success: false, error: 'Session name must be under 100 characters' },
+        { status: 400 }
+      );
+    }
+
+    // Validate mode
+    if (mode !== 'fast' && mode !== 'relaxed') {
+      return NextResponse.json(
+        { success: false, error: 'Mode must be "fast" or "relaxed"' },
+        { status: 400 }
+      );
+    }
+
+    // ========================================================================
+    // FETCH REFERENCE IMAGES
+    // ========================================================================
+
     let referenceImages: string[] = [];
     if (referenceImagePaths && referenceImagePaths.length > 0) {
-      console.log('[API /generate] Fetching reference images:', referenceImagePaths);
       referenceImages = await getImagesAsBase64(referenceImagePaths);
-      console.log('[API /generate] Fetched reference images:', {
-        requested: referenceImagePaths.length,
-        fetched: referenceImages.length,
-        sizes: referenceImages.map(img => `${Math.round(img.length / 1024)}KB`),
-      });
 
       if (referenceImages.length === 0 && referenceImagePaths.length > 0) {
         console.error('[API /generate] Failed to fetch any reference images');
@@ -321,7 +385,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
   } catch (error) {
     console.error('Generation error:', error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Generation failed' },
+      { success: false, error: 'Image generation failed. Please try again.' },
       { status: 500 }
     );
   }

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { X, Plus, Tag as TagIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { safeColor } from "@/lib/validations/color";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,11 +95,11 @@ export function TagInput({ imageId, className }: TagInputProps) {
               variant="secondary"
               className="gap-1 pr-1 text-xs font-mono"
               style={
-                tag.color
+                safeColor(tag.color)
                   ? {
-                      backgroundColor: `${tag.color}20`,
-                      borderColor: tag.color,
-                      color: tag.color,
+                      backgroundColor: `${safeColor(tag.color)}20`,
+                      borderColor: safeColor(tag.color),
+                      color: safeColor(tag.color),
                     }
                   : undefined
               }
@@ -164,8 +165,8 @@ export function TagInput({ imageId, className }: TagInputProps) {
                       <div
                         className="size-3 rounded-full border"
                         style={{
-                          backgroundColor: tag.color || "transparent",
-                          borderColor: tag.color || "currentColor",
+                          backgroundColor: safeColor(tag.color, "transparent"),
+                          borderColor: safeColor(tag.color, "currentColor"),
                         }}
                       />
                       <span className="font-mono text-xs">{tag.name}</span>

@@ -25,15 +25,12 @@ export async function GET(request: NextRequest) {
     // Validate URL is from allowed domains (our storage or known image hosts)
     const url = new URL(imageUrl);
 
-    // Strict domain allowlist - must match exactly or be a subdomain
+    // Strict domain allowlist - only Supabase storage and known image CDNs
     const allowedDomains = [
       'supabase.co',
       'supabase.in',
       'supabase.com',
       'storage.googleapis.com',
-      'googleusercontent.com',
-      'cloudflare.com',
-      'cloudfront.net',
     ];
 
     /**
@@ -43,9 +40,7 @@ export async function GET(request: NextRequest) {
     const isAllowedDomain = (hostname: string): boolean => {
       const normalizedHost = hostname.toLowerCase();
       return allowedDomains.some(domain => {
-        // Exact match
         if (normalizedHost === domain) return true;
-        // Valid subdomain match (must have dot before the domain)
         if (normalizedHost.endsWith(`.${domain}`)) return true;
         return false;
       });
@@ -54,34 +49,67 @@ export async function GET(request: NextRequest) {
     if (!isAllowedDomain(url.hostname)) {
       console.warn(`[proxy-image] Blocked domain: ${url.hostname}`);
       return NextResponse.json(
-        { error: `Image URL not from allowed domain: ${url.hostname}` },
+        { error: 'Image URL not from allowed domain' },
         { status: 403 }
       );
     }
 
-    // Fetch the image server-side (no CORS restrictions)
+    // Fetch with timeout protection (10 seconds)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     const response = await fetch(imageUrl, {
-      headers: {
-        'Accept': 'image/*',
-      },
+      headers: { 'Accept': 'image/*' },
+      signal: controller.signal,
     });
+
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: `Failed to fetch image: ${response.status}` },
-        { status: response.status }
+        { error: 'Failed to fetch image' },
+        { status: 502 }
       );
     }
 
-    const contentType = response.headers.get('content-type') || 'image/png';
+    // Validate content-type is an actual image
+    const contentType = response.headers.get('content-type') || '';
+    const VALID_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
+    const isValidImage = VALID_IMAGE_TYPES.some(type => contentType.includes(type));
+
+    if (!isValidImage) {
+      return NextResponse.json(
+        { error: 'Response is not a valid image type' },
+        { status: 400 }
+      );
+    }
+
+    // Check content-length before loading into memory
+    const MAX_IMAGE_SIZE = 50 * 1024 * 1024; // 50MB
+    const contentLength = response.headers.get('content-length');
+    if (contentLength && parseInt(contentLength) > MAX_IMAGE_SIZE) {
+      return NextResponse.json(
+        { error: 'Image too large' },
+        { status: 413 }
+      );
+    }
+
     const buffer = await response.arrayBuffer();
 
-    // Return the image with proper headers
+    // Double-check actual size
+    if (buffer.byteLength > MAX_IMAGE_SIZE) {
+      return NextResponse.json(
+        { error: 'Image too large' },
+        { status: 413 }
+      );
+    }
+
     return new NextResponse(buffer, {
       status: 200,
       headers: {
         'Content-Type': contentType,
         'Cache-Control': 'public, max-age=3600',
+        'X-Content-Type-Options': 'nosniff',
       },
     });
   } catch (error) {

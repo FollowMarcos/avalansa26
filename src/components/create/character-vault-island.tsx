@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { safeColor } from "@/lib/validations/color";
 import type { Character, CharacterFolder, CharacterTag } from "@/types/character";
 import {
   Users,
@@ -265,7 +266,7 @@ export function CharacterVaultIsland({
                               >
                                 <Folder
                                   className="size-3 inline mr-1.5"
-                                  style={{ color: folder.color || undefined }}
+                                  style={{ color: safeColor(folder.color) }}
                                 />
                                 {folder.name}
                               </button>

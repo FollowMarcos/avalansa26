@@ -18,6 +18,7 @@ const ALLOWED_IMAGE_DOMAINS = [
 function isAllowedImageUrl(urlString: string): boolean {
   try {
     const url = new URL(urlString);
+    // Use exact hostname matching only for tighter SSRF protection
     return ALLOWED_IMAGE_DOMAINS.some(domain =>
       url.hostname === domain || url.hostname.endsWith(`.${domain}`)
     );
@@ -25,6 +26,10 @@ function isAllowedImageUrl(urlString: string): boolean {
     return false;
   }
 }
+
+// Validate image content-type and size before processing
+const VALID_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/avif'];
+const MAX_SHARE_IMAGE_SIZE = 100 * 1024 * 1024; // 100MB
 
 /**
  * API route for generating watermarked/platform-optimized images for sharing
@@ -54,12 +59,33 @@ export async function GET(request: NextRequest) {
 
   try {
     // Fetch the original image (validated against allowlist)
-    const response = await fetch(imageUrl);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+    const response = await fetch(imageUrl, { signal: controller.signal });
+    clearTimeout(timeoutId);
+
     if (!response.ok) {
       return NextResponse.json({ error: 'Failed to fetch image' }, { status: 400 });
     }
 
+    // Validate content-type
+    const contentType = response.headers.get('content-type') || '';
+    if (!VALID_IMAGE_TYPES.some(type => contentType.includes(type))) {
+      return NextResponse.json({ error: 'Response is not a valid image' }, { status: 400 });
+    }
+
+    // Check content-length before loading
+    const contentLength = response.headers.get('content-length');
+    if (contentLength && parseInt(contentLength) > MAX_SHARE_IMAGE_SIZE) {
+      return NextResponse.json({ error: 'Image too large' }, { status: 413 });
+    }
+
     const imageBuffer = Buffer.from(await response.arrayBuffer());
+
+    if (imageBuffer.byteLength > MAX_SHARE_IMAGE_SIZE) {
+      return NextResponse.json({ error: 'Image too large' }, { status: 413 });
+    }
     let processedImage = sharp(imageBuffer);
 
     // Get image metadata for dimension calculations

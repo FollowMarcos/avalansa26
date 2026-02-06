@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { safeColor } from "@/lib/validations/color";
 import type { Prompt, PromptFolder, PromptTag } from "@/types/prompt";
+import type { Ava, AvaFolder } from "@/types/ava";
 import {
   BookMarked,
   Search,
@@ -11,6 +13,8 @@ import {
   Heart,
   Clock,
   Sparkles,
+  Bot,
+  Plus,
 } from "lucide-react";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -23,8 +27,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { PromptCard } from "./prompt-card";
+import { AvaCard } from "./ava-card";
 
-type VaultSection = "all" | "favorites" | "recent" | string; // string for folder IDs
+type VaultSection = "all" | "favorites" | "recent" | "avas" | string; // string for folder IDs
 
 interface PromptVaultIslandProps {
   open: boolean;
@@ -36,6 +41,15 @@ interface PromptVaultIslandProps {
   onToggleFavorite: (promptId: string, isFavorite: boolean) => void;
   onSharePrompt: (prompt: Prompt) => void;
   onDeletePrompt: (promptId: string) => void;
+  // Ava props
+  avas?: Ava[];
+  avaFolders?: AvaFolder[];
+  onRunAva?: (ava: Ava) => void;
+  onEditAva?: (ava: Ava) => void;
+  onCreateAva?: () => void;
+  onToggleAvaFavorite?: (avaId: string, isFavorite: boolean) => void;
+  onShareAva?: (ava: Ava) => void;
+  onDeleteAva?: (avaId: string) => void;
 }
 
 export function PromptVaultIsland({
@@ -48,6 +62,14 @@ export function PromptVaultIsland({
   onToggleFavorite,
   onSharePrompt,
   onDeletePrompt,
+  avas = [],
+  avaFolders = [],
+  onRunAva,
+  onEditAva,
+  onCreateAva,
+  onToggleAvaFavorite,
+  onShareAva,
+  onDeleteAva,
 }: PromptVaultIslandProps) {
   const prefersReducedMotion = useReducedMotion();
   const [activeSection, setActiveSection] = React.useState<VaultSection>("all");
@@ -88,6 +110,18 @@ export function PromptVaultIsland({
 
     return filtered;
   }, [prompts, searchQuery, activeSection]);
+
+  // Filter avas based on search
+  const filteredAvas = React.useMemo(() => {
+    if (!searchQuery) return avas;
+    const query = searchQuery.toLowerCase();
+    return avas.filter(
+      (a) =>
+        a.name.toLowerCase().includes(query) ||
+        a.instructions.toLowerCase().includes(query) ||
+        a.description?.toLowerCase().includes(query)
+    );
+  }, [avas, searchQuery]);
 
   const favoriteCount = prompts.filter((p) => p.is_favorite).length;
 
@@ -146,11 +180,12 @@ export function PromptVaultIsland({
               {/* Search */}
               <div className="px-3 py-2 border-b border-border">
                 <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" aria-hidden="true" />
                   <Input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search your prompts..."
+                    placeholder={activeSection === "avas" ? "Search your Avas\u2026" : "Search your prompts\u2026"}
+                    aria-label={activeSection === "avas" ? "Search Avas" : "Search prompts"}
                     className="h-8 pl-8 text-sm"
                   />
                   {searchQuery && (
@@ -159,8 +194,9 @@ export function PromptVaultIsland({
                       size="icon"
                       onClick={() => setSearchQuery("")}
                       className="absolute right-1 top-1/2 -translate-y-1/2 size-6"
+                      aria-label="Clear search"
                     >
-                      <X className="size-3" />
+                      <X className="size-3" aria-hidden="true" />
                     </Button>
                   )}
                 </div>
@@ -175,14 +211,16 @@ export function PromptVaultIsland({
                       {/* All */}
                       <button
                         onClick={() => setActiveSection("all")}
+                        aria-current={activeSection === "all" ? "true" : undefined}
                         className={cn(
                           "w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors",
+                          "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                           activeSection === "all"
                             ? "bg-accent text-accent-foreground"
                             : "hover:bg-muted"
                         )}
                       >
-                        <Sparkles className="size-3 inline mr-1.5" />
+                        <Sparkles className="size-3 inline mr-1.5" aria-hidden="true" />
                         All
                         <span className="text-muted-foreground ml-1">
                           ({prompts.length})
@@ -192,14 +230,16 @@ export function PromptVaultIsland({
                       {/* Favorites */}
                       <button
                         onClick={() => setActiveSection("favorites")}
+                        aria-current={activeSection === "favorites" ? "true" : undefined}
                         className={cn(
                           "w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors",
+                          "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                           activeSection === "favorites"
                             ? "bg-accent text-accent-foreground"
                             : "hover:bg-muted"
                         )}
                       >
-                        <Heart className="size-3 inline mr-1.5" />
+                        <Heart className="size-3 inline mr-1.5" aria-hidden="true" />
                         Favorites
                         {favoriteCount > 0 && (
                           <span className="text-muted-foreground ml-1">
@@ -211,15 +251,38 @@ export function PromptVaultIsland({
                       {/* Recent */}
                       <button
                         onClick={() => setActiveSection("recent")}
+                        aria-current={activeSection === "recent" ? "true" : undefined}
                         className={cn(
                           "w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors",
+                          "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                           activeSection === "recent"
                             ? "bg-accent text-accent-foreground"
                             : "hover:bg-muted"
                         )}
                       >
-                        <Clock className="size-3 inline mr-1.5" />
+                        <Clock className="size-3 inline mr-1.5" aria-hidden="true" />
                         Recent
+                      </button>
+
+                      {/* Avas */}
+                      <button
+                        onClick={() => setActiveSection("avas")}
+                        aria-current={activeSection === "avas" ? "true" : undefined}
+                        className={cn(
+                          "w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors",
+                          "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                          activeSection === "avas"
+                            ? "bg-accent text-accent-foreground"
+                            : "hover:bg-muted"
+                        )}
+                      >
+                        <Bot className="size-3 inline mr-1.5" aria-hidden="true" />
+                        Avas
+                        {avas.length > 0 && (
+                          <span className="text-muted-foreground ml-1">
+                            ({avas.length})
+                          </span>
+                        )}
                       </button>
 
                       {/* Folders */}
@@ -242,7 +305,7 @@ export function PromptVaultIsland({
                               >
                                 <Folder
                                   className="size-3 inline mr-1.5"
-                                  style={{ color: folder.color || undefined }}
+                                  style={{ color: safeColor(folder.color) }}
                                 />
                                 {folder.name}
                               </button>
@@ -254,43 +317,98 @@ export function PromptVaultIsland({
                   </ScrollArea>
                 </div>
 
-                {/* Prompt List */}
+                {/* Content List */}
                 <ScrollArea className="flex-1 h-[320px]">
-                  {filteredPrompts.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center p-6">
-                      <BookMarked
-                        className="size-8 text-muted-foreground/30 mb-2"
-                        aria-hidden="true"
-                      />
-                      <p className="text-xs text-muted-foreground font-mono">
-                        {searchQuery
-                          ? "No matching prompts"
-                          : activeSection === "favorites"
-                            ? "No favorites yet"
-                            : activeSection === "recent"
-                              ? "No recently used"
-                              : "No saved prompts"}
-                      </p>
-                      {!searchQuery && activeSection === "all" && (
-                        <p className="text-[10px] text-muted-foreground mt-1">
-                          Save prompts using the bookmark button
-                        </p>
+                  {activeSection === "avas" ? (
+                    /* Avas content */
+                    <>
+                      {/* Create Ava button */}
+                      {onCreateAva && (
+                        <div className="p-2 pb-0">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={onCreateAva}
+                            className="w-full h-8 text-xs"
+                          >
+                            <Plus className="size-3 mr-1.5" />
+                            Create Ava
+                          </Button>
+                        </div>
                       )}
-                    </div>
+                      {filteredAvas.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full text-center p-6">
+                          <Bot
+                            className="size-8 text-muted-foreground/30 mb-2"
+                            aria-hidden="true"
+                          />
+                          <p className="text-xs text-muted-foreground font-mono">
+                            {searchQuery
+                              ? "No matching Avas"
+                              : "No Avas yet"}
+                          </p>
+                          {!searchQuery && (
+                            <p className="text-[10px] text-muted-foreground mt-1">
+                              Create an Ava to generate prompts with AI
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="p-2 space-y-2">
+                          {filteredAvas.map((ava) => (
+                            <AvaCard
+                              key={ava.id}
+                              ava={ava}
+                              onSelect={onRunAva}
+                              onEdit={onEditAva}
+                              onToggleFavorite={onToggleAvaFavorite}
+                              onShare={onShareAva}
+                              onDelete={onDeleteAva}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </>
                   ) : (
-                    <div className="p-2 space-y-2">
-                      {filteredPrompts.map((prompt) => (
-                        <PromptCard
-                          key={prompt.id}
-                          prompt={prompt}
-                          onSelect={onSelectPrompt}
-                          onToggleFavorite={onToggleFavorite}
-                          onShare={onSharePrompt}
-                          onDelete={onDeletePrompt}
-                          showActions
-                        />
-                      ))}
-                    </div>
+                    /* Prompts content */
+                    <>
+                      {filteredPrompts.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-full text-center p-6">
+                          <BookMarked
+                            className="size-8 text-muted-foreground/30 mb-2"
+                            aria-hidden="true"
+                          />
+                          <p className="text-xs text-muted-foreground font-mono">
+                            {searchQuery
+                              ? "No matching prompts"
+                              : activeSection === "favorites"
+                                ? "No favorites yet"
+                                : activeSection === "recent"
+                                  ? "No recently used"
+                                  : "No saved prompts"}
+                          </p>
+                          {!searchQuery && activeSection === "all" && (
+                            <p className="text-[10px] text-muted-foreground mt-1">
+                              Save prompts using the bookmark button
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="p-2 space-y-2">
+                          {filteredPrompts.map((prompt) => (
+                            <PromptCard
+                              key={prompt.id}
+                              prompt={prompt}
+                              onSelect={onSelectPrompt}
+                              onToggleFavorite={onToggleFavorite}
+                              onShare={onSharePrompt}
+                              onDelete={onDeletePrompt}
+                              showActions
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </>
                   )}
                 </ScrollArea>
               </div>
