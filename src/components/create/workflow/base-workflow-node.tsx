@@ -34,6 +34,8 @@ interface BaseWorkflowNodeProps {
   children: React.ReactNode;
   /** Minimum width override */
   minWidth?: number;
+  /** Maximum width override */
+  maxWidth?: number;
 }
 
 const STATUS_BORDER: Record<WorkflowNodeStatus, string> = {
@@ -68,6 +70,7 @@ export function BaseWorkflowNode({
   outputs,
   children,
   minWidth = 220,
+  maxWidth = 300,
 }: BaseWorkflowNodeProps) {
   const status = data.status ?? 'idle';
   const displayLabel = data.label ?? label;
@@ -80,7 +83,7 @@ export function BaseWorkflowNode({
         STATUS_BORDER[status],
         selected && status === 'idle' && 'border-primary ring-2 ring-primary/20',
       )}
-      style={{ minWidth }}
+      style={{ minWidth, maxWidth }}
     >
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border/50 bg-muted/30 rounded-t-[10px]">
@@ -167,7 +170,7 @@ export function BaseWorkflowNode({
 
       {/* Body */}
       <div
-        className="px-3 py-2"
+        className="px-3 py-2 overflow-hidden"
         style={{
           marginTop: Math.max(inputs.length, outputs.length) * 28,
         }}

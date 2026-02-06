@@ -148,7 +148,7 @@ export function PromptVaultIsland({
                   : { opacity: 0, scale: 0.95, x: -20 }
               }
               transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
-              className="w-80 bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-lg overflow-hidden"
+              className="w-[480px] bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-lg overflow-hidden"
             >
               {/* Header */}
               <div className="flex items-center justify-between px-3 py-2 border-b border-border">
