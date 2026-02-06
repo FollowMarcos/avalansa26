@@ -20,6 +20,7 @@ import { isSocketCompatible, SOCKET_COLORS } from '@/types/workflow';
 import type { GroupData, CanvasViewport } from '@/types/canvas';
 import { getNodeEntry, getAllDefinitions, type ExecutionContext } from './node-registry';
 import { executeWorkflow } from './execution-engine';
+import { GROUP_PADDING, GROUP_TITLE_HEIGHT, getRandomGroupColor } from '../groups/group-utils';
 
 // Ensure nodes are registered
 import './nodes';
@@ -234,8 +235,14 @@ export function useWorkflow({ apiId }: UseWorkflowOptions) {
   );
 
   // ---------------------------------------------------------------------------
-  // Group locking
+  // Group management
   // ---------------------------------------------------------------------------
+
+  const [selectedGroupId, setSelectedGroupId] = React.useState<string | null>(null);
+
+  const selectGroup = React.useCallback((groupId: string | null) => {
+    setSelectedGroupId(groupId);
+  }, []);
 
   const toggleGroupLock = React.useCallback((groupId: string) => {
     setGroups((prev) =>
@@ -244,6 +251,179 @@ export function useWorkflow({ apiId }: UseWorkflowOptions) {
       ),
     );
   }, []);
+
+  const toggleGroupCollapse = React.useCallback((groupId: string) => {
+    setGroups((prev) =>
+      prev.map((g) =>
+        g.id === groupId ? { ...g, isCollapsed: !g.isCollapsed } : g,
+      ),
+    );
+  }, []);
+
+  /** Calculate bounds that encompass the given workflow nodes */
+  const calculateWorkflowBounds = React.useCallback(
+    (nodeIds: string[]) => {
+      const targetNodes = nodes.filter((n) => nodeIds.includes(n.id));
+      if (targetNodes.length === 0) return { x: 0, y: 0, width: 300, height: 200 };
+
+      const minX = Math.min(...targetNodes.map((n) => n.position.x)) - GROUP_PADDING;
+      const minY = Math.min(...targetNodes.map((n) => n.position.y)) - GROUP_PADDING - GROUP_TITLE_HEIGHT;
+      const maxX = Math.max(...targetNodes.map((n) => n.position.x + (n.measured?.width ?? 260))) + GROUP_PADDING;
+      const maxY = Math.max(...targetNodes.map((n) => n.position.y + (n.measured?.height ?? 140))) + GROUP_PADDING;
+
+      return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+    },
+    [nodes],
+  );
+
+  /** Create a group from the currently selected nodes (Ctrl+G) */
+  const createGroup = React.useCallback(() => {
+    const selectedIds = nodes.filter((n) => n.selected).map((n) => n.id);
+    if (selectedIds.length < 2) {
+      toast.error('Select at least 2 nodes to group');
+      return;
+    }
+
+    const bounds = calculateWorkflowBounds(selectedIds);
+    const newGroup: GroupData & { locked?: boolean } = {
+      id: `wfg-${Date.now()}`,
+      title: 'Group',
+      color: getRandomGroupColor(),
+      bounds,
+      isCollapsed: false,
+      createdAt: Date.now(),
+      nodeIds: selectedIds,
+    };
+
+    setGroups((prev) => [...prev, newGroup]);
+    setSelectedGroupId(newGroup.id);
+  }, [nodes, calculateWorkflowBounds]);
+
+  /** Delete a group (does not delete contained nodes) */
+  const deleteGroup = React.useCallback((groupId: string) => {
+    setGroups((prev) => prev.filter((g) => g.id !== groupId));
+    if (selectedGroupId === groupId) setSelectedGroupId(null);
+  }, [selectedGroupId]);
+
+  /** Update group properties */
+  const updateGroup = React.useCallback((groupId: string, updates: Partial<GroupData>) => {
+    setGroups((prev) =>
+      prev.map((g) => (g.id === groupId ? { ...g, ...updates } : g)),
+    );
+  }, []);
+
+  /** Move group bounds + all contained nodes by a delta */
+  const moveGroup = React.useCallback(
+    (groupId: string, delta: { x: number; y: number }) => {
+      setGroups((prev) =>
+        prev.map((g) => {
+          if (g.id !== groupId) return g;
+          return {
+            ...g,
+            bounds: {
+              ...g.bounds,
+              x: g.bounds.x + delta.x,
+              y: g.bounds.y + delta.y,
+            },
+          };
+        }),
+      );
+      // Also move contained nodes
+      const group = groups.find((g) => g.id === groupId);
+      if (!group) return;
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (!group.nodeIds.includes(n.id)) return n;
+          return {
+            ...n,
+            position: {
+              x: n.position.x + delta.x,
+              y: n.position.y + delta.y,
+            },
+          };
+        }),
+      );
+    },
+    [groups, setNodes],
+  );
+
+  /** Resize group bounds (nodes are not affected) */
+  const resizeGroup = React.useCallback(
+    (groupId: string, bounds: { x: number; y: number; width: number; height: number }) => {
+      setGroups((prev) =>
+        prev.map((g) => (g.id === groupId ? { ...g, bounds } : g)),
+      );
+    },
+    [],
+  );
+
+  /** Duplicate a group and all its contained nodes + internal edges */
+  const duplicateGroup = React.useCallback(
+    (groupId: string) => {
+      const group = groups.find((g) => g.id === groupId);
+      if (!group) return;
+
+      const offset = { x: 60, y: 60 };
+      const idMap = new Map<string, string>();
+
+      // Clone nodes with new IDs
+      const clonedNodes: Node<WorkflowNodeData>[] = [];
+      for (const nodeId of group.nodeIds) {
+        const node = nodes.find((n) => n.id === nodeId);
+        if (!node) continue;
+        const newId = `wf-${node.data.definitionType}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+        idMap.set(nodeId, newId);
+        clonedNodes.push({
+          ...node,
+          id: newId,
+          position: {
+            x: node.position.x + offset.x,
+            y: node.position.y + offset.y,
+          },
+          selected: false,
+          data: { ...node.data, status: 'idle', error: undefined, outputValues: undefined },
+        });
+      }
+
+      // Clone internal edges (both source and target in the group)
+      const clonedEdges: Edge<WorkflowEdgeData>[] = [];
+      for (const edge of edges) {
+        const newSource = idMap.get(edge.source);
+        const newTarget = idMap.get(edge.target);
+        if (newSource && newTarget) {
+          clonedEdges.push({
+            ...edge,
+            id: `wfe-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            source: newSource,
+            target: newTarget,
+          });
+        }
+      }
+
+      // Create new group
+      const newGroup: GroupData & { locked?: boolean } = {
+        id: `wfg-${Date.now()}`,
+        title: `${group.title} (copy)`,
+        color: group.color,
+        bounds: {
+          x: group.bounds.x + offset.x,
+          y: group.bounds.y + offset.y,
+          width: group.bounds.width,
+          height: group.bounds.height,
+        },
+        isCollapsed: false,
+        createdAt: Date.now(),
+        nodeIds: Array.from(idMap.values()),
+      };
+
+      setNodes((nds) => [...nds, ...clonedNodes]);
+      setEdges((eds) => [...eds, ...clonedEdges]);
+      setGroups((prev) => [...prev, newGroup]);
+      setSelectedGroupId(newGroup.id);
+      toast.success('Group duplicated');
+    },
+    [groups, nodes, edges, setNodes, setEdges],
+  );
 
   // ---------------------------------------------------------------------------
   // Workflow execution
@@ -608,15 +788,32 @@ export function useWorkflow({ apiId }: UseWorkflowOptions) {
         e.preventDefault();
         if (!isExecuting) runWorkflow();
       }
-      // Escape to stop
-      if (e.key === 'Escape' && isExecuting) {
+      // Escape to stop execution or deselect group
+      if (e.key === 'Escape') {
+        if (isExecuting) {
+          e.preventDefault();
+          stopWorkflow();
+        } else if (selectedGroupId) {
+          e.preventDefault();
+          setSelectedGroupId(null);
+        }
+      }
+      // Ctrl+G to group selected nodes
+      if ((e.ctrlKey || e.metaKey) && e.key === 'g') {
         e.preventDefault();
-        stopWorkflow();
+        createGroup();
+      }
+      // Delete/Backspace to delete selected group
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedGroupId) {
+        // Only delete group if not focused on an input element
+        const target = e.target as HTMLElement;
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return;
+        deleteGroup(selectedGroupId);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [isExecuting, runWorkflow, stopWorkflow]);
+  }, [isExecuting, runWorkflow, stopWorkflow, selectedGroupId, createGroup, deleteGroup]);
 
   return {
     // React Flow state
@@ -632,7 +829,16 @@ export function useWorkflow({ apiId }: UseWorkflowOptions) {
 
     // Groups
     groups,
+    selectedGroupId,
+    selectGroup,
+    createGroup,
+    deleteGroup,
+    updateGroup,
+    moveGroup,
+    resizeGroup,
+    toggleGroupCollapse,
     toggleGroupLock,
+    duplicateGroup,
 
     // Execution
     isExecuting,

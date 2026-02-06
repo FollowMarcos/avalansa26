@@ -42,7 +42,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'", // unsafe-inline needed for styled-components
               "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://storage.googleapis.com",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.supabase.co https://generativelanguage.googleapis.com wss://*.supabase.co",
+              "connect-src 'self' data: blob: https://*.supabase.co https://generativelanguage.googleapis.com wss://*.supabase.co",
               "media-src 'self' blob:",
               "object-src 'none'",
               "base-uri 'self'",

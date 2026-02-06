@@ -18,8 +18,10 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import type { WorkflowNodeData, WorkflowEdgeData } from '@/types/workflow';
+import type { GroupData } from '@/types/canvas';
 import { SOCKET_COLORS, isSocketCompatible } from '@/types/workflow';
 import { getWorkflowNodeTypes, getNodeEntry } from './node-registry';
+import { GroupLayer } from '../groups/group-layer';
 
 // Ensure all nodes are registered
 import './nodes';
@@ -30,19 +32,31 @@ interface WorkflowCanvasProps {
   onNodesChange: (changes: NodeChange<Node<WorkflowNodeData>>[]) => void;
   onEdgesChange: (changes: EdgeChange<Edge<WorkflowEdgeData>>[]) => void;
   onConnect: (connection: Connection) => void;
-  /** Callback when a node is dropped from the palette */
   onAddNode: (type: string, position: { x: number; y: number }) => void;
+  // Group props
+  groups: (GroupData & { locked?: boolean })[];
+  selectedGroupId: string | null;
+  onSelectGroup: (groupId: string | null) => void;
+  onMoveGroup: (groupId: string, delta: { x: number; y: number }) => void;
+  onResizeGroup: (groupId: string, bounds: { x: number; y: number; width: number; height: number }) => void;
+  onUpdateGroup: (groupId: string, updates: Partial<GroupData>) => void;
+  onToggleGroupCollapse: (groupId: string) => void;
+  onToggleGroupLock?: (groupId: string) => void;
+  onDuplicateGroup?: (groupId: string) => void;
+  onDeleteGroup?: (groupId: string) => void;
 }
 
 const defaultEdgeOptions: DefaultEdgeOptions = {
   type: 'smoothstep',
   animated: true,
   style: { strokeWidth: 2 },
+  interactionWidth: 20,
 };
 
 /**
  * React Flow canvas for workflow mode.
  * Uses typed sockets for connection validation and colored edges.
+ * Renders GroupLayer overlay for node grouping.
  */
 export function WorkflowCanvas({
   nodes,
@@ -51,6 +65,16 @@ export function WorkflowCanvas({
   onEdgesChange,
   onConnect,
   onAddNode,
+  groups,
+  selectedGroupId,
+  onSelectGroup,
+  onMoveGroup,
+  onResizeGroup,
+  onUpdateGroup,
+  onToggleGroupCollapse,
+  onToggleGroupLock,
+  onDuplicateGroup,
+  onDeleteGroup,
 }: WorkflowCanvasProps) {
   const { screenToFlowPosition } = useReactFlow();
 
@@ -123,7 +147,7 @@ export function WorkflowCanvas({
     [nodes],
   );
 
-  /** Color edges based on source socket type */
+  /** Color edges based on source socket type, highlight selected */
   const styledEdges = React.useMemo(() => {
     return edges.map((edge) => {
       const color = edge.data?.sourceSocketType
@@ -131,13 +155,23 @@ export function WorkflowCanvas({
         : '#9ca3af';
       return {
         ...edge,
-        style: { ...edge.style, stroke: color, strokeWidth: 2 },
+        style: {
+          ...edge.style,
+          stroke: color,
+          strokeWidth: edge.selected ? 3 : 2,
+          opacity: edge.selected ? 1 : 0.8,
+        },
       };
     });
   }, [edges]);
 
+  /** Deselect group when clicking on the canvas background */
+  const handlePaneClick = React.useCallback(() => {
+    if (selectedGroupId) onSelectGroup(null);
+  }, [selectedGroupId, onSelectGroup]);
+
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full relative">
       <ReactFlow
         nodes={nodes}
         edges={styledEdges}
@@ -146,6 +180,7 @@ export function WorkflowCanvas({
         onConnect={onConnect}
         onDrop={handleDrop}
         onDragOver={handleDragOver}
+        onPaneClick={handlePaneClick}
         nodeTypes={nodeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
         isValidConnection={isValidConnection}
@@ -156,7 +191,9 @@ export function WorkflowCanvas({
         snapGrid={[20, 20]}
         selectionMode={SelectionMode.Partial}
         multiSelectionKeyCode="Shift"
-        deleteKeyCode="Delete"
+        deleteKeyCode={['Delete', 'Backspace']}
+        edgesFocusable
+        edgesReconnectable
         className="bg-transparent"
       >
         <Background
@@ -185,6 +222,17 @@ export function WorkflowCanvas({
           style={{ width: 150, height: 100 }}
         />
       </ReactFlow>
+
+      {/* Group overlay — rendered outside ReactFlow for absolute positioning */}
+      <GroupLayer
+        groups={groups}
+        selectedGroupId={selectedGroupId}
+        onSelectGroup={onSelectGroup}
+        onMoveGroup={onMoveGroup}
+        onResizeGroup={onResizeGroup}
+        onUpdateGroup={onUpdateGroup}
+        onToggleGroupCollapse={onToggleGroupCollapse}
+      />
     </div>
   );
 }

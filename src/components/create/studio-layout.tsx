@@ -105,6 +105,16 @@ export function StudioLayout() {
                     onEdgesChange={workflow.onEdgesChange}
                     onConnect={workflow.onConnect}
                     onAddNode={workflow.addWorkflowNode}
+                    groups={workflow.groups}
+                    selectedGroupId={workflow.selectedGroupId}
+                    onSelectGroup={workflow.selectGroup}
+                    onMoveGroup={workflow.moveGroup}
+                    onResizeGroup={workflow.resizeGroup}
+                    onUpdateGroup={workflow.updateGroup}
+                    onToggleGroupCollapse={workflow.toggleGroupCollapse}
+                    onToggleGroupLock={workflow.toggleGroupLock}
+                    onDuplicateGroup={workflow.duplicateGroup}
+                    onDeleteGroup={workflow.deleteGroup}
                   />
                 ) : undefined
               }
