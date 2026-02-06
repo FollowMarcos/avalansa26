@@ -68,17 +68,18 @@ export function PromptInputNode({ data, id, selected }: PromptInputNodeProps) {
       inputs={promptInputDefinition.inputs}
       outputs={promptInputDefinition.outputs}
       minWidth={promptInputDefinition.minWidth}
+      resizable
+      minHeight={160}
     >
-      <div className="space-y-2">
+      <div className="flex flex-col flex-1 min-h-0 gap-2">
         <textarea
           value={(data.config.prompt as string) || ''}
           onChange={handlePromptChange}
           placeholder="Enter your prompt..."
-          rows={3}
-          className="nodrag nowheel w-full resize-none rounded-md border border-border bg-muted/30 px-2.5 py-1.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+          className="nodrag nowheel w-full flex-1 min-h-[3.5rem] resize-none rounded-md border border-border bg-muted/30 px-2.5 py-1.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
           aria-label="Prompt text"
         />
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-shrink-0">
           <span className="text-[10px] text-muted-foreground">
             {((data.config.prompt as string) || '').length} chars
           </span>
@@ -95,8 +96,7 @@ export function PromptInputNode({ data, id, selected }: PromptInputNodeProps) {
             value={(data.config.negativePrompt as string) || ''}
             onChange={handleNegativeChange}
             placeholder="Negative prompt..."
-            rows={2}
-            className="nodrag nowheel w-full resize-none rounded-md border border-border bg-muted/30 px-2.5 py-1.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+            className="nodrag nowheel w-full flex-1 min-h-[2.5rem] resize-none rounded-md border border-border bg-muted/30 px-2.5 py-1.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
             aria-label="Negative prompt text"
           />
         )}

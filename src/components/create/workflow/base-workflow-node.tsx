@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Handle, Position } from '@xyflow/react';
+import { Handle, Position, NodeResizer } from '@xyflow/react';
 import { cn } from '@/lib/utils';
 import { AlertCircle } from 'lucide-react';
 import type {
@@ -36,6 +36,10 @@ interface BaseWorkflowNodeProps {
   minWidth?: number;
   /** Maximum width override */
   maxWidth?: number;
+  /** Allow user to resize the node */
+  resizable?: boolean;
+  /** Minimum height when resizable */
+  minHeight?: number;
 }
 
 const STATUS_BORDER: Record<WorkflowNodeStatus, string> = {
@@ -71,6 +75,8 @@ export function BaseWorkflowNode({
   children,
   minWidth = 220,
   maxWidth = 300,
+  resizable = false,
+  minHeight = 120,
 }: BaseWorkflowNodeProps) {
   const status = data.status ?? 'idle';
   const displayLabel = data.label ?? label;
@@ -82,9 +88,19 @@ export function BaseWorkflowNode({
         'relative rounded-xl border-2 bg-background shadow-md transition-all',
         STATUS_BORDER[status],
         selected && status === 'idle' && 'border-primary ring-2 ring-primary/20',
+        resizable && 'h-full flex flex-col',
       )}
-      style={{ minWidth, maxWidth }}
+      style={{ minWidth, maxWidth: resizable ? undefined : maxWidth }}
     >
+      {resizable && (
+        <NodeResizer
+          isVisible={selected}
+          minWidth={minWidth}
+          minHeight={minHeight}
+          lineClassName="!border-primary/30"
+          handleClassName="!size-2.5 !rounded-sm !border-primary !bg-background"
+        />
+      )}
       {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border/50 bg-muted/30 rounded-t-[10px]">
         <div className="text-muted-foreground">{icon}</div>
@@ -170,7 +186,7 @@ export function BaseWorkflowNode({
 
       {/* Body */}
       <div
-        className="px-3 py-2 overflow-hidden"
+        className={cn('px-3 py-2 overflow-hidden', resizable && 'flex-1 flex flex-col min-h-0')}
         style={{
           marginTop: Math.max(inputs.length, outputs.length) * 28,
         }}
