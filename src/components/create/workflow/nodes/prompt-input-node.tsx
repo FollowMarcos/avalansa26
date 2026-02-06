@@ -75,7 +75,7 @@ export function PromptInputNode({ data, id, selected }: PromptInputNodeProps) {
           onChange={handlePromptChange}
           placeholder="Enter your prompt..."
           rows={3}
-          className="w-full resize-none rounded-md border border-border bg-muted/30 px-2.5 py-1.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+          className="nodrag nowheel w-full resize-none rounded-md border border-border bg-muted/30 px-2.5 py-1.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
           aria-label="Prompt text"
         />
         <div className="flex items-center justify-between">
@@ -96,7 +96,7 @@ export function PromptInputNode({ data, id, selected }: PromptInputNodeProps) {
             onChange={handleNegativeChange}
             placeholder="Negative prompt..."
             rows={2}
-            className="w-full resize-none rounded-md border border-border bg-muted/30 px-2.5 py-1.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+            className="nodrag nowheel w-full resize-none rounded-md border border-border bg-muted/30 px-2.5 py-1.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
             aria-label="Negative prompt text"
           />
         )}
