@@ -211,7 +211,7 @@ export function ImageToImageNode({ data, id, selected }: ImageToImageNodeProps) 
               <X className="size-3" />
             </button>
           </div>
-          <ScrollArea className="nodrag nowheel h-20">
+          <ScrollArea className="nodrag nowheel h-40">
             {savedReferences.length === 0 ? (
               <p className="text-[10px] text-muted-foreground text-center py-3">
                 No saved images yet
