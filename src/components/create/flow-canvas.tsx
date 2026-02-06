@@ -425,8 +425,8 @@ export function FlowCanvas({ className, canvasRef }: FlowCanvasProps) {
               className={cn(
                 "bg-transparent",
                 // Change cursor based on interaction mode - target ReactFlow's internal pane
-                interactionMode === 'select' && !isSpacePressed && "[&_.react-flow__pane]:!cursor-default [&_.react-flow__node]:cursor-default",
-                (interactionMode === 'hand' || isSpacePressed) && "[&_.react-flow__pane]:cursor-grab [&_.react-flow__pane]:active:cursor-grabbing"
+                interactionMode === 'select' && !isSpacePressed && "[&_.react-flow__pane]:!cursor-default [&_.react-flow__node]:!cursor-default",
+                (interactionMode === 'hand' || isSpacePressed) && "[&_.react-flow__pane]:!cursor-grab [&_.react-flow__pane]:active:!cursor-grabbing [&_.react-flow__node]:!cursor-grab [&_.react-flow__node.dragging]:!cursor-grabbing"
               )}
             >
               {/* Helper lines for alignment guides */}

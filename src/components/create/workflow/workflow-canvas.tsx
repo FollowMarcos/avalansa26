@@ -22,6 +22,10 @@ import type { GroupData } from '@/types/canvas';
 import { SOCKET_COLORS, isSocketCompatible } from '@/types/workflow';
 import { getWorkflowNodeTypes, getNodeEntry } from './node-registry';
 import { GroupLayer } from '../groups/group-layer';
+import { useCreate } from '../create-context';
+import { cn } from '@/lib/utils';
+import { CanvasContextMenu } from '../canvas-context-menu';
+import { ContextMenuTrigger } from '@/components/ui/context-menu';
 
 // Ensure all nodes are registered
 import './nodes';
@@ -56,6 +60,7 @@ const defaultEdgeOptions: DefaultEdgeOptions = {
 /**
  * React Flow canvas for workflow mode.
  * Uses typed sockets for connection validation and colored edges.
+ * Supports Figma-style interaction modes (select/hand) and right-click context menu.
  * Renders GroupLayer overlay for node grouping.
  */
 export function WorkflowCanvas({
@@ -76,7 +81,14 @@ export function WorkflowCanvas({
   onDuplicateGroup,
   onDeleteGroup,
 }: WorkflowCanvasProps) {
-  const { screenToFlowPosition } = useReactFlow();
+  const { screenToFlowPosition, zoomIn, zoomOut, fitView, setViewport, getViewport } = useReactFlow();
+  const { interactionMode, setInteractionMode } = useCreate();
+
+  // State for temporary hand tool (Space key held)
+  const [isSpacePressed, setIsSpacePressed] = React.useState(false);
+
+  // Track selected node IDs for context menu
+  const [selectedNodeIds, setSelectedNodeIds] = React.useState<Set<string>>(new Set());
 
   // Cast to NodeTypes — React Flow's internal type expects more props than our components declare,
   // but React Flow passes them at runtime. The cast is safe.
@@ -170,69 +182,180 @@ export function WorkflowCanvas({
     if (selectedGroupId) onSelectGroup(null);
   }, [selectedGroupId, onSelectGroup]);
 
-  return (
-    <div className="h-full w-full relative">
-      <ReactFlow
-        nodes={nodes}
-        edges={styledEdges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onDrop={handleDrop}
-        onDragOver={handleDragOver}
-        onPaneClick={handlePaneClick}
-        nodeTypes={nodeTypes}
-        defaultEdgeOptions={defaultEdgeOptions}
-        isValidConnection={isValidConnection}
-        fitView
-        minZoom={0.1}
-        maxZoom={2}
-        snapToGrid
-        snapGrid={[20, 20]}
-        selectionMode={SelectionMode.Partial}
-        multiSelectionKeyCode="Shift"
-        deleteKeyCode={['Delete', 'Backspace']}
-        edgesFocusable
-        edgesReconnectable
-        className="bg-transparent"
-      >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={20}
-          size={1}
-          color="hsl(var(--muted-foreground) / 0.15)"
-        />
-        <MiniMap
-          position="bottom-left"
-          className="!bg-background/80 !border-border !rounded-lg !shadow-sm"
-          maskColor="hsl(var(--foreground) / 0.06)"
-          nodeColor={(node) => {
-            const entry = getNodeEntry(
-              (node.data as WorkflowNodeData)?.definitionType,
-            );
-            if (!entry) return '#9ca3af';
-            const firstOutput = entry.definition.outputs[0];
-            if (firstOutput) return SOCKET_COLORS[firstOutput.type];
-            const firstInput = entry.definition.inputs[0];
-            if (firstInput) return SOCKET_COLORS[firstInput.type];
-            return '#9ca3af';
-          }}
-          pannable
-          zoomable
-          style={{ width: 150, height: 100 }}
-        />
-      </ReactFlow>
+  /** Track node selection for context menu */
+  const handleSelectionChange = React.useCallback(
+    ({ nodes: selected }: { nodes: Node<WorkflowNodeData>[] }) => {
+      setSelectedNodeIds(new Set(selected.map((n) => n.id)));
+      if (selected.length > 0) {
+        onSelectGroup(null);
+      }
+    },
+    [onSelectGroup],
+  );
 
-      {/* Group overlay — rendered outside ReactFlow for absolute positioning */}
-      <GroupLayer
-        groups={groups}
-        selectedGroupId={selectedGroupId}
-        onSelectGroup={onSelectGroup}
-        onMoveGroup={onMoveGroup}
-        onResizeGroup={onResizeGroup}
-        onUpdateGroup={onUpdateGroup}
-        onToggleGroupCollapse={onToggleGroupCollapse}
-      />
-    </div>
+  // Figma-style keyboard shortcuts for tools and zoom
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) {
+        return;
+      }
+
+      const isMod = e.ctrlKey || e.metaKey;
+
+      // Zoom controls
+      if (isMod && (e.key === '+' || e.key === '=')) {
+        e.preventDefault();
+        zoomIn({ duration: 200 });
+        return;
+      }
+      if (isMod && e.key === '-') {
+        e.preventDefault();
+        zoomOut({ duration: 200 });
+        return;
+      }
+      if (isMod && e.key === '0') {
+        e.preventDefault();
+        const viewport = getViewport();
+        setViewport({ x: viewport.x, y: viewport.y, zoom: 1 }, { duration: 200 });
+        return;
+      }
+      if (isMod && e.key === '1') {
+        e.preventDefault();
+        fitView({ padding: 0.2, duration: 300 });
+        return;
+      }
+
+      // V: Select tool
+      if (e.key === 'v' || e.key === 'V') {
+        e.preventDefault();
+        setInteractionMode('select');
+        return;
+      }
+
+      // H: Hand/pan tool
+      if (e.key === 'h' || e.key === 'H') {
+        e.preventDefault();
+        setInteractionMode('hand');
+        return;
+      }
+
+      // Space: Temporary hand tool (hold to pan)
+      if (e.key === ' ' && !e.repeat) {
+        e.preventDefault();
+        setIsSpacePressed(true);
+        return;
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === ' ') {
+        setIsSpacePressed(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, [setInteractionMode, zoomIn, zoomOut, fitView, setViewport, getViewport]);
+
+  return (
+    <CanvasContextMenu
+      selectedNodeIds={selectedNodeIds}
+      selectedGroupId={selectedGroupId}
+      groups={groups}
+      onCreateGroup={() => {}}
+      onDeleteGroup={onDeleteGroup ?? (() => {})}
+      onUpdateGroup={onUpdateGroup}
+      onClearSelection={() => {
+        setSelectedNodeIds(new Set());
+        onSelectGroup(null);
+      }}
+    >
+      <ContextMenuTrigger asChild>
+        <div
+          className="h-full w-full relative"
+          role="application"
+          aria-label="Workflow canvas. Press V for select, H for hand tool, Space to pan."
+        >
+          <ReactFlow
+            nodes={nodes}
+            edges={styledEdges}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onPaneClick={handlePaneClick}
+            onSelectionChange={handleSelectionChange}
+            nodeTypes={nodeTypes}
+            defaultEdgeOptions={defaultEdgeOptions}
+            isValidConnection={isValidConnection}
+            fitView
+            minZoom={0.1}
+            maxZoom={2}
+            snapToGrid
+            snapGrid={[20, 20]}
+            // Figma-style interaction: pan with hand tool or space held
+            panOnDrag={interactionMode === 'hand' || isSpacePressed}
+            // Selection drag only in select mode when space not held
+            selectionOnDrag={interactionMode === 'select' && !isSpacePressed}
+            selectionMode={SelectionMode.Partial}
+            multiSelectionKeyCode="Shift"
+            deleteKeyCode={['Delete', 'Backspace']}
+            edgesFocusable
+            edgesReconnectable
+            panOnScroll
+            zoomOnScroll
+            className={cn(
+              "bg-transparent",
+              interactionMode === 'select' && !isSpacePressed && "[&_.react-flow__pane]:!cursor-default [&_.react-flow__node]:!cursor-default",
+              (interactionMode === 'hand' || isSpacePressed) && "[&_.react-flow__pane]:!cursor-grab [&_.react-flow__pane]:active:!cursor-grabbing [&_.react-flow__node]:!cursor-grab [&_.react-flow__node.dragging]:!cursor-grabbing"
+            )}
+            proOptions={{ hideAttribution: true }}
+          >
+            <Background
+              variant={BackgroundVariant.Dots}
+              gap={20}
+              size={1}
+              color="hsl(var(--muted-foreground) / 0.15)"
+            />
+            <MiniMap
+              position="bottom-left"
+              className="!bg-background/80 !border-border !rounded-lg !shadow-sm"
+              maskColor="hsl(var(--foreground) / 0.06)"
+              nodeColor={(node) => {
+                const entry = getNodeEntry(
+                  (node.data as WorkflowNodeData)?.definitionType,
+                );
+                if (!entry) return '#9ca3af';
+                const firstOutput = entry.definition.outputs[0];
+                if (firstOutput) return SOCKET_COLORS[firstOutput.type];
+                const firstInput = entry.definition.inputs[0];
+                if (firstInput) return SOCKET_COLORS[firstInput.type];
+                return '#9ca3af';
+              }}
+              pannable
+              zoomable
+              style={{ width: 150, height: 100 }}
+            />
+          </ReactFlow>
+
+          {/* Group overlay — rendered outside ReactFlow for absolute positioning */}
+          <GroupLayer
+            groups={groups}
+            selectedGroupId={selectedGroupId}
+            onSelectGroup={onSelectGroup}
+            onMoveGroup={onMoveGroup}
+            onResizeGroup={onResizeGroup}
+            onUpdateGroup={onUpdateGroup}
+            onToggleGroupCollapse={onToggleGroupCollapse}
+          />
+        </div>
+      </ContextMenuTrigger>
+    </CanvasContextMenu>
   );
 }
