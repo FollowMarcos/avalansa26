@@ -254,43 +254,6 @@ export function useWorkflow({ apiId }: UseWorkflowOptions) {
   }, []);
 
   // ---------------------------------------------------------------------------
-  // Drag-and-drop from palette
-  // ---------------------------------------------------------------------------
-
-  const onDrop = React.useCallback(
-    (event: React.DragEvent) => {
-      event.preventDefault();
-      const data = event.dataTransfer.getData('application/workflow-node');
-      if (!data) return;
-
-      try {
-        const { type } = JSON.parse(data) as { type: string };
-
-        // Get drop position relative to the canvas
-        const reactFlowBounds = (event.target as HTMLElement)
-          .closest('.react-flow')
-          ?.getBoundingClientRect();
-        if (!reactFlowBounds) return;
-
-        const position = {
-          x: event.clientX - reactFlowBounds.left - 100,
-          y: event.clientY - reactFlowBounds.top - 30,
-        };
-
-        addWorkflowNode(type, position);
-      } catch {
-        // Invalid drag data
-      }
-    },
-    [addWorkflowNode],
-  );
-
-  const onDragOver = React.useCallback((event: React.DragEvent) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-  }, []);
-
-  // ---------------------------------------------------------------------------
   // Serialization
   // ---------------------------------------------------------------------------
 
@@ -506,10 +469,6 @@ export function useWorkflow({ apiId }: UseWorkflowOptions) {
     onNodesChange,
     onEdgesChange,
     onConnect,
-
-    // Drag-and-drop
-    onDrop,
-    onDragOver,
 
     // Node operations
     addWorkflowNode,

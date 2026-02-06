@@ -104,8 +104,7 @@ export function StudioLayout() {
                     onNodesChange={workflow.onNodesChange}
                     onEdgesChange={workflow.onEdgesChange}
                     onConnect={workflow.onConnect}
-                    onDrop={workflow.onDrop}
-                    onDragOver={workflow.onDragOver}
+                    onAddNode={workflow.addWorkflowNode}
                   />
                 ) : undefined
               }

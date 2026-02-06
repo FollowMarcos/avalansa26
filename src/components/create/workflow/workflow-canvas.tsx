@@ -5,6 +5,7 @@ import {
   ReactFlow,
   Background,
   MiniMap,
+  useReactFlow,
   type Connection,
   type Edge,
   type Node,
@@ -16,7 +17,6 @@ import {
   type DefaultEdgeOptions,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { cn } from '@/lib/utils';
 import type { WorkflowNodeData, WorkflowEdgeData } from '@/types/workflow';
 import { SOCKET_COLORS, isSocketCompatible } from '@/types/workflow';
 import { getWorkflowNodeTypes, getNodeEntry } from './node-registry';
@@ -30,8 +30,8 @@ interface WorkflowCanvasProps {
   onNodesChange: (changes: NodeChange<Node<WorkflowNodeData>>[]) => void;
   onEdgesChange: (changes: EdgeChange<Edge<WorkflowEdgeData>>[]) => void;
   onConnect: (connection: Connection) => void;
-  onDrop: (event: React.DragEvent) => void;
-  onDragOver: (event: React.DragEvent) => void;
+  /** Callback when a node is dropped from the palette */
+  onAddNode: (type: string, position: { x: number; y: number }) => void;
 }
 
 const defaultEdgeOptions: DefaultEdgeOptions = {
@@ -50,15 +50,43 @@ export function WorkflowCanvas({
   onNodesChange,
   onEdgesChange,
   onConnect,
-  onDrop,
-  onDragOver,
+  onAddNode,
 }: WorkflowCanvasProps) {
+  const { screenToFlowPosition } = useReactFlow();
+
   // Cast to NodeTypes — React Flow's internal type expects more props than our components declare,
   // but React Flow passes them at runtime. The cast is safe.
   const nodeTypes = React.useMemo(
     () => getWorkflowNodeTypes() as unknown as NodeTypes,
     [],
   );
+
+  /** Handle drop from the node palette */
+  const handleDrop = React.useCallback(
+    (event: React.DragEvent) => {
+      event.preventDefault();
+      const raw = event.dataTransfer.getData('application/workflow-node');
+      if (!raw) return;
+
+      try {
+        const { type } = JSON.parse(raw) as { type: string };
+        // Convert screen coordinates to flow-space coordinates
+        const position = screenToFlowPosition({
+          x: event.clientX,
+          y: event.clientY,
+        });
+        onAddNode(type, position);
+      } catch {
+        // Invalid drag data
+      }
+    },
+    [screenToFlowPosition, onAddNode],
+  );
+
+  const handleDragOver = React.useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  }, []);
 
   /** Validate connections based on socket type compatibility */
   const isValidConnection = React.useCallback(
@@ -116,8 +144,8 @@ export function WorkflowCanvas({
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
         nodeTypes={nodeTypes}
         defaultEdgeOptions={defaultEdgeOptions}
         isValidConnection={isValidConnection}
