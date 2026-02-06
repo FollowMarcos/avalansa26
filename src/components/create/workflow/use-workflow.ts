@@ -24,6 +24,48 @@ import { executeWorkflow } from './execution-engine';
 // Ensure nodes are registered
 import './nodes';
 
+// ---------------------------------------------------------------------------
+// localStorage persistence helpers
+// ---------------------------------------------------------------------------
+
+const WORKFLOW_STORAGE_KEY = 'workflow-canvas-state';
+
+interface PersistedWorkflowState {
+  nodes: Array<{ id: string; type: string; position: { x: number; y: number }; data: WorkflowNodeData }>;
+  edges: Array<{ id: string; source: string; target: string; sourceHandle: string; targetHandle: string; data?: WorkflowEdgeData }>;
+  groups: (GroupData & { locked?: boolean })[];
+  viewport: CanvasViewport;
+  workflowName: string;
+  currentWorkflowId: string | null;
+  timestamp: number;
+}
+
+function loadPersistedWorkflow(): PersistedWorkflowState | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const stored = localStorage.getItem(WORKFLOW_STORAGE_KEY);
+    if (!stored) return null;
+    const parsed = JSON.parse(stored) as PersistedWorkflowState;
+    // Invalidate after 7 days
+    if (Date.now() - parsed.timestamp > 7 * 24 * 60 * 60 * 1000) {
+      localStorage.removeItem(WORKFLOW_STORAGE_KEY);
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function savePersistedWorkflow(state: PersistedWorkflowState): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(WORKFLOW_STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // localStorage might be full or disabled
+  }
+}
+
 interface UseWorkflowOptions {
   apiId: string;
 }
@@ -46,6 +88,46 @@ export function useWorkflow({ apiId }: UseWorkflowOptions) {
 
   // Saved workflows
   const [savedWorkflows, setSavedWorkflows] = React.useState<Workflow[]>([]);
+
+  // Persistence refs
+  const persistTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasLoadedPersistedState = React.useRef(false);
+
+  // ---------------------------------------------------------------------------
+  // Load persisted state from localStorage on mount
+  // ---------------------------------------------------------------------------
+
+  React.useEffect(() => {
+    if (hasLoadedPersistedState.current) return;
+    hasLoadedPersistedState.current = true;
+
+    const persisted = loadPersistedWorkflow();
+    if (!persisted) return;
+    if (!persisted.nodes || persisted.nodes.length === 0) return;
+
+    setWorkflowName(persisted.workflowName || 'Untitled Workflow');
+    setCurrentWorkflowId(persisted.currentWorkflowId ?? null);
+    setNodes(
+      persisted.nodes.map((n) => ({
+        id: n.id,
+        type: n.type,
+        position: n.position,
+        data: { ...n.data, status: 'idle' as const, error: undefined, outputValues: undefined },
+      })),
+    );
+    setEdges(
+      persisted.edges.map((e) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        sourceHandle: e.sourceHandle,
+        targetHandle: e.targetHandle,
+        data: e.data,
+      })),
+    );
+    setGroups(persisted.groups || []);
+    if (persisted.viewport) setViewport(persisted.viewport);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ---------------------------------------------------------------------------
   // Node config updates via custom events (from node components)
@@ -440,6 +522,80 @@ export function useWorkflow({ apiId }: UseWorkflowOptions) {
   React.useEffect(() => {
     loadSavedWorkflows();
   }, [loadSavedWorkflows]);
+
+  // ---------------------------------------------------------------------------
+  // Persist workflow state to localStorage (debounced)
+  // ---------------------------------------------------------------------------
+
+  React.useEffect(() => {
+    if (!hasLoadedPersistedState.current) return;
+
+    if (persistTimeoutRef.current) {
+      clearTimeout(persistTimeoutRef.current);
+    }
+
+    persistTimeoutRef.current = setTimeout(() => {
+      const state: PersistedWorkflowState = {
+        nodes: nodes.map((n) => ({
+          id: n.id,
+          type: n.type!,
+          position: n.position,
+          data: { ...n.data, status: 'idle' as const, error: undefined, outputValues: undefined },
+        })),
+        edges: edges.map((e) => ({
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          sourceHandle: e.sourceHandle!,
+          targetHandle: e.targetHandle!,
+          data: e.data,
+        })),
+        groups,
+        viewport,
+        workflowName,
+        currentWorkflowId,
+        timestamp: Date.now(),
+      };
+      savePersistedWorkflow(state);
+    }, 1000);
+
+    return () => {
+      if (persistTimeoutRef.current) {
+        clearTimeout(persistTimeoutRef.current);
+      }
+    };
+  }, [nodes, edges, groups, viewport, workflowName, currentWorkflowId]);
+
+  // Save immediately before page unload
+  React.useEffect(() => {
+    const handleBeforeUnload = () => {
+      const state: PersistedWorkflowState = {
+        nodes: nodes.map((n) => ({
+          id: n.id,
+          type: n.type!,
+          position: n.position,
+          data: { ...n.data, status: 'idle' as const, error: undefined, outputValues: undefined },
+        })),
+        edges: edges.map((e) => ({
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          sourceHandle: e.sourceHandle!,
+          targetHandle: e.targetHandle!,
+          data: e.data,
+        })),
+        groups,
+        viewport,
+        workflowName,
+        currentWorkflowId,
+        timestamp: Date.now(),
+      };
+      savePersistedWorkflow(state);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [nodes, edges, groups, viewport, workflowName, currentWorkflowId]);
 
   // ---------------------------------------------------------------------------
   // Keyboard shortcuts

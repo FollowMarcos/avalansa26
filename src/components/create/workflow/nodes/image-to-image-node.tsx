@@ -211,19 +211,19 @@ export function ImageToImageNode({ data, id, selected }: ImageToImageNodeProps) 
               <X className="size-3" />
             </button>
           </div>
-          <ScrollArea className="h-32">
+          <ScrollArea className="h-20">
             {savedReferences.length === 0 ? (
-              <p className="text-[10px] text-muted-foreground text-center py-4">
+              <p className="text-[10px] text-muted-foreground text-center py-3">
                 No saved images yet
               </p>
             ) : (
-              <div className="grid grid-cols-3 gap-1 p-1.5">
+              <div className="grid grid-cols-4 gap-0.5 p-1">
                 {savedReferences.map((ref) => (
                   <button
                     key={ref.id}
                     type="button"
                     onClick={() => handlePickSaved(ref)}
-                    className="relative aspect-square rounded overflow-hidden border border-border hover:ring-2 hover:ring-primary transition-all"
+                    className="relative aspect-square rounded-sm overflow-hidden border border-border hover:ring-1 hover:ring-primary transition-all"
                     title={ref.name || 'Reference image'}
                   >
                     <img
