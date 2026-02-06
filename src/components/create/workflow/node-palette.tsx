@@ -101,7 +101,7 @@ export function NodePalette({ className }: NodePaletteProps) {
   return (
     <div
       className={cn(
-        'absolute top-4 left-4 z-20 w-56',
+        'absolute top-4 right-4 z-20 w-56',
         'rounded-xl bg-background/95 backdrop-blur-xl border border-border shadow-lg',
         'flex flex-col max-h-[calc(100vh-8rem)] overflow-hidden',
         className,

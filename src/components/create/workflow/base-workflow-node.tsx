@@ -14,6 +14,7 @@ import { SOCKET_COLORS as socketColors } from '@/types/workflow';
 import {
   Tooltip,
   TooltipContent,
+  TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
@@ -72,6 +73,7 @@ export function BaseWorkflowNode({
   const displayLabel = data.label ?? label;
 
   return (
+    <TooltipProvider delayDuration={300}>
     <div
       className={cn(
         'relative rounded-xl border-2 bg-background shadow-md transition-all',
@@ -181,5 +183,6 @@ export function BaseWorkflowNode({
         </div>
       )}
     </div>
+    </TooltipProvider>
   );
 }
