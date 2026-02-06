@@ -18,11 +18,15 @@ import { usePromptVault } from "./use-prompt-vault";
 import { CharacterVaultIsland } from "./character-vault-island";
 import { SaveCharacterDialog } from "./save-character-dialog";
 import { useCharacterVault } from "./use-character-vault";
+import { useAvaVault } from "./use-ava-vault";
+import { CreateAvaDialog } from "./create-ava-dialog";
+import { RunAvaDialog } from "./run-ava-dialog";
+import { ShareAvaDialog } from "./share-ava-dialog";
 import { motion, useReducedMotion } from "motion/react";
 
 export function StudioLayout() {
   const prefersReducedMotion = useReducedMotion();
-  const { addReferenceImages, addReferenceImageFromUrl, prompt, setPrompt, settings, updateSettings } = useCreate();
+  const { addReferenceImages, addReferenceImageFromUrl, prompt, setPrompt, settings, updateSettings, selectedApiId } = useCreate();
 
   // Prompt vault hook
   const promptVault = usePromptVault({
@@ -45,6 +49,24 @@ export function StudioLayout() {
       }
     },
   });
+
+  // Ava vault hook
+  const avaVault = useAvaVault({
+    onAvaResult: (result) => {
+      setPrompt(result.prompt);
+      if (result.negativePrompt) {
+        updateSettings({ negativePrompt: result.negativePrompt } as any);
+      }
+    },
+  });
+
+  // Load avas when vault opens
+  React.useEffect(() => {
+    if (promptVault.vaultOpen && avaVault.avas.length === 0) {
+      avaVault.loadAvas();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [promptVault.vaultOpen]);
 
   // Character vault hook
   const characterVault = useCharacterVault({
@@ -117,6 +139,16 @@ export function StudioLayout() {
               onToggleFavorite={promptVault.toggleFavorite}
               onSharePrompt={promptVault.openShareDialog}
               onDeletePrompt={promptVault.deletePrompt}
+              avas={avaVault.avas}
+              avaFolders={avaVault.folders}
+              onRunAva={avaVault.openRunDialog}
+              onEditAva={(ava) => avaVault.openCreateDialog(ava)}
+              onCreateAva={() => avaVault.openCreateDialog()}
+              onToggleAvaFavorite={avaVault.toggleFavorite}
+              onShareAva={avaVault.openShareDialog}
+              onDeleteAva={(avaId) => {
+                avaVault.deleteAva(avaId);
+              }}
             />
 
             {/* Floating Character Vault Island (below prompt vault) */}
@@ -186,6 +218,64 @@ export function StudioLayout() {
             }
           }}
           onSearchUsers={promptVault.searchUsers}
+        />
+
+        {/* Create/Edit Ava Dialog */}
+        <CreateAvaDialog
+          open={avaVault.createDialogOpen}
+          onOpenChange={(open) => !open && avaVault.closeCreateDialog()}
+          editingAva={avaVault.editingAva}
+          folders={avaVault.folders}
+          tags={avaVault.tags}
+          onSave={async (data) => {
+            if (avaVault.editingAva) {
+              await avaVault.updateExistingAva(avaVault.editingAva.id, data);
+            } else {
+              await avaVault.saveNewAva(data);
+            }
+          }}
+          onCreateFolder={avaVault.createFolder}
+          onCreateTag={avaVault.createTag}
+        />
+
+        {/* Run Ava Dialog */}
+        <RunAvaDialog
+          open={avaVault.runDialogOpen}
+          onOpenChange={(open) => !open && avaVault.closeRunDialog()}
+          ava={avaVault.avaToRun}
+          onRun={avaVault.runAva}
+          onUseResult={(resultPrompt, negativePrompt) => {
+            setPrompt(resultPrompt);
+            if (negativePrompt) {
+              updateSettings({ negativePrompt } as any);
+            }
+          }}
+          onSaveResult={(resultPrompt, negativePrompt) => {
+            // Pre-fill the save prompt dialog with the generated result
+            setPrompt(resultPrompt);
+            if (negativePrompt) {
+              updateSettings({ negativePrompt } as any);
+            }
+            promptVault.openSaveDialog();
+          }}
+          selectedApiId={selectedApiId}
+        />
+
+        {/* Share Ava Dialog */}
+        <ShareAvaDialog
+          open={avaVault.shareDialogOpen}
+          onOpenChange={(open) => !open && avaVault.closeShareDialog()}
+          ava={avaVault.avaToShare}
+          onShare={async (userIds, message) => {
+            if (avaVault.avaToShare) {
+              await avaVault.shareWithUsers(
+                avaVault.avaToShare.id,
+                userIds,
+                message
+              );
+            }
+          }}
+          onSearchUsers={avaVault.searchUsers}
         />
 
         {/* Save/Edit Character Dialog */}
