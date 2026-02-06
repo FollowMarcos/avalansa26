@@ -32,9 +32,33 @@ export const imageGenerateExecutor: NodeExecutor = async (inputs, config, contex
 
   const negative = (inputs.negative as string) || '';
   const settings = (inputs.settings as Record<string, unknown>) || {};
-  const referenceImagePaths = inputs.reference
-    ? [inputs.reference as string]
-    : [];
+  const rawReference = inputs.reference as string | undefined;
+  let referenceImagePaths: string[] = [];
+
+  if (rawReference) {
+    // If reference is a public URL (from another generate node), download and upload to storage
+    if (rawReference.startsWith('http://') || rawReference.startsWith('https://')) {
+      try {
+        const { uploadReferenceImage } = await import('@/utils/supabase/storage');
+        const { createClient } = await import('@/utils/supabase/client');
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const res = await fetch(rawReference);
+          const blob = await res.blob();
+          const file = new File([blob], `workflow-ref-${Date.now()}.jpg`, { type: blob.type || 'image/jpeg' });
+          const result = await uploadReferenceImage(file, user.id);
+          if (result.path) referenceImagePaths = [result.path];
+        }
+      } catch {
+        // Fall through — generation will proceed without reference
+      }
+    } else {
+      // Already a storage path
+      referenceImagePaths = [rawReference];
+    }
+  }
+
   const apiId = (config.apiId as string) || context.apiId;
 
   const response = await fetch('/api/generate', {

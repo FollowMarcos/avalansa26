@@ -97,6 +97,16 @@ export function PromptCard({
         </div>
 
         {showActions && (
+          <div className="flex items-center gap-0.5">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleCopyPrompt}
+              className="size-7 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+              aria-label="Copy prompt to clipboard"
+            >
+              <Copy className="size-3.5" aria-hidden="true" />
+            </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -146,6 +156,7 @@ export function PromptCard({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          </div>
         )}
       </div>
 
