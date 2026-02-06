@@ -5,13 +5,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useCreate, type AspectRatio, type ImageSize } from "./create-context";
 
 const ASPECT_RATIOS: AspectRatio[] = [
@@ -30,7 +23,6 @@ export function GalleryFilters() {
     galleryFilterState,
     setGalleryFilters,
     clearGalleryFilters,
-    sessions,
   } = useCreate();
 
   const handleAspectRatioToggle = (ratio: AspectRatio) => {
@@ -49,14 +41,9 @@ export function GalleryFilters() {
     setGalleryFilters({ imageSize: newSizes });
   };
 
-  const handleSessionChange = (value: string) => {
-    setGalleryFilters({ sessionId: value === "all" ? null : value });
-  };
-
   const activeFilterCount =
     galleryFilterState.filters.aspectRatio.length +
-    galleryFilterState.filters.imageSize.length +
-    (galleryFilterState.filters.sessionId ? 1 : 0);
+    galleryFilterState.filters.imageSize.length;
 
   return (
     <div className="p-4 space-y-4">
@@ -124,39 +111,6 @@ export function GalleryFilters() {
             </div>
           </div>
 
-          {/* Session Filter */}
-          {sessions.length > 0 && (
-            <div className="space-y-2">
-              <Label className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-                Session
-              </Label>
-              <Select
-                value={galleryFilterState.filters.sessionId || "all"}
-                onValueChange={handleSessionChange}
-              >
-                <SelectTrigger className="w-full h-9 font-mono text-sm">
-                  <SelectValue placeholder="All sessions" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all" className="font-mono text-sm">
-                    All sessions
-                  </SelectItem>
-                  {sessions.map((session) => (
-                    <SelectItem
-                      key={session.id}
-                      value={session.id}
-                      className="font-mono text-sm"
-                    >
-                      {session.name || `Session ${session.id.slice(0, 8)}`}
-                      <span className="text-muted-foreground ml-2">
-                        ({session.generation_count})
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
         </div>
       </ScrollArea>
     </div>

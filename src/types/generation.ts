@@ -22,7 +22,6 @@ export interface Generation {
   id: string;
   user_id: string;
   api_config_id: string | null;
-  session_id: string | null;
   prompt: string;
   negative_prompt: string | null;
   image_url: string;
@@ -118,7 +117,6 @@ export interface GenerationWithOrganization extends Generation {
 export interface GenerationInsert {
   user_id: string;
   api_config_id?: string | null;
-  session_id?: string | null;
   prompt: string;
   negative_prompt?: string | null;
   image_url: string;

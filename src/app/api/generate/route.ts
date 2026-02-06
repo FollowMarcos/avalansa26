@@ -4,7 +4,6 @@ import { getDecryptedApiKey, getApiConfig } from '@/utils/supabase/api-configs.s
 import { createBatchJob, submitGeminiBatchJob } from '@/utils/supabase/batch-jobs.server';
 import { getImagesAsBase64, uploadGeneratedImage, getReferenceImageUrls } from '@/utils/supabase/storage.server';
 import { saveGeneration } from '@/utils/supabase/generations.server';
-import { getOrCreateSession, createNamedSession } from '@/utils/supabase/sessions.server';
 import type { BatchJobRequest } from '@/types/batch-job';
 
 // Extend serverless function timeout to 5 minutes (300 seconds)
@@ -20,8 +19,6 @@ export interface GenerateRequest {
   outputCount?: number;
   referenceImagePaths?: string[]; // Storage paths (not base64)
   mode?: 'fast' | 'relaxed'; // Generation mode
-  canvasId?: string; // Canvas for session association
-  pendingSessionName?: string; // User-requested new session name
 }
 
 export interface GeneratedImage {
@@ -37,8 +34,6 @@ export interface GenerateResponse {
   batchJobId?: string;
   mode?: 'fast' | 'relaxed';
   estimatedCompletion?: string;
-  // Session created/used for this generation
-  sessionId?: string;
 }
 
 /**
@@ -62,7 +57,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
 
     // Parse request body
     const body: GenerateRequest = await request.json();
-    const { apiId, prompt, negativePrompt, aspectRatio, imageSize, outputCount = 1, referenceImagePaths, mode = 'fast', canvasId, pendingSessionName } = body;
+    const { apiId, prompt, negativePrompt, aspectRatio, imageSize, outputCount = 1, referenceImagePaths, mode = 'fast' } = body;
 
     // ========================================================================
     // INPUT VALIDATION
@@ -137,15 +132,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
           );
         }
       }
-    }
-
-    // Validate session name
-    const MAX_SESSION_NAME_LENGTH = 100;
-    if (pendingSessionName && (typeof pendingSessionName !== 'string' || pendingSessionName.length > MAX_SESSION_NAME_LENGTH)) {
-      return NextResponse.json(
-        { success: false, error: 'Session name must be under 100 characters' },
-        { status: 400 }
-      );
     }
 
     // Validate mode
@@ -311,24 +297,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
         });
     }
 
-    // Get or create session AFTER successful generation (lazy session creation)
-    // This prevents empty sessions when generation fails
-    let sessionId: string | null = null;
-    try {
-      if (pendingSessionName) {
-        // User explicitly started a new session
-        const session = await createNamedSession(pendingSessionName, canvasId);
-        sessionId = session?.id || null;
-      } else {
-        // Auto-create/reuse session based on 30-min gap rule
-        const session = await getOrCreateSession(canvasId);
-        sessionId = session?.id || null;
-      }
-    } catch (sessionError) {
-      console.error('Failed to create session:', sessionError);
-      // Continue without session - generations will be unsessioned
-    }
-
     // Get public URLs for reference images to store with generation
     const referenceImageInfo = referenceImagePaths && referenceImagePaths.length > 0
       ? await getReferenceImageUrls(referenceImagePaths)
@@ -366,7 +334,6 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
       await saveGeneration({
         user_id: user.id,
         api_config_id: apiId,
-        session_id: sessionId,
         prompt: prompt || '',
         negative_prompt: negativePrompt,
         image_url: imageUrl,
@@ -381,7 +348,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
       });
     }
 
-    return NextResponse.json({ success: true, images: processedImages, mode: 'fast', sessionId: sessionId || undefined });
+    return NextResponse.json({ success: true, images: processedImages, mode: 'fast' });
   } catch (error) {
     console.error('Generation error:', error);
     return NextResponse.json(

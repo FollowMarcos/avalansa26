@@ -60,7 +60,6 @@ export function GalleryToolbar() {
   const activeFilterCount =
     galleryFilterState.filters.aspectRatio.length +
     galleryFilterState.filters.imageSize.length +
-    (galleryFilterState.filters.sessionId ? 1 : 0) +
     galleryFilterState.filters.tagIds.length +
     (galleryFilterState.filters.collectionId ? 1 : 0);
 

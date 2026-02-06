@@ -27,7 +27,10 @@
       "Bash(ls:*)",
       "WebFetch(domain:chamaac.com)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(del \"src\\\\types\\\\session.ts\")",
+      "Bash(del \"src\\\\utils\\\\supabase\\\\sessions.server.ts\")",
+      "Bash(del \"supabase\\\\migrations\\\\20260201000000_create_sessions.sql\")"
     ]
   }
 }
