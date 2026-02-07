@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { BookOpen } from 'lucide-react';
+import { BookOpen, ChevronRight } from 'lucide-react';
 import { BaseWorkflowNode } from '../base-workflow-node';
 import type { WorkflowNodeData, WorkflowNodeDefinition } from '@/types/workflow';
 import type { NodeExecutor } from '../node-registry';
@@ -461,13 +461,63 @@ function computeReadingOrder(panels: PanelRect[], dir: string): number[] {
   return order;
 }
 
-const BUBBLE_TYPES: Array<{ type: BubbleType; label: string; icon: string }> = [
-  { type: 'speech', label: 'Speech', icon: 'O' },
-  { type: 'thought', label: 'Thought', icon: '...' },
-  { type: 'shout', label: 'Shout', icon: '!' },
-  { type: 'narration', label: 'Narration', icon: '[]' },
-  { type: 'whisper', label: 'Whisper', icon: '~' },
+const BUBBLE_TYPES: Array<{ type: BubbleType; label: string }> = [
+  { type: 'speech', label: 'Speech' },
+  { type: 'thought', label: 'Thought' },
+  { type: 'shout', label: 'Shout' },
+  { type: 'narration', label: 'Narrate' },
+  { type: 'whisper', label: 'Whisper' },
 ];
+
+/** Group layouts by panel count for cleaner display */
+const LAYOUT_GROUPS = (() => {
+  const groups: Array<{ count: number; layouts: LayoutPreset[] }> = [];
+  for (const layout of MANGA_LAYOUTS) {
+    const existing = groups.find((g) => g.count === layout.panelCount);
+    if (existing) existing.layouts.push(layout);
+    else groups.push({ count: layout.panelCount, layouts: [layout] });
+  }
+  return groups;
+})();
+
+// ---------------------------------------------------------------------------
+// Collapsible section helper
+// ---------------------------------------------------------------------------
+
+interface SectionProps {
+  title: string;
+  count?: number;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}
+
+function Section({ title, count, defaultOpen = false, children }: SectionProps) {
+  const [open, setOpen] = React.useState(defaultOpen);
+
+  return (
+    <div className="border-t border-border/30 pt-1.5">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1.5 w-full text-left py-0.5 group"
+        aria-expanded={open}
+      >
+        <ChevronRight
+          className={cn(
+            'size-3 text-muted-foreground transition-transform duration-150',
+            open && 'rotate-90',
+          )}
+          aria-hidden="true"
+        />
+        <span className="text-[10px] font-medium text-foreground/80">{title}</span>
+        {count !== undefined && count > 0 && (
+          <span className="text-[9px] text-muted-foreground font-mono">({count})</span>
+        )}
+      </button>
+      {open && <div className="pt-1.5 space-y-1.5">{children}</div>}
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // BubbleCard sub-component
@@ -485,21 +535,21 @@ function BubbleCard({ bubble, maxPanel, onUpdate, onDelete }: BubbleCardProps) {
     onUpdate({ ...bubble, [k]: v });
 
   return (
-    <div className="rounded-md border border-border/50 bg-muted/10 p-1.5 space-y-1">
-      {/* Panel + delete */}
-      <div className="flex items-center gap-1">
+    <div className="rounded-lg border border-border/50 bg-muted/10 p-2 space-y-1.5">
+      {/* Panel selector + delete */}
+      <div className="flex items-center justify-between">
         <select
           value={bubble.panelIndex}
           onChange={(e) => set('panelIndex', Number(e.target.value))}
-          className="flex-1 text-[10px] rounded border border-border bg-muted/30 px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-ring"
+          className="text-[10px] rounded border border-border bg-muted/30 px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-ring"
           aria-label="Panel"
         >
           {Array.from({ length: maxPanel + 1 }, (_, i) => (
             <option key={i} value={i}>Panel {i + 1}</option>
           ))}
         </select>
-        <button type="button" onClick={onDelete} className="text-[10px] text-muted-foreground hover:text-destructive px-1" aria-label="Delete bubble">
-          X
+        <button type="button" onClick={onDelete} className="text-[10px] text-muted-foreground hover:text-destructive px-1 rounded hover:bg-destructive/10 transition-colors" aria-label="Delete bubble">
+          Remove
         </button>
       </div>
 
@@ -511,14 +561,13 @@ function BubbleCard({ bubble, maxPanel, onUpdate, onDelete }: BubbleCardProps) {
             type="button"
             onClick={() => set('type', bt.type)}
             className={cn(
-              'flex-1 px-1 py-0.5 rounded text-[8px] transition-colors text-center',
+              'flex-1 px-1 py-0.5 rounded text-[9px] transition-colors text-center',
               bubble.type === bt.type ? 'bg-primary text-primary-foreground' : 'bg-muted/40 text-muted-foreground hover:bg-muted',
             )}
-            title={bt.label}
             aria-label={`Bubble type: ${bt.label}`}
             aria-pressed={bubble.type === bt.type}
           >
-            {bt.icon}
+            {bt.label}
           </button>
         ))}
       </div>
@@ -528,8 +577,8 @@ function BubbleCard({ bubble, maxPanel, onUpdate, onDelete }: BubbleCardProps) {
         value={bubble.text}
         onChange={(e) => set('text', e.target.value)}
         rows={2}
-        placeholder="Bubble text..."
-        className="w-full text-[10px] rounded border border-border bg-muted/30 px-1.5 py-0.5 resize-none focus:outline-none focus:ring-1 focus:ring-ring"
+        placeholder="Type dialogue..."
+        className="w-full text-[10px] rounded border border-border bg-muted/30 px-1.5 py-1 resize-none focus:outline-none focus:ring-1 focus:ring-ring"
         aria-label="Bubble text"
       />
 
@@ -537,7 +586,7 @@ function BubbleCard({ bubble, maxPanel, onUpdate, onDelete }: BubbleCardProps) {
       <div className="flex items-start gap-3">
         {/* 3x3 position grid */}
         <div>
-          <span className="text-[9px] text-muted-foreground block mb-0.5">Pos</span>
+          <span className="text-[9px] text-muted-foreground block mb-0.5">Position</span>
           <div className="grid grid-cols-3 gap-0.5">
             {Array.from({ length: 9 }, (_, i) => (
               <button
@@ -545,8 +594,8 @@ function BubbleCard({ bubble, maxPanel, onUpdate, onDelete }: BubbleCardProps) {
                 type="button"
                 onClick={() => set('position', String(i))}
                 className={cn(
-                  'size-3 rounded-full transition-colors',
-                  bubble.position === String(i) ? 'bg-primary' : 'bg-muted-foreground/30 hover:bg-muted-foreground/50',
+                  'size-3.5 rounded-full transition-colors',
+                  bubble.position === String(i) ? 'bg-primary' : 'bg-muted-foreground/20 hover:bg-muted-foreground/40',
                 )}
                 aria-label={`Position ${i}`}
                 aria-pressed={bubble.position === String(i)}
@@ -556,14 +605,14 @@ function BubbleCard({ bubble, maxPanel, onUpdate, onDelete }: BubbleCardProps) {
         </div>
 
         {/* Tail + font size stacked */}
-        <div className="flex-1 space-y-1">
+        <div className="flex-1 space-y-1.5">
           <div>
-            <span className="text-[9px] text-muted-foreground block mb-0.5">Tail</span>
+            <span className="text-[9px] text-muted-foreground block mb-0.5" title="Tail Direction">Tail</span>
             <div className="flex gap-0.5">
               {([
-                { dir: 'bottom-left' as const, icon: '\u2199' },
-                { dir: 'bottom-right' as const, icon: '\u2198' },
-                { dir: 'none' as const, icon: '\u2014' },
+                { dir: 'bottom-left' as const, icon: '\u2199', label: 'Left' },
+                { dir: 'bottom-right' as const, icon: '\u2198', label: 'Right' },
+                { dir: 'none' as const, icon: '\u2014', label: 'None' },
               ]).map((td) => (
                 <button
                   key={td.dir}
@@ -573,7 +622,7 @@ function BubbleCard({ bubble, maxPanel, onUpdate, onDelete }: BubbleCardProps) {
                     'px-1.5 py-0.5 rounded text-[9px] transition-colors',
                     bubble.tailDirection === td.dir ? 'bg-primary text-primary-foreground' : 'bg-muted/40 text-muted-foreground hover:bg-muted',
                   )}
-                  aria-label={`Tail: ${td.dir}`}
+                  aria-label={`Tail: ${td.label}`}
                   aria-pressed={bubble.tailDirection === td.dir}
                 >
                   {td.icon}
@@ -588,7 +637,7 @@ function BubbleCard({ bubble, maxPanel, onUpdate, onDelete }: BubbleCardProps) {
               onChange={(e) => set('fontSize', Number(e.target.value))}
               className="flex-1 h-1 accent-primary" aria-label="Font size"
             />
-            <span className="text-[9px] text-muted-foreground w-4 text-right">{bubble.fontSize}</span>
+            <span className="text-[9px] text-muted-foreground w-6 text-right">{bubble.fontSize}px</span>
           </div>
         </div>
       </div>
@@ -644,94 +693,103 @@ export function MangaPanelNode({ data, id, selected }: MangaPanelNodeProps) {
       outputs={mangaPanelDefinition.outputs}
       minWidth={mangaPanelDefinition.minWidth}
     >
-      <div className="space-y-2 nodrag nowheel">
-        {/* Layout preset selector */}
-        <div>
-          <label className="text-[10px] text-muted-foreground mb-1 block">Layout</label>
-          <div className="flex flex-wrap gap-1">
-            {MANGA_LAYOUTS.map((preset) => (
-              <button
-                key={preset.id} type="button"
-                onClick={() => update('layoutPreset', preset.id)}
-                className={cn(
-                  'w-6 h-8 rounded border transition-all flex-shrink-0 relative overflow-hidden',
-                  layoutPreset === preset.id ? 'border-primary ring-1 ring-primary/30' : 'border-border hover:border-foreground/30',
-                )}
-                title={preset.label} aria-label={`Layout: ${preset.label}`}
-              >
-                <svg viewBox="0 0 5 7" className="w-full h-full" preserveAspectRatio="none">
-                  {preset.panels.map((p, i) => (
-                    <rect key={i} x={p.x * 5 + 0.1} y={p.y * 7 + 0.1} width={p.w * 5 - 0.2} height={p.h * 7 - 0.2} className="fill-muted-foreground/30" />
+      <div className="space-y-1.5 nodrag nowheel">
+        {/* ── Layout Section (open by default) ── */}
+        <Section title="Layout" defaultOpen>
+          {/* Grouped by panel count */}
+          <div className="space-y-1">
+            {LAYOUT_GROUPS.map((group) => (
+              <div key={group.count} className="flex items-center gap-1.5">
+                <span className="text-[9px] text-muted-foreground/60 w-3 text-right flex-shrink-0 font-mono">{group.count}</span>
+                <div className="flex gap-1">
+                  {group.layouts.map((preset) => (
+                    <button
+                      key={preset.id} type="button"
+                      onClick={() => update('layoutPreset', preset.id)}
+                      className={cn(
+                        'w-6 h-8 rounded border transition-all flex-shrink-0 relative overflow-hidden',
+                        layoutPreset === preset.id ? 'border-primary ring-1 ring-primary/30 bg-primary/5' : 'border-border hover:border-foreground/30',
+                      )}
+                      title={preset.label} aria-label={`Layout: ${preset.label}`}
+                    >
+                      <svg viewBox="0 0 5 7" className="w-full h-full" preserveAspectRatio="none">
+                        {preset.panels.map((p, i) => (
+                          <rect key={i} x={p.x * 5 + 0.15} y={p.y * 7 + 0.15} width={p.w * 5 - 0.3} height={p.h * 7 - 0.3}
+                            className={layoutPreset === preset.id ? 'fill-primary/30' : 'fill-muted-foreground/25'} rx={0.2}
+                          />
+                        ))}
+                      </svg>
+                    </button>
                   ))}
-                </svg>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Mini preview */}
-        {status === 'success' && outputImage ? (
-          <div className="relative rounded-md overflow-hidden border border-border">
-            <img src={outputImage} alt="Manga page" className="w-full object-contain" draggable={false} />
-          </div>
-        ) : (
-          <div
-            className="relative rounded-md border border-border overflow-hidden"
-            style={{ aspectRatio: `${activeFormat.ratioW}/${activeFormat.ratioH}`, backgroundColor: gutterColor }}
-          >
-            {activePreset.panels.map((panel, i) => (
-              <div key={i} className="absolute overflow-hidden flex items-center justify-center"
-                style={{ left: `${panel.x * 100}%`, top: `${panel.y * 100}%`, width: `${panel.w * 100}%`, height: `${panel.h * 100}%`, padding: `${Math.max(gutterWidth / 4, 1)}px` }}
-              >
-                <div className="w-full h-full relative flex items-center justify-center bg-muted/20"
-                  style={{ border: `${Math.max(borderWidth / 4, 1)}px solid ${borderColor}` }}
-                >
-                  <span className="text-[9px] text-muted-foreground/50 font-mono">{i + 1}</span>
-                  <span
-                    className="absolute text-[7px] font-bold text-primary/60"
-                    style={{ [readingOrder === 'rtl' ? 'right' : 'left']: '2px', top: '1px' }}
-                  >
-                    {readOrder[i] + 1}
-                  </span>
-                  {bubbles.filter((b) => b.panelIndex === i).map((b) => {
-                    const pos = BUBBLE_POS[b.position] ?? { nx: 0.5, ny: 0.2 };
-                    return (
-                      <div key={b.id} className="absolute size-2 rounded-full bg-white border border-black/30"
-                        style={{ left: `${pos.nx * 100}%`, top: `${pos.ny * 100}%`, transform: 'translate(-50%,-50%)' }}
-                      />
-                    );
-                  })}
                 </div>
               </div>
             ))}
           </div>
-        )}
 
-        {/* Page settings */}
-        <div className="space-y-1.5">
+          {/* Mini preview */}
+          {status === 'success' && outputImage ? (
+            <div className="relative rounded-md overflow-hidden border border-border mt-1.5">
+              <img src={outputImage} alt="Manga page" className="w-full object-contain" draggable={false} />
+            </div>
+          ) : (
+            <div
+              className="relative rounded-md border border-border overflow-hidden mt-1.5"
+              style={{ aspectRatio: `${activeFormat.ratioW}/${activeFormat.ratioH}`, backgroundColor: gutterColor }}
+            >
+              {activePreset.panels.map((panel, i) => (
+                <div key={i} className="absolute overflow-hidden flex items-center justify-center"
+                  style={{ left: `${panel.x * 100}%`, top: `${panel.y * 100}%`, width: `${panel.w * 100}%`, height: `${panel.h * 100}%`, padding: `${Math.max(gutterWidth / 4, 1)}px` }}
+                >
+                  <div className="w-full h-full relative flex items-center justify-center bg-muted/20"
+                    style={{ border: `${Math.max(borderWidth / 4, 1)}px solid ${borderColor}` }}
+                  >
+                    <span className="text-[9px] text-muted-foreground/50 font-mono">{i + 1}</span>
+                    <span
+                      className="absolute text-[7px] font-bold text-primary/60"
+                      style={{ [readingOrder === 'rtl' ? 'right' : 'left']: '2px', top: '1px' }}
+                    >
+                      {readOrder[i] + 1}
+                    </span>
+                    {bubbles.filter((b) => b.panelIndex === i).map((b) => {
+                      const pos = BUBBLE_POS[b.position] ?? { nx: 0.5, ny: 0.2 };
+                      return (
+                        <div key={b.id} className="absolute size-2 rounded-full bg-white border border-black/30"
+                          style={{ left: `${pos.nx * 100}%`, top: `${pos.ny * 100}%`, transform: 'translate(-50%,-50%)' }}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </Section>
+
+        {/* ── Page & Style Section (collapsed by default) ── */}
+        <Section title="Page & Style">
           <div className="flex items-center gap-2">
-            <label className="text-[10px] text-muted-foreground w-12 flex-shrink-0">Page</label>
+            <label className="text-[10px] text-muted-foreground w-14 flex-shrink-0">Format</label>
             <select value={pageFormat} onChange={(e) => update('pageFormat', e.target.value)}
               className="flex-1 text-[10px] rounded border border-border bg-muted/30 px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-ring" aria-label="Page format">
               {PAGE_FORMATS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
             </select>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-[10px] text-muted-foreground w-12 flex-shrink-0">Gutter</label>
+            <label className="text-[10px] text-muted-foreground w-14 flex-shrink-0">Gutter</label>
             <input type="range" min={0} max={20} value={gutterWidth} onChange={(e) => update('gutterWidth', Number(e.target.value))} className="flex-1 h-1 accent-primary" aria-label="Gutter width" />
             <span className="text-[10px] text-muted-foreground w-6 text-right">{gutterWidth}px</span>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-[10px] text-muted-foreground w-12 flex-shrink-0">Border</label>
+            <label className="text-[10px] text-muted-foreground w-14 flex-shrink-0">Border</label>
             <input type="range" min={0} max={10} value={borderWidth} onChange={(e) => update('borderWidth', Number(e.target.value))} className="flex-1 h-1 accent-primary" aria-label="Border width" />
             <span className="text-[10px] text-muted-foreground w-6 text-right">{borderWidth}px</span>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-[10px] text-muted-foreground w-12 flex-shrink-0">Colors</label>
-            <div className="flex items-center gap-1.5">
+            <label className="text-[10px] text-muted-foreground w-14 flex-shrink-0">Colors</label>
+            <div className="flex items-center gap-2">
               <label className="flex items-center gap-1 text-[9px] text-muted-foreground">
                 <input type="color" value={borderColor} onChange={(e) => update('borderColor', e.target.value)} className="size-5 rounded border border-border cursor-pointer" aria-label="Border color" />
-                Bdr
+                Border
               </label>
               <label className="flex items-center gap-1 text-[9px] text-muted-foreground">
                 <input type="color" value={gutterColor} onChange={(e) => update('gutterColor', e.target.value)} className="size-5 rounded border border-border cursor-pointer" aria-label="Gutter color" />
@@ -740,39 +798,45 @@ export function MangaPanelNode({ data, id, selected }: MangaPanelNodeProps) {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-[10px] text-muted-foreground w-12 flex-shrink-0">Read</label>
+            <label className="text-[10px] text-muted-foreground w-14 flex-shrink-0">Direction</label>
             <div className="flex gap-0.5">
-              {(['rtl', 'ltr'] as const).map((d) => (
-                <button key={d} type="button" onClick={() => update('readingOrder', d)}
-                  className={cn('px-1.5 py-0.5 rounded text-[9px] transition-colors', readingOrder === d ? 'bg-primary text-primary-foreground' : 'bg-muted/40 text-muted-foreground hover:bg-muted')}
-                  aria-label={`Reading: ${d.toUpperCase()}`} aria-pressed={readingOrder === d}
-                >{d.toUpperCase()}</button>
+              {([
+                { value: 'rtl' as const, label: 'RTL', title: 'Right-to-Left (manga style)' },
+                { value: 'ltr' as const, label: 'LTR', title: 'Left-to-Right (western style)' },
+              ]).map((d) => (
+                <button key={d.value} type="button" onClick={() => update('readingOrder', d.value)}
+                  className={cn('px-2 py-0.5 rounded text-[9px] transition-colors', readingOrder === d.value ? 'bg-primary text-primary-foreground' : 'bg-muted/40 text-muted-foreground hover:bg-muted')}
+                  aria-label={d.title} aria-pressed={readingOrder === d.value} title={d.title}
+                >{d.label}</button>
               ))}
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <label className="text-[10px] text-muted-foreground w-12 flex-shrink-0">Size</label>
+            <label className="text-[10px] text-muted-foreground w-14 flex-shrink-0">Output</label>
             <div className="flex gap-0.5">
               {([1024, 2048] as const).map((s) => (
                 <button key={s} type="button" onClick={() => update('outputSize', s)}
-                  className={cn('px-1.5 py-0.5 rounded text-[9px] transition-colors', outputSize === s ? 'bg-primary text-primary-foreground' : 'bg-muted/40 text-muted-foreground hover:bg-muted')}
-                  aria-label={`Size: ${s}px`} aria-pressed={outputSize === s}
-                >{s}</button>
+                  className={cn('px-2 py-0.5 rounded text-[9px] transition-colors', outputSize === s ? 'bg-primary text-primary-foreground' : 'bg-muted/40 text-muted-foreground hover:bg-muted')}
+                  aria-label={`Output size: ${s}px`} aria-pressed={outputSize === s}
+                >{s}px</button>
               ))}
             </div>
           </div>
-        </div>
+        </Section>
 
-        {/* Bubble manager */}
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <label className="text-[10px] text-muted-foreground">Speech Bubbles</label>
+        {/* ── Speech Bubbles Section (collapsed by default) ── */}
+        <Section title="Speech Bubbles" count={bubbles.length}>
+          <div className="flex justify-end mb-1">
             <button type="button" onClick={addBubble}
-              className="px-2 py-0.5 rounded text-[9px] bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+              className="px-2.5 py-0.5 rounded text-[9px] bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
               aria-label="Add speech bubble"
-            >+ Add</button>
+            >+ Add Bubble</button>
           </div>
-          {bubbles.length > 0 && (
+          {bubbles.length === 0 ? (
+            <p className="text-[10px] text-muted-foreground/60 text-center py-3">
+              No bubbles yet. Add one to place dialogue in your panels.
+            </p>
+          ) : (
             <ScrollArea className="max-h-48">
               <div className="space-y-2 pr-2">
                 {bubbles.map((b) => (
@@ -782,12 +846,14 @@ export function MangaPanelNode({ data, id, selected }: MangaPanelNodeProps) {
               </div>
             </ScrollArea>
           )}
-        </div>
+        </Section>
 
-        {/* Status */}
-        <p className="text-[10px] text-muted-foreground text-center">
-          {status === 'idle' ? 'Connect images to panels' : status === 'running' ? 'Compositing page\u2026' : status === 'success' ? 'Manga page ready' : ''}
-        </p>
+        {/* Status footer */}
+        {status !== 'idle' && (
+          <p className="text-[10px] text-muted-foreground text-center pt-1 border-t border-border/30">
+            {status === 'running' ? 'Compositing page\u2026' : status === 'success' ? 'Manga page ready' : ''}
+          </p>
+        )}
       </div>
     </BaseWorkflowNode>
   );
