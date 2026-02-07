@@ -271,6 +271,7 @@ export function WorkflowCanvas({
       onDeleteGroup={onDeleteGroup ?? (() => {})}
       onUpdateGroup={onUpdateGroup}
       onDuplicateGroup={onDuplicateGroup}
+      onToggleGroupSleep={onToggleGroupLock}
       onClearSelection={() => {
         setSelectedNodeIds(new Set());
         onSelectGroup(null);
@@ -354,6 +355,7 @@ export function WorkflowCanvas({
             onResizeGroup={onResizeGroup}
             onUpdateGroup={onUpdateGroup}
             onToggleGroupCollapse={onToggleGroupCollapse}
+            onToggleGroupLock={onToggleGroupLock}
           />
         </div>
       </ContextMenuTrigger>

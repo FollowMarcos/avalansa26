@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import type { GroupData } from "@/types/canvas";
 import { hexToRgba, GROUP_TITLE_HEIGHT } from "./group-utils";
-import { ChevronDown, ChevronRight, GripHorizontal, Pencil, Lock, Unlock } from "lucide-react";
+import { ChevronDown, ChevronRight, GripHorizontal, Pencil, Moon, Sun } from "lucide-react";
 
 interface GroupItemProps {
   group: GroupData;
@@ -129,7 +129,7 @@ export const GroupItem = React.memo(function GroupItem({
         top: screenBounds.y,
         width: screenBounds.width,
         height: screenBounds.height,
-        opacity: isDragging ? 0.9 : isResizing ? 0.95 : 1,
+        opacity: isDragging ? 0.9 : isResizing ? 0.95 : group.locked ? 0.5 : 1,
       }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -226,8 +226,8 @@ export const GroupItem = React.memo(function GroupItem({
           </button>
         )}
 
-        {/* Lock toggle — skip group during workflow execution */}
-        {onToggleLock && isTitleHovered && (
+        {/* Sleep toggle — skip group during workflow execution */}
+        {onToggleLock && (isTitleHovered || group.locked) && (
           <button
             type="button"
             className="flex items-center justify-center size-6 rounded hover:bg-black/10"
@@ -237,12 +237,13 @@ export const GroupItem = React.memo(function GroupItem({
             }}
             onMouseDown={(e) => e.stopPropagation()}
             style={{ transform: `scale(${iconScale})` }}
-            aria-label={group.locked ? "Unlock group" : "Lock group (skip during execution)"}
+            aria-label={group.locked ? "Wake group" : "Sleep group (skip during execution)"}
+            title={group.locked ? "Wake group" : "Sleep group"}
           >
             {group.locked ? (
-              <Lock className="size-3" style={{ color: group.color }} />
+              <Moon className="size-3" style={{ color: group.color }} />
             ) : (
-              <Unlock className="size-3" style={{ color: group.color }} />
+              <Sun className="size-3" style={{ color: group.color }} />
             )}
           </button>
         )}

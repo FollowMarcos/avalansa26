@@ -12,7 +12,7 @@ import {
   ContextMenuShortcut,
 } from "@/components/ui/context-menu";
 import { GROUP_COLORS } from "./groups/group-utils";
-import { Group, Ungroup, Palette, Trash2, Edit3, Copy } from "lucide-react";
+import { Group, Ungroup, Palette, Trash2, Edit3, Copy, Moon, Sun } from "lucide-react";
 import type { GroupData } from "@/types/canvas";
 
 interface CanvasContextMenuProps {
@@ -24,6 +24,7 @@ interface CanvasContextMenuProps {
   onDeleteGroup: (groupId: string) => void;
   onUpdateGroup: (groupId: string, updates: Partial<GroupData>) => void;
   onDuplicateGroup?: (groupId: string) => void;
+  onToggleGroupSleep?: (groupId: string) => void;
   onClearSelection: () => void;
 }
 
@@ -36,6 +37,7 @@ export function CanvasContextMenu({
   onDeleteGroup,
   onUpdateGroup,
   onDuplicateGroup,
+  onToggleGroupSleep,
   onClearSelection,
 }: CanvasContextMenuProps) {
   const [isRenaming, setIsRenaming] = React.useState(false);
@@ -158,6 +160,24 @@ export function CanvasContextMenu({
               <ContextMenuItem onClick={handleDuplicateGroup}>
                 <Copy className="mr-2 size-4" />
                 Duplicate Group
+              </ContextMenuItem>
+            )}
+
+            {onToggleGroupSleep && (
+              <ContextMenuItem
+                onClick={() => onToggleGroupSleep(selectedGroupId!)}
+              >
+                {selectedGroup.locked ? (
+                  <>
+                    <Sun className="mr-2 size-4" />
+                    Wake Group
+                  </>
+                ) : (
+                  <>
+                    <Moon className="mr-2 size-4" />
+                    Sleep Group
+                  </>
+                )}
               </ContextMenuItem>
             )}
 

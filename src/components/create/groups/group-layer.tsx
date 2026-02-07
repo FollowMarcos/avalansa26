@@ -14,6 +14,7 @@ interface GroupLayerProps {
   onResizeGroup: (groupId: string, bounds: { x: number; y: number; width: number; height: number }) => void;
   onUpdateGroup: (groupId: string, updates: Partial<GroupData>) => void;
   onToggleGroupCollapse: (groupId: string) => void;
+  onToggleGroupLock?: (groupId: string) => void;
 }
 
 interface DragState {
@@ -44,6 +45,7 @@ export const GroupLayer = React.memo(function GroupLayer({
   onResizeGroup,
   onUpdateGroup,
   onToggleGroupCollapse,
+  onToggleGroupLock,
 }: GroupLayerProps) {
   const transform = useStore(transformSelector);
   const [dragState, setDragState] = React.useState<DragState | null>(null);
@@ -189,6 +191,7 @@ export const GroupLayer = React.memo(function GroupLayer({
             zoom={transform.zoom}
             onTitleChange={(title) => onUpdateGroup(group.id, { title })}
             onToggleCollapse={() => onToggleGroupCollapse(group.id)}
+            onToggleLock={onToggleGroupLock ? () => onToggleGroupLock(group.id) : undefined}
             onMouseDown={(e, action, handle) => handleMouseDown(group.id, e, action, handle)}
           />
         );

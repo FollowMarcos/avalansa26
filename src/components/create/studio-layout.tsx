@@ -142,6 +142,8 @@ export function StudioLayout() {
                 onExport={workflow.exportWorkflowJSON}
                 onImport={workflow.importWorkflowJSON}
                 onNameChange={workflow.setWorkflowName}
+                savedWorkflows={workflow.savedWorkflows}
+                onLoad={workflow.loadWorkflow}
               />
             )}
 

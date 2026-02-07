@@ -9,6 +9,7 @@ import {
   Download,
   Upload,
   Loader2,
+  FolderOpen,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +18,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import type { Workflow } from '@/types/workflow';
+
 interface WorkflowToolbarProps {
   isExecuting: boolean;
   executionProgress: { completed: number; total: number };
@@ -27,6 +30,8 @@ interface WorkflowToolbarProps {
   onExport: () => void;
   onImport: (file: File) => void;
   onNameChange: (name: string) => void;
+  savedWorkflows?: Workflow[];
+  onLoad?: (id: string) => void;
 }
 
 /**
@@ -42,14 +47,30 @@ export function WorkflowToolbar({
   onExport,
   onImport,
   onNameChange,
+  savedWorkflows = [],
+  onLoad,
 }: WorkflowToolbarProps) {
   const [isEditingName, setIsEditingName] = React.useState(false);
   const [nameValue, setNameValue] = React.useState(workflowName);
+  const [showLoadMenu, setShowLoadMenu] = React.useState(false);
   const importRef = React.useRef<HTMLInputElement>(null);
+  const loadMenuRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     setNameValue(workflowName);
   }, [workflowName]);
+
+  // Close load menu on outside click
+  React.useEffect(() => {
+    if (!showLoadMenu) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (loadMenuRef.current && !loadMenuRef.current.contains(e.target as HTMLElement)) {
+        setShowLoadMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showLoadMenu]);
 
   const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -162,6 +183,50 @@ export function WorkflowToolbar({
             </TooltipTrigger>
             <TooltipContent>Save Workflow</TooltipContent>
           </Tooltip>
+
+          {/* Load */}
+          {onLoad && savedWorkflows.length > 0 && (
+            <div className="relative" ref={loadMenuRef}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowLoadMenu((v) => !v)}
+                    className="size-8 rounded-lg"
+                    aria-label="Load saved workflow"
+                    aria-expanded={showLoadMenu}
+                  >
+                    <FolderOpen className="size-4" strokeWidth={1.5} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Load Workflow</TooltipContent>
+              </Tooltip>
+
+              {showLoadMenu && (
+                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 w-56 bg-background/95 backdrop-blur-xl border border-border rounded-lg shadow-lg overflow-hidden">
+                  <div className="px-3 py-1.5 border-b border-border">
+                    <span className="text-xs font-medium text-muted-foreground">Saved Workflows</span>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto p-1">
+                    {savedWorkflows.map((w) => (
+                      <button
+                        key={w.id}
+                        type="button"
+                        onClick={() => {
+                          onLoad(w.id);
+                          setShowLoadMenu(false);
+                        }}
+                        className="w-full text-left px-3 py-1.5 text-xs rounded-md hover:bg-muted/60 transition-colors truncate"
+                      >
+                        {w.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="w-px h-5 bg-border mx-1" />
 
