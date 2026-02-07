@@ -127,7 +127,7 @@ export function GenerationGallery() {
   const isSelected = (id: string) => galleryFilterState.bulkSelection.selectedIds.has(id);
 
   return (
-    <div className="flex-1 flex flex-col bg-background">
+    <div className="flex-1 flex flex-col min-h-0 bg-background">
       {/* Toolbar */}
       <div className="px-6 py-3 border-b border-border shrink-0">
         <GalleryToolbar />
@@ -424,7 +424,7 @@ function FailedCard({ image }: { image: GeneratedImage }) {
   return (
     <div
       className="relative rounded-lg overflow-hidden bg-destructive/5 border border-destructive/20 mb-4 break-inside-avoid"
-      role="status"
+      role="alert"
       aria-label="Generation failed"
     >
       <div className="aspect-square flex flex-col items-center justify-center gap-2 p-4">
@@ -432,8 +432,8 @@ function FailedCard({ image }: { image: GeneratedImage }) {
           <span className="text-destructive text-sm" aria-hidden="true">!</span>
         </div>
         <p className="text-xs text-destructive font-mono text-center">Failed</p>
-        <p className="text-[10px] text-muted-foreground text-center line-clamp-2">
-          {image.prompt}
+        <p className="text-[10px] text-muted-foreground text-center line-clamp-4">
+          {image.error || image.prompt}
         </p>
       </div>
     </div>

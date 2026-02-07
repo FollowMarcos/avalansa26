@@ -61,7 +61,8 @@ export interface GeneratedImage {
   prompt: string;
   timestamp: number;
   settings: CreateSettings;
-  status?: "pending" | "completed" | "failed"; // For relax mode async generation
+  status?: "pending" | "completed" | "failed";
+  error?: string;
   isFavorite?: boolean;
 }
 
@@ -1039,17 +1040,14 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       console.error("Generation error:", error);
-      // Update placeholders to failed status
       const errorMessage = error instanceof Error ? error.message : "Generation failed";
       setHistory(prev =>
         prev.map(img =>
           placeholderIds.includes(img.id)
-            ? { ...img, status: 'failed' as const }
+            ? { ...img, status: 'failed' as const, error: errorMessage }
             : img
         )
       );
-      // Show error in first placeholder for user visibility (toast could be added)
-      console.error("Generation failed:", errorMessage);
     } finally {
       setIsGenerating(false);
       setThinkingSteps([]);

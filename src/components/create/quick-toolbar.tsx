@@ -39,11 +39,18 @@ export function QuickToolbar() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
+      <div
+        className={cn(
+          viewMode === "workflow"
+            ? "absolute top-4 left-1/2 -translate-x-1/2 z-20"
+            : "flex justify-center py-2 shrink-0 border-b border-border"
+        )}
+      >
         <div
           className={cn(
             "flex items-center gap-1 rounded-xl bg-background border border-border shadow-sm transition-all duration-200 ease-out",
-            isCollapsed ? "px-1.5 py-1.5" : "px-2 py-1.5"
+            isCollapsed ? "px-1.5 py-1.5" : "px-2 py-1.5",
+            viewMode !== "workflow" && "border-transparent shadow-none"
           )}
         >
           {/* Collapse/Expand Toggle */}
