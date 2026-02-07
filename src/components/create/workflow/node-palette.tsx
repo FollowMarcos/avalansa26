@@ -11,6 +11,7 @@ import {
   Merge,
   Combine,
   LayoutGrid,
+  BookOpen,
   Search,
   ChevronDown,
   ChevronRight,
@@ -41,6 +42,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   Merge: <Merge className="size-4" />,
   Combine: <Combine className="size-4" />,
   LayoutGrid: <LayoutGrid className="size-4" />,
+  BookOpen: <BookOpen className="size-4" />,
 };
 
 interface NodePaletteProps {

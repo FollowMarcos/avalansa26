@@ -18,6 +18,7 @@ import { AvaNode, avaDefinition, avaExecutor } from './ava-node';
 import { ImageGridNode, imageGridDefinition, imageGridExecutor } from './image-grid-node';
 import { NoteNode, noteDefinition, noteExecutor } from './note-node';
 import { CollageComposerNode, collageComposerDefinition, collageComposerExecutor } from './collage-composer-node';
+import { MangaPanelNode, mangaPanelDefinition, mangaPanelExecutor } from './manga-panel-node';
 
 registerNode({ definition: promptInputDefinition, component: PromptInputNode, executor: promptInputExecutor });
 registerNode({ definition: settingsDefinition, component: SettingsNode, executor: settingsExecutor });
@@ -30,3 +31,4 @@ registerNode({ definition: avaDefinition, component: AvaNode, executor: avaExecu
 registerNode({ definition: imageGridDefinition, component: ImageGridNode, executor: imageGridExecutor });
 registerNode({ definition: noteDefinition, component: NoteNode, executor: noteExecutor });
 registerNode({ definition: collageComposerDefinition, component: CollageComposerNode, executor: collageComposerExecutor });
+registerNode({ definition: mangaPanelDefinition, component: MangaPanelNode, executor: mangaPanelExecutor });
