@@ -34,7 +34,16 @@
       "Bash(npx next build:*)",
       "Bash(npx lucide-react:*)",
       "Bash(npx supabase migration list:*)",
-      "Bash(npx supabase status:*)"
+      "Bash(npx supabase status:*)",
+      "Bash(powershell -NoProfile -File -:*)",
+      "Bash(powershell:*)",
+      "Bash(del \"src\\\\components\\\\create\\\\canvas-list.tsx\")",
+      "Bash(del \"src\\\\components\\\\create\\\\history-island.tsx\")",
+      "Bash(del \"src\\\\components\\\\create\\\\share-canvas-dialog.tsx\")",
+      "Bash(del \"src\\\\components\\\\create\\\\flow-canvas.tsx\")",
+      "Bash(del \"src\\\\components\\\\create\\\\helper-lines.tsx\")",
+      "Bash(del \"src\\\\components\\\\create\\\\nodes\\\\image-node.tsx\")",
+      "Bash(del \"src\\\\components\\\\create\\\\nodes\\\\index.ts\")"
     ]
   }
 }

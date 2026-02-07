@@ -4,11 +4,8 @@ import * as React from "react";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useCreate } from "./create-context";
 import { CanvasViewport } from "./canvas-viewport";
-import { HistoryIsland } from "./history-island";
-import { CanvasList } from "./canvas-list";
 import { PromptComposer } from "./prompt-composer";
 import { QuickToolbar } from "./quick-toolbar";
-import { GenerationGallery } from "./generation-gallery";
 import { MaintenanceBanner } from "./maintenance-banner";
 import { HotkeysIsland } from "./hotkeys-island";
 import { PromptVaultIsland } from "./prompt-vault-island";
@@ -121,9 +118,6 @@ export function StudioLayout() {
               }
             />
 
-            {/* Gallery View (overlay when active) */}
-            {viewMode !== "workflow" && <GenerationGallery />}
-
             {/* Prompt Composer — hidden in workflow mode */}
             {viewMode !== "workflow" && (
               <PromptComposer onSaveToVault={promptVault.openSaveDialog} />
@@ -146,9 +140,6 @@ export function StudioLayout() {
                 onLoad={workflow.loadWorkflow}
               />
             )}
-
-            {/* Floating Canvas List (left side) — hidden in workflow mode */}
-            {viewMode !== "workflow" && <CanvasList />}
 
             {/* Floating Workflow List (left side) — only in workflow mode */}
             {viewMode === "workflow" && (
@@ -187,10 +178,7 @@ export function StudioLayout() {
             />
 
 
-            {/* Floating History Island (right side) — hidden in workflow mode */}
-            {viewMode !== "workflow" && <HistoryIsland />}
-
-            {/* Floating Hotkeys Island (bottom left) */}
+            {/* Floating Hotkeys Island (bottom right) */}
             <HotkeysIsland />
           </div>
         </div>

@@ -1,23 +1,12 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 import type { ApiConfig } from "@/types/api-config";
 import type { Generation, Collection, Tag } from "@/types/generation";
-import type { Canvas, CanvasViewport, ImageNodeData, GroupData, GroupBounds } from "@/types/canvas";
 import { uploadReferenceImage as uploadToStorage } from "@/utils/supabase/storage";
 import { createClient } from "@/utils/supabase/client";
 import type { ReferenceImageWithUrl } from "@/types/reference-image";
 import type { CreateSettings as AdminCreateSettings } from "@/types/create-settings";
-import {
-  type Node,
-  type Edge,
-  type OnNodesChange,
-  type OnEdgesChange,
-  type OnConnect,
-  applyNodeChanges,
-  applyEdgeChanges,
-  addEdge,
-} from "@xyflow/react";
 
 // Gemini 3 Pro Image Preview API types
 export type ImageSize = "1K" | "2K" | "4K";
@@ -136,73 +125,17 @@ interface CreateContextType {
   selectImage: (image: GeneratedImage | null) => void;
   clearHistory: () => void;
 
-  // React Flow nodes and edges
-  nodes: Node<ImageNodeData>[];
-  edges: Edge[];
-  onNodesChange: OnNodesChange<Node<ImageNodeData>>;
-  onEdgesChange: OnEdgesChange<Edge>;
-  onConnect: OnConnect;
-  addImageNode: (image: GeneratedImage) => void;
-  deleteNode: (nodeId: string) => void;
-  selectImageByNodeId: (nodeId: string) => void;
-
-  // Node groups
-  groups: GroupData[];
-  selectedGroupId: string | null;
-  selectedNodeIds: Set<string>;
-  createGroup: (nodeIds: string[]) => void;
-  deleteGroup: (groupId: string) => void;
-  updateGroup: (groupId: string, updates: Partial<GroupData>) => void;
-  moveGroup: (groupId: string, delta: { x: number; y: number }) => void;
-  toggleGroupCollapse: (groupId: string) => void;
-  selectGroup: (groupId: string | null) => void;
-  toggleNodeSelection: (nodeId: string) => void;
-  selectNodes: (nodeIds: string[]) => void;
-  clearNodeSelection: () => void;
-  getNodesInGroup: (groupId: string) => string[];
-
-  // Canvas management
-  currentCanvasId: string | null;
-  canvasList: Canvas[];
-  isSaving: boolean;
-  lastSaved: Date | null;
-  createNewCanvas: () => Promise<void>;
-  switchCanvas: (id: string) => Promise<void>;
-  renameCanvas: (id: string, name: string) => Promise<void>;
-  deleteCanvas: (id: string) => Promise<void>;
-
   // UI state
-  viewMode: "canvas" | "gallery" | "workflow";
-  setViewMode: (mode: "canvas" | "gallery" | "workflow") => void;
+  viewMode: "gallery" | "workflow";
+  setViewMode: (mode: "gallery" | "workflow") => void;
   historyPanelOpen: boolean;
   toggleHistoryPanel: () => void;
   isInputVisible: boolean;
   toggleInputVisibility: () => void;
   activeTab: string;
   setActiveTab: (tab: string) => void;
-
-  // Zoom
-  zoom: number;
-  setZoom: (zoom: number) => void;
-
-  // Viewport tracking (for placing nodes where user is looking)
-  onViewportChange: (viewport: CanvasViewport) => void;
-
-  // Canvas layout
-  snapToGrid: boolean;
-  setSnapToGrid: (enabled: boolean) => void;
-  autoLayoutNodes: () => void;
-  gridSize: number;
-
-  // Interaction mode (Figma-style: V for select, H for hand/pan)
   interactionMode: InteractionMode;
   setInteractionMode: (mode: InteractionMode) => void;
-
-  // Undo/Redo
-  canUndo: boolean;
-  canRedo: boolean;
-  undo: () => void;
-  redo: () => void;
 
   // Generation
   isGenerating: boolean;
@@ -211,11 +144,9 @@ interface CreateContextType {
   cancelGeneration: () => void;
   pendingBatchJobs: string[];
 
-  // Concurrent generation tracking (max 4)
-  activeGenerations: number; // Number of currently active generations
-  hasAvailableSlots: boolean; // True if can start new generation (< 4 active)
-  retryGeneration: (nodeId: string) => Promise<void>;
-  updateNodeData: (nodeId: string, updates: Partial<ImageNodeData>) => void;
+  // Concurrency
+  hasAvailableSlots: boolean;
+  activeGenerations: number;
 
   // Helper to build final prompt with negative injection
   buildFinalPrompt: () => string;
@@ -258,11 +189,6 @@ interface CreateContextType {
   imageOrganization: Map<string, { tagIds: string[]; collectionIds: string[] }>;
   loadImageOrganization: (imageId: string) => Promise<void>;
 
-  // Canvas export
-  setCanvasRef: (ref: React.RefObject<HTMLDivElement | null> | null) => void;
-  exportCanvasAsPng: (filename?: string) => Promise<void>;
-  exportCanvasAsJpeg: (filename?: string) => Promise<void>;
-
   // Admin settings (for restricting features)
   adminSettings: AdminCreateSettings | null;
   isMaintenanceMode: boolean;
@@ -303,13 +229,8 @@ function getStorageKey(userId: string | null): string {
 interface PersistedState {
   prompt: string;
   settings: CreateSettings;
-  currentCanvasId: string | null;
   selectedApiId: string | null;
-  nodes: Node<ImageNodeData>[];
-  edges: Edge[];
-  groups: GroupData[];
-  viewport: CanvasViewport;
-  viewMode: "canvas" | "gallery" | "workflow";
+  viewMode: "gallery" | "workflow";
   historyPanelOpen: boolean;
   timestamp: number; // For cache invalidation
 }
@@ -321,13 +242,18 @@ function loadPersistedState(userId: string | null): Partial<PersistedState> | nu
     const key = getStorageKey(userId);
     const stored = localStorage.getItem(key);
     if (!stored) return null;
-    const parsed = JSON.parse(stored) as PersistedState;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const parsed = JSON.parse(stored) as any;
     // Invalidate cache after 24 hours
     if (Date.now() - parsed.timestamp > 24 * 60 * 60 * 1000) {
       localStorage.removeItem(key);
       return null;
     }
-    return parsed;
+    // Migration: map old "canvas" viewMode to "gallery"
+    if (parsed.viewMode === "canvas") {
+      parsed.viewMode = "gallery";
+    }
+    return parsed as Partial<PersistedState>;
   } catch {
     return null;
   }
@@ -370,11 +296,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         // Clear in-memory state when user changes
         setPrompt("");
         setSettings(defaultSettings);
-        setNodes([]);
-        setEdges([]);
-        setViewport({ x: 0, y: 0, zoom: 1 });
         setSavedReferences([]);
-        setCurrentCanvasId(null);
         hasLoadedPersistedState.current = false;
         isInitialLoadRef.current = true;
       }
@@ -400,62 +322,15 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [savedReferences, setSavedReferences] = React.useState<SavedReferenceImage[]>([]);
   const [history, setHistory] = React.useState<GeneratedImage[]>([]);
   const [selectedImage, setSelectedImage] = React.useState<GeneratedImage | null>(null);
-  const [viewMode, setViewMode] = React.useState<"canvas" | "gallery" | "workflow">("canvas");
+  const [viewMode, setViewMode] = React.useState<"gallery" | "workflow">("gallery");
+  const [interactionMode, setInteractionMode] = React.useState<InteractionMode>("select");
   const [historyPanelOpen, setHistoryPanelOpen] = React.useState(true);
   const [isInputVisible, setIsInputVisible] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState("create");
-  const [zoom, setZoom] = React.useState(100);
-  const [snapToGrid, setSnapToGrid] = React.useState(false);
-  const GRID_SIZE = 20; // Grid size in pixels for snap-to-grid
-  const [interactionMode, setInteractionMode] = React.useState<InteractionMode>("select");
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [thinkingSteps, setThinkingSteps] = React.useState<ThinkingStep[]>([]);
-  const [historyIndex, setHistoryIndex] = React.useState(-1);
-  const [historyStack, setHistoryStack] = React.useState<GeneratedImage[][]>([]);
   const [pendingBatchJobs, setPendingBatchJobs] = React.useState<string[]>([]);
-  const [batchCompletedImages, setBatchCompletedImages] = React.useState<GeneratedImage[]>([]);
   const abortControllerRef = React.useRef<AbortController | null>(null);
-
-  // Track active generation node IDs for concurrency limit (max 4)
-  const [activeGenerations, setActiveGenerations] = React.useState<Set<string>>(new Set());
-  const activeGenerationNodesRef = React.useRef<Set<string>>(new Set());
-
-  // React Flow state
-  const [nodes, setNodes] = React.useState<Node<ImageNodeData>[]>([]);
-  const [edges, setEdges] = React.useState<Edge[]>([]);
-  const [groups, setGroups] = React.useState<GroupData[]>([]);
-  const [selectedGroupId, setSelectedGroupId] = React.useState<string | null>(null);
-  const [selectedNodeIds, setSelectedNodeIds] = React.useState<Set<string>>(new Set());
-  const [viewport, setViewport] = React.useState<CanvasViewport>({ x: 0, y: 0, zoom: 1 });
-
-  // Callback for FlowCanvas to report viewport changes (pan/zoom)
-  const onViewportChange = React.useCallback((newViewport: CanvasViewport) => {
-    setViewport(newViewport);
-    setHasUnsavedChanges(true);
-  }, []);
-
-  // Canvas ref for export functionality
-  const canvasRefHolder = React.useRef<React.RefObject<HTMLDivElement | null> | null>(null);
-
-  // Canvas management state
-  const [currentCanvasId, setCurrentCanvasId] = React.useState<string | null>(null);
-  const [canvasList, setCanvasList] = React.useState<Canvas[]>([]);
-  const [isSaving, setIsSaving] = React.useState(false);
-  const [lastSaved, setLastSaved] = React.useState<Date | null>(null);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
-  const saveTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
-
-  // Track which generation IDs have already been added as nodes to prevent duplicates
-  // This is declared early so it's available for canvas loading functions
-  const processedGenerationIds = React.useRef<Set<string>>(new Set());
-
-  // Track whether initial canvas loading has completed to prevent race conditions
-  // History effect should wait for this before processing
-  const canvasLoadedRef = React.useRef(false);
-
-  // Track whether the initial history batch has been skipped after canvas load
-  // Prevents pre-existing history items from being re-added as new nodes
-  const initialHistoryProcessedRef = React.useRef(false);
 
   // Admin settings for feature restrictions
   const [adminSettings, setAdminSettings] = React.useState<AdminCreateSettings | null>(null);
@@ -530,10 +405,6 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
               return [...completedImages, ...filtered];
             });
             setSelectedImage(completedImages[0]);
-            setViewMode("canvas");
-
-            // Mark these as needing canvas addition
-            setBatchCompletedImages(completedImages);
           }
         } else if (status === 'failed') {
           clearInterval(pollInterval);
@@ -955,14 +826,11 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
   const selectImage = React.useCallback((image: GeneratedImage | null) => {
     setSelectedImage(image);
-    if (image) setViewMode("canvas");
   }, []);
 
   const clearHistory = React.useCallback(() => {
     setHistory([]);
     setSelectedImage(null);
-    setHistoryStack([]);
-    setHistoryIndex(-1);
   }, []);
 
   const toggleHistoryPanel = React.useCallback(() => {
@@ -1008,119 +876,11 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     return steps;
   }, [referenceImages.length, prompt, settings.imageSize, settings.generationSpeed]);
 
-  // Helper function to clean up stale loading nodes after page refresh
-  // When a page is refreshed during generation, the generation process is lost
-  // but the node remains with status: 'loading'. This marks them as failed.
-  const cleanupStaleLoadingNodes = React.useCallback((loadedNodes: Node<ImageNodeData>[]): Node<ImageNodeData>[] => {
-    return loadedNodes.map(node => {
-      // If node is loading but has no image URL, generation was interrupted
-      if (node.data.status === 'loading' && !node.data.imageUrl) {
-        return {
-          ...node,
-          data: {
-            ...node.data,
-            status: 'failed' as const,
-            error: 'Generation was interrupted. Click retry to try again.',
-            thinkingStep: undefined,
-          },
-        };
-      }
-      return node;
-    });
-  }, []);
-
-  // Helper function to update node data
-  const updateNodeData = React.useCallback((nodeId: string, updates: Partial<ImageNodeData>) => {
-    setNodes(prev => prev.map(node =>
-      node.id === nodeId
-        ? { ...node, data: { ...node.data, ...updates } }
-        : node
-    ));
-  }, []);
-
-  // Retry a failed generation
-  const retryGeneration = React.useCallback(async (nodeId: string) => {
-    const node = nodes.find(n => n.id === nodeId);
-    if (!node || node.data.status !== 'failed') return;
-
-    // Add to active generations
-    setActiveGenerations(prev => new Set([...prev, nodeId]));
-    activeGenerationNodesRef.current.add(nodeId);
-
-    // Reset node to loading
-    updateNodeData(nodeId, {
-      status: 'loading',
-      error: undefined,
-      thinkingStep: 'Retrying generation...',
-    });
-
-    try {
-      // Get the original settings from the node
-      const finalPrompt = node.data.prompt + (node.data.negativePrompt ? `\n\nNegative: ${node.data.negativePrompt}` : '');
-
-      // Call the generation API
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          apiId: selectedApiId,
-          prompt: finalPrompt,
-          negativePrompt: node.data.negativePrompt || '',
-          aspectRatio: node.data.settings.aspectRatio,
-          imageSize: node.data.settings.imageSize,
-          outputCount: 1,
-          referenceImagePaths: [],
-          mode: node.data.settings.generationSpeed,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Request failed with status ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (!data.success || !data.images || data.images.length === 0) {
-        throw new Error(data.error || 'No images generated');
-      }
-
-      // Update node with success
-      updateNodeData(nodeId, {
-        status: 'success',
-        imageUrl: data.images[0].url,
-        thinkingStep: undefined,
-      });
-
-    } catch (error) {
-      console.error('Retry generation error:', error);
-      updateNodeData(nodeId, {
-        status: 'failed',
-        error: error instanceof Error ? error.message : 'Generation failed',
-        thinkingStep: undefined,
-      });
-    } finally {
-      // Remove from active generations
-      setActiveGenerations(prev => {
-        const next = new Set(prev);
-        next.delete(nodeId);
-        return next;
-      });
-      activeGenerationNodesRef.current.delete(nodeId);
-    }
-  }, [nodes, activeGenerations, selectedApiId, currentCanvasId, updateNodeData]);
 
   const generate = React.useCallback(async () => {
     if (!prompt.trim() && referenceImages.length === 0) return;
     if (!selectedApiId) {
       console.error("No API selected");
-      return;
-    }
-
-    // Check concurrency limit (max 4 concurrent generations)
-    if (activeGenerations.size >= 4) {
-      console.warn('Maximum concurrent generations reached (4)');
       return;
     }
 
@@ -1134,53 +894,22 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     const steps = getThinkingSteps();
     setThinkingSteps(steps);
 
-    // Create placeholder nodes immediately at viewport center
-    const placeholderNodeIds: string[] = [];
-    const centerX = -viewport.x / viewport.zoom + (typeof window !== 'undefined' ? window.innerWidth / 2 / viewport.zoom : 400);
-    const centerY = -viewport.y / viewport.zoom + (typeof window !== 'undefined' ? window.innerHeight / 2 / viewport.zoom : 300);
-
+    // Create placeholder entries in history immediately
+    const placeholderIds: string[] = [];
+    const placeholders: GeneratedImage[] = [];
     for (let i = 0; i < outputCount; i++) {
-      const nodeId = `node-gen-${Date.now()}-${i}`;
-      const generationId = `gen-${Date.now()}-${i}`;
-
-      // Offset each node slightly to avoid overlap
-      const offsetX = i * 20;
-      const offsetY = i * 20;
-
-      const placeholderNode: Node<ImageNodeData> = {
-        id: nodeId,
-        type: 'imageNode',
-        position: {
-          x: centerX + offsetX,
-          y: centerY + offsetY,
-        },
-        data: {
-          generationId,
-          imageUrl: '', // Empty until generation completes
-          prompt: prompt,
-          negativePrompt: settings.negativePrompt,
-          timestamp: Date.now(),
-          settings: {
-            aspectRatio: settings.aspectRatio,
-            imageSize: settings.imageSize,
-            outputCount: settings.outputCount,
-            generationSpeed: settings.generationSpeed,
-          },
-          status: 'loading',
-          thinkingStep: 'Initializing...',
-        },
-      };
-
-      setNodes(prev => [...prev, placeholderNode]);
-      placeholderNodeIds.push(nodeId);
-
-      // Track this node in active generations
-      setActiveGenerations(prev => new Set([...prev, nodeId]));
-      activeGenerationNodesRef.current.add(nodeId);
-      processedGenerationIds.current.add(generationId);
+      const id = `gen-pending-${Date.now()}-${i}`;
+      placeholderIds.push(id);
+      placeholders.push({
+        id,
+        url: '',
+        prompt: prompt,
+        timestamp: Date.now(),
+        settings: { ...settings },
+        status: 'pending',
+      });
     }
-
-    setHasUnsavedChanges(true);
+    setHistory(prev => [...placeholders, ...prev]);
 
     try {
       // Show thinking steps animation
@@ -1200,7 +929,6 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       // Wait for any uploading images to complete
       const uploadingImages = referenceImages.filter(img => img.isUploading);
       if (uploadingImages.length > 0) {
-        // Wait a bit for uploads to complete
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
 
@@ -1212,40 +940,21 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       // Build the final prompt
       const finalPrompt = buildFinalPrompt();
 
-      // Debug: Log the exact parameters being sent
-      const requestParams: {
-        apiId: string;
-        prompt: string;
-        negativePrompt: string;
-        aspectRatio: AspectRatio;
-        imageSize: ImageSize;
-        outputCount: number;
-        referenceImagePaths: string[];
-        mode: GenerationSpeed;
-      } = {
+      const requestParams = {
         apiId: selectedApiId,
         prompt: finalPrompt,
         negativePrompt: settings.negativePrompt,
         aspectRatio: settings.aspectRatio,
         imageSize: settings.imageSize,
-        outputCount: settings.outputCount,
-        referenceImagePaths, // Storage paths instead of base64
-        mode: settings.generationSpeed, // 'fast' or 'relaxed'
+        outputCount,
+        referenceImagePaths,
+        mode: settings.generationSpeed,
       };
-      console.log('[Generate] Sending request with params:', {
-        ...requestParams,
-        prompt: requestParams.prompt.slice(0, 100) + '...', // Truncate for readability
-      });
 
-      // Update request params to use actual available slot count
-      requestParams.outputCount = outputCount;
-
-      // Call the generation API with storage paths (not base64)
+      // Call the generation API
       const response = await fetch('/api/generate', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(requestParams),
         signal: abortControllerRef.current.signal,
       });
@@ -1258,13 +967,11 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       );
 
       if (!response.ok) {
-        // Try to parse error message from JSON, fallback to status text
         let errorMessage = `Request failed with status ${response.status}`;
         try {
           const errorData = await response.json();
           errorMessage = errorData.error || errorMessage;
         } catch {
-          // Response wasn't JSON (e.g., HTML error page)
           if (response.status === 413) {
             errorMessage = 'Images are too large. Try using fewer or smaller reference images.';
           }
@@ -1285,816 +992,83 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
       // Handle batch/relaxed mode
       if (data.mode === 'relaxed' && data.batchJobId) {
-        // Update placeholder nodes with batch job info
-        for (const nodeId of placeholderNodeIds) {
-          updateNodeData(nodeId, {
-            thinkingStep: 'Batch job queued...',
-            batchJobId: data.batchJobId,
-          });
-        }
+        // Replace placeholders with a single batch-pending entry
+        setHistory(prev => {
+          const filtered = prev.filter(img => !placeholderIds.includes(img.id));
+          const batchPlaceholder: GeneratedImage = {
+            id: `batch-${data.batchJobId}`,
+            url: '',
+            prompt: finalPrompt,
+            timestamp: Date.now(),
+            settings: { ...settings },
+            status: 'pending',
+          };
+          return [batchPlaceholder, ...filtered];
+        });
 
         // Start polling for batch job completion
         pollBatchJob(data.batchJobId, finalPrompt, { ...settings });
-
-        // Show a placeholder in history indicating batch job is processing
-        const pendingImage: GeneratedImage = {
-          id: `batch-${data.batchJobId}`,
-          url: '', // Will be filled when batch completes
-          prompt: finalPrompt,
-          timestamp: Date.now(),
-          settings: { ...settings },
-          status: "pending", // Mark as pending for UI to show loading state
-        };
-        setHistory(prev => [pendingImage, ...prev]);
         return;
       }
 
       // Handle fast mode (immediate images)
       if (!data.images || data.images.length === 0) {
-        // Mark all placeholder nodes as failed
-        for (const nodeId of placeholderNodeIds) {
-          updateNodeData(nodeId, {
-            status: 'failed',
-            error: data.error || 'No images generated',
-            thinkingStep: undefined,
-          });
-        }
         throw new Error(data.error || 'No images generated');
       }
 
-      // Convert API response to GeneratedImage format
+      // Replace placeholder entries with actual images
       const newImages: GeneratedImage[] = data.images.map((img: { url: string }, i: number) => ({
         id: `gen-${Date.now()}-${i}`,
         url: img.url,
         prompt: finalPrompt,
         timestamp: Date.now(),
         settings: { ...settings },
+        status: 'completed' as const,
       }));
 
-      // Mark these IDs as processed BEFORE updating history to prevent
-      // the history effect from creating duplicate nodes
-      for (const img of newImages) {
-        processedGenerationIds.current.add(img.id);
-      }
-
-      // Update placeholder nodes with actual images
-      for (let i = 0; i < placeholderNodeIds.length; i++) {
-        const nodeId = placeholderNodeIds[i];
-        if (i < newImages.length) {
-          // Success - update with image URL
-          updateNodeData(nodeId, {
-            status: 'success',
-            imageUrl: newImages[i].url,
-            thinkingStep: undefined,
-          });
-        } else {
-          // Fewer images returned than expected
-          updateNodeData(nodeId, {
-            status: 'failed',
-            error: 'No image generated',
-            thinkingStep: undefined,
-          });
-        }
-      }
-
-      // Save to history for undo
-      setHistoryStack(prev => [...prev.slice(0, historyIndex + 1), history]);
-      setHistoryIndex(prev => prev + 1);
-
-      // Add to history and select first
-      setHistory(prev => [...newImages, ...prev]);
+      setHistory(prev => {
+        const filtered = prev.filter(img => !placeholderIds.includes(img.id));
+        return [...newImages, ...filtered];
+      });
       setSelectedImage(newImages[0]);
-      setViewMode("canvas");
 
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
-        // Generation was cancelled - remove placeholder nodes
-        setNodes(prev => prev.filter(n => !placeholderNodeIds.includes(n.id)));
-        for (const nodeId of placeholderNodeIds) {
-          const node = nodes.find(n => n.id === nodeId);
-          if (node) {
-            processedGenerationIds.current.delete(node.data.generationId);
-          }
-        }
+        // Generation was cancelled - remove placeholder entries
+        setHistory(prev => prev.filter(img => !placeholderIds.includes(img.id)));
         return;
       }
       console.error("Generation error:", error);
-      // Mark all placeholder nodes as failed
-      for (const nodeId of placeholderNodeIds) {
-        updateNodeData(nodeId, {
-          status: 'failed',
-          error: error instanceof Error ? error.message : "Generation failed",
-          thinkingStep: undefined,
-        });
-      }
+      // Update placeholders to failed status
+      const errorMessage = error instanceof Error ? error.message : "Generation failed";
+      setHistory(prev =>
+        prev.map(img =>
+          placeholderIds.includes(img.id)
+            ? { ...img, status: 'failed' as const }
+            : img
+        )
+      );
+      // Show error in first placeholder for user visibility (toast could be added)
+      console.error("Generation failed:", errorMessage);
     } finally {
       setIsGenerating(false);
       setThinkingSteps([]);
-      // Remove placeholder nodes from active generations
-      for (const nodeId of placeholderNodeIds) {
-        setActiveGenerations(prev => {
-          const next = new Set(prev);
-          next.delete(nodeId);
-          return next;
-        });
-        activeGenerationNodesRef.current.delete(nodeId);
-      }
     }
-  }, [prompt, referenceImages, settings, history, historyIndex, selectedApiId, getThinkingSteps, buildFinalPrompt, currentCanvasId, viewport, nodes, updateNodeData, activeGenerations, pollBatchJob]);
+  }, [prompt, referenceImages, settings, selectedApiId, getThinkingSteps, buildFinalPrompt, pollBatchJob]);
 
   const cancelGeneration = React.useCallback(() => {
     abortControllerRef.current?.abort();
     setIsGenerating(false);
     setThinkingSteps([]);
-    // Clear all active generations
-    activeGenerationNodesRef.current.clear();
-    setActiveGenerations(new Set());
   }, []);
 
-  const canUndo = historyIndex >= 0;
-  const canRedo = historyIndex < historyStack.length - 1;
 
-  const undo = React.useCallback(() => {
-    if (!canUndo) return;
-    const prevHistory = historyStack[historyIndex];
-    setHistory(prevHistory);
-    setHistoryIndex(prev => prev - 1);
-    setSelectedImage(prevHistory[0] || null);
-  }, [canUndo, historyIndex, historyStack]);
 
-  const redo = React.useCallback(() => {
-    if (!canRedo) return;
-    const nextHistory = historyStack[historyIndex + 2];
-    if (nextHistory) {
-      setHistory(nextHistory);
-      setHistoryIndex(prev => prev + 1);
-      setSelectedImage(nextHistory[0] || null);
-    }
-  }, [canRedo, historyIndex, historyStack]);
 
-  // React Flow handlers
-  const onNodesChange: OnNodesChange<Node<ImageNodeData>> = React.useCallback(
-    (changes) => {
-      setNodes((nds) => applyNodeChanges(changes, nds));
-      setHasUnsavedChanges(true);
-    },
-    []
-  );
 
-  const onEdgesChange: OnEdgesChange<Edge> = React.useCallback(
-    (changes) => {
-      setEdges((eds) => applyEdgeChanges(changes, eds));
-      setHasUnsavedChanges(true);
-    },
-    []
-  );
-
-  const onConnect: OnConnect = React.useCallback(
-    (connection) => {
-      setEdges((eds) => addEdge(connection, eds));
-      setHasUnsavedChanges(true);
-    },
-    []
-  );
-
-  // Calculate position for new node (grid layout)
-  const getNextNodePosition = React.useCallback(() => {
-    const COLS = 4;
-    const SPACING_X = 300;
-    const SPACING_Y = 380;
-    const nodeCount = nodes.length;
-    const row = Math.floor(nodeCount / COLS);
-    const col = nodeCount % COLS;
-    return {
-      x: col * SPACING_X + 50,
-      y: row * SPACING_Y + 50,
-    };
-  }, [nodes.length]);
-
-  // Add a new image node from a generated image
-  const addImageNode = React.useCallback((image: GeneratedImage) => {
-    const nodeId = `node-${image.id}`;
-
-    setNodes((nds) => {
-      // Check if node already exists - prevents duplicates from race conditions
-      if (nds.some(n => n.id === nodeId)) {
-        return nds;
-      }
-
-      // Grid layout constants
-      const COLS = 4;
-      const SPACING_X = 300;
-      const SPACING_Y = 380;
-
-      // Calculate position based on current node count (inside callback for accuracy)
-      const nodeCount = nds.length;
-      const row = Math.floor(nodeCount / COLS);
-      const col = nodeCount % COLS;
-      const position = {
-        x: col * SPACING_X + 50,
-        y: row * SPACING_Y + 50,
-      };
-
-      const newNode: Node<ImageNodeData> = {
-        id: nodeId,
-        type: 'imageNode',
-        position,
-        data: {
-          generationId: image.id,
-          imageUrl: image.url,
-          prompt: image.prompt,
-          negativePrompt: image.settings.negativePrompt,
-          timestamp: image.timestamp,
-          settings: {
-            aspectRatio: image.settings.aspectRatio,
-            imageSize: image.settings.imageSize,
-            outputCount: image.settings.outputCount,
-            generationSpeed: image.settings.generationSpeed,
-            referenceImages: image.settings.referenceImages,
-          },
-          status: 'success', // Images from history are already completed
-        },
-      };
-      return [...nds, newNode];
-    });
-    setHasUnsavedChanges(true);
-  }, []);
-
-  // Delete a node from the canvas
-  const deleteNode = React.useCallback((nodeId: string) => {
-    setNodes((nds) => nds.filter((n) => n.id !== nodeId));
-    // Also remove any edges connected to this node
-    setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
-    // Remove node from any groups it belongs to (handle backwards compatibility)
-    setGroups((prevGroups) =>
-      prevGroups.map((g) => {
-        const nodeIds = g.nodeIds || [];
-        return nodeIds.includes(nodeId)
-          ? { ...g, nodeIds: nodeIds.filter((id) => id !== nodeId) }
-          : g;
-      })
-    );
-    // Clear selection if the deleted node was selected
-    setSelectedImage((prev) => {
-      const node = nodes.find((n) => n.id === nodeId);
-      if (node && prev?.id === node.data.generationId) {
-        return null;
-      }
-      return prev;
-    });
-    setHasUnsavedChanges(true);
-  }, [nodes]);
-
-  // Select image by node ID
-  const selectImageByNodeId = React.useCallback((nodeId: string) => {
-    const node = nodes.find((n) => n.id === nodeId);
-    if (node) {
-      const image = history.find((h) => h.id === node.data.generationId);
-      if (image) {
-        setSelectedImage(image);
-      }
-    }
-  }, [nodes, history]);
-
-  // ========== Node Groups ==========
-
-  // Get all node IDs that belong to a group (from stored membership)
-  const getNodesInGroup = React.useCallback((groupId: string): string[] => {
-    const group = groups.find((g) => g.id === groupId);
-    if (!group) return [];
-    // Return stored node IDs, filtering out any that no longer exist
-    // Handle backwards compatibility where nodeIds might be undefined
-    const nodeIds = group.nodeIds || [];
-    return nodeIds.filter((nodeId) => nodes.some((n) => n.id === nodeId));
-  }, [groups, nodes]);
-
-  // Calculate bounds that encompass selected nodes (uses actual node dimensions)
-  const calculateGroupBounds = React.useCallback((nodeIds: string[]): GroupBounds => {
-    const selectedNodes = nodes.filter((n) => nodeIds.includes(n.id));
-    if (selectedNodes.length === 0) {
-      return { x: 0, y: 0, width: 300, height: 200 };
-    }
-
-    const padding = 40;
-    const titleHeight = 32;
-
-    // Calculate actual dimensions for each node
-    const nodeBounds = selectedNodes.map((node) => {
-      // Use measured dimensions if available, otherwise calculate from aspect ratio
-      let width = 240;
-      let height = 300;
-
-      if (node.measured?.width && node.measured?.height) {
-        width = node.measured.width;
-        height = node.measured.height;
-      } else if (node.data.settings?.aspectRatio) {
-        const [w, h] = node.data.settings.aspectRatio.split(":").map(Number);
-        const baseWidth = 240;
-        const aspectHeight = Math.round((baseWidth / (w || 1)) * (h || 1));
-        const clampedHeight = Math.min(400, Math.max(160, aspectHeight));
-        const adjustedWidth = Math.round((clampedHeight / (h || 1)) * (w || 1));
-        width = Math.min(320, Math.max(160, adjustedWidth));
-        height = Math.round((width / (w || 1)) * (h || 1)) + 50; // +50 for info section
-      }
-
-      return {
-        x: node.position.x,
-        y: node.position.y,
-        width,
-        height,
-      };
-    });
-
-    const minX = Math.min(...nodeBounds.map((b) => b.x)) - padding;
-    const minY = Math.min(...nodeBounds.map((b) => b.y)) - padding - titleHeight;
-    const maxX = Math.max(...nodeBounds.map((b) => b.x + b.width)) + padding;
-    const maxY = Math.max(...nodeBounds.map((b) => b.y + b.height)) + padding;
-
-    return {
-      x: minX,
-      y: minY,
-      width: maxX - minX,
-      height: maxY - minY,
-    };
-  }, [nodes]);
-
-  // Create a new group from selected nodes
-  const createGroup = React.useCallback((nodeIds: string[]) => {
-    if (nodeIds.length < 2) return;
-
-    // Validate that all node IDs exist
-    const validNodeIds = nodeIds.filter((id) => nodes.some((n) => n.id === id));
-    if (validNodeIds.length < 2) return;
-
-    const bounds = calculateGroupBounds(validNodeIds);
-    const newGroup: GroupData = {
-      id: `group-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-      title: "New Group",
-      color: "#3b82f6", // Default blue
-      bounds,
-      isCollapsed: false,
-      createdAt: Date.now(),
-      nodeIds: validNodeIds, // Store the node IDs in the group
-    };
-
-    setGroups((prev) => [...prev, newGroup]);
-    setSelectedGroupId(newGroup.id);
-    setSelectedNodeIds(new Set());
-    setHasUnsavedChanges(true);
-  }, [calculateGroupBounds, nodes]);
-
-  // Delete a group (keeps the nodes)
-  const deleteGroup = React.useCallback((groupId: string) => {
-    setGroups((prev) => prev.filter((g) => g.id !== groupId));
-    if (selectedGroupId === groupId) {
-      setSelectedGroupId(null);
-    }
-    setHasUnsavedChanges(true);
-  }, [selectedGroupId]);
-
-  // Update group properties
-  const updateGroup = React.useCallback((groupId: string, updates: Partial<GroupData>) => {
-    setGroups((prev) =>
-      prev.map((g) => (g.id === groupId ? { ...g, ...updates } : g))
-    );
-    setHasUnsavedChanges(true);
-  }, []);
-
-  // Move a group and all contained nodes
-  const moveGroup = React.useCallback((groupId: string, delta: { x: number; y: number }) => {
-    const group = groups.find((g) => g.id === groupId);
-    if (!group) return;
-
-    // Get nodes from stored membership (handle backwards compatibility)
-    const nodesInGroup = group.nodeIds || [];
-
-    // Update group bounds
-    setGroups((prev) =>
-      prev.map((g) =>
-        g.id === groupId
-          ? {
-              ...g,
-              bounds: {
-                ...g.bounds,
-                x: g.bounds.x + delta.x,
-                y: g.bounds.y + delta.y,
-              },
-            }
-          : g
-      )
-    );
-
-    // Move all nodes in the group (even if collapsed)
-    if (nodesInGroup.length > 0) {
-      setNodes((prev) =>
-        prev.map((node) =>
-          nodesInGroup.includes(node.id)
-            ? {
-                ...node,
-                position: {
-                  x: node.position.x + delta.x,
-                  y: node.position.y + delta.y,
-                },
-              }
-            : node
-        )
-      );
-    }
-
-    setHasUnsavedChanges(true);
-  }, [groups]);
-
-  // Toggle group collapse state
-  const toggleGroupCollapse = React.useCallback((groupId: string) => {
-    setGroups((prev) =>
-      prev.map((g) =>
-        g.id === groupId ? { ...g, isCollapsed: !g.isCollapsed } : g
-      )
-    );
-    setHasUnsavedChanges(true);
-  }, []);
-
-  // Select a group
-  const selectGroup = React.useCallback((groupId: string | null) => {
-    setSelectedGroupId(groupId);
-    if (groupId) {
-      setSelectedNodeIds(new Set());
-      setSelectedImage(null);
-    }
-  }, []);
-
-  // Toggle a node in the selection
-  const toggleNodeSelection = React.useCallback((nodeId: string) => {
-    setSelectedNodeIds((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(nodeId)) {
-        newSet.delete(nodeId);
-      } else {
-        newSet.add(nodeId);
-      }
-      return newSet;
-    });
-    setSelectedGroupId(null);
-  }, []);
-
-  // Select multiple nodes
-  const selectNodes = React.useCallback((nodeIds: string[]) => {
-    setSelectedNodeIds(new Set(nodeIds));
-    setSelectedGroupId(null);
-  }, []);
-
-  // Clear node selection
-  const clearNodeSelection = React.useCallback(() => {
-    setSelectedNodeIds(new Set());
-  }, []);
-
-  // Auto-layout nodes in a grid pattern
-  const autoLayoutNodes = React.useCallback(() => {
-    if (nodes.length === 0) return;
-
-    const COLS = 4;
-    const SPACING_X = 300;
-    const SPACING_Y = 380;
-    const OFFSET_X = 50;
-    const OFFSET_Y = 50;
-
-    // Sort nodes by creation time (using timestamp in data) for consistent ordering
-    const sortedNodes = [...nodes].sort((a, b) => {
-      const timeA = a.data.timestamp || 0;
-      const timeB = b.data.timestamp || 0;
-      return timeA - timeB;
-    });
-
-    // Calculate new positions in a grid
-    const updatedNodes = sortedNodes.map((node, index) => {
-      const row = Math.floor(index / COLS);
-      const col = index % COLS;
-      return {
-        ...node,
-        position: {
-          x: col * SPACING_X + OFFSET_X,
-          y: row * SPACING_Y + OFFSET_Y,
-        },
-      };
-    });
-
-    setNodes(updatedNodes);
-    setHasUnsavedChanges(true);
-  }, [nodes]);
-
-  // Auto-save canvas with debounce
-  const autoSaveCanvas = React.useCallback(async () => {
-    if (!currentCanvasId || !hasUnsavedChanges) return;
-
-    setIsSaving(true);
-    try {
-      const { updateCanvas } = await import("@/utils/supabase/canvases.server");
-      await updateCanvas(currentCanvasId, {
-        nodes,
-        edges,
-        groups,
-        viewport,
-      });
-      setLastSaved(new Date());
-      setHasUnsavedChanges(false);
-    } catch (error) {
-      console.error("Failed to auto-save canvas:", error);
-    } finally {
-      setIsSaving(false);
-    }
-  }, [currentCanvasId, hasUnsavedChanges, nodes, edges, groups, viewport]);
-
-  // Debounced auto-save effect
-  React.useEffect(() => {
-    if (hasUnsavedChanges && currentCanvasId) {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-      saveTimeoutRef.current = setTimeout(() => {
-        autoSaveCanvas();
-      }, 2000); // 2 second debounce
-    }
-    return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-    };
-  }, [hasUnsavedChanges, currentCanvasId, autoSaveCanvas]);
-
-  // Create a new canvas
-  const createNewCanvas = React.useCallback(async () => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
-
-    try {
-      const { createCanvas } = await import("@/utils/supabase/canvases.server");
-      const canvas = await createCanvas({
-        user_id: user.id,
-        name: `Canvas ${canvasList.length + 1}`,
-      });
-
-      if (canvas) {
-        setCanvasList((prev) => [canvas, ...prev]);
-        setCurrentCanvasId(canvas.id);
-        setNodes([]);
-        setEdges([]);
-        setGroups([]);
-        setSelectedGroupId(null);
-        setSelectedNodeIds(new Set());
-        setViewport({ x: 0, y: 0, zoom: 1 });
-        setHasUnsavedChanges(false);
-
-        // Clear processedGenerationIds for the new empty canvas
-        processedGenerationIds.current.clear();
-      }
-    } catch (error) {
-      console.error("Failed to create canvas:", error);
-    }
-  }, [canvasList.length]);
-
-  // Switch to a different canvas
-  const switchCanvas = React.useCallback(async (id: string) => {
-    // Save current canvas first if there are unsaved changes
-    if (currentCanvasId && hasUnsavedChanges) {
-      await autoSaveCanvas();
-    }
-
-    try {
-      const { getCanvas } = await import("@/utils/supabase/canvases.server");
-      const canvas = await getCanvas(id);
-
-      if (canvas) {
-        setCurrentCanvasId(canvas.id);
-        // Clean up any stale loading nodes from interrupted generations
-        setNodes(cleanupStaleLoadingNodes(canvas.nodes || []));
-        setEdges(canvas.edges || []);
-        // Migrate groups to ensure nodeIds exists (for backwards compatibility)
-        setGroups((canvas.groups || []).map(g => ({ ...g, nodeIds: g.nodeIds || [] })));
-        setSelectedGroupId(null);
-        setSelectedNodeIds(new Set());
-        setViewport(canvas.viewport || { x: 0, y: 0, zoom: 1 });
-        setHasUnsavedChanges(false);
-
-        // Clear and repopulate processedGenerationIds for the new canvas
-        processedGenerationIds.current.clear();
-        for (const node of (canvas.nodes || []) as Node<ImageNodeData>[]) {
-          if (node.data?.generationId) {
-            processedGenerationIds.current.add(node.data.generationId);
-          }
-        }
-      }
-    } catch (error) {
-      console.error("Failed to switch canvas:", error);
-    }
-  }, [currentCanvasId, hasUnsavedChanges, autoSaveCanvas]);
-
-  // Rename a canvas
-  const renameCanvas = React.useCallback(async (id: string, name: string) => {
-    try {
-      const { updateCanvas } = await import("@/utils/supabase/canvases.server");
-      await updateCanvas(id, { name });
-      setCanvasList((prev) =>
-        prev.map((c) => (c.id === id ? { ...c, name } : c))
-      );
-    } catch (error) {
-      console.error("Failed to rename canvas:", error);
-    }
-  }, []);
-
-  // Delete a canvas
-  const deleteCanvasById = React.useCallback(async (id: string) => {
-    try {
-      const { deleteCanvas } = await import("@/utils/supabase/canvases.server");
-      await deleteCanvas(id);
-      setCanvasList((prev) => prev.filter((c) => c.id !== id));
-
-      // If deleting current canvas, switch to another or create new
-      if (currentCanvasId === id) {
-        const remaining = canvasList.filter((c) => c.id !== id);
-        if (remaining.length > 0) {
-          await switchCanvas(remaining[0].id);
-        } else {
-          await createNewCanvas();
-        }
-      }
-    } catch (error) {
-      console.error("Failed to delete canvas:", error);
-    }
-  }, [currentCanvasId, canvasList, switchCanvas, createNewCanvas]);
-
-  // Load canvases and initialize on mount (after userId is known)
-  React.useEffect(() => {
-    // Wait for user ID to be loaded before loading canvases
-    if (!userIdLoadedRef.current) return;
-
-    async function loadCanvases() {
-      try {
-        const { getUserCanvases, getLatestCanvas, getCanvas, createCanvas } = await import(
-          "@/utils/supabase/canvases.server"
-        );
-
-        const canvases = await getUserCanvases();
-        setCanvasList(canvases);
-
-        // Check if we have a persisted canvas ID to restore
-        const persisted = loadPersistedState(currentUserId);
-        const persistedCanvasId = persisted?.currentCanvasId;
-
-        if (canvases.length > 0) {
-          let canvasToLoad = null;
-
-          // Try to load the persisted canvas if it exists
-          if (persistedCanvasId) {
-            const matchingCanvas = canvases.find(c => c.id === persistedCanvasId);
-            if (matchingCanvas) {
-              canvasToLoad = await getCanvas(persistedCanvasId);
-            }
-          }
-
-          // Fall back to most recent canvas
-          if (!canvasToLoad) {
-            canvasToLoad = await getLatestCanvas();
-          }
-
-          if (canvasToLoad) {
-            setCurrentCanvasId(canvasToLoad.id);
-            // Clean up any stale loading nodes from interrupted generations
-            setNodes(cleanupStaleLoadingNodes(canvasToLoad.nodes || []));
-            setEdges(canvasToLoad.edges || []);
-            // Migrate groups to ensure nodeIds exists (for backwards compatibility)
-            setGroups((canvasToLoad.groups || []).map(g => ({ ...g, nodeIds: g.nodeIds || [] })));
-            setViewport(canvasToLoad.viewport || { x: 0, y: 0, zoom: 1 });
-
-            // Mark all existing nodes as processed to prevent history-to-nodes duplication
-            for (const node of (canvasToLoad.nodes || []) as Node<ImageNodeData>[]) {
-              if (node.data?.generationId) {
-                processedGenerationIds.current.add(node.data.generationId);
-              }
-            }
-
-            // Check for pending nodes from localStorage (unsaved before refresh)
-            const pendingNodesStr = sessionStorage.getItem("pending-nodes");
-            const pendingEdgesStr = sessionStorage.getItem("pending-edges");
-
-            if (pendingNodesStr && persistedCanvasId === canvasToLoad.id) {
-              try {
-                const pendingNodes = JSON.parse(pendingNodesStr) as Node<ImageNodeData>[];
-                const pendingEdges = pendingEdgesStr ? JSON.parse(pendingEdgesStr) as Edge[] : [];
-
-                // Merge pending nodes that don't exist in loaded canvas
-                const existingNodeIds = new Set((canvasToLoad.nodes || []).map((n: Node) => n.id));
-                const newNodes = pendingNodes.filter(n => !existingNodeIds.has(n.id));
-
-                if (newNodes.length > 0) {
-                  // Clean up any stale loading nodes from pending nodes as well
-                  setNodes(prev => [...prev, ...cleanupStaleLoadingNodes(newNodes)]);
-                  setEdges(prev => [...prev, ...pendingEdges.filter(e =>
-                    !prev.some(existing => existing.id === e.id)
-                  )]);
-                  setHasUnsavedChanges(true);
-
-                  // Also mark pending nodes as processed
-                  for (const node of newNodes) {
-                    if (node.data?.generationId) {
-                      processedGenerationIds.current.add(node.data.generationId);
-                    }
-                  }
-                }
-              } catch {
-                // Invalid JSON, ignore
-              }
-
-              // Clear pending data
-              sessionStorage.removeItem("pending-nodes");
-              sessionStorage.removeItem("pending-edges");
-            }
-          }
-        } else {
-          // Create a new canvas if none exist
-          const supabase = createClient();
-          const { data: { user } } = await supabase.auth.getUser();
-          if (user) {
-            const newCanvas = await createCanvas({
-              user_id: user.id,
-              name: "Canvas 1",
-            });
-            if (newCanvas) {
-              setCanvasList([newCanvas]);
-              setCurrentCanvasId(newCanvas.id);
-            }
-          }
-        }
-        // Mark canvas loading as complete so history effect can proceed
-        canvasLoadedRef.current = true;
-      } catch (error) {
-        console.error("Failed to load canvases:", error);
-        // Still mark as loaded on error so we don't block forever
-        canvasLoadedRef.current = true;
-      }
-    }
-    loadCanvases();
-  }, [currentUserId]);
-
-  // Stable ref for addImageNode to avoid triggering effect re-runs
-  const addImageNodeRef = React.useRef(addImageNode);
-  React.useEffect(() => {
-    addImageNodeRef.current = addImageNode;
-  }, [addImageNode]);
-
-  // Convert history to nodes when history changes (for new generations only)
-  const prevHistoryLength = React.useRef(history.length);
-  React.useEffect(() => {
-    // Wait for canvas to load first - initial history items come from the loaded canvas
-    // This effect should only handle NEW generations that happen during the session
-    if (!canvasLoadedRef.current) {
-      prevHistoryLength.current = history.length;
-      return;
-    }
-
-    // Skip the first history batch after canvas loads - these are pre-existing items,
-    // not new generations. Without this, a race condition where canvas loads before
-    // history causes all history items to be re-added as duplicate nodes.
-    if (!initialHistoryProcessedRef.current) {
-      initialHistoryProcessedRef.current = true;
-      prevHistoryLength.current = history.length;
-      return;
-    }
-
-    // Only add nodes for new history items (generated during this session)
-    if (history.length > prevHistoryLength.current) {
-      const newCount = history.length - prevHistoryLength.current;
-      const newItems = history.slice(0, newCount);
-      for (const item of newItems) {
-        if (!processedGenerationIds.current.has(item.id) && item.url) {
-          processedGenerationIds.current.add(item.id);
-          addImageNodeRef.current(item);
-        }
-      }
-    }
-    prevHistoryLength.current = history.length;
-  }, [history]);
-
-  // Add batch-completed images to canvas when they arrive
-  React.useEffect(() => {
-    if (batchCompletedImages.length === 0) return;
-
-    // Add each completed image to canvas
-    for (const img of batchCompletedImages) {
-      // Check if this item has already been processed (prevents duplicates)
-      if (!processedGenerationIds.current.has(img.id) && img.url) {
-        processedGenerationIds.current.add(img.id);
-        addImageNodeRef.current(img);
-      }
-    }
-
-    // Clear the batch completed images after processing
-    setBatchCompletedImages([]);
-  }, [batchCompletedImages]); // Removed nodes and addImageNode from deps
 
   // Load persisted state from localStorage on mount (after userId is known)
   React.useEffect(() => {
-    // Wait for user ID to be loaded before loading persisted state
     if (!userIdLoadedRef.current) return;
     if (hasLoadedPersistedState.current) return;
     hasLoadedPersistedState.current = true;
@@ -2102,54 +1076,28 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
     const persisted = loadPersistedState(currentUserId);
     if (persisted) {
-      // Restore prompt and settings
       if (persisted.prompt) setPrompt(persisted.prompt);
       if (persisted.settings) setSettings(persisted.settings);
       if (persisted.selectedApiId) setSelectedApiId(persisted.selectedApiId);
       if (persisted.viewMode) setViewMode(persisted.viewMode);
       if (persisted.historyPanelOpen !== undefined) setHistoryPanelOpen(persisted.historyPanelOpen);
-
-      // Note: nodes/edges/viewport are loaded from the database via loadCanvases
-      // but we keep the persisted currentCanvasId to ensure we load the right canvas
-      if (persisted.currentCanvasId) {
-        // This will be used by loadCanvases if it matches
-        setCurrentCanvasId(persisted.currentCanvasId);
-      }
-
-      // If there are unsaved nodes in localStorage (user closed before auto-save)
-      // we'll merge them after canvas loads
-      if (persisted.nodes && persisted.nodes.length > 0) {
-        // Store for potential merge after canvas load
-        sessionStorage.setItem("pending-nodes", JSON.stringify(persisted.nodes));
-        sessionStorage.setItem("pending-edges", JSON.stringify(persisted.edges || []));
-      }
     }
-
-    // Saved references are now loaded from database in loadInitialData()
   }, [currentUserId]);
 
   // Persist state to localStorage on changes (debounced)
   React.useEffect(() => {
-    // Skip during initial load or if user ID not yet loaded
     if (!hasLoadedPersistedState.current) return;
     if (!userIdLoadedRef.current) return;
 
-    // Clear existing timeout
     if (persistTimeoutRef.current) {
       clearTimeout(persistTimeoutRef.current);
     }
 
-    // Debounce the save (1 second)
     persistTimeoutRef.current = setTimeout(() => {
       const stateToSave: PersistedState = {
         prompt,
         settings,
-        currentCanvasId,
         selectedApiId,
-        nodes,
-        edges,
-        groups,
-        viewport,
         viewMode,
         historyPanelOpen,
         timestamp: Date.now(),
@@ -2162,7 +1110,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         clearTimeout(persistTimeoutRef.current);
       }
     };
-  }, [prompt, settings, currentCanvasId, selectedApiId, nodes, edges, groups, viewport, viewMode, historyPanelOpen, currentUserId]);
+  }, [prompt, settings, selectedApiId, viewMode, historyPanelOpen, currentUserId]);
 
   // Save state immediately before page unload
   React.useEffect(() => {
@@ -2171,12 +1119,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       const stateToSave: PersistedState = {
         prompt,
         settings,
-        currentCanvasId,
         selectedApiId,
-        nodes,
-        edges,
-        groups,
-        viewport,
         viewMode,
         historyPanelOpen,
         timestamp: Date.now(),
@@ -2186,13 +1129,17 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [prompt, settings, currentCanvasId, selectedApiId, nodes, edges, groups, viewport, viewMode, historyPanelOpen, currentUserId]);
+  }, [prompt, settings, selectedApiId, viewMode, historyPanelOpen, currentUserId]);
 
   // Compute whether there are available slots for new generations
-  // Maximum 4 concurrent generations allowed
   const hasAvailableSlots = React.useMemo(() => {
     return true; // No global concurrency limit, only per-call limit of 4 images
   }, []);
+
+  // Count active (pending) generations from history
+  const activeGenerations = React.useMemo(() => {
+    return history.filter(img => img.status === "pending").length;
+  }, [history]);
 
   // Gallery filter actions
   const setSearchQuery = React.useCallback((query: string) => {
@@ -2357,9 +1304,6 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
       // Remove from local history
       setHistory(prev => prev.filter(img => !ids.includes(img.id)));
-
-      // Remove from nodes if they exist
-      setNodes(prev => prev.filter(node => !ids.includes(node.data.generationId)));
 
       // Clear selection
       setGalleryFilterState(prev => ({
@@ -2709,49 +1653,6 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     }
   }, [imageOrganization]);
 
-  // ============================================
-  // CANVAS EXPORT
-  // ============================================
-
-  const setCanvasRef = React.useCallback((ref: React.RefObject<HTMLDivElement | null> | null) => {
-    canvasRefHolder.current = ref;
-  }, []);
-
-  const exportCanvasAsPng = React.useCallback(async (filename?: string) => {
-    const canvasElement = canvasRefHolder.current?.current;
-    if (!canvasElement) {
-      console.error("Canvas element not available for export");
-      return;
-    }
-
-    try {
-      const { exportCanvasAsPng: exportPng } = await import("@/utils/canvas-export");
-      const canvas = canvasList.find(c => c.id === currentCanvasId);
-      const exportFilename = filename || canvas?.name || "canvas";
-      await exportPng(canvasElement, exportFilename);
-    } catch (error) {
-      console.error("Failed to export canvas as PNG:", error);
-      throw error;
-    }
-  }, [canvasList, currentCanvasId]);
-
-  const exportCanvasAsJpeg = React.useCallback(async (filename?: string) => {
-    const canvasElement = canvasRefHolder.current?.current;
-    if (!canvasElement) {
-      console.error("Canvas element not available for export");
-      return;
-    }
-
-    try {
-      const { exportCanvasAsJpeg: exportJpeg } = await import("@/utils/canvas-export");
-      const canvas = canvasList.find(c => c.id === currentCanvasId);
-      const exportFilename = filename || canvas?.name || "canvas";
-      await exportJpeg(canvasElement, exportFilename);
-    } catch (error) {
-      console.error("Failed to export canvas as JPEG:", error);
-      throw error;
-    }
-  }, [canvasList, currentCanvasId]);
 
   // Load collections and tags on mount
   React.useEffect(() => {
@@ -2804,38 +1705,6 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     selectedImage,
     selectImage,
     clearHistory,
-    // React Flow
-    nodes,
-    edges,
-    onNodesChange,
-    onEdgesChange,
-    onConnect,
-    addImageNode,
-    deleteNode,
-    selectImageByNodeId,
-    // Node groups
-    groups,
-    selectedGroupId,
-    selectedNodeIds,
-    createGroup,
-    deleteGroup,
-    updateGroup,
-    moveGroup,
-    toggleGroupCollapse,
-    selectGroup,
-    toggleNodeSelection,
-    selectNodes,
-    clearNodeSelection,
-    getNodesInGroup,
-    // Canvas management
-    currentCanvasId,
-    canvasList,
-    isSaving,
-    lastSaved,
-    createNewCanvas,
-    switchCanvas,
-    renameCanvas,
-    deleteCanvas: deleteCanvasById,
     // UI state
     viewMode,
     setViewMode,
@@ -2845,30 +1714,16 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     toggleInputVisibility,
     activeTab,
     setActiveTab,
-    zoom,
-    setZoom,
-    onViewportChange,
-    // Canvas layout
-    snapToGrid,
-    setSnapToGrid,
-    autoLayoutNodes,
-    gridSize: GRID_SIZE,
-    // Interaction mode
     interactionMode,
     setInteractionMode,
-    canUndo,
-    canRedo,
-    undo,
-    redo,
+    // Generation
     isGenerating,
     thinkingSteps,
     generate,
     cancelGeneration,
     pendingBatchJobs,
-    activeGenerations: activeGenerations.size,
     hasAvailableSlots,
-    retryGeneration,
-    updateNodeData,
+    activeGenerations,
     buildFinalPrompt,
     // Gallery filters
     galleryFilterState,
@@ -2903,10 +1758,6 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     // Image organization
     imageOrganization,
     loadImageOrganization,
-    // Canvas export
-    setCanvasRef,
-    exportCanvasAsPng,
-    exportCanvasAsJpeg,
     // Admin settings
     adminSettings,
     isMaintenanceMode,
@@ -2918,21 +1769,17 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   }), [
     availableApis, selectedApiId, isLoadingApis, pendingBatchJobs,
     prompt, isPromptExpanded, settings, referenceImages, history, selectedImage,
-    nodes, edges, onNodesChange, onEdgesChange, onConnect, addImageNode, deleteNode, selectImageByNodeId,
-    groups, selectedGroupId, selectedNodeIds, createGroup, deleteGroup, updateGroup, moveGroup, toggleGroupCollapse, selectGroup, toggleNodeSelection, selectNodes, clearNodeSelection, getNodesInGroup,
-    currentCanvasId, canvasList, isSaving, lastSaved, createNewCanvas, switchCanvas, renameCanvas, deleteCanvasById,
-    viewMode, historyPanelOpen, isInputVisible, activeTab, zoom, snapToGrid, interactionMode, autoLayoutNodes, canUndo, canRedo,
-    isGenerating, thinkingSteps, activeGenerations, hasAvailableSlots, retryGeneration, updateNodeData,
+    viewMode, historyPanelOpen, isInputVisible, activeTab, interactionMode,
+    isGenerating, thinkingSteps,
     updateSettings, addReferenceImages, addReferenceImageFromUrl, removeReferenceImage, clearReferenceImages,
     savedReferences, loadSavedReferences, removeSavedReference, renameSavedReference, addSavedReferenceToActive,
-    selectImage, clearHistory, toggleHistoryPanel, toggleInputVisibility, undo, redo, generate, cancelGeneration,
-    buildFinalPrompt,
+    selectImage, clearHistory, toggleHistoryPanel, toggleInputVisibility, generate, cancelGeneration,
+    hasAvailableSlots, activeGenerations, buildFinalPrompt,
     galleryFilterState, setSearchQuery, setSortBy, setGalleryFilters, clearGalleryFilters,
     toggleBulkSelection, toggleImageSelection, selectAllImages, deselectAllImages, getFilteredHistory, bulkDeleteImages,
     toggleFavorite, collections, createCollectionFn, updateCollectionFn, deleteCollectionFn, addToCollectionFn, removeFromCollectionFn, getImageCollections,
     tags, createTagFn, deleteTagFn, addTagToImageFn, removeTagFromImageFn, createAndAddTagFn, getImageTags,
     imageOrganization, loadImageOrganization,
-    setCanvasRef, exportCanvasAsPng, exportCanvasAsJpeg,
     adminSettings, isMaintenanceMode, allowedImageSizes, allowedAspectRatios, maxOutputCount, allowFastMode, allowRelaxedMode,
   ]);
 

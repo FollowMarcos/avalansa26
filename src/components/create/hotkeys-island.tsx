@@ -18,40 +18,19 @@ interface HotkeySection {
 
 const HOTKEY_SECTIONS: HotkeySection[] = [
   {
-    title: "Tools",
+    title: "Gallery",
     items: [
-      { keys: ["V"], description: "Select tool" },
-      { keys: ["H"], description: "Hand tool" },
-      { keys: ["Space"], description: "Temporary pan (hold)" },
+      { keys: ["Ctrl", "Enter"], description: "Generate" },
+      { keys: ["Esc"], description: "Close modal" },
+      { keys: ["←"], description: "Previous image" },
+      { keys: ["→"], description: "Next image" },
     ],
   },
   {
-    title: "Zoom",
+    title: "General",
     items: [
-      { keys: ["Ctrl", "+"], description: "Zoom in" },
-      { keys: ["Ctrl", "-"], description: "Zoom out" },
-      { keys: ["Ctrl", "0"], description: "Zoom to 100%" },
-      { keys: ["Ctrl", "1"], description: "Fit all" },
-      { keys: ["Ctrl", "2"], description: "Zoom to selection" },
-      { keys: ["Ctrl", "Scroll"], description: "Zoom" },
-    ],
-  },
-  {
-    title: "Navigation",
-    items: [
-      { keys: ["↑ ↓ ← →"], description: "Pan canvas" },
-      { keys: ["Shift", "Arrows"], description: "Pan faster" },
-      { keys: ["Scroll"], description: "Vertical pan" },
-      { keys: ["Shift", "Ctrl", "Scroll"], description: "Horizontal pan" },
-    ],
-  },
-  {
-    title: "Groups",
-    items: [
-      { keys: ["Ctrl", "G"], description: "Create group" },
-      { keys: ["Delete"], description: "Delete group" },
-      { keys: ["Double-click"], description: "Edit title" },
-      { keys: ["F2"], description: "Rename group" },
+      { keys: ["Ctrl", "A"], description: "Select all" },
+      { keys: ["Ctrl", "D"], description: "Deselect all" },
     ],
   },
 ];

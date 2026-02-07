@@ -72,7 +72,6 @@ export function ImageDetailModal({
     addReferenceImageFromUrl,
     reuseImageSetup,
     bulkDeleteImages,
-    setViewMode,
     toggleFavorite,
   } = useCreate();
 
@@ -153,14 +152,12 @@ export function ImageDetailModal({
   const handleUseAsReference = async () => {
     await addReferenceImageFromUrl(image.url);
     toast.success("Added as reference");
-    setViewMode("canvas");
     onClose();
   };
 
   const handleReuseSetup = async () => {
     await reuseImageSetup(image);
     toast.success("Setup restored");
-    setViewMode("canvas");
     onClose();
   };
 

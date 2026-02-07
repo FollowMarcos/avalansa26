@@ -4,10 +4,11 @@ import * as React from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useCreate, type GeneratedImage } from "./create-context";
-import { Download, Copy, X, ImagePlus, RotateCw, Check, Heart, Link2 } from "lucide-react";
+import { Download, Copy, ImagePlus, RotateCw, Check, Heart, Link2 } from "lucide-react";
 import { toast } from "sonner";
-import { motion, AnimatePresence, useReducedMotion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
+import { Loader } from "@/components/ui/loader";
 import { GalleryToolbar } from "./gallery-toolbar";
 import { BulkActionBar } from "./bulk-action-bar";
 import { ImageDetailModal } from "./image-detail-modal";
@@ -15,8 +16,6 @@ import { ImageDetailModal } from "./image-detail-modal";
 export function GenerationGallery() {
   const prefersReducedMotion = useReducedMotion();
   const {
-    viewMode,
-    setViewMode,
     selectedImage,
     addReferenceImageFromUrl,
     reuseImageSetup,
@@ -24,12 +23,15 @@ export function GenerationGallery() {
     toggleImageSelection,
     getFilteredHistory,
     toggleFavorite,
+    isGenerating,
+    history,
   } = useCreate();
 
   const [detailImage, setDetailImage] = React.useState<GeneratedImage | null>(null);
   const filteredHistory = getFilteredHistory();
 
-  if (viewMode !== "gallery") return null;
+  // Count pending images for loading state
+  const pendingCount = history.filter(img => img.status === "pending").length;
 
   const handleDownload = async (url: string, id: string) => {
     try {
@@ -81,7 +83,6 @@ export function GenerationGallery() {
     e.stopPropagation();
     await reuseImageSetup(image);
     toast.success("Setup restored");
-    setViewMode("canvas");
   };
 
   const handleImageClick = (image: GeneratedImage) => {
@@ -126,58 +127,42 @@ export function GenerationGallery() {
   const isSelected = (id: string) => galleryFilterState.bulkSelection.selectedIds.has(id);
 
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
-        className="absolute inset-0 z-40 bg-background flex flex-col"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
-          <h2 className="text-lg font-mono font-medium text-balance">Gallery</h2>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setViewMode("canvas")}
-            aria-label="Close gallery"
-            className="size-8 rounded-lg"
+    <div className="flex-1 flex flex-col bg-background">
+      {/* Toolbar */}
+      <div className="px-6 py-3 border-b border-border shrink-0">
+        <GalleryToolbar />
+      </div>
+
+      {/* Masonry Gallery Grid */}
+      <div className="flex-1 overflow-auto px-6 py-4">
+        {filteredHistory.length === 0 && pendingCount === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full text-center p-8">
+            <p className="text-muted-foreground font-mono">
+              {galleryFilterState.searchQuery ||
+               galleryFilterState.filters.aspectRatio.length > 0 ||
+               galleryFilterState.filters.imageSize.length > 0
+                ? "No images match your filters"
+                : "No generations yet"}
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {galleryFilterState.searchQuery ||
+               galleryFilterState.filters.aspectRatio.length > 0 ||
+               galleryFilterState.filters.imageSize.length > 0
+                ? "Try adjusting your search or filters"
+                : "Enter a prompt below to start creating"}
+            </p>
+          </div>
+        ) : (
+          <div
+            className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-4"
+            style={{ columnFill: "balance" }}
           >
-            <X className="size-4" strokeWidth={1.5} aria-hidden="true" />
-          </Button>
-        </div>
-
-        {/* Toolbar */}
-        <div className="px-6 py-4 border-b border-border shrink-0">
-          <GalleryToolbar />
-        </div>
-
-        {/* Masonry Gallery Grid */}
-        <div className="flex-1 overflow-auto px-6 py-4">
-          {filteredHistory.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-center p-8">
-              <p className="text-muted-foreground font-mono">
-                {galleryFilterState.searchQuery ||
-                 galleryFilterState.filters.aspectRatio.length > 0 ||
-                 galleryFilterState.filters.imageSize.length > 0
-                  ? "No images match your filters"
-                  : "No generations yet"}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">
-                {galleryFilterState.searchQuery ||
-                 galleryFilterState.filters.aspectRatio.length > 0 ||
-                 galleryFilterState.filters.imageSize.length > 0
-                  ? "Try adjusting your search or filters"
-                  : "Start creating to see your images here"}
-              </p>
-            </div>
-          ) : (
-            <div
-              className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-4"
-              style={{ columnFill: "balance" }}
-            >
-              {filteredHistory.map((image) => (
+            {filteredHistory.map((image) =>
+              image.status === "pending" ? (
+                <PendingCard key={image.id} image={image} />
+              ) : image.status === "failed" ? (
+                <FailedCard key={image.id} image={image} />
+              ) : (
                 <GalleryItem
                   key={image.id}
                   image={image}
@@ -194,25 +179,25 @@ export function GenerationGallery() {
                   onToggleFavorite={handleToggleFavorite}
                   formatTime={formatTime}
                 />
-              ))}
-            </div>
-          )}
-        </div>
+              )
+            )}
+          </div>
+        )}
+      </div>
 
-        {/* Bulk Action Bar */}
-        <BulkActionBar />
+      {/* Bulk Action Bar */}
+      <BulkActionBar />
 
-        {/* Image Detail Modal */}
-        <ImageDetailModal
-          image={detailImage}
-          isOpen={!!detailImage}
-          onClose={() => setDetailImage(null)}
-          onNavigate={handleDetailNavigate}
-          hasPrev={detailImageIndex > 0}
-          hasNext={detailImageIndex < filteredHistory.length - 1}
-        />
-      </motion.div>
-    </AnimatePresence>
+      {/* Image Detail Modal */}
+      <ImageDetailModal
+        image={detailImage}
+        isOpen={!!detailImage}
+        onClose={() => setDetailImage(null)}
+        onNavigate={handleDetailNavigate}
+        hasPrev={detailImageIndex > 0}
+        hasNext={detailImageIndex < filteredHistory.length - 1}
+      />
+    </div>
   );
 }
 
@@ -415,3 +400,42 @@ const GalleryItem = React.memo(function GalleryItem({
     </motion.article>
   );
 });
+
+/** Placeholder card shown while an image is being generated */
+function PendingCard({ image }: { image: GeneratedImage }) {
+  return (
+    <div
+      className="relative rounded-lg overflow-hidden bg-muted border border-border mb-4 break-inside-avoid"
+      role="status"
+      aria-label="Generating image"
+    >
+      <div className="aspect-square flex flex-col items-center justify-center gap-3 p-4">
+        <Loader size="sm" />
+        <p className="text-xs text-muted-foreground font-mono text-center line-clamp-2">
+          {image.prompt || "Generating..."}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** Card shown when image generation failed */
+function FailedCard({ image }: { image: GeneratedImage }) {
+  return (
+    <div
+      className="relative rounded-lg overflow-hidden bg-destructive/5 border border-destructive/20 mb-4 break-inside-avoid"
+      role="status"
+      aria-label="Generation failed"
+    >
+      <div className="aspect-square flex flex-col items-center justify-center gap-2 p-4">
+        <div className="size-8 rounded-full bg-destructive/10 flex items-center justify-center">
+          <span className="text-destructive text-sm" aria-hidden="true">!</span>
+        </div>
+        <p className="text-xs text-destructive font-mono text-center">Failed</p>
+        <p className="text-[10px] text-muted-foreground text-center line-clamp-2">
+          {image.prompt}
+        </p>
+      </div>
+    </div>
+  );
+}
