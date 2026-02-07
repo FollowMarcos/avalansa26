@@ -1001,6 +1001,77 @@ export function useWorkflow({ apiId }: UseWorkflowOptions) {
     return () => window.removeEventListener('keydown', handler);
   }, [isExecuting, runWorkflow, stopWorkflow, saveWorkflow, selectedGroupId, createGroup, deleteGroup]);
 
+  // ---------------------------------------------------------------------------
+  // Recompose single node (re-execute one node using existing upstream outputs)
+  // ---------------------------------------------------------------------------
+
+  React.useEffect(() => {
+    const handler = async (e: Event) => {
+      const { nodeId } = (e as CustomEvent<{ nodeId: string }>).detail;
+      if (!nodeId || isExecuting) return;
+
+      const node = nodes.find((n) => n.id === nodeId);
+      if (!node) return;
+
+      const entry = getNodeEntry(node.data.definitionType);
+      if (!entry) return;
+
+      // Resolve inputs from upstream nodes' existing outputValues
+      const nodeInputs: Record<string, unknown> = {};
+      for (const edge of edges) {
+        if (edge.target !== nodeId) continue;
+        const sourceNode = nodes.find((n) => n.id === edge.source);
+        const sourceOutputs = sourceNode?.data?.outputValues as Record<string, unknown> | undefined;
+        if (sourceOutputs) {
+          const sourceSocketId = edge.sourceHandle?.replace('out-', '');
+          const targetSocketId = edge.targetHandle?.replace('in-', '');
+          if (sourceSocketId && targetSocketId) {
+            nodeInputs[targetSocketId] = sourceOutputs[sourceSocketId];
+          }
+        }
+      }
+
+      // Mark as running
+      setNodes((nds) =>
+        nds.map((n) =>
+          n.id === nodeId
+            ? { ...n, data: { ...n.data, status: 'running' as const, error: undefined } }
+            : n,
+        ),
+      );
+
+      try {
+        const ctx: ExecutionContext = {
+          apiId,
+          signal: new AbortController().signal,
+          onStatusUpdate: () => {},
+        };
+        const outputs = await entry.executor(nodeInputs, node.data.config, ctx);
+        setNodes((nds) =>
+          nds.map((n) =>
+            n.id === nodeId
+              ? { ...n, data: { ...n.data, status: 'success' as const, outputValues: outputs } }
+              : n,
+          ),
+        );
+        toast.success('Recomposed');
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Recompose failed';
+        setNodes((nds) =>
+          nds.map((n) =>
+            n.id === nodeId
+              ? { ...n, data: { ...n.data, status: 'error' as const, error: message } }
+              : n,
+          ),
+        );
+        toast.error(message);
+      }
+    };
+
+    window.addEventListener('workflow-recompose-node', handler);
+    return () => window.removeEventListener('workflow-recompose-node', handler);
+  }, [nodes, edges, apiId, isExecuting, setNodes]);
+
   return {
     // React Flow state
     nodes,
