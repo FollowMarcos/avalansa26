@@ -32,7 +32,9 @@
       "Bash(del \"src\\\\utils\\\\supabase\\\\sessions.server.ts\")",
       "Bash(del \"supabase\\\\migrations\\\\20260201000000_create_sessions.sql\")",
       "Bash(npx next build:*)",
-      "Bash(npx lucide-react:*)"
+      "Bash(npx lucide-react:*)",
+      "Bash(npx supabase migration list:*)",
+      "Bash(npx supabase status:*)"
     ]
   }
 }

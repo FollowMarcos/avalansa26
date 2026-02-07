@@ -12,7 +12,7 @@ import {
   ContextMenuShortcut,
 } from "@/components/ui/context-menu";
 import { GROUP_COLORS } from "./groups/group-utils";
-import { Group, Ungroup, Palette, Trash2, Edit3 } from "lucide-react";
+import { Group, Ungroup, Palette, Trash2, Edit3, Copy } from "lucide-react";
 import type { GroupData } from "@/types/canvas";
 
 interface CanvasContextMenuProps {
@@ -23,6 +23,7 @@ interface CanvasContextMenuProps {
   onCreateGroup: (nodeIds: string[]) => void;
   onDeleteGroup: (groupId: string) => void;
   onUpdateGroup: (groupId: string, updates: Partial<GroupData>) => void;
+  onDuplicateGroup?: (groupId: string) => void;
   onClearSelection: () => void;
 }
 
@@ -34,6 +35,7 @@ export function CanvasContextMenu({
   onCreateGroup,
   onDeleteGroup,
   onUpdateGroup,
+  onDuplicateGroup,
   onClearSelection,
 }: CanvasContextMenuProps) {
   const [isRenaming, setIsRenaming] = React.useState(false);
@@ -49,6 +51,12 @@ export function CanvasContextMenu({
   const handleDeleteGroup = () => {
     if (selectedGroupId) {
       onDeleteGroup(selectedGroupId);
+    }
+  };
+
+  const handleDuplicateGroup = () => {
+    if (selectedGroupId && onDuplicateGroup) {
+      onDuplicateGroup(selectedGroupId);
     }
   };
 
@@ -145,6 +153,13 @@ export function CanvasContextMenu({
                 ))}
               </ContextMenuSubContent>
             </ContextMenuSub>
+
+            {onDuplicateGroup && (
+              <ContextMenuItem onClick={handleDuplicateGroup}>
+                <Copy className="mr-2 size-4" />
+                Duplicate Group
+              </ContextMenuItem>
+            )}
 
             <ContextMenuSeparator />
 

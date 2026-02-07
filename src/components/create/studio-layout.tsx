@@ -24,6 +24,7 @@ import { useWorkflow } from "./workflow/use-workflow";
 import { WorkflowCanvas } from "./workflow/workflow-canvas";
 import { NodePalette } from "./workflow/node-palette";
 import { WorkflowToolbar } from "./workflow/workflow-toolbar";
+import { WorkflowList } from "./workflow/workflow-list";
 
 export function StudioLayout() {
   const prefersReducedMotion = useReducedMotion();
@@ -134,12 +135,10 @@ export function StudioLayout() {
               <WorkflowToolbar
                 isExecuting={workflow.isExecuting}
                 executionProgress={workflow.executionProgress}
-                savedWorkflows={workflow.savedWorkflows}
                 workflowName={workflow.workflowName}
                 onRun={workflow.runWorkflow}
                 onStop={workflow.stopWorkflow}
                 onSave={workflow.saveWorkflow}
-                onLoad={workflow.loadWorkflow}
                 onExport={workflow.exportWorkflowJSON}
                 onImport={workflow.importWorkflowJSON}
                 onNameChange={workflow.setWorkflowName}
@@ -148,6 +147,19 @@ export function StudioLayout() {
 
             {/* Floating Canvas List (left side) — hidden in workflow mode */}
             {viewMode !== "workflow" && <CanvasList />}
+
+            {/* Floating Workflow List (left side) — only in workflow mode */}
+            {viewMode === "workflow" && (
+              <WorkflowList
+                savedWorkflows={workflow.savedWorkflows}
+                currentWorkflowId={workflow.currentWorkflowId}
+                workflowName={workflow.workflowName}
+                onCreateNew={workflow.createNewWorkflow}
+                onSwitch={workflow.switchWorkflow}
+                onRename={workflow.renameWorkflow}
+                onDelete={workflow.deleteWorkflow}
+              />
+            )}
 
             {/* Floating Prompt Vault Island (top left, below canvas list) */}
             <PromptVaultIsland

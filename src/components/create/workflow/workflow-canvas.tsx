@@ -270,6 +270,7 @@ export function WorkflowCanvas({
       onCreateGroup={() => {}}
       onDeleteGroup={onDeleteGroup ?? (() => {})}
       onUpdateGroup={onUpdateGroup}
+      onDuplicateGroup={onDuplicateGroup}
       onClearSelection={() => {
         setSelectedNodeIds(new Set());
         onSelectGroup(null);

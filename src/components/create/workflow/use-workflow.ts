@@ -73,7 +73,7 @@ interface UseWorkflowOptions {
 
 export function useWorkflow({ apiId }: UseWorkflowOptions) {
   // React Flow state
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node<WorkflowNodeData>>([]);
+  const [nodes, setNodes, rawOnNodesChange] = useNodesState<Node<WorkflowNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge<WorkflowEdgeData>>([]);
 
   // Workflow metadata
@@ -89,6 +89,12 @@ export function useWorkflow({ apiId }: UseWorkflowOptions) {
 
   // Saved workflows
   const [savedWorkflows, setSavedWorkflows] = React.useState<Workflow[]>([]);
+
+  // Ref tracking current groups for use in onNodesChange (avoids stale closures)
+  const groupsRef = React.useRef(groups);
+  React.useEffect(() => {
+    groupsRef.current = groups;
+  }, [groups]);
 
   // Persistence refs
   const persistTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -151,6 +157,124 @@ export function useWorkflow({ apiId }: UseWorkflowOptions) {
     window.addEventListener('workflow-node-config', handler);
     return () => window.removeEventListener('workflow-node-config', handler);
   }, [setNodes]);
+
+  // ---------------------------------------------------------------------------
+  // Wrapped onNodesChange — drag-to-group membership detection
+  // ---------------------------------------------------------------------------
+
+  const onNodesChange = React.useCallback(
+    (changes: import('@xyflow/react').NodeChange<Node<WorkflowNodeData>>[]) => {
+      rawOnNodesChange(changes);
+
+      // Detect drag-end events (position change where dragging switched to false)
+      const dragEndChanges = changes.filter(
+        (c): c is import('@xyflow/react').NodeChange<Node<WorkflowNodeData>> & { type: 'position'; id: string; dragging: false } =>
+          c.type === 'position' && 'dragging' in c && c.dragging === false,
+      );
+
+      if (dragEndChanges.length === 0) return;
+
+      // Use setNodes callback to access latest node positions
+      setNodes((currentNodes) => {
+        const currentGroups = groupsRef.current;
+        let groupsChanged = false;
+        let updatedGroups = [...currentGroups];
+
+        for (const change of dragEndChanges) {
+          const node = currentNodes.find((n) => n.id === change.id);
+          if (!node) continue;
+
+          // Node center point
+          const nodeWidth = node.measured?.width ?? 260;
+          const nodeHeight = node.measured?.height ?? 140;
+          const nodeCenterX = node.position.x + nodeWidth / 2;
+          const nodeCenterY = node.position.y + nodeHeight / 2;
+
+          // Find current group membership
+          const currentGroupIdx = updatedGroups.findIndex((g) =>
+            g.nodeIds.includes(node.id),
+          );
+
+          // Find target group by position (node center inside group bounds)
+          const targetGroupIdx = updatedGroups.findIndex((g) => {
+            const b = g.bounds;
+            return (
+              nodeCenterX >= b.x &&
+              nodeCenterX <= b.x + b.width &&
+              nodeCenterY >= b.y &&
+              nodeCenterY <= b.y + b.height
+            );
+          });
+
+          if (currentGroupIdx === targetGroupIdx) {
+            // Same group (or both -1) — auto-expand if inside a group
+            if (targetGroupIdx !== -1) {
+              const group = updatedGroups[targetGroupIdx];
+              const b = group.bounds;
+              const nodeRight = node.position.x + nodeWidth + GROUP_PADDING;
+              const nodeBottom = node.position.y + nodeHeight + GROUP_PADDING;
+              const nodeLeft = node.position.x - GROUP_PADDING;
+              const nodeTop = node.position.y - GROUP_PADDING - GROUP_TITLE_HEIGHT;
+
+              if (nodeRight > b.x + b.width || nodeBottom > b.y + b.height || nodeLeft < b.x || nodeTop < b.y) {
+                const newX = Math.min(b.x, nodeLeft);
+                const newY = Math.min(b.y, nodeTop);
+                const newRight = Math.max(b.x + b.width, nodeRight);
+                const newBottom = Math.max(b.y + b.height, nodeBottom);
+                updatedGroups[targetGroupIdx] = {
+                  ...group,
+                  bounds: { x: newX, y: newY, width: newRight - newX, height: newBottom - newY },
+                };
+                groupsChanged = true;
+              }
+            }
+            continue;
+          }
+
+          groupsChanged = true;
+
+          // Remove from old group
+          if (currentGroupIdx !== -1) {
+            const oldGroup = updatedGroups[currentGroupIdx];
+            updatedGroups[currentGroupIdx] = {
+              ...oldGroup,
+              nodeIds: oldGroup.nodeIds.filter((id) => id !== node.id),
+            };
+          }
+
+          // Add to new group and expand bounds if needed
+          if (targetGroupIdx !== -1) {
+            const newGroup = updatedGroups[targetGroupIdx];
+            const b = newGroup.bounds;
+            const nodeRight = node.position.x + nodeWidth + GROUP_PADDING;
+            const nodeBottom = node.position.y + nodeHeight + GROUP_PADDING;
+            const nodeLeft = node.position.x - GROUP_PADDING;
+            const nodeTop = node.position.y - GROUP_PADDING - GROUP_TITLE_HEIGHT;
+            const newX = Math.min(b.x, nodeLeft);
+            const newY = Math.min(b.y, nodeTop);
+            const newRight = Math.max(b.x + b.width, nodeRight);
+            const newBottom = Math.max(b.y + b.height, nodeBottom);
+
+            updatedGroups[targetGroupIdx] = {
+              ...newGroup,
+              nodeIds: [...newGroup.nodeIds, node.id],
+              bounds: { x: newX, y: newY, width: newRight - newX, height: newBottom - newY },
+            };
+          }
+        }
+
+        if (groupsChanged) {
+          // Remove empty groups (groups with 0 nodes after drag-out)
+          // Keep groups with at least 1 node
+          setGroups(updatedGroups);
+        }
+
+        // Return currentNodes unchanged — we only needed to read positions
+        return currentNodes;
+      });
+    },
+    [rawOnNodesChange, setNodes, setGroups],
+  );
 
   // ---------------------------------------------------------------------------
   // Connection handling with type validation
@@ -593,11 +717,7 @@ export function useWorkflow({ apiId }: UseWorkflowOptions) {
     try {
       if (currentWorkflowId) {
         const { updateWorkflow } = await import('@/utils/supabase/workflows.server');
-        const updated = await updateWorkflow(currentWorkflowId, { name: workflowName, definition });
-        if (!updated) {
-          toast.error('Failed to update workflow');
-          return;
-        }
+        await updateWorkflow(currentWorkflowId, { name: workflowName, definition });
         toast.success('Workflow saved');
       } else {
         const { createWorkflow } = await import('@/utils/supabase/workflows.server');
@@ -613,17 +733,14 @@ export function useWorkflow({ apiId }: UseWorkflowOptions) {
           name: workflowName,
           definition,
         });
-        if (!workflow) {
-          toast.error('Failed to create workflow');
-          return;
-        }
         setCurrentWorkflowId(workflow.id);
         toast.success('Workflow saved');
       }
       await loadSavedWorkflows();
     } catch (err) {
-      console.error('Workflow save error:', err);
-      toast.error('Failed to save workflow');
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      console.error('Workflow save error:', message);
+      toast.error(`Failed to save: ${message}`);
     }
   }, [buildDefinition, currentWorkflowId, workflowName, loadSavedWorkflows]);
 
@@ -658,6 +775,63 @@ export function useWorkflow({ apiId }: UseWorkflowOptions) {
         toast.success('Workflow deleted');
       } catch {
         toast.error('Failed to delete workflow');
+      }
+    },
+    [currentWorkflowId, loadSavedWorkflows],
+  );
+
+  // ---------------------------------------------------------------------------
+  // Workflow management (multi-workflow support)
+  // ---------------------------------------------------------------------------
+
+  const createNewWorkflow = React.useCallback(async () => {
+    // Auto-save current if it has content
+    if (nodes.length > 0 && currentWorkflowId) {
+      try {
+        const definition = buildDefinition();
+        const { updateWorkflow } = await import('@/utils/supabase/workflows.server');
+        await updateWorkflow(currentWorkflowId, { name: workflowName, definition });
+      } catch {
+        // Best effort save
+      }
+    }
+    setCurrentWorkflowId(null);
+    setWorkflowName('Untitled Workflow');
+    setNodes([]);
+    setEdges([]);
+    setGroups([]);
+    toast.success('New workflow created');
+  }, [nodes.length, currentWorkflowId, buildDefinition, workflowName, setNodes, setEdges]);
+
+  const switchWorkflow = React.useCallback(
+    async (id: string) => {
+      if (id === currentWorkflowId) return;
+      // Auto-save current before switching
+      if (nodes.length > 0 && currentWorkflowId) {
+        try {
+          const definition = buildDefinition();
+          const { updateWorkflow } = await import('@/utils/supabase/workflows.server');
+          await updateWorkflow(currentWorkflowId, { name: workflowName, definition });
+        } catch {
+          // Best effort save
+        }
+      }
+      await loadWorkflow(id);
+    },
+    [currentWorkflowId, nodes.length, buildDefinition, workflowName, loadWorkflow],
+  );
+
+  const renameWorkflow = React.useCallback(
+    async (id: string, name: string) => {
+      try {
+        const { updateWorkflow } = await import('@/utils/supabase/workflows.server');
+        await updateWorkflow(id, { name });
+        if (id === currentWorkflowId) {
+          setWorkflowName(name);
+        }
+        await loadSavedWorkflows();
+      } catch {
+        toast.error('Failed to rename workflow');
       }
     },
     [currentWorkflowId, loadSavedWorkflows],
@@ -869,6 +1043,9 @@ export function useWorkflow({ apiId }: UseWorkflowOptions) {
     loadWorkflow,
     deleteWorkflow,
     loadSavedWorkflows,
+    createNewWorkflow,
+    switchWorkflow,
+    renameWorkflow,
 
     // Export/Import
     exportWorkflowJSON,
