@@ -860,7 +860,7 @@ export function MangaPanelNode({ data, id, selected }: MangaPanelNodeProps) {
     <TooltipProvider delayDuration={300}>
       <div
         className={cn(
-          'relative rounded-2xl bg-zinc-950 shadow-2xl overflow-hidden transition-all',
+          'relative rounded-2xl bg-zinc-950 shadow-2xl transition-all',
           status === 'error' ? 'ring-2 ring-red-500/40' : status === 'running' ? 'ring-2 ring-blue-500/40' : status === 'success' ? 'ring-1 ring-emerald-500/30' : 'ring-1 ring-zinc-800',
           selected && status === 'idle' && 'ring-2 ring-violet-500/50',
         )}
@@ -868,7 +868,7 @@ export function MangaPanelNode({ data, id, selected }: MangaPanelNodeProps) {
         role="application"
         aria-label="Manga Editor"
       >
-        {/* ── Handles (dots only, tooltip labels) ── */}
+        {/* ── Input handles ── */}
         {mangaPanelDefinition.inputs.map((socket, index) => (
           <Tooltip key={`in-${socket.id}`}>
             <TooltipTrigger asChild>
@@ -876,11 +876,11 @@ export function MangaPanelNode({ data, id, selected }: MangaPanelNodeProps) {
                 type="target"
                 position={Position.Left}
                 id={`in-${socket.id}`}
-                className="!w-3 !h-3 !rounded-full !border-2 !border-zinc-900 transition-colors hover:!scale-125"
+                className="!w-3.5 !h-3.5 !rounded-full !border-2 !border-zinc-900 transition-all hover:!scale-150 hover:!border-white/50"
                 style={{
                   backgroundColor: socketColors[socket.type],
                   top: 56 + index * 32,
-                  left: -6,
+                  left: -7,
                 }}
               />
             </TooltipTrigger>
@@ -889,6 +889,8 @@ export function MangaPanelNode({ data, id, selected }: MangaPanelNodeProps) {
             </TooltipContent>
           </Tooltip>
         ))}
+
+        {/* ── Output handle ── */}
         {mangaPanelDefinition.outputs.map((socket) => (
           <Tooltip key={`out-${socket.id}`}>
             <TooltipTrigger asChild>
@@ -896,7 +898,7 @@ export function MangaPanelNode({ data, id, selected }: MangaPanelNodeProps) {
                 type="source"
                 position={Position.Right}
                 id={`out-${socket.id}`}
-                className="!w-3.5 !h-3.5 !rounded-full !border-2 !border-zinc-900 transition-colors hover:!scale-125"
+                className="!w-3.5 !h-3.5 !rounded-full !border-2 !border-zinc-900 transition-all hover:!scale-150 hover:!border-white/50"
                 style={{
                   backgroundColor: socketColors[socket.type],
                   top: '50%',
@@ -911,7 +913,7 @@ export function MangaPanelNode({ data, id, selected }: MangaPanelNodeProps) {
         ))}
 
         {/* ── Titlebar ── */}
-        <div className="flex items-center gap-3 px-4 py-2.5 bg-zinc-900/80 backdrop-blur-md select-none">
+        <div className="flex items-center gap-3 px-4 py-2.5 bg-zinc-900/80 backdrop-blur-md select-none rounded-t-2xl">
           <div className="flex items-center gap-1.5" aria-hidden="true">
             <div className="size-3 rounded-full bg-[#ff5f57] hover:brightness-110 transition-all" />
             <div className="size-3 rounded-full bg-[#febc2e] hover:brightness-110 transition-all" />
@@ -944,7 +946,7 @@ export function MangaPanelNode({ data, id, selected }: MangaPanelNodeProps) {
         </div>
 
         {/* ── Main body ── */}
-        <div className="flex nodrag nowheel" style={{ height: 420 }}>
+        <div className="flex nodrag nowheel overflow-hidden" style={{ height: 420 }}>
 
           {/* ── Canvas workspace (left, dominant) ── */}
           <div className="flex-1 min-w-0 flex flex-col bg-zinc-900/30">
@@ -1194,7 +1196,7 @@ export function MangaPanelNode({ data, id, selected }: MangaPanelNodeProps) {
 
         {/* ── Error bar ── */}
         {status === 'error' && data.error && (
-          <div className="flex items-center gap-2 px-4 py-2 bg-red-950/40 border-t border-red-500/30">
+          <div className="flex items-center gap-2 px-4 py-2 bg-red-950/40 border-t border-red-500/30 rounded-b-2xl">
             <AlertCircle className="size-4 text-red-400 flex-shrink-0" aria-hidden="true" />
             <p className="text-[12px] text-red-300 truncate">{data.error}</p>
           </div>
