@@ -154,7 +154,7 @@ export const mangaPanelDefinition: WorkflowNodeDefinition = {
     panelTransforms: {},
     outputSize: 1024,
   },
-  minWidth: 400,
+  minWidth: 720,
 };
 
 // ---------------------------------------------------------------------------
@@ -835,56 +835,82 @@ export function MangaPanelNode({ data, id, selected }: MangaPanelNodeProps) {
           STATUS_BORDER[status] || 'border-zinc-800',
           selected && status === 'idle' && 'border-violet-500 ring-2 ring-violet-500/20',
         )}
-        style={{ minWidth: 400, maxWidth: 480 }}
+        style={{ width: 720, maxWidth: 800 }}
         role="application"
         aria-label="Manga Editor"
       >
-        {/* Input handles */}
+        {/* Input handles — distributed along left edge with visible labels */}
         {mangaPanelDefinition.inputs.map((socket, index) => {
-          const topOffset = 52 + index * 24;
+          const topOffset = 60 + index * 28;
           return (
             <Tooltip key={`in-${socket.id}`}>
               <TooltipTrigger asChild>
-                <Handle
-                  type="target"
-                  position={Position.Left}
-                  id={`in-${socket.id}`}
-                  className="!w-2.5 !h-2.5 !rounded-full !border-2 !border-zinc-950 transition-colors"
-                  style={{
-                    backgroundColor: socketColors[socket.type],
-                    top: topOffset,
-                    left: -5,
-                  }}
-                />
+                <div
+                  className="absolute flex items-center gap-1.5"
+                  style={{ left: 8, top: topOffset }}
+                >
+                  <span
+                    className="text-[10px]"
+                    style={{ color: socketColors[socket.type] }}
+                  >
+                    {socket.label}
+                    {socket.required && <span className="text-red-400 ml-0.5">*</span>}
+                  </span>
+                </div>
               </TooltipTrigger>
               <TooltipContent side="left" className="text-xs">
-                {socket.label} ({socket.type}){socket.required ? ' *' : ''}
+                {socket.label} ({socket.type})
               </TooltipContent>
+              <Handle
+                type="target"
+                position={Position.Left}
+                id={`in-${socket.id}`}
+                className="!w-3 !h-3 !rounded-full !border-2 !border-zinc-950 transition-colors"
+                style={{
+                  backgroundColor: socketColors[socket.type],
+                  top: topOffset + 4,
+                  left: -6,
+                }}
+              />
             </Tooltip>
           );
         })}
 
-        {/* Output handle */}
-        {mangaPanelDefinition.outputs.map((socket) => (
-          <Tooltip key={`out-${socket.id}`}>
-            <TooltipTrigger asChild>
+        {/* Output handle — right edge with visible label */}
+        {mangaPanelDefinition.outputs.map((socket, index) => {
+          const topOffset = 60 + index * 28;
+          return (
+            <Tooltip key={`out-${socket.id}`}>
+              <TooltipTrigger asChild>
+                <div
+                  className="absolute flex items-center gap-1.5"
+                  style={{ right: 8, top: topOffset }}
+                >
+                  <span
+                    className="text-[10px]"
+                    style={{ color: socketColors[socket.type] }}
+                  >
+                    {socket.label}
+                  </span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="text-xs">
+                {socket.label} ({socket.type})
+              </TooltipContent>
               <Handle
                 type="source"
                 position={Position.Right}
                 id={`out-${socket.id}`}
-                className="!w-2.5 !h-2.5 !rounded-full !border-2 !border-zinc-950 transition-colors"
+                className="!w-3 !h-3 !rounded-full !border-2 !border-zinc-950 transition-colors"
                 style={{
                   backgroundColor: socketColors[socket.type],
-                  top: 52 + 2 * 24,
-                  right: -5,
+                  top: topOffset + 4,
+                  right: -6,
                 }}
               />
-            </TooltipTrigger>
-            <TooltipContent side="right" className="text-xs">
-              {socket.label} ({socket.type})
-            </TooltipContent>
-          </Tooltip>
-        ))}
+            </Tooltip>
+          );
+        })}
 
         {/* ── Titlebar ── */}
         <div className="flex items-center gap-2.5 px-3 py-2 bg-zinc-900 border-b border-zinc-800 select-none">
@@ -898,288 +924,288 @@ export function MangaPanelNode({ data, id, selected }: MangaPanelNodeProps) {
           <span className="text-xs font-semibold text-zinc-200 tracking-wide truncate flex-1">
             Manga Editor
           </span>
+          {/* Status text */}
+          {status !== 'idle' && (
+            <span className="text-[9px] text-zinc-500 mr-1">
+              {status === 'running' && 'Compositing\u2026'}
+              {status === 'queued' && 'Queued\u2026'}
+              {status === 'success' && 'Ready'}
+              {status === 'skipped' && 'Skipped'}
+            </span>
+          )}
           <div
             className={cn('size-2 rounded-full flex-shrink-0', STATUS_DOT[status] || 'bg-zinc-600')}
             aria-label={`Status: ${status}`}
           />
         </div>
 
-        {/* ── Preview Canvas ── */}
-        <div className="px-2.5 pt-2 pb-1.5 nodrag nowheel">
-          {hasEditablePreview ? (
-            // Interactive post-execution preview with draggable images/bubbles
-            <div className="relative">
-              <div
-                className="relative rounded-lg border border-zinc-700/50 overflow-hidden bg-zinc-900"
-                style={{ aspectRatio: `${activeFormat.ratioW}/${activeFormat.ratioH}`, backgroundColor: gutterColor }}
-              >
-                {activePreset.panels.map((panel, i) => (
-                  <InteractivePanel
-                    key={i}
-                    panelIndex={i}
-                    panel={panel}
-                    panelSource={panelSources?.[i]}
-                    transform={panelTransforms[String(i)] ?? { offsetX: 0, offsetY: 0, scale: 1 }}
-                    bubbles={bubbles.filter((b) => b.panelIndex === i)}
-                    gutterWidth={gutterWidth}
-                    borderWidth={borderWidth}
-                    borderColor={borderColor}
-                    readingOrder={readingOrder}
-                    readOrderNum={readOrder[i]}
-                    onTransformChange={(t) => handlePanelTransformChange(i, t)}
-                    onBubbleDrag={handleBubbleDrag}
-                  />
-                ))}
-              </div>
-              {/* Recompose button */}
-              <button
-                type="button"
-                onClick={handleRecompose}
-                className="absolute bottom-2 right-2 flex items-center gap-1 px-2 py-1 rounded-md bg-violet-600/80 hover:bg-violet-600 text-white text-[9px] font-medium backdrop-blur-sm transition-colors"
-                aria-label="Recompose with adjusted transforms"
-              >
-                <RefreshCw className="size-3" aria-hidden="true" />
-                Recompose
-              </button>
-            </div>
-          ) : status === 'success' && outputImage ? (
-            // Static output preview
-            <div className="relative rounded-lg overflow-hidden border border-zinc-700/50 bg-zinc-900">
-              <img src={outputImage} alt="Manga page preview" className="w-full object-contain" draggable={false} />
-            </div>
-          ) : (
-            // Pre-execution layout mockup
-            <div
-              className="relative rounded-lg border border-zinc-700/50 overflow-hidden bg-zinc-900"
-              style={{ aspectRatio: `${activeFormat.ratioW}/${activeFormat.ratioH}`, backgroundColor: gutterColor }}
-            >
-              {activePreset.panels.map((panel, i) => (
-                <div key={i} className="absolute overflow-hidden flex items-center justify-center"
-                  style={{ left: `${panel.x * 100}%`, top: `${panel.y * 100}%`, width: `${panel.w * 100}%`, height: `${panel.h * 100}%`, padding: `${Math.max(gutterWidth / 4, 1)}px` }}
-                >
-                  <div className="w-full h-full relative flex items-center justify-center bg-zinc-800/40"
-                    style={{ border: `${Math.max(borderWidth / 4, 1)}px solid ${borderColor}` }}
+        {/* ── Horizontal body: Preview | Controls ── */}
+        <div
+          className="flex nodrag nowheel"
+          style={{ minHeight: 280, marginTop: mangaPanelDefinition.inputs.length * 28 }}
+        >
+          {/* ── Left: Preview Canvas ── */}
+          <div className="flex-1 min-w-0 p-2.5 flex flex-col border-r border-zinc-800">
+            <div className="flex-1 min-h-0 flex items-center justify-center">
+              {hasEditablePreview ? (
+                <div className="relative w-full h-full flex items-center justify-center">
+                  <div
+                    className="relative rounded-lg border border-zinc-700/50 overflow-hidden bg-zinc-900 w-full"
+                    style={{ aspectRatio: `${activeFormat.ratioW}/${activeFormat.ratioH}`, maxHeight: '100%', backgroundColor: gutterColor }}
                   >
-                    <span className="text-[10px] text-zinc-500 font-mono">{i + 1}</span>
-                    <span
-                      className="absolute text-[7px] font-bold text-violet-400/70"
-                      style={{ [readingOrder === 'rtl' ? 'right' : 'left']: '2px', top: '1px' }}
+                    {activePreset.panels.map((panel, i) => (
+                      <InteractivePanel
+                        key={i}
+                        panelIndex={i}
+                        panel={panel}
+                        panelSource={panelSources?.[i]}
+                        transform={panelTransforms[String(i)] ?? { offsetX: 0, offsetY: 0, scale: 1 }}
+                        bubbles={bubbles.filter((b) => b.panelIndex === i)}
+                        gutterWidth={gutterWidth}
+                        borderWidth={borderWidth}
+                        borderColor={borderColor}
+                        readingOrder={readingOrder}
+                        readOrderNum={readOrder[i]}
+                        onTransformChange={(t) => handlePanelTransformChange(i, t)}
+                        onBubbleDrag={handleBubbleDrag}
+                      />
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleRecompose}
+                    className="absolute bottom-1 right-1 flex items-center gap-1 px-2 py-1 rounded-md bg-violet-600/80 hover:bg-violet-600 text-white text-[9px] font-medium backdrop-blur-sm transition-colors"
+                    aria-label="Recompose with adjusted transforms"
+                  >
+                    <RefreshCw className="size-3" aria-hidden="true" />
+                    Recompose
+                  </button>
+                </div>
+              ) : status === 'success' && outputImage ? (
+                <div className="relative rounded-lg overflow-hidden border border-zinc-700/50 bg-zinc-900 w-full">
+                  <img src={outputImage} alt="Manga page preview" className="w-full object-contain" draggable={false} />
+                </div>
+              ) : (
+                <div
+                  className="relative rounded-lg border border-zinc-700/50 overflow-hidden bg-zinc-900 w-full"
+                  style={{ aspectRatio: `${activeFormat.ratioW}/${activeFormat.ratioH}`, backgroundColor: gutterColor }}
+                >
+                  {activePreset.panels.map((panel, i) => (
+                    <div key={i} className="absolute overflow-hidden flex items-center justify-center"
+                      style={{ left: `${panel.x * 100}%`, top: `${panel.y * 100}%`, width: `${panel.w * 100}%`, height: `${panel.h * 100}%`, padding: `${Math.max(gutterWidth / 4, 1)}px` }}
                     >
-                      {readOrder[i] + 1}
-                    </span>
-                    {bubbles.filter((b) => b.panelIndex === i).map((b) => {
-                      const pos = b.freePosition ?? BUBBLE_POS[b.position] ?? { nx: 0.5, ny: 0.2 };
-                      return (
-                        <div key={b.id} className="absolute size-2 rounded-full bg-white/80 border border-zinc-500"
-                          style={{ left: `${pos.nx * 100}%`, top: `${pos.ny * 100}%`, transform: 'translate(-50%,-50%)' }}
-                        />
-                      );
-                    })}
+                      <div className="w-full h-full relative flex items-center justify-center bg-zinc-800/40"
+                        style={{ border: `${Math.max(borderWidth / 4, 1)}px solid ${borderColor}` }}
+                      >
+                        <span className="text-[10px] text-zinc-500 font-mono">{i + 1}</span>
+                        <span
+                          className="absolute text-[7px] font-bold text-violet-400/70"
+                          style={{ [readingOrder === 'rtl' ? 'right' : 'left']: '2px', top: '1px' }}
+                        >
+                          {readOrder[i] + 1}
+                        </span>
+                        {bubbles.filter((b) => b.panelIndex === i).map((b) => {
+                          const pos = b.freePosition ?? BUBBLE_POS[b.position] ?? { nx: 0.5, ny: 0.2 };
+                          return (
+                            <div key={b.id} className="absolute size-2 rounded-full bg-white/80 border border-zinc-500"
+                              style={{ left: `${pos.nx * 100}%`, top: `${pos.ny * 100}%`, transform: 'translate(-50%,-50%)' }}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Layout strip — sits below preview */}
+            <div className="mt-2 pt-2 border-t border-zinc-800 space-y-1">
+              {LAYOUT_GROUPS.map((group) => (
+                <div key={group.count} className="flex items-center gap-1.5">
+                  <span className="text-[9px] text-zinc-500 w-3 text-right flex-shrink-0 font-mono">{group.count}</span>
+                  <div className="flex gap-1 flex-wrap">
+                    {group.layouts.map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => update('layoutPreset', preset.id)}
+                        className={cn(
+                          'w-6 h-8 rounded border transition-all flex-shrink-0 relative overflow-hidden',
+                          layoutPreset === preset.id
+                            ? 'border-violet-500 ring-1 ring-violet-500/30 bg-violet-500/10'
+                            : 'border-zinc-700 hover:border-zinc-500 bg-zinc-800/50',
+                        )}
+                        title={preset.label}
+                        aria-label={`Layout: ${preset.label}`}
+                      >
+                        <svg viewBox="0 0 5 7" className="w-full h-full" preserveAspectRatio="none">
+                          {preset.panels.map((p, i) => (
+                            <rect key={i} x={p.x * 5 + 0.15} y={p.y * 7 + 0.15} width={p.w * 5 - 0.3} height={p.h * 7 - 0.3}
+                              className={layoutPreset === preset.id ? 'fill-violet-500/40' : 'fill-zinc-500/30'} rx={0.2}
+                            />
+                          ))}
+                        </svg>
+                      </button>
+                    ))}
                   </div>
                 </div>
               ))}
             </div>
-          )}
-        </div>
-
-        <Separator className="!bg-zinc-800" />
-
-        {/* ── Layout Strip ── */}
-        <div className="px-2.5 py-2 space-y-1 nodrag nowheel">
-          {LAYOUT_GROUPS.map((group) => (
-            <div key={group.count} className="flex items-center gap-1.5">
-              <span className="text-[9px] text-zinc-500 w-3 text-right flex-shrink-0 font-mono">{group.count}</span>
-              <div className="flex gap-1">
-                {group.layouts.map((preset) => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => update('layoutPreset', preset.id)}
-                    className={cn(
-                      'w-7 h-9 rounded border transition-all flex-shrink-0 relative overflow-hidden',
-                      layoutPreset === preset.id
-                        ? 'border-violet-500 ring-1 ring-violet-500/30 bg-violet-500/10'
-                        : 'border-zinc-700 hover:border-zinc-500 bg-zinc-800/50',
-                    )}
-                    title={preset.label}
-                    aria-label={`Layout: ${preset.label}`}
-                  >
-                    <svg viewBox="0 0 5 7" className="w-full h-full" preserveAspectRatio="none">
-                      {preset.panels.map((p, i) => (
-                        <rect key={i} x={p.x * 5 + 0.15} y={p.y * 7 + 0.15} width={p.w * 5 - 0.3} height={p.h * 7 - 0.3}
-                          className={layoutPreset === preset.id ? 'fill-violet-500/40' : 'fill-zinc-500/30'} rx={0.2}
-                        />
-                      ))}
-                    </svg>
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <Separator className="!bg-zinc-800" />
-
-        {/* ── Tabbed Controls ── */}
-        <div className="px-2.5 pt-1.5 pb-2 nodrag nowheel">
-          <Tabs defaultValue="style" className="w-full">
-            <TabsList className="w-full h-7 bg-zinc-800/60 rounded-lg p-0.5">
-              <TabsTrigger
-                value="style"
-                className="flex-1 h-6 text-[10px] font-medium rounded-md data-[state=active]:bg-zinc-700 data-[state=active]:text-zinc-100 data-[state=active]:shadow-none data-[state=inactive]:text-zinc-400 data-[state=inactive]:bg-transparent"
-              >
-                Style
-              </TabsTrigger>
-              <TabsTrigger
-                value="bubbles"
-                className="flex-1 h-6 text-[10px] font-medium rounded-md data-[state=active]:bg-zinc-700 data-[state=active]:text-zinc-100 data-[state=active]:shadow-none data-[state=inactive]:text-zinc-400 data-[state=inactive]:bg-transparent"
-              >
-                Bubbles{bubbles.length > 0 ? ` (${bubbles.length})` : ''}
-              </TabsTrigger>
-            </TabsList>
-
-            {/* ── Style Tab ── */}
-            <TabsContent value="style" className="mt-2 space-y-2.5">
-              {/* Format - segmented */}
-              <div className="space-y-1">
-                <span className="text-[9px] text-zinc-500 uppercase tracking-wider font-medium">Format</span>
-                <div className="flex gap-0.5 bg-zinc-800/60 rounded-lg p-0.5">
-                  {PAGE_FORMATS.map((f) => (
-                    <button
-                      key={f.id} type="button"
-                      onClick={() => update('pageFormat', f.id)}
-                      className={cn(
-                        'flex-1 px-1.5 py-1 rounded-md text-[9px] font-medium transition-colors text-center',
-                        pageFormat === f.id ? 'bg-zinc-700 text-zinc-100 shadow-sm' : 'text-zinc-400 hover:text-zinc-300',
-                      )}
-                      aria-label={`Format: ${f.label}`}
-                      aria-pressed={pageFormat === f.id}
-                    >
-                      {f.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Gutter */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] text-zinc-500 uppercase tracking-wider font-medium">Gutter</span>
-                  <span className="text-[9px] text-zinc-400 font-mono">{gutterWidth}px</span>
-                </div>
-                <input type="range" min={0} max={20} value={gutterWidth}
-                  onChange={(e) => update('gutterWidth', Number(e.target.value))}
-                  className="w-full h-1 accent-violet-500" aria-label="Gutter width" />
-              </div>
-
-              {/* Border */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <span className="text-[9px] text-zinc-500 uppercase tracking-wider font-medium">Border</span>
-                  <span className="text-[9px] text-zinc-400 font-mono">{borderWidth}px</span>
-                </div>
-                <input type="range" min={0} max={10} value={borderWidth}
-                  onChange={(e) => update('borderWidth', Number(e.target.value))}
-                  className="w-full h-1 accent-violet-500" aria-label="Border width" />
-              </div>
-
-              {/* Colors */}
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-1.5 text-[9px] text-zinc-400">
-                  <input type="color" value={borderColor} onChange={(e) => update('borderColor', e.target.value)}
-                    className="size-5 rounded border border-zinc-700 cursor-pointer bg-transparent" aria-label="Border color" />
-                  Border
-                </label>
-                <label className="flex items-center gap-1.5 text-[9px] text-zinc-400">
-                  <input type="color" value={gutterColor} onChange={(e) => update('gutterColor', e.target.value)}
-                    className="size-5 rounded border border-zinc-700 cursor-pointer bg-transparent" aria-label="Gutter color" />
-                  Gutter
-                </label>
-              </div>
-
-              {/* Direction - segmented */}
-              <div className="space-y-1">
-                <span className="text-[9px] text-zinc-500 uppercase tracking-wider font-medium">Direction</span>
-                <div className="flex gap-0.5 bg-zinc-800/60 rounded-lg p-0.5">
-                  {([
-                    { value: 'rtl', label: 'RTL', title: 'Right-to-Left (manga)' },
-                    { value: 'ltr', label: 'LTR', title: 'Left-to-Right (western)' },
-                  ] as const).map((d) => (
-                    <button key={d.value} type="button" onClick={() => update('readingOrder', d.value)}
-                      className={cn(
-                        'flex-1 px-2 py-1 rounded-md text-[9px] font-medium transition-colors',
-                        readingOrder === d.value ? 'bg-zinc-700 text-zinc-100 shadow-sm' : 'text-zinc-400 hover:text-zinc-300',
-                      )}
-                      aria-label={d.title} aria-pressed={readingOrder === d.value} title={d.title}
-                    >
-                      {d.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Output size - segmented */}
-              <div className="space-y-1">
-                <span className="text-[9px] text-zinc-500 uppercase tracking-wider font-medium">Output</span>
-                <div className="flex gap-0.5 bg-zinc-800/60 rounded-lg p-0.5">
-                  {([1024, 2048] as const).map((s) => (
-                    <button key={s} type="button" onClick={() => update('outputSize', s)}
-                      className={cn(
-                        'flex-1 px-2 py-1 rounded-md text-[9px] font-medium transition-colors',
-                        outputSize === s ? 'bg-zinc-700 text-zinc-100 shadow-sm' : 'text-zinc-400 hover:text-zinc-300',
-                      )}
-                      aria-label={`Output: ${s}px`} aria-pressed={outputSize === s}
-                    >
-                      {s}px
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </TabsContent>
-
-            {/* ── Bubbles Tab ── */}
-            <TabsContent value="bubbles" className="mt-2">
-              <div className="flex justify-end mb-1.5">
-                <button
-                  type="button" onClick={addBubble}
-                  className="px-2.5 py-1 rounded-md text-[9px] font-medium bg-violet-600/20 text-violet-300 hover:bg-violet-600/30 transition-colors"
-                  aria-label="Add speech bubble"
-                >
-                  + Add Bubble
-                </button>
-              </div>
-              {bubbles.length === 0 ? (
-                <p className="text-[10px] text-zinc-500 text-center py-4">
-                  No bubbles yet. Add one to place dialogue in your panels.
-                </p>
-              ) : (
-                <ScrollArea className="max-h-52">
-                  <div className="space-y-2 pr-2">
-                    {bubbles.map((b) => (
-                      <BubbleCard key={b.id} bubble={b} maxPanel={activePreset.panelCount - 1}
-                        onUpdate={updateBubble} onDelete={() => deleteBubble(b.id)} />
-                    ))}
-                  </div>
-                </ScrollArea>
-              )}
-            </TabsContent>
-          </Tabs>
-        </div>
-
-        {/* ── Status / Error Footer ── */}
-        {status !== 'idle' && status !== 'error' && (
-          <div className="px-3 py-1.5 border-t border-zinc-800 text-center">
-            <span className="text-[9px] text-zinc-500">
-              {status === 'running' && 'Compositing page\u2026'}
-              {status === 'queued' && 'Queued\u2026'}
-              {status === 'success' && 'Manga page ready'}
-              {status === 'skipped' && 'Skipped'}
-            </span>
           </div>
-        )}
 
+          {/* ── Right: Controls panel ── */}
+          <div className="w-[280px] flex-shrink-0 flex flex-col">
+            <ScrollArea className="flex-1">
+              <div className="p-2.5">
+                <Tabs defaultValue="style" className="w-full">
+                  <TabsList className="w-full h-7 bg-zinc-800/60 rounded-lg p-0.5">
+                    <TabsTrigger
+                      value="style"
+                      className="flex-1 h-6 text-[10px] font-medium rounded-md data-[state=active]:bg-zinc-700 data-[state=active]:text-zinc-100 data-[state=active]:shadow-none data-[state=inactive]:text-zinc-400 data-[state=inactive]:bg-transparent"
+                    >
+                      Style
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="bubbles"
+                      className="flex-1 h-6 text-[10px] font-medium rounded-md data-[state=active]:bg-zinc-700 data-[state=active]:text-zinc-100 data-[state=active]:shadow-none data-[state=inactive]:text-zinc-400 data-[state=inactive]:bg-transparent"
+                    >
+                      Bubbles{bubbles.length > 0 ? ` (${bubbles.length})` : ''}
+                    </TabsTrigger>
+                  </TabsList>
+
+                  {/* ── Style Tab ── */}
+                  <TabsContent value="style" className="mt-2 space-y-2.5">
+                    {/* Format */}
+                    <div className="space-y-1">
+                      <span className="text-[9px] text-zinc-500 uppercase tracking-wider font-medium">Format</span>
+                      <div className="grid grid-cols-2 gap-0.5 bg-zinc-800/60 rounded-lg p-0.5">
+                        {PAGE_FORMATS.map((f) => (
+                          <button
+                            key={f.id} type="button"
+                            onClick={() => update('pageFormat', f.id)}
+                            className={cn(
+                              'px-1.5 py-1 rounded-md text-[9px] font-medium transition-colors text-center',
+                              pageFormat === f.id ? 'bg-zinc-700 text-zinc-100 shadow-sm' : 'text-zinc-400 hover:text-zinc-300',
+                            )}
+                            aria-label={`Format: ${f.label}`}
+                            aria-pressed={pageFormat === f.id}
+                          >
+                            {f.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Gutter */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] text-zinc-500 uppercase tracking-wider font-medium">Gutter</span>
+                        <span className="text-[9px] text-zinc-400 font-mono">{gutterWidth}px</span>
+                      </div>
+                      <input type="range" min={0} max={20} value={gutterWidth}
+                        onChange={(e) => update('gutterWidth', Number(e.target.value))}
+                        className="w-full h-1 accent-violet-500" aria-label="Gutter width" />
+                    </div>
+
+                    {/* Border */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[9px] text-zinc-500 uppercase tracking-wider font-medium">Border</span>
+                        <span className="text-[9px] text-zinc-400 font-mono">{borderWidth}px</span>
+                      </div>
+                      <input type="range" min={0} max={10} value={borderWidth}
+                        onChange={(e) => update('borderWidth', Number(e.target.value))}
+                        className="w-full h-1 accent-violet-500" aria-label="Border width" />
+                    </div>
+
+                    {/* Colors */}
+                    <div className="flex items-center gap-3">
+                      <label className="flex items-center gap-1.5 text-[9px] text-zinc-400">
+                        <input type="color" value={borderColor} onChange={(e) => update('borderColor', e.target.value)}
+                          className="size-5 rounded border border-zinc-700 cursor-pointer bg-transparent" aria-label="Border color" />
+                        Border
+                      </label>
+                      <label className="flex items-center gap-1.5 text-[9px] text-zinc-400">
+                        <input type="color" value={gutterColor} onChange={(e) => update('gutterColor', e.target.value)}
+                          className="size-5 rounded border border-zinc-700 cursor-pointer bg-transparent" aria-label="Gutter color" />
+                        Gutter
+                      </label>
+                    </div>
+
+                    {/* Direction */}
+                    <div className="space-y-1">
+                      <span className="text-[9px] text-zinc-500 uppercase tracking-wider font-medium">Direction</span>
+                      <div className="flex gap-0.5 bg-zinc-800/60 rounded-lg p-0.5">
+                        {([
+                          { value: 'rtl', label: 'RTL', title: 'Right-to-Left (manga)' },
+                          { value: 'ltr', label: 'LTR', title: 'Left-to-Right (western)' },
+                        ] as const).map((d) => (
+                          <button key={d.value} type="button" onClick={() => update('readingOrder', d.value)}
+                            className={cn(
+                              'flex-1 px-2 py-1 rounded-md text-[9px] font-medium transition-colors',
+                              readingOrder === d.value ? 'bg-zinc-700 text-zinc-100 shadow-sm' : 'text-zinc-400 hover:text-zinc-300',
+                            )}
+                            aria-label={d.title} aria-pressed={readingOrder === d.value} title={d.title}
+                          >
+                            {d.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Output size */}
+                    <div className="space-y-1">
+                      <span className="text-[9px] text-zinc-500 uppercase tracking-wider font-medium">Output</span>
+                      <div className="flex gap-0.5 bg-zinc-800/60 rounded-lg p-0.5">
+                        {([1024, 2048] as const).map((s) => (
+                          <button key={s} type="button" onClick={() => update('outputSize', s)}
+                            className={cn(
+                              'flex-1 px-2 py-1 rounded-md text-[9px] font-medium transition-colors',
+                              outputSize === s ? 'bg-zinc-700 text-zinc-100 shadow-sm' : 'text-zinc-400 hover:text-zinc-300',
+                            )}
+                            aria-label={`Output: ${s}px`} aria-pressed={outputSize === s}
+                          >
+                            {s}px
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </TabsContent>
+
+                  {/* ── Bubbles Tab ── */}
+                  <TabsContent value="bubbles" className="mt-2">
+                    <div className="flex justify-end mb-1.5">
+                      <button
+                        type="button" onClick={addBubble}
+                        className="px-2.5 py-1 rounded-md text-[9px] font-medium bg-violet-600/20 text-violet-300 hover:bg-violet-600/30 transition-colors"
+                        aria-label="Add speech bubble"
+                      >
+                        + Add Bubble
+                      </button>
+                    </div>
+                    {bubbles.length === 0 ? (
+                      <p className="text-[10px] text-zinc-500 text-center py-4">
+                        No bubbles yet. Add one to place dialogue in your panels.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {bubbles.map((b) => (
+                          <BubbleCard key={b.id} bubble={b} maxPanel={activePreset.panelCount - 1}
+                            onUpdate={updateBubble} onDelete={() => deleteBubble(b.id)} />
+                        ))}
+                      </div>
+                    )}
+                  </TabsContent>
+                </Tabs>
+              </div>
+            </ScrollArea>
+          </div>
+        </div>
+
+        {/* ── Error Footer ── */}
         {status === 'error' && data.error && (
-          <div className="flex items-start gap-1.5 px-3 py-2 border-t border-red-500/30 bg-red-950/30 rounded-b-xl">
+          <div className="flex items-start gap-1.5 px-3 py-2 border-t border-red-500/30 bg-red-950/30">
             <AlertCircle className="size-3.5 text-red-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
             <p className="text-xs text-red-300 line-clamp-2">{data.error}</p>
           </div>
