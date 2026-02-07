@@ -140,7 +140,7 @@ export function WorkflowList({
       </AlertDialog>
 
       <TooltipProvider delayDuration={300}>
-        <div className="absolute top-4 left-20 z-20">
+        <div className="absolute top-4 left-[5.25rem] z-20">
           <AnimatePresence initial={false} mode="wait">
             {isOpen ? (
               <motion.div

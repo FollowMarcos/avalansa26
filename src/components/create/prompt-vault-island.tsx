@@ -127,7 +127,7 @@ export function PromptVaultIsland({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="absolute top-4 left-24 z-20">
+      <div className="absolute top-[4.25rem] left-[5.25rem] z-20">
         <AnimatePresence initial={false} mode="wait">
           {open ? (
             <motion.div
