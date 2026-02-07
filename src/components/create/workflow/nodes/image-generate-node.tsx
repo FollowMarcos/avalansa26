@@ -18,6 +18,7 @@ export const imageGenerateDefinition: WorkflowNodeDefinition = {
     { id: 'negative', label: 'Negative', type: 'text' },
     { id: 'settings', label: 'Settings', type: 'settings' },
     { id: 'reference', label: 'Reference', type: 'image' },
+    { id: 'references', label: 'References', type: 'image' },
   ],
   outputs: [
     { id: 'image', label: 'Image', type: 'image' },
@@ -26,38 +27,57 @@ export const imageGenerateDefinition: WorkflowNodeDefinition = {
   minWidth: 240,
 };
 
+/** Resolve a single reference (URL or storage path) to a storage path. */
+async function resolveRefPath(raw: string): Promise<string | null> {
+  if (!raw) return null;
+
+  if (raw.startsWith('http://') || raw.startsWith('https://')) {
+    try {
+      const { uploadReferenceImage } = await import('@/utils/supabase/storage');
+      const { createClient } = await import('@/utils/supabase/client');
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return null;
+
+      const res = await fetch(raw);
+      const blob = await res.blob();
+      const file = new File([blob], `workflow-ref-${Date.now()}.jpg`, { type: blob.type || 'image/jpeg' });
+      const result = await uploadReferenceImage(file, user.id);
+      return result.path || null;
+    } catch {
+      return null;
+    }
+  }
+
+  return raw;
+}
+
 export const imageGenerateExecutor: NodeExecutor = async (inputs, config, context) => {
   const prompt = inputs.prompt as string;
   if (!prompt) throw new Error('Prompt is required');
 
   const negative = (inputs.negative as string) || '';
   const settings = (inputs.settings as Record<string, unknown>) || {};
-  const rawReference = inputs.reference as string | undefined;
-  let referenceImagePaths: string[] = [];
 
-  if (rawReference) {
-    // If reference is a public URL (from another generate node), download and upload to storage
-    if (rawReference.startsWith('http://') || rawReference.startsWith('https://')) {
-      try {
-        const { uploadReferenceImage } = await import('@/utils/supabase/storage');
-        const { createClient } = await import('@/utils/supabase/client');
-        const supabase = createClient();
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const res = await fetch(rawReference);
-          const blob = await res.blob();
-          const file = new File([blob], `workflow-ref-${Date.now()}.jpg`, { type: blob.type || 'image/jpeg' });
-          const result = await uploadReferenceImage(file, user.id);
-          if (result.path) referenceImagePaths = [result.path];
-        }
-      } catch {
-        // Fall through — generation will proceed without reference
-      }
-    } else {
-      // Already a storage path
-      referenceImagePaths = [rawReference];
-    }
+  // Collect reference images from both input sockets
+  const rawReference = inputs.reference as string | undefined;
+  const rawReferences = inputs.references as string[] | undefined;
+
+  const allRawRefs: string[] = [];
+
+  // "references" carries an array from the multi-image Reference node
+  if (rawReferences && Array.isArray(rawReferences)) {
+    allRawRefs.push(...rawReferences);
   }
+
+  // "reference" carries a single image (backward compat / other node types)
+  if (rawReference && !allRawRefs.includes(rawReference)) {
+    allRawRefs.push(rawReference);
+  }
+
+  // Resolve all refs (download URLs → storage paths if needed)
+  const resolvedPaths = await Promise.all(allRawRefs.map(resolveRefPath));
+  const referenceImagePaths = resolvedPaths.filter((p): p is string => p !== null);
 
   const apiId = (config.apiId as string) || context.apiId;
 
