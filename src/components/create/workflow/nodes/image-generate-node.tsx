@@ -6,6 +6,7 @@ import { BaseWorkflowNode } from '../base-workflow-node';
 import { Loader } from '@/components/ui/loader';
 import type { WorkflowNodeData, WorkflowNodeDefinition } from '@/types/workflow';
 import type { NodeExecutor } from '../node-registry';
+import { cn } from '@/lib/utils';
 
 export const imageGenerateDefinition: WorkflowNodeDefinition = {
   type: 'imageGenerate',
@@ -21,7 +22,10 @@ export const imageGenerateDefinition: WorkflowNodeDefinition = {
     { id: 'references', label: 'References', type: 'image' },
   ],
   outputs: [
-    { id: 'image', label: 'Image', type: 'image' },
+    { id: 'image', label: 'Image 1', type: 'image' },
+    { id: 'image2', label: 'Image 2', type: 'image' },
+    { id: 'image3', label: 'Image 3', type: 'image' },
+    { id: 'image4', label: 'Image 4', type: 'image' },
   ],
   defaultConfig: { apiId: null },
   minWidth: 240,
@@ -90,7 +94,7 @@ export const imageGenerateExecutor: NodeExecutor = async (inputs, config, contex
       negativePrompt: negative,
       aspectRatio: settings.aspectRatio || '1:1',
       imageSize: settings.imageSize || '2K',
-      outputCount: 1,
+      outputCount: Number(settings.outputCount) || 1,
       referenceImagePaths,
       mode: settings.generationSpeed || 'fast',
     }),
@@ -107,7 +111,12 @@ export const imageGenerateExecutor: NodeExecutor = async (inputs, config, contex
     throw new Error(data.error || 'No image generated');
   }
 
-  return { image: data.images[0].url };
+  const outputKeys = ['image', 'image2', 'image3', 'image4'] as const;
+  const outputs: Record<string, unknown> = {};
+  for (let i = 0; i < data.images.length && i < outputKeys.length; i++) {
+    outputs[outputKeys[i]] = data.images[i].url;
+  }
+  return outputs;
 };
 
 interface ImageGenerateNodeProps {
@@ -118,7 +127,13 @@ interface ImageGenerateNodeProps {
 
 export function ImageGenerateNode({ data, id, selected }: ImageGenerateNodeProps) {
   const status = data.status ?? 'idle';
-  const outputImage = data.outputValues?.image as string | undefined;
+
+  const outputImages: string[] = [];
+  const keys = ['image', 'image2', 'image3', 'image4'] as const;
+  for (const key of keys) {
+    const url = data.outputValues?.[key] as string | undefined;
+    if (url) outputImages.push(url);
+  }
 
   return (
     <BaseWorkflowNode
@@ -140,15 +155,22 @@ export function ImageGenerateNode({ data, id, selected }: ImageGenerateNodeProps
           </div>
         )}
 
-        {/* Thumbnail preview of generated image */}
-        {status === 'success' && outputImage && (
-          <div className="relative rounded-md overflow-hidden border border-border">
-            <img
-              src={outputImage}
-              alt="Generated"
-              className="w-full h-32 object-cover"
-              draggable={false}
-            />
+        {/* Thumbnail previews of generated images */}
+        {status === 'success' && outputImages.length > 0 && (
+          <div className={cn(
+            'gap-1',
+            outputImages.length === 1 ? 'block' : 'grid grid-cols-2',
+          )}>
+            {outputImages.map((url, i) => (
+              <div key={`${url}-${i}`} className="relative rounded-md overflow-hidden border border-border">
+                <img
+                  src={url}
+                  alt={`Generated ${i + 1}`}
+                  className="w-full h-32 object-cover"
+                  draggable={false}
+                />
+              </div>
+            ))}
           </div>
         )}
 
