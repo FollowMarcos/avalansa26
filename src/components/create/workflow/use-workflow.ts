@@ -593,7 +593,11 @@ export function useWorkflow({ apiId }: UseWorkflowOptions) {
     try {
       if (currentWorkflowId) {
         const { updateWorkflow } = await import('@/utils/supabase/workflows.server');
-        await updateWorkflow(currentWorkflowId, { name: workflowName, definition });
+        const updated = await updateWorkflow(currentWorkflowId, { name: workflowName, definition });
+        if (!updated) {
+          toast.error('Failed to update workflow');
+          return;
+        }
         toast.success('Workflow saved');
       } else {
         const { createWorkflow } = await import('@/utils/supabase/workflows.server');
@@ -601,7 +605,7 @@ export function useWorkflow({ apiId }: UseWorkflowOptions) {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-          toast.error('Not authenticated');
+          toast.error('Sign in to save workflows');
           return;
         }
         const workflow = await createWorkflow({
@@ -609,13 +613,16 @@ export function useWorkflow({ apiId }: UseWorkflowOptions) {
           name: workflowName,
           definition,
         });
-        if (workflow) {
-          setCurrentWorkflowId(workflow.id);
-          toast.success('Workflow saved');
+        if (!workflow) {
+          toast.error('Failed to create workflow');
+          return;
         }
+        setCurrentWorkflowId(workflow.id);
+        toast.success('Workflow saved');
       }
       await loadSavedWorkflows();
-    } catch {
+    } catch (err) {
+      console.error('Workflow save error:', err);
       toast.error('Failed to save workflow');
     }
   }, [buildDefinition, currentWorkflowId, workflowName, loadSavedWorkflows]);
@@ -798,6 +805,11 @@ export function useWorkflow({ apiId }: UseWorkflowOptions) {
           setSelectedGroupId(null);
         }
       }
+      // Ctrl+S to save workflow
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        saveWorkflow();
+      }
       // Ctrl+G to group selected nodes
       if ((e.ctrlKey || e.metaKey) && e.key === 'g') {
         e.preventDefault();
@@ -813,7 +825,7 @@ export function useWorkflow({ apiId }: UseWorkflowOptions) {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [isExecuting, runWorkflow, stopWorkflow, selectedGroupId, createGroup, deleteGroup]);
+  }, [isExecuting, runWorkflow, stopWorkflow, saveWorkflow, selectedGroupId, createGroup, deleteGroup]);
 
   return {
     // React Flow state
