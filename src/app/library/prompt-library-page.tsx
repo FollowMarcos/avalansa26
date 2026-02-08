@@ -786,9 +786,9 @@ export function PromptLibraryPage() {
 
                 {/* Image previews */}
                 {imagePreviewUrls.length > 0 && (
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="flex gap-2">
                     {imagePreviewUrls.map((url, index) => (
-                      <div key={index} className="relative aspect-square rounded-lg overflow-hidden bg-muted">
+                      <div key={index} className="relative size-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
                         <Image
                           src={url}
                           alt={`Preview ${index + 1}`}
@@ -798,9 +798,9 @@ export function PromptLibraryPage() {
                         <button
                           type="button"
                           onClick={() => handleRemoveImage(index)}
-                          className="absolute top-1 right-1 size-5 rounded-full bg-background/80 flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                          className="absolute top-0.5 right-0.5 size-4 rounded-full bg-background/80 flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground transition-colors"
                         >
-                          <X className="size-3" />
+                          <X className="size-2.5" />
                         </button>
                       </div>
                     ))}
