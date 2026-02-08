@@ -5,10 +5,21 @@ import { Columns2, GripVertical, Upload, FolderOpen, X, Loader2 } from 'lucide-r
 import { toast } from 'sonner';
 import { BaseWorkflowNode } from '../base-workflow-node';
 import { useCreate } from '../../create-context';
+import { createClient } from '@/utils/supabase/client';
 import type { WorkflowNodeData, WorkflowNodeDefinition } from '@/types/workflow';
 import type { NodeExecutor } from '../node-registry';
 import type { ReferenceImageWithUrl } from '@/types/reference-image';
 import { ScrollArea } from '@/components/ui/scroll-area';
+
+/** Resolve a value that may be a storage path or a displayable URL */
+function resolveImageUrl(value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  if (value.startsWith('http') || value.startsWith('blob:') || value.startsWith('data:')) return value;
+  // It's a storage path — resolve to a public URL via Supabase
+  const supabase = createClient();
+  const { data } = supabase.storage.from('reference-images').getPublicUrl(value);
+  return data.publicUrl;
+}
 
 interface SlotImage {
   url: string;
@@ -170,8 +181,11 @@ export function BeforeAfterImageNode({ data, id, selected }: BeforeAfterImageNod
   const configAfter = config.afterImage as SlotImage | undefined;
 
   // Use connected images when executed, otherwise show config images for preview
-  const beforeUrl = (status === 'success' && connectedBefore) ? connectedBefore : configBefore?.url;
-  const afterUrl = (status === 'success' && connectedAfter) ? connectedAfter : configAfter?.url;
+  // Resolve storage paths to public URLs (reference image node outputs paths, not URLs)
+  const rawBefore = (status === 'success' && connectedBefore) ? connectedBefore : configBefore?.url;
+  const rawAfter = (status === 'success' && connectedAfter) ? connectedAfter : configAfter?.url;
+  const beforeUrl = React.useMemo(() => resolveImageUrl(rawBefore), [rawBefore]);
+  const afterUrl = React.useMemo(() => resolveImageUrl(rawAfter), [rawAfter]);
   const hasImages = beforeUrl && afterUrl;
 
   const containerRef = React.useRef<HTMLDivElement>(null);
