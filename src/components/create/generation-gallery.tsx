@@ -176,8 +176,7 @@ export function GenerationGallery() {
           </div>
         ) : (
           <div
-            className="columns-2 sm:columns-3 md:columns-4 lg:columns-5 gap-4"
-            style={{ columnFill: "balance" }}
+            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
           >
             {filteredHistory.map((image) =>
               image.status === "pending" ? (
@@ -267,7 +266,7 @@ const GalleryItem = React.memo(function GalleryItem({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className={cn(
-        "relative group rounded-lg overflow-hidden bg-muted border mb-4 break-inside-avoid",
+        "relative group rounded-lg overflow-hidden bg-muted border",
         isCurrentSelected && !isBulkMode && "ring-2 ring-foreground",
         isSelected && isBulkMode && "ring-2 ring-primary border-primary"
       )}
@@ -434,7 +433,7 @@ const GalleryItem = React.memo(function GalleryItem({
 function PendingCard({ image }: { image: GeneratedImage }) {
   return (
     <div
-      className="relative rounded-lg overflow-hidden bg-muted border border-border mb-4 break-inside-avoid"
+      className="relative rounded-lg overflow-hidden bg-muted border border-border"
       role="status"
       aria-label="Generating image"
     >
@@ -452,7 +451,7 @@ function PendingCard({ image }: { image: GeneratedImage }) {
 function FailedCard({ image }: { image: GeneratedImage }) {
   return (
     <div
-      className="relative rounded-lg overflow-hidden bg-destructive/5 border border-destructive/20 mb-4 break-inside-avoid"
+      className="relative rounded-lg overflow-hidden bg-destructive/5 border border-destructive/20"
       role="alert"
       aria-label="Generation failed"
     >
