@@ -25,13 +25,35 @@ export function GenerationGallery() {
     toggleFavorite,
     isGenerating,
     history,
+    loadMoreHistory,
+    hasMoreHistory,
+    isLoadingMoreHistory,
   } = useCreate();
 
   const [detailImage, setDetailImage] = React.useState<GeneratedImage | null>(null);
   const filteredHistory = getFilteredHistory();
+  const sentinelRef = React.useRef<HTMLDivElement>(null);
 
   // Count pending images for loading state
   const pendingCount = history.filter(img => img.status === "pending").length;
+
+  // Infinite scroll — load more when sentinel enters viewport
+  React.useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !hasMoreHistory) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && !isLoadingMoreHistory) {
+          loadMoreHistory();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMoreHistory, isLoadingMoreHistory, loadMoreHistory]);
 
   const handleDownload = async (url: string, id: string) => {
     try {
@@ -181,6 +203,13 @@ export function GenerationGallery() {
                 />
               )
             )}
+          </div>
+        )}
+
+        {/* Infinite scroll sentinel */}
+        {hasMoreHistory && filteredHistory.length > 0 && (
+          <div ref={sentinelRef} className="flex items-center justify-center py-8">
+            {isLoadingMoreHistory && <Loader size="sm" />}
           </div>
         )}
       </div>

@@ -125,6 +125,9 @@ interface CreateContextType {
   selectedImage: GeneratedImage | null;
   selectImage: (image: GeneratedImage | null) => void;
   clearHistory: () => void;
+  loadMoreHistory: () => Promise<void>;
+  hasMoreHistory: boolean;
+  isLoadingMoreHistory: boolean;
 
   // UI state
   viewMode: "gallery" | "workflow";
@@ -323,6 +326,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [savedReferences, setSavedReferences] = React.useState<SavedReferenceImage[]>([]);
   const [history, setHistory] = React.useState<GeneratedImage[]>([]);
   const [selectedImage, setSelectedImage] = React.useState<GeneratedImage | null>(null);
+  const [hasMoreHistory, setHasMoreHistory] = React.useState(true);
+  const [isLoadingMoreHistory, setIsLoadingMoreHistory] = React.useState(false);
   const [viewMode, setViewMode] = React.useState<"gallery" | "workflow">("gallery");
   const [interactionMode, setInteractionMode] = React.useState<InteractionMode>("select");
   const [historyPanelOpen, setHistoryPanelOpen] = React.useState(true);
@@ -501,6 +506,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       }));
 
       setHistory(historyImages);
+      setHasMoreHistory(generations.length >= 50);
       // Select the most recent image if available
       if (historyImages.length > 0) {
         setSelectedImage(historyImages[0]);
@@ -516,6 +522,52 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
     loadInitialData();
   }, []);
+
+  // Load more history (pagination)
+  const loadMoreHistory = React.useCallback(async () => {
+    if (isLoadingMoreHistory || !hasMoreHistory) return;
+    setIsLoadingMoreHistory(true);
+    try {
+      const { getGenerationHistory } = await import("@/utils/supabase/generations.server");
+      // Offset = number of completed (non-pending) images already loaded
+      const existingCount = history.filter(img => img.status !== "pending").length;
+      const generations = await getGenerationHistory(50, existingCount);
+
+      if (generations.length < 50) {
+        setHasMoreHistory(false);
+      }
+
+      if (generations.length > 0) {
+        const moreImages: GeneratedImage[] = generations.map((gen: Generation) => ({
+          id: gen.id,
+          url: gen.image_url,
+          prompt: gen.prompt,
+          timestamp: new Date(gen.created_at).getTime(),
+          isFavorite: gen.is_favorite ?? false,
+          settings: {
+            model: "nano-banana-pro" as ModelId,
+            imageSize: (gen.settings.imageSize as ImageSize) || "2K",
+            aspectRatio: (gen.settings.aspectRatio as AspectRatio) || "1:1",
+            outputCount: gen.settings.outputCount || 1,
+            generationSpeed: (gen.settings.generationSpeed as GenerationSpeed) || "fast",
+            styleStrength: 75,
+            negativePrompt: gen.negative_prompt || "",
+            referenceImages: gen.settings.referenceImages,
+          },
+        }));
+
+        setHistory(prev => {
+          const existingIds = new Set(prev.map(img => img.id));
+          const newImages = moreImages.filter(img => !existingIds.has(img.id));
+          return [...prev, ...newImages];
+        });
+      }
+    } catch (error) {
+      console.error("Failed to load more history:", error);
+    } finally {
+      setIsLoadingMoreHistory(false);
+    }
+  }, [isLoadingMoreHistory, hasMoreHistory, history]);
 
   const updateSettings = React.useCallback((newSettings: Partial<CreateSettings>) => {
     setSettings(prev => ({ ...prev, ...newSettings }));
@@ -1703,6 +1755,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     selectedImage,
     selectImage,
     clearHistory,
+    loadMoreHistory,
+    hasMoreHistory,
+    isLoadingMoreHistory,
     // UI state
     viewMode,
     setViewMode,
@@ -1771,7 +1826,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     isGenerating, thinkingSteps,
     updateSettings, addReferenceImages, addReferenceImageFromUrl, removeReferenceImage, clearReferenceImages,
     savedReferences, loadSavedReferences, removeSavedReference, renameSavedReference, addSavedReferenceToActive,
-    selectImage, clearHistory, toggleHistoryPanel, toggleInputVisibility, generate, cancelGeneration,
+    selectImage, clearHistory, loadMoreHistory, hasMoreHistory, isLoadingMoreHistory,
+    toggleHistoryPanel, toggleInputVisibility, generate, cancelGeneration,
     hasAvailableSlots, activeGenerations, buildFinalPrompt,
     galleryFilterState, setSearchQuery, setSortBy, setGalleryFilters, clearGalleryFilters,
     toggleBulkSelection, toggleImageSelection, selectAllImages, deselectAllImages, getFilteredHistory, bulkDeleteImages,
