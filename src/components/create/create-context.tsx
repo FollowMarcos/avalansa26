@@ -1132,6 +1132,37 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       if (persisted.viewMode) setViewMode(persisted.viewMode);
       if (persisted.historyPanelOpen !== undefined) setHistoryPanelOpen(persisted.historyPanelOpen);
     }
+
+    // Check for "Use in Create" from prompt library — overrides persisted prompt
+    try {
+      const raw = sessionStorage.getItem("loadPrompt");
+      if (raw) {
+        sessionStorage.removeItem("loadPrompt");
+        const libraryPrompt = JSON.parse(raw) as {
+          prompt_text?: string;
+          negative_prompt?: string | null;
+          settings?: Record<string, unknown>;
+        };
+        if (libraryPrompt.prompt_text) {
+          setPrompt(libraryPrompt.prompt_text);
+        }
+        const settingsUpdate: Partial<CreateSettings> = {};
+        if (libraryPrompt.negative_prompt) {
+          settingsUpdate.negativePrompt = libraryPrompt.negative_prompt;
+        }
+        if (libraryPrompt.settings?.aspectRatio) {
+          settingsUpdate.aspectRatio = libraryPrompt.settings.aspectRatio as CreateSettings['aspectRatio'];
+        }
+        if (libraryPrompt.settings?.imageSize) {
+          settingsUpdate.imageSize = libraryPrompt.settings.imageSize as CreateSettings['imageSize'];
+        }
+        if (Object.keys(settingsUpdate).length > 0) {
+          setSettings(prev => ({ ...prev, ...settingsUpdate }));
+        }
+      }
+    } catch {
+      // Ignore malformed sessionStorage data
+    }
   }, [currentUserId]);
 
   // Persist state to localStorage on changes (debounced)
