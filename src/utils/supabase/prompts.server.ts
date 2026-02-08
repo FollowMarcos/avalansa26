@@ -617,13 +617,13 @@ export async function createAndAddTagToPrompt(
  */
 export async function sharePromptWithUser(
   data: Omit<PromptShareInsert, 'shared_by'>
-): Promise<PromptShare | null> {
+): Promise<PromptShare> {
   const supabase = await createClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return null;
+  if (!user) throw new Error('Not authenticated');
 
   const { data: share, error } = await supabase
     .from('prompt_shares')
@@ -633,12 +633,9 @@ export async function sharePromptWithUser(
 
   if (error) {
     if (error.code === '23505') {
-      // Already shared with this user
-      console.error('Prompt already shared with this user');
-      return null;
+      throw new Error('Prompt already shared with this user');
     }
-    console.error('Error sharing prompt:', error.message);
-    return null;
+    throw new Error(`Failed to share prompt: ${error.message}`);
   }
 
   // Auto-process the share (create duplicate for recipient)
@@ -654,7 +651,7 @@ export async function sharePromptWithUser(
  */
 export async function processPromptShare(
   shareId: string
-): Promise<string | null> {
+): Promise<string> {
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc('process_prompt_share', {
@@ -662,8 +659,7 @@ export async function processPromptShare(
   });
 
   if (error) {
-    console.error('Error processing prompt share:', error.message);
-    return null;
+    throw new Error(`Failed to process share: ${error.message}`);
   }
 
   return data as string;

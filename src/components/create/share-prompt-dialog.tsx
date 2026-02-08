@@ -132,7 +132,7 @@ export function SharePromptDialog({
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to share prompt:", error);
-      toast.error("Failed to share prompt");
+      toast.error(error instanceof Error ? error.message : "Failed to share prompt");
     } finally {
       setIsSharing(false);
     }

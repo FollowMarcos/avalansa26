@@ -430,8 +430,8 @@ export function PromptLibraryPage() {
       );
       toast.success(`Shared with ${selectedShareUsers.length} user${selectedShareUsers.length > 1 ? "s" : ""}`);
       handleCloseShareDialog();
-    } catch {
-      toast.error("Failed to share prompt");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to share prompt");
     } finally {
       setIsSharing(false);
     }
