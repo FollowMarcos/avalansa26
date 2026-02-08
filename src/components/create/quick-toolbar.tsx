@@ -37,20 +37,17 @@ export function QuickToolbar() {
     });
   }, []);
 
+  // Only show floating toolbar in workflow mode
+  // Gallery mode has view switcher integrated into GalleryToolbar
+  if (viewMode !== "workflow") return null;
+
   return (
     <TooltipProvider delayDuration={300}>
-      <div
-        className={cn(
-          viewMode === "workflow"
-            ? "absolute top-4 left-1/2 -translate-x-1/2 z-20"
-            : "flex justify-center py-2 shrink-0 border-b border-border"
-        )}
-      >
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20">
         <div
           className={cn(
             "flex items-center gap-1 rounded-xl bg-background border border-border shadow-sm transition-all duration-200 ease-out",
-            isCollapsed ? "px-1.5 py-1.5" : "px-2 py-1.5",
-            viewMode !== "workflow" && "border-transparent shadow-none"
+            isCollapsed ? "px-1.5 py-1.5" : "px-2 py-1.5"
           )}
         >
           {/* Collapse/Expand Toggle */}
@@ -92,11 +89,7 @@ export function QuickToolbar() {
                     size="icon"
                     onClick={() => setViewMode("gallery")}
                     aria-label="Gallery view"
-                    aria-pressed={viewMode === "gallery"}
-                    className={cn(
-                      "size-8 rounded-lg",
-                      viewMode === "gallery" && "bg-muted"
-                    )}
+                    className="size-8 rounded-lg"
                   >
                     <LayoutGrid className="size-4" strokeWidth={1.5} aria-hidden="true" />
                   </Button>
@@ -109,13 +102,9 @@ export function QuickToolbar() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => setViewMode("workflow")}
                     aria-label="Workflow view"
-                    aria-pressed={viewMode === "workflow"}
-                    className={cn(
-                      "size-8 rounded-lg",
-                      viewMode === "workflow" && "bg-muted"
-                    )}
+                    aria-pressed
+                    className="size-8 rounded-lg bg-muted"
                   >
                     <GitBranch className="size-4" strokeWidth={1.5} aria-hidden="true" />
                   </Button>

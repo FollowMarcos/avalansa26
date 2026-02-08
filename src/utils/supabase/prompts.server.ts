@@ -717,15 +717,17 @@ export async function getReceivedPromptShares(): Promise<PromptShareWithDetails[
   }
 
   return (
-    shares?.map((share) => ({
-      ...share,
-      prompt: share.prompts as unknown as Prompt,
-      sharer: share.profiles as unknown as {
-        id: string;
-        username: string | null;
-        avatar_url: string | null;
-      },
-    })) ?? []
+    shares
+      ?.filter((share) => share.prompts != null && share.profiles != null)
+      .map((share) => ({
+        ...share,
+        prompt: share.prompts as unknown as Prompt,
+        sharer: share.profiles as unknown as {
+          id: string;
+          username: string | null;
+          avatar_url: string | null;
+        },
+      })) ?? []
   );
 }
 

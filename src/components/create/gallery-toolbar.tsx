@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Search, SlidersHorizontal, CheckSquare, X, Heart } from "lucide-react";
+import { Search, SlidersHorizontal, CheckSquare, X, Heart, LayoutGrid, GitBranch } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,11 +17,20 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useCreate, type GallerySortOption } from "./create-context";
 import { GalleryFilters } from "./gallery-filters";
 
 export function GalleryToolbar() {
   const {
+    viewMode,
+    setViewMode,
     galleryFilterState,
     setSearchQuery,
     setSortBy,
@@ -75,9 +84,52 @@ export function GalleryToolbar() {
   ];
 
   return (
+    <TooltipProvider delayDuration={300}>
     <div className="space-y-3">
       {/* Main toolbar row */}
       <div className="flex items-center gap-2 flex-wrap">
+        {/* View Mode Switcher */}
+        <div className="flex items-center border border-border rounded-lg p-0.5" role="group" aria-label="View mode">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setViewMode("gallery")}
+                aria-label="Gallery view"
+                aria-pressed={viewMode === "gallery"}
+                className={cn(
+                  "size-8 rounded-md",
+                  viewMode === "gallery" && "bg-muted"
+                )}
+              >
+                <LayoutGrid className="size-4" strokeWidth={1.5} aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Gallery View</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setViewMode("workflow")}
+                aria-label="Workflow view"
+                aria-pressed={viewMode === "workflow"}
+                className={cn(
+                  "size-8 rounded-md",
+                  viewMode === "workflow" && "bg-muted"
+                )}
+              >
+                <GitBranch className="size-4" strokeWidth={1.5} aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Workflow View</TooltipContent>
+          </Tooltip>
+        </div>
+
+        <div className="w-px h-6 bg-border" aria-hidden="true" />
+
         {/* Search */}
         <div className="relative flex-1 min-w-[200px] max-w-[300px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" aria-hidden="true" />
@@ -259,5 +311,6 @@ export function GalleryToolbar() {
         </div>
       )}
     </div>
+    </TooltipProvider>
   );
 }
