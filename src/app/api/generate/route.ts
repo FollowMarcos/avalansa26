@@ -355,6 +355,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
           imageSize,
           outputCount,
           generationSpeed: mode,
+          model: apiConfig.name,
           referenceImages: referenceImageInfo.length > 0 ? referenceImageInfo : undefined,
         },
       });

@@ -18,7 +18,7 @@ export type AspectRatio =
   | "9:16" | "16:9"
   | "21:9";
 export type GenerationSpeed = "fast" | "relaxed";
-export type ModelId = "nano-banana-pro";
+export type ModelId = string;
 
 // Canvas interaction modes (Figma-style)
 export type InteractionMode = "select" | "hand";
@@ -494,7 +494,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         timestamp: new Date(gen.created_at).getTime(),
         isFavorite: gen.is_favorite ?? false,
         settings: {
-          model: "nano-banana-pro" as ModelId,
+          model: gen.settings.model || "Unknown",
           imageSize: (gen.settings.imageSize as ImageSize) || "2K",
           aspectRatio: (gen.settings.aspectRatio as AspectRatio) || "1:1",
           outputCount: gen.settings.outputCount || 1,
@@ -545,7 +545,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
           timestamp: new Date(gen.created_at).getTime(),
           isFavorite: gen.is_favorite ?? false,
           settings: {
-            model: "nano-banana-pro" as ModelId,
+            model: gen.settings.model || "Unknown",
             imageSize: (gen.settings.imageSize as ImageSize) || "2K",
             aspectRatio: (gen.settings.aspectRatio as AspectRatio) || "1:1",
             outputCount: gen.settings.outputCount || 1,

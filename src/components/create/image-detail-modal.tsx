@@ -22,6 +22,7 @@ import {
   FolderOpen,
   Link2,
   Images,
+  Cpu,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -467,6 +468,19 @@ export function ImageDetailModal({
                   <span className="text-xs font-mono text-muted-foreground uppercase">
                     Details
                   </span>
+
+                  {/* Model */}
+                  {image.settings.model && (
+                    <div className="flex items-center gap-2">
+                      <div className="size-8 rounded-md bg-muted flex items-center justify-center">
+                        <Cpu className="size-4 text-muted-foreground" aria-hidden="true" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs text-muted-foreground">Model</p>
+                        <p className="text-sm font-mono font-medium truncate">{image.settings.model}</p>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-3">
                     {/* Aspect Ratio */}

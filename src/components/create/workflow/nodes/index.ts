@@ -20,6 +20,7 @@ import { NoteNode, noteDefinition, noteExecutor } from './note-node';
 import { CollageComposerNode, collageComposerDefinition, collageComposerExecutor } from './collage-composer-node';
 import { MangaPanelNode, mangaPanelDefinition, mangaPanelExecutor } from './manga-panel-node';
 import { BeforeAfterImageNode, beforeAfterDefinition, beforeAfterExecutor } from './before-after-node';
+import { CharacterTurnaroundNode, characterTurnaroundDefinition, characterTurnaroundExecutor } from './character-turnaround-node';
 
 registerNode({ definition: promptInputDefinition, component: PromptInputNode, executor: promptInputExecutor });
 registerNode({ definition: settingsDefinition, component: SettingsNode, executor: settingsExecutor });
@@ -34,3 +35,4 @@ registerNode({ definition: noteDefinition, component: NoteNode, executor: noteEx
 registerNode({ definition: collageComposerDefinition, component: CollageComposerNode, executor: collageComposerExecutor });
 registerNode({ definition: mangaPanelDefinition, component: MangaPanelNode, executor: mangaPanelExecutor });
 registerNode({ definition: beforeAfterDefinition, component: BeforeAfterImageNode, executor: beforeAfterExecutor });
+registerNode({ definition: characterTurnaroundDefinition, component: CharacterTurnaroundNode, executor: characterTurnaroundExecutor });
