@@ -947,6 +947,10 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     const steps = getThinkingSteps();
     setThinkingSteps(steps);
 
+    // Resolve the API config name for accurate model display
+    const selectedApi = availableApis.find(api => api.id === selectedApiId);
+    const resolvedModelName = selectedApi?.name || settings.model;
+
     // Create placeholder entries in history immediately
     const placeholderIds: string[] = [];
     const placeholders: GeneratedImage[] = [];
@@ -958,7 +962,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         url: '',
         prompt: prompt,
         timestamp: Date.now(),
-        settings: { ...settings },
+        settings: { ...settings, model: resolvedModelName },
         status: 'pending',
       });
     }
@@ -1075,7 +1079,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         url: img.url,
         prompt: finalPrompt,
         timestamp: Date.now(),
-        settings: { ...settings },
+        settings: { ...settings, model: resolvedModelName },
         status: 'completed' as const,
       }));
 
@@ -1104,7 +1108,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       setIsGenerating(false);
       setThinkingSteps([]);
     }
-  }, [prompt, referenceImages, settings, selectedApiId, getThinkingSteps, buildFinalPrompt, pollBatchJob]);
+  }, [prompt, referenceImages, settings, selectedApiId, availableApis, getThinkingSteps, buildFinalPrompt, pollBatchJob]);
 
   const cancelGeneration = React.useCallback(() => {
     abortControllerRef.current?.abort();
