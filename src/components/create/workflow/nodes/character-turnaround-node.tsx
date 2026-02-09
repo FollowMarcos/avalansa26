@@ -15,16 +15,16 @@ import { cn } from '@/lib/utils';
 interface ViewAngle {
   key: string;
   label: string;
-  promptSuffix: string;
+  promptLabel: string;
 }
 
 const VIEW_ANGLES: ViewAngle[] = [
-  { key: 'front', label: 'Front', promptSuffix: 'front view' },
-  { key: 'threeQuarterFront', label: '3/4 Front', promptSuffix: 'three-quarter front view' },
-  { key: 'sideLeft', label: 'Side (L)', promptSuffix: 'left side profile view' },
-  { key: 'sideRight', label: 'Side (R)', promptSuffix: 'right side profile view' },
-  { key: 'threeQuarterBack', label: '3/4 Back', promptSuffix: 'three-quarter back view' },
-  { key: 'back', label: 'Back', promptSuffix: 'back view, from behind' },
+  { key: 'front', label: 'Front', promptLabel: 'Front View' },
+  { key: 'threeQuarterFront', label: '3/4 Front', promptLabel: 'Three-Quarter Front View' },
+  { key: 'sideLeft', label: 'Side (L)', promptLabel: 'Left Profile' },
+  { key: 'sideRight', label: 'Side (R)', promptLabel: 'Right Profile' },
+  { key: 'threeQuarterBack', label: '3/4 Back', promptLabel: 'Three-Quarter Back View' },
+  { key: 'back', label: 'Back', promptLabel: 'Back View' },
 ];
 
 const SHOT_TYPES = [
@@ -60,12 +60,8 @@ export const characterTurnaroundDefinition: WorkflowNodeDefinition = {
       back: true,
     },
     shotType: 'full-body',
-    showLabels: true,
-    labelFontSize: 24,
     backgroundMode: 'solid',
     backgroundColor: '#ffffff',
-    outputSize: 2048,
-    gap: 8,
   },
   minWidth: 280,
 };
@@ -74,7 +70,7 @@ export const characterTurnaroundDefinition: WorkflowNodeDefinition = {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Resolve a reference image URL to a storage path (same pattern as image-generate-node). */
+/** Resolve a reference image URL to a storage path. */
 async function resolveRefPath(raw: unknown): Promise<string | null> {
   if (!raw || typeof raw !== 'string') return null;
 
@@ -103,17 +99,59 @@ async function resolveRefPath(raw: unknown): Promise<string | null> {
   return raw;
 }
 
-function loadImage(src: unknown): Promise<HTMLImageElement> {
-  if (typeof src !== 'string' || !src) {
-    return Promise.reject(new Error('Invalid image source'));
+/** Compute the best aspect ratio for the sheet based on view count and layout. */
+function getSheetAspectRatio(viewCount: number): string {
+  if (viewCount <= 3) return '16:9';
+  if (viewCount === 4) return '16:9';
+  // 5-6 views use a grid — slightly wider than square
+  return '3:2';
+}
+
+/** Build the structured turnaround prompt. */
+function buildTurnaroundPrompt(
+  characterDescription: string,
+  enabledViews: ViewAngle[],
+  shotType: string,
+  backgroundMode: string,
+  backgroundColor: string,
+): string {
+  const viewCount = enabledViews.length;
+  const viewList = enabledViews.map((v) => v.promptLabel).join(', ');
+
+  // Layout instruction
+  let layoutInstruction: string;
+  if (viewCount <= 4) {
+    layoutInstruction = `Place exactly ${viewCount} figures in a single horizontal row.`;
+  } else {
+    const cols = 3;
+    const rows = Math.ceil(viewCount / cols);
+    layoutInstruction = `Arrange the ${viewCount} figures in a clean ${rows}x${cols} grid layout.`;
   }
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => resolve(img);
-    img.onerror = () => reject(new Error(`Failed to load: ${src.slice(0, 50)}`));
-    img.src = src;
-  });
+
+  // Background
+  const bgValue = backgroundMode === 'solid' ? `Solid ${backgroundColor}` : 'Keep the original scene background';
+
+  // Shot type label
+  const shotLabel = shotType === 'close-up' ? 'close-up' : shotType === 'medium-shot' ? 'medium shot' : 'full-body';
+
+  return [
+    `Generate a professional character turnaround sheet based on the provided reference.`,
+    ``,
+    `CHARACTER: ${characterDescription}`,
+    ``,
+    `STRICT LAYOUT REQUIREMENTS:`,
+    `- VIEW COUNT: Generate EXACTLY ${viewCount} distinct character figures. No more, no less.`,
+    `- ARRANGEMENT: ${layoutInstruction}`,
+    `- VIEW LIST: The figures must represent these specific angles: ${viewList}.`,
+    `- NO REPETITION: Every character figure must be a unique angle from the list. Do NOT duplicate the front view or any other pose.`,
+    `- NO HALLUCINATIONS: Do not fill empty canvas space with extra characters or redundant sketches.`,
+    ``,
+    `VISUAL MANDATE:`,
+    `- CONSISTENCY: Maintain 1:1 likeness, facial features, hair, and clothing across all views.`,
+    `- FRAMING: ${shotLabel} framing for all figures.`,
+    `- BACKGROUND: ${bgValue}.`,
+    `- FORMAT: High-fidelity production asset. Zero text labels or UI elements.`,
+  ].join('\n');
 }
 
 // ---------------------------------------------------------------------------
@@ -151,117 +189,51 @@ export const characterTurnaroundExecutor: NodeExecutor = async (inputs, config, 
   const backgroundMode = (config.backgroundMode as string) || 'solid';
   const backgroundColor = (config.backgroundColor as string) || '#ffffff';
 
-  // Build prompt for each view and generate in parallel
-  const bgInstruction =
-    backgroundMode === 'solid' ? `, on a plain ${backgroundColor} colored background` : '';
-
-  const generateView = async (view: ViewAngle): Promise<{ label: string; url: string }> => {
-    const viewPrompt = `${prompt}, ${view.promptSuffix}, ${shotType} shot, character turnaround sheet${bgInstruction}`;
-
-    const response = await fetch('/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        apiId,
-        prompt: viewPrompt,
-        negativePrompt: negative,
-        aspectRatio: '3:4',
-        imageSize: typeof settings.imageSize === 'string' ? settings.imageSize : '2K',
-        outputCount: 1,
-        referenceImagePaths,
-        mode: typeof settings.generationSpeed === 'string' ? settings.generationSpeed : 'fast',
-      }),
-      signal: context.signal,
-    });
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Generation failed' }));
-      throw new Error(error.error || `HTTP ${response.status}`);
-    }
-
-    const data = await response.json();
-    if (!data.success || !data.images?.[0]) {
-      throw new Error(data.error || `No image generated for ${view.label}`);
-    }
-
-    const imageUrl = data.images[0].url;
-    if (typeof imageUrl !== 'string') {
-      throw new Error(`Invalid image URL for ${view.label}`);
-    }
-
-    return { label: view.label, url: imageUrl };
-  };
-
-  const results = await Promise.all(enabledViews.map(generateView));
-
-  // Load all generated images
-  const loadedImages = await Promise.all(
-    results.map(async (r) => ({
-      label: r.label,
-      img: await loadImage(r.url),
-    })),
+  // Build structured prompt
+  const turnaroundPrompt = buildTurnaroundPrompt(
+    prompt,
+    enabledViews,
+    shotType,
+    backgroundMode,
+    backgroundColor,
   );
 
-  // Composite onto canvas
-  const N = loadedImages.length;
-  const cols = N <= 4 ? N : 3;
-  const rows = Math.ceil(N / cols);
+  // Determine aspect ratio based on layout
+  const aspectRatio = getSheetAspectRatio(enabledViews.length);
 
-  const outputSize = (config.outputSize as number) || 2048;
-  const gap = (config.gap as number) ?? 8;
-  const showLabels = config.showLabels !== false;
-  const labelFontSize = (config.labelFontSize as number) || 24;
-  const labelH = showLabels ? labelFontSize + 12 : 0;
+  // Single API call — the model generates the entire sheet
+  const response = await fetch('/api/generate', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      apiId,
+      prompt: turnaroundPrompt,
+      negativePrompt: negative,
+      aspectRatio,
+      imageSize: typeof settings.imageSize === 'string' ? settings.imageSize : '2K',
+      outputCount: 1,
+      referenceImagePaths,
+      mode: typeof settings.generationSpeed === 'string' ? settings.generationSpeed : 'fast',
+    }),
+    signal: context.signal,
+  });
 
-  const panelW = Math.floor((outputSize - (cols + 1) * gap) / cols);
-  const panelH = Math.floor(panelW * 1.2);
-  const canvasW = cols * panelW + (cols + 1) * gap;
-  const canvasH = rows * (panelH + labelH) + (rows + 1) * gap;
-
-  const canvas = document.createElement('canvas');
-  canvas.width = canvasW;
-  canvas.height = canvasH;
-  const ctx = canvas.getContext('2d')!;
-
-  // Background fill
-  ctx.fillStyle = backgroundMode === 'solid' ? backgroundColor : '#ffffff';
-  ctx.fillRect(0, 0, canvasW, canvasH);
-
-  for (let i = 0; i < loadedImages.length; i++) {
-    const { label, img } = loadedImages[i];
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-
-    const px = gap + col * (panelW + gap);
-    const py = gap + row * (panelH + labelH + gap);
-
-    // Cover-fit drawing
-    ctx.save();
-    ctx.beginPath();
-    ctx.roundRect(px, py, panelW, panelH, 8);
-    ctx.clip();
-
-    const scale = Math.max(panelW / img.width, panelH / img.height);
-    const sw = panelW / scale;
-    const sh = panelH / scale;
-    const sx = (img.width - sw) / 2;
-    const sy = (img.height - sh) / 2;
-    ctx.drawImage(img, sx, sy, sw, sh, px, py, panelW, panelH);
-    ctx.restore();
-
-    // Draw label below panel
-    if (showLabels) {
-      ctx.save();
-      ctx.font = `600 ${labelFontSize}px Inter, system-ui, sans-serif`;
-      ctx.fillStyle = backgroundMode === 'solid' ? '#333333' : '#ffffff';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'top';
-      ctx.fillText(label, px + panelW / 2, py + panelH + 4);
-      ctx.restore();
-    }
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Generation failed' }));
+    throw new Error(error.error || `HTTP ${response.status}`);
   }
 
-  return { sheet: canvas.toDataURL('image/jpeg', 0.92) };
+  const data = await response.json();
+  if (!data.success || !data.images?.[0]) {
+    throw new Error(data.error || 'No turnaround sheet generated');
+  }
+
+  const imageUrl = data.images[0].url;
+  if (typeof imageUrl !== 'string') {
+    throw new Error('Invalid image URL returned');
+  }
+
+  return { sheet: imageUrl };
 };
 
 // ---------------------------------------------------------------------------
@@ -287,8 +259,6 @@ export function CharacterTurnaroundNode({ data, id, selected }: CharacterTurnaro
 
   const views = (config.views as Record<string, boolean>) || {};
   const shotType = (config.shotType as string) || 'full-body';
-  const showLabels = config.showLabels !== false;
-  const labelFontSize = (config.labelFontSize as number) || 24;
   const backgroundMode = (config.backgroundMode as string) || 'solid';
   const backgroundColor = (config.backgroundColor as string) || '#ffffff';
 
@@ -365,43 +335,6 @@ export function CharacterTurnaroundNode({ data, id, selected }: CharacterTurnaro
           </div>
         </div>
 
-        {/* Labels toggle */}
-        <div className="flex items-center gap-2">
-          <label className="text-[10px] text-muted-foreground w-12 flex-shrink-0">Labels</label>
-          <button
-            type="button"
-            onClick={() => update('showLabels', !showLabels)}
-            className={cn(
-              'relative inline-flex h-4 w-7 items-center rounded-full transition-colors',
-              showLabels ? 'bg-primary' : 'bg-muted',
-            )}
-            role="switch"
-            aria-checked={showLabels}
-            aria-label="Show labels"
-          >
-            <span
-              className={cn(
-                'inline-block size-3 rounded-full bg-white transition-transform',
-                showLabels ? 'translate-x-3.5' : 'translate-x-0.5',
-              )}
-            />
-          </button>
-          {showLabels && (
-            <div className="flex items-center gap-1">
-              <input
-                type="number"
-                min={12}
-                max={48}
-                value={labelFontSize}
-                onChange={(e) => update('labelFontSize', Number(e.target.value))}
-                className="w-10 text-[10px] rounded border border-border bg-muted/30 px-1 py-0.5 text-center focus:outline-none focus:ring-1 focus:ring-ring"
-                aria-label="Label font size"
-              />
-              <span className="text-[9px] text-muted-foreground">px</span>
-            </div>
-          )}
-        </div>
-
         {/* Background */}
         <div className="space-y-1">
           <label className="text-[10px] text-muted-foreground block">Background</label>
@@ -441,9 +374,7 @@ export function CharacterTurnaroundNode({ data, id, selected }: CharacterTurnaro
         {status === 'running' && (
           <div className="flex items-center gap-2 py-2">
             <Loader size="sm" />
-            <span className="text-xs text-muted-foreground">
-              Generating {enabledCount} views…
-            </span>
+            <span className="text-xs text-muted-foreground">Generating sheet…</span>
           </div>
         )}
 
