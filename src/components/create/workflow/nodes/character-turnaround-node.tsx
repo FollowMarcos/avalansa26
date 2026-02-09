@@ -75,8 +75,8 @@ export const characterTurnaroundDefinition: WorkflowNodeDefinition = {
 // ---------------------------------------------------------------------------
 
 /** Resolve a reference image URL to a storage path (same pattern as image-generate-node). */
-async function resolveRefPath(raw: string): Promise<string | null> {
-  if (!raw) return null;
+async function resolveRefPath(raw: unknown): Promise<string | null> {
+  if (!raw || typeof raw !== 'string') return null;
 
   if (raw.startsWith('http://') || raw.startsWith('https://')) {
     try {
@@ -103,7 +103,10 @@ async function resolveRefPath(raw: string): Promise<string | null> {
   return raw;
 }
 
-function loadImage(src: string): Promise<HTMLImageElement> {
+function loadImage(src: unknown): Promise<HTMLImageElement> {
+  if (typeof src !== 'string' || !src) {
+    return Promise.reject(new Error('Invalid image source'));
+  }
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.crossOrigin = 'anonymous';
@@ -118,22 +121,25 @@ function loadImage(src: string): Promise<HTMLImageElement> {
 // ---------------------------------------------------------------------------
 
 export const characterTurnaroundExecutor: NodeExecutor = async (inputs, config, context) => {
-  const prompt = inputs.prompt as string;
+  const rawPrompt = inputs.prompt;
+  const prompt = typeof rawPrompt === 'string' ? rawPrompt : '';
   if (!prompt) throw new Error('Prompt is required');
 
-  const negative = (inputs.negative as string) || '';
-  const settings = (inputs.settings as Record<string, unknown>) || {};
+  const negative = typeof inputs.negative === 'string' ? inputs.negative : '';
+  const settings =
+    inputs.settings && typeof inputs.settings === 'object' && !Array.isArray(inputs.settings)
+      ? (inputs.settings as Record<string, unknown>)
+      : {};
 
   // Resolve reference image if provided
-  const rawReference = inputs.reference as string | undefined;
   const referenceImagePaths: string[] = [];
-  if (rawReference) {
-    const resolved = await resolveRefPath(rawReference);
+  if (inputs.reference) {
+    const resolved = await resolveRefPath(inputs.reference);
     if (resolved) referenceImagePaths.push(resolved);
   }
 
   // Determine API ID
-  const settingsApiId = (settings.apiId as string) || '';
+  const settingsApiId = typeof settings.apiId === 'string' ? settings.apiId : '';
   const apiId = settingsApiId || context.apiId;
 
   // Collect enabled views
@@ -160,10 +166,10 @@ export const characterTurnaroundExecutor: NodeExecutor = async (inputs, config, 
         prompt: viewPrompt,
         negativePrompt: negative,
         aspectRatio: '3:4',
-        imageSize: settings.imageSize || '2K',
+        imageSize: typeof settings.imageSize === 'string' ? settings.imageSize : '2K',
         outputCount: 1,
         referenceImagePaths,
-        mode: settings.generationSpeed || 'fast',
+        mode: typeof settings.generationSpeed === 'string' ? settings.generationSpeed : 'fast',
       }),
       signal: context.signal,
     });
@@ -178,7 +184,12 @@ export const characterTurnaroundExecutor: NodeExecutor = async (inputs, config, 
       throw new Error(data.error || `No image generated for ${view.label}`);
     }
 
-    return { label: view.label, url: data.images[0].url };
+    const imageUrl = data.images[0].url;
+    if (typeof imageUrl !== 'string') {
+      throw new Error(`Invalid image URL for ${view.label}`);
+    }
+
+    return { label: view.label, url: imageUrl };
   };
 
   const results = await Promise.all(enabledViews.map(generateView));
