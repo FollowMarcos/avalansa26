@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Settings } from 'lucide-react';
 import { BaseWorkflowNode } from '../base-workflow-node';
+import { useCreate } from '../../create-context';
 import type { WorkflowNodeData, WorkflowNodeDefinition } from '@/types/workflow';
 import type { NodeExecutor } from '../node-registry';
 
@@ -24,6 +25,7 @@ export const settingsDefinition: WorkflowNodeDefinition = {
     imageSize: '2K',
     outputCount: 1,
     generationSpeed: 'fast',
+    apiId: null,
   },
   minWidth: 220,
 };
@@ -34,6 +36,7 @@ export const settingsExecutor: NodeExecutor = async (_inputs, config) => ({
     imageSize: config.imageSize ?? '2K',
     outputCount: config.outputCount ?? 1,
     generationSpeed: config.generationSpeed ?? 'fast',
+    apiId: config.apiId ?? null,
   },
 });
 
@@ -53,6 +56,7 @@ interface SettingsNodeProps {
 
 export function SettingsNode({ data, id, selected }: SettingsNodeProps) {
   const config = data.config;
+  const { availableApis } = useCreate();
 
   return (
     <BaseWorkflowNode
@@ -66,6 +70,28 @@ export function SettingsNode({ data, id, selected }: SettingsNodeProps) {
       minWidth={settingsDefinition.minWidth}
     >
       <div className="space-y-2">
+        {/* API / Provider */}
+        <div className="flex items-center gap-2">
+          <label className="text-[10px] text-muted-foreground w-16 flex-shrink-0">
+            API
+          </label>
+          <select
+            value={(config.apiId as string) || ''}
+            onChange={(e) =>
+              dispatchConfig(id, { ...config, apiId: e.target.value || null })
+            }
+            className="flex-1 rounded-md border border-border bg-muted/30 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring truncate"
+            aria-label="API provider"
+          >
+            <option value="">Default</option>
+            {availableApis.map((api) => (
+              <option key={api.id} value={api.id}>
+                {api.name}{api.model_id ? ` (${api.model_id})` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+
         {/* Aspect Ratio */}
         <div className="flex items-center gap-2">
           <label className="text-[10px] text-muted-foreground w-16 flex-shrink-0">

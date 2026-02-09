@@ -142,26 +142,33 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
       );
     }
 
-    // ========================================================================
-    // FETCH REFERENCE IMAGES
-    // ========================================================================
-
-    let referenceImages: string[] = [];
-    if (referenceImagePaths && referenceImagePaths.length > 0) {
-      referenceImages = await getImagesAsBase64(referenceImagePaths);
-
-      if (referenceImages.length === 0 && referenceImagePaths.length > 0) {
-        console.error('[API /generate] Failed to fetch any reference images');
-      }
-    }
-
-    // Get API configuration
+    // Get API configuration (before fetching reference images so we know the format)
     const apiConfig = await getApiConfig(apiId);
     if (!apiConfig) {
       return NextResponse.json(
         { success: false, error: 'API not found or access denied' },
         { status: 404 }
       );
+    }
+
+    // ========================================================================
+    // FETCH REFERENCE IMAGES
+    // ========================================================================
+
+    let referenceImages: string[] = [];
+    if (referenceImagePaths && referenceImagePaths.length > 0) {
+      if (apiConfig.provider === 'fal') {
+        // Fal.ai expects public URLs (image_urls), not base64
+        const refUrls = await getReferenceImageUrls(referenceImagePaths);
+        referenceImages = refUrls.map(r => r.url);
+      } else {
+        // Other providers (Google, Stability, etc.) use base64
+        referenceImages = await getImagesAsBase64(referenceImagePaths);
+      }
+
+      if (referenceImages.length === 0 && referenceImagePaths.length > 0) {
+        console.error('[API /generate] Failed to fetch any reference images');
+      }
     }
 
     // Handle relaxed/batch mode for supported providers
@@ -651,29 +658,38 @@ function getAspectRatioHint(aspectRatio: string): string {
 
 /**
  * Generate images using Fal.ai API
+ * Supports SeedREAM v4/v4.5, Flux, and other fal.ai models.
  */
 async function generateWithFal(params: ProviderParams): Promise<GeneratedImage[]> {
   const { apiKey, endpoint, modelId, prompt, negativePrompt, aspectRatio, imageSize, outputCount, referenceImages } = params;
 
-  // Parse image size to dimensions
   const dimensions = parseImageSize(imageSize, aspectRatio);
+  const hasReferenceImages = referenceImages && referenceImages.length > 0;
 
   const requestBody: Record<string, unknown> = {
     prompt,
-    negative_prompt: negativePrompt || '',
     num_images: outputCount,
+    max_images: outputCount,
     image_size: {
       width: dimensions.width,
       height: dimensions.height,
     },
+    enable_safety_checker: true,
   };
 
-  // Add reference images for image-to-image if provided
-  if (referenceImages && referenceImages.length > 0) {
-    requestBody.image_url = referenceImages[0]; // Fal typically uses first reference
+  // Only include negative_prompt if provided (some models like SeedREAM don't support it)
+  if (negativePrompt) {
+    requestBody.negative_prompt = negativePrompt;
   }
 
-  const apiEndpoint = endpoint || `https://fal.run/${modelId || 'fal-ai/flux/dev'}`;
+  // Reference images — use image_urls array (SeedREAM, newer fal models)
+  if (hasReferenceImages) {
+    requestBody.image_urls = referenceImages;
+  }
+
+  // Build endpoint: use custom endpoint if set, otherwise construct from model ID
+  const resolvedModelId = modelId || 'fal-ai/flux/dev';
+  const apiEndpoint = endpoint || `https://fal.run/${resolvedModelId}`;
 
   const response = await fetchWithTimeout(apiEndpoint, {
     method: 'POST',
@@ -691,9 +707,7 @@ async function generateWithFal(params: ProviderParams): Promise<GeneratedImage[]
 
   const data = await response.json();
 
-  // Extract images from Fal response
   const images: GeneratedImage[] = [];
-
   if (data.images) {
     for (const img of data.images) {
       images.push({ url: img.url });

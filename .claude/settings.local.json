@@ -43,7 +43,8 @@
       "Bash(del \"src\\\\components\\\\create\\\\flow-canvas.tsx\")",
       "Bash(del \"src\\\\components\\\\create\\\\helper-lines.tsx\")",
       "Bash(del \"src\\\\components\\\\create\\\\nodes\\\\image-node.tsx\")",
-      "Bash(del \"src\\\\components\\\\create\\\\nodes\\\\index.ts\")"
+      "Bash(del \"src\\\\components\\\\create\\\\nodes\\\\index.ts\")",
+      "WebFetch(domain:fal.ai)"
     ]
   }
 }

@@ -83,7 +83,9 @@ export const imageGenerateExecutor: NodeExecutor = async (inputs, config, contex
   const resolvedPaths = await Promise.all(allRawRefs.map(resolveRefPath));
   const referenceImagePaths = resolvedPaths.filter((p): p is string => p !== null);
 
-  const apiId = (config.apiId as string) || context.apiId;
+  // Priority: generate node config > settings wire > global context
+  const settingsApiId = (settings.apiId as string) || '';
+  const apiId = (config.apiId as string) || settingsApiId || context.apiId;
 
   const response = await fetch('/api/generate', {
     method: 'POST',
