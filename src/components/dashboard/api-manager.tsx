@@ -86,6 +86,7 @@ interface ApiFormData {
   access_level: ApiAccessLevel;
   allowed_users: string[];
   is_active: boolean;
+  enable_safety_checker: boolean;
 }
 
 const defaultFormData: ApiFormData = {
@@ -98,6 +99,7 @@ const defaultFormData: ApiFormData = {
   access_level: 'authenticated',
   allowed_users: [],
   is_active: true,
+  enable_safety_checker: true,
 };
 
 function ApiCard({
@@ -212,6 +214,10 @@ export function ApiManager() {
 
     setIsSaving(true);
 
+    const modelInfo = formData.provider === 'fal'
+      ? { enableSafetyChecker: formData.enable_safety_checker }
+      : null;
+
     if (editingApi) {
       // Update existing API
       const updates: ApiConfigUpdate = {
@@ -220,6 +226,7 @@ export function ApiManager() {
         description: formData.description || null,
         endpoint: formData.endpoint,
         model_id: formData.model_id || null,
+        model_info: modelInfo,
         access_level: formData.access_level,
         allowed_users: formData.allowed_users,
         is_active: formData.is_active,
@@ -247,6 +254,7 @@ export function ApiManager() {
         endpoint: formData.endpoint,
         api_key: formData.api_key,
         model_id: formData.model_id || null,
+        model_info: modelInfo,
         access_level: formData.access_level,
         allowed_users: formData.allowed_users,
         is_active: formData.is_active,
@@ -297,6 +305,7 @@ export function ApiManager() {
       access_level: api.access_level,
       allowed_users: api.allowed_users || [],
       is_active: api.is_active,
+      enable_safety_checker: api.model_info?.enableSafetyChecker ?? true,
     });
     setShowApiKey(false);
     setIsDialogOpen(true);
@@ -479,6 +488,24 @@ export function ApiManager() {
                   placeholder="e.g. gemini-3-pro-image"
                 />
               </div>
+
+              {/* Safety Checker (fal.ai only) */}
+              {formData.provider === 'fal' && (
+                <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/20">
+                  <div className="space-y-0.5">
+                    <Label className="text-sm">Safety Checker</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Filter unsafe or inappropriate content (fal.ai)
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.enable_safety_checker}
+                    onCheckedChange={(c) =>
+                      setFormData({ ...formData, enable_safety_checker: c })
+                    }
+                  />
+                </div>
+              )}
             </div>
 
             {/* Access Control */}

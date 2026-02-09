@@ -40,6 +40,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { AvatarUpload } from "@/components/settings/avatar-upload";
+import { PersonalApiManager } from "@/components/settings/personal-api-manager";
 import { validateWebsite, validateContentSafety } from "@/lib/validations/profile";
 import { toast } from "sonner";
 
@@ -413,6 +414,10 @@ export default function SettingsPage() {
                                                     <Badge variant="secondary" className="rounded-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors">Manage</Badge>
                                                 </div>
                                             </div>
+
+                                            <Separator className="bg-primary/5" />
+
+                                            <PersonalApiManager />
 
                                             <Separator className="bg-primary/5" />
 

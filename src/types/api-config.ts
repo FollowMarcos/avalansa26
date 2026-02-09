@@ -25,6 +25,8 @@ export interface ApiModelInfo {
   supportsImages?: boolean;
   /** Whether the model supports streaming responses */
   supportsStreaming?: boolean;
+  /** Whether the safety checker is enabled (fal.ai, default: true) */
+  enableSafetyChecker?: boolean;
   /** Pricing information */
   pricing?: {
     input?: number;

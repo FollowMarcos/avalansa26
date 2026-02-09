@@ -260,6 +260,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
           imageSize,
           outputCount,
           referenceImages,
+          modelInfo: apiConfig.model_info,
         });
         break;
 
@@ -377,6 +378,7 @@ interface ProviderParams {
   imageSize?: string;
   outputCount: number;
   referenceImages?: string[];
+  modelInfo?: import('@/types/api-config').ApiModelInfo | null;
 }
 
 // Default timeout for API requests (90 seconds)
@@ -661,7 +663,7 @@ function getAspectRatioHint(aspectRatio: string): string {
  * Supports SeedREAM v4/v4.5, Flux, and other fal.ai models.
  */
 async function generateWithFal(params: ProviderParams): Promise<GeneratedImage[]> {
-  const { apiKey, endpoint, modelId, prompt, negativePrompt, aspectRatio, imageSize, outputCount, referenceImages } = params;
+  const { apiKey, endpoint, modelId, prompt, negativePrompt, aspectRatio, imageSize, outputCount, referenceImages, modelInfo } = params;
 
   const dimensions = parseImageSize(imageSize, aspectRatio);
   const hasReferenceImages = referenceImages && referenceImages.length > 0;
@@ -674,7 +676,7 @@ async function generateWithFal(params: ProviderParams): Promise<GeneratedImage[]
       width: dimensions.width,
       height: dimensions.height,
     },
-    enable_safety_checker: true,
+    enable_safety_checker: modelInfo?.enableSafetyChecker ?? true,
   };
 
   // Only include negative_prompt if provided (some models like SeedREAM don't support it)

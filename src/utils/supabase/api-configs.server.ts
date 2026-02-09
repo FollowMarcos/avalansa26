@@ -73,6 +73,35 @@ export async function getGlobalApiConfigs(): Promise<ApiConfig[]> {
 }
 
 /**
+ * Get personal API configs owned by the current user (for settings page)
+ * Does not include the encrypted API key
+ */
+export async function getUserPersonalApiConfigs(): Promise<ApiConfig[]> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from('api_configs')
+    .select(
+      'id, owner_id, name, provider, description, endpoint, model_id, model_info, access_level, allowed_users, is_active, created_at, updated_at'
+    )
+    .eq('owner_id', user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching personal API configs:', error.message);
+    return [];
+  }
+
+  return data ?? [];
+}
+
+/**
  * Get all API configs accessible to the current user (for /create page)
  * Includes both global APIs and user's personal APIs
  * Does not include the encrypted API key
