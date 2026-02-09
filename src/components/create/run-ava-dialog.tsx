@@ -190,7 +190,7 @@ export function RunAvaDialog({
                   id="ava-input"
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
-                  placeholder="Describe what you want to generate\u2026"
+                  placeholder="Describe what you want to generate…"
                   rows={4}
                   className="resize-none"
                   autoFocus
@@ -276,7 +276,7 @@ export function RunAvaDialog({
                 <Loader2 className="absolute -bottom-1 -right-1 size-5 animate-spin text-primary" />
               </div>
               <div className="text-center">
-                <p className="text-sm font-medium">Generating prompt\u2026</p>
+                <p className="text-sm font-medium">Generating prompt…</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {ava.name} is working on your request
                 </p>

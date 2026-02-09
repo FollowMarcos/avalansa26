@@ -100,7 +100,7 @@ export function PromptVaultNode({ data, id, selected }: PromptVaultNodeProps) {
           )}
         >
           <span className={cn('truncate', !selectedName && 'text-muted-foreground')}>
-            {selectedName || 'Select a prompt\u2026'}
+            {selectedName || 'Select a prompt…'}
           </span>
           <ChevronDown aria-hidden="true" className="size-3 text-muted-foreground flex-shrink-0 ml-1" />
         </button>
@@ -109,7 +109,7 @@ export function PromptVaultNode({ data, id, selected }: PromptVaultNodeProps) {
         {isOpen && (
           <div className="rounded-md border border-border overflow-hidden max-h-40 overflow-y-auto bg-background">
             {isLoading ? (
-              <p className="text-[10px] text-muted-foreground text-center py-3">Loading\u2026</p>
+              <p className="text-[10px] text-muted-foreground text-center py-3">Loading…</p>
             ) : prompts.length === 0 ? (
               <p className="text-[10px] text-muted-foreground text-center py-3">No saved prompts</p>
             ) : (
@@ -126,7 +126,7 @@ export function PromptVaultNode({ data, id, selected }: PromptVaultNodeProps) {
                   <span className="font-medium truncate block">{prompt.name}</span>
                   <span className="text-[10px] text-muted-foreground truncate block">
                     {prompt.prompt_text.slice(0, 60)}
-                    {prompt.prompt_text.length > 60 ? '\u2026' : ''}
+                    {prompt.prompt_text.length > 60 ? '…' : ''}
                   </span>
                 </button>
               ))

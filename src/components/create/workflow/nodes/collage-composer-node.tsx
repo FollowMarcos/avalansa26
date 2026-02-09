@@ -484,7 +484,7 @@ export function CollageComposerNode({ data, id, selected }: CollageComposerNodeP
           {status === 'idle'
             ? 'Connect images to panels'
             : status === 'running'
-              ? 'Compositing\u2026'
+              ? 'Compositing…'
               : status === 'success'
                 ? 'Collage ready'
                 : ''}

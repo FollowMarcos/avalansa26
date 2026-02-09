@@ -933,7 +933,7 @@ export function MangaPanelNode({ data, id, selected }: MangaPanelNodeProps) {
               status === 'success' && 'bg-emerald-500/20 text-emerald-300',
               status === 'skipped' && 'bg-zinc-700/50 text-zinc-400',
             )}>
-              {status === 'running' && 'Compositing\u2026'}
+              {status === 'running' && 'Compositing…'}
               {status === 'queued' && 'Queued'}
               {status === 'success' && 'Ready'}
               {status === 'skipped' && 'Skipped'}

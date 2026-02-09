@@ -128,7 +128,7 @@ export function AvaNode({ data, id, selected }: AvaNodeProps) {
           )}
         >
           <span className={cn('truncate', !selectedName && 'text-muted-foreground')}>
-            {selectedName || 'Select an Ava\u2026'}
+            {selectedName || 'Select an Ava…'}
           </span>
           <ChevronDown aria-hidden="true" className="size-3 text-muted-foreground flex-shrink-0 ml-1" />
         </button>
@@ -137,7 +137,7 @@ export function AvaNode({ data, id, selected }: AvaNodeProps) {
         {isOpen && (
           <div className="rounded-md border border-border overflow-hidden max-h-36 overflow-y-auto bg-background">
             {isLoading ? (
-              <p className="text-[10px] text-muted-foreground text-center py-3">Loading\u2026</p>
+              <p className="text-[10px] text-muted-foreground text-center py-3">Loading…</p>
             ) : avas.length === 0 ? (
               <p className="text-[10px] text-muted-foreground text-center py-3">No Avas created</p>
             ) : (
@@ -179,7 +179,7 @@ export function AvaNode({ data, id, selected }: AvaNodeProps) {
         {status === 'running' && (
           <div className="flex items-center gap-2 py-1">
             <Loader2 aria-hidden="true" className="size-3.5 animate-spin text-muted-foreground" />
-            <span className="text-[10px] text-muted-foreground">Generating prompt\u2026</span>
+            <span className="text-[10px] text-muted-foreground">Generating prompt…</span>
           </div>
         )}
 

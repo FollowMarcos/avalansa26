@@ -359,7 +359,7 @@ export function PersonalApiManager() {
               </Label>
               <Input
                 id="api-name"
-                placeholder="My Fal.ai Key\u2026"
+                placeholder="My Fal.ai Key…"
                 value={form.name}
                 onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                 className="rounded-xl"
@@ -375,7 +375,7 @@ export function PersonalApiManager() {
                 <Input
                   id="api-key"
                   type={showKey ? 'text' : 'password'}
-                  placeholder={editingId ? '••••••••••••••••' : 'sk-\u2026'}
+                  placeholder={editingId ? '••••••••••••••••' : 'sk-…'}
                   value={form.apiKey}
                   onChange={(e) => setForm((prev) => ({ ...prev, apiKey: e.target.value }))}
                   className="rounded-xl pr-10"

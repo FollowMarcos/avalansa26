@@ -205,7 +205,7 @@ export function ShareAvaDialog({
                 id="ava-user-search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search by username\u2026"
+                placeholder="Search by username…"
                 className="pl-8"
                 autoComplete="off"
                 spellCheck={false}
@@ -269,7 +269,7 @@ export function ShareAvaDialog({
               id="ava-share-message"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              placeholder="Add a note for the recipient\u2026"
+              placeholder="Add a note for the recipient…"
               rows={2}
               className="resize-none"
             />
@@ -317,7 +317,7 @@ export function ShareAvaDialog({
             {isSharing ? (
               <>
                 <Loader2 className="size-4 mr-2 animate-spin" />
-                Sharing\u2026
+                Sharing…
               </>
             ) : (
               <>

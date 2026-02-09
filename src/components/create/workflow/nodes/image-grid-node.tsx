@@ -158,7 +158,7 @@ export function ImageGridNode({ data, id, selected }: ImageGridNodeProps) {
           {status === 'idle'
             ? 'Connect 2-4 images'
             : status === 'running'
-              ? 'Compositing\u2026'
+              ? 'Compositing…'
               : status === 'success'
                 ? `${Object.values(data.outputValues ?? {}).length > 0 ? 'Grid ready' : ''}`
                 : ''}

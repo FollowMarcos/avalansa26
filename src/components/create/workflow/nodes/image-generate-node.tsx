@@ -153,7 +153,7 @@ export function ImageGenerateNode({ data, id, selected }: ImageGenerateNodeProps
         {status === 'running' && (
           <div className="flex items-center gap-2 py-2">
             <Loader size="sm" />
-            <span className="text-xs text-muted-foreground">Generating\u2026</span>
+            <span className="text-xs text-muted-foreground">Generating…</span>
           </div>
         )}
 

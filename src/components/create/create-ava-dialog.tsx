@@ -208,7 +208,7 @@ export function CreateAvaDialog({
               id="ava-name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Cinematic Realism\u2026"
+              placeholder="Cinematic Realism…"
               autoFocus
             />
           </div>
@@ -236,7 +236,7 @@ export function CreateAvaDialog({
               id="ava-instructions"
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
-              placeholder="You are an expert at creating cinematic photography prompts. When the user provides a description or image, generate a detailed image generation prompt that includes lighting, composition, lens details, and atmosphere\u2026"
+              placeholder="You are an expert at creating cinematic photography prompts. When the user provides a description or image, generate a detailed image generation prompt that includes lighting, composition, lens details, and atmosphere…"
               rows={6}
               className="resize-none font-mono text-xs"
             />
@@ -268,14 +268,14 @@ export function CreateAvaDialog({
                           .join(", ")}
                       </span>
                     ) : (
-                      <span className="text-muted-foreground">Select folders\u2026</span>
+                      <span className="text-muted-foreground">Select folders…</span>
                     )}
                     <ChevronDown className="size-4 ml-2 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-full p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Search folders\u2026" />
+                    <CommandInput placeholder="Search folders…" />
                     <CommandList>
                       <CommandEmpty>No folders found.</CommandEmpty>
                       <CommandGroup>
@@ -322,7 +322,7 @@ export function CreateAvaDialog({
                             onClick={handleCreateFolder}
                             disabled={!newFolderName.trim() || isCreatingFolder}
                             className="h-8 px-2"
-                            aria-label={isCreatingFolder ? "Creating folder\u2026" : "Create folder"}
+                            aria-label={isCreatingFolder ? "Creating folder…" : "Create folder"}
                           >
                             {isCreatingFolder ? (
                               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -392,14 +392,14 @@ export function CreateAvaDialog({
                           .join(", ")}
                       </span>
                     ) : (
-                      <span className="text-muted-foreground">Select tags\u2026</span>
+                      <span className="text-muted-foreground">Select tags…</span>
                     )}
                     <ChevronDown className="size-4 ml-2 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-full p-0" align="start">
                   <Command>
-                    <CommandInput placeholder="Search tags\u2026" />
+                    <CommandInput placeholder="Search tags…" />
                     <CommandList>
                       <CommandEmpty>No tags found.</CommandEmpty>
                       <CommandGroup>
@@ -446,7 +446,7 @@ export function CreateAvaDialog({
                             onClick={handleCreateTag}
                             disabled={!newTagName.trim() || isCreatingTag}
                             className="h-8 px-2"
-                            aria-label={isCreatingTag ? "Creating tag\u2026" : "Create tag"}
+                            aria-label={isCreatingTag ? "Creating tag…" : "Create tag"}
                           >
                             {isCreatingTag ? (
                               <Loader2 className="size-4 animate-spin" aria-hidden="true" />
@@ -508,7 +508,7 @@ export function CreateAvaDialog({
             {isSaving ? (
               <>
                 <Loader2 className="size-4 mr-2 animate-spin" />
-                Saving\u2026
+                Saving…
               </>
             ) : (
               <>

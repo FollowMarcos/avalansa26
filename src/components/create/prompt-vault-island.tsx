@@ -184,7 +184,7 @@ export function PromptVaultIsland({
                   <Input
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder={activeSection === "avas" ? "Search your Avas\u2026" : "Search your prompts\u2026"}
+                    placeholder={activeSection === "avas" ? "Search your Avas…" : "Search your prompts…"}
                     aria-label={activeSection === "avas" ? "Search Avas" : "Search prompts"}
                     className="h-8 pl-8 text-sm"
                   />

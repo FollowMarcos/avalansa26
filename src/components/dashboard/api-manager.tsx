@@ -380,7 +380,7 @@ export function ApiManager() {
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
-                  placeholder="e.g. Gemini 3 Pro Image\u2026"
+                  placeholder="e.g. Gemini 3 Pro Image…"
                 />
               </div>
               <div className="space-y-2">
@@ -419,7 +419,7 @@ export function ApiManager() {
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                placeholder="Optional description of this API\u2026"
+                placeholder="Optional description of this API…"
                 rows={2}
               />
             </div>
@@ -438,7 +438,7 @@ export function ApiManager() {
                   onChange={(e) =>
                     setFormData({ ...formData, endpoint: e.target.value })
                   }
-                  placeholder="https://api.example.com/v1/generate\u2026"
+                  placeholder="https://api.example.com/v1/generate…"
                 />
               </div>
 
@@ -454,7 +454,7 @@ export function ApiManager() {
                     onChange={(e) =>
                       setFormData({ ...formData, api_key: e.target.value })
                     }
-                    placeholder={editingApi ? '••••••••••••••••' : 'Enter API key\u2026'}
+                    placeholder={editingApi ? '••••••••••••••••' : 'Enter API key…'}
                     className="pr-10"
                   />
                   <Button
@@ -486,7 +486,7 @@ export function ApiManager() {
                   onChange={(e) =>
                     setFormData({ ...formData, model_id: e.target.value })
                   }
-                  placeholder="e.g. gemini-3-pro-image\u2026"
+                  placeholder="e.g. gemini-3-pro-image…"
                 />
               </div>
 
