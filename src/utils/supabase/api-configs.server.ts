@@ -381,33 +381,17 @@ export async function getApiStats(): Promise<{
 
   const supabase = await createClient();
 
-  // Get total APIs
-  const { count: totalApis } = await supabase
-    .from('api_configs')
-    .select('*', { count: 'exact', head: true });
-
-  // Get active APIs
-  const { count: activeApis } = await supabase
-    .from('api_configs')
-    .select('*', { count: 'exact', head: true })
-    .eq('is_active', true);
-
-  // Get global APIs
-  const { count: globalApis } = await supabase
-    .from('api_configs')
-    .select('*', { count: 'exact', head: true })
-    .is('owner_id', null);
-
-  // Get user APIs
-  const { count: userApis } = await supabase
-    .from('api_configs')
-    .select('*', { count: 'exact', head: true })
-    .not('owner_id', 'is', null);
+  const [totalResult, activeResult, globalResult, userResult] = await Promise.all([
+    supabase.from('api_configs').select('*', { count: 'exact', head: true }),
+    supabase.from('api_configs').select('*', { count: 'exact', head: true }).eq('is_active', true),
+    supabase.from('api_configs').select('*', { count: 'exact', head: true }).is('owner_id', null),
+    supabase.from('api_configs').select('*', { count: 'exact', head: true }).not('owner_id', 'is', null),
+  ]);
 
   return {
-    totalApis: totalApis ?? 0,
-    activeApis: activeApis ?? 0,
-    globalApis: globalApis ?? 0,
-    userApis: userApis ?? 0,
+    totalApis: totalResult.count ?? 0,
+    activeApis: activeResult.count ?? 0,
+    globalApis: globalResult.count ?? 0,
+    userApis: userResult.count ?? 0,
   };
 }

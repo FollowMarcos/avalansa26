@@ -151,7 +151,7 @@ function ApiCard({
         </div>
       </div>
 
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity">
         <Button
           variant="ghost"
           size="icon"
@@ -239,7 +239,7 @@ export function ApiManager() {
 
       const updated = await updateApiConfig(editingApi.id, updates);
       if (updated) {
-        setApis(apis.map((a) => (a.id === updated.id ? updated : a)));
+        setApis((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
         toast.success('API updated successfully');
       } else {
         toast.error('Failed to update API');
@@ -262,7 +262,7 @@ export function ApiManager() {
 
       const created = await createApiConfig(newApi);
       if (created) {
-        setApis([created, ...apis]);
+        setApis((prev) => [created, ...prev]);
         toast.success('API created successfully');
       } else {
         toast.error('Failed to create API');
@@ -284,7 +284,7 @@ export function ApiManager() {
 
     const success = await deleteApiConfig(apiToDelete.id);
     if (success) {
-      setApis(apis.filter((a) => a.id !== apiToDelete.id));
+      setApis((prev) => prev.filter((a) => a.id !== apiToDelete.id));
       toast.success('API deleted');
     } else {
       toast.error('Failed to delete API');
@@ -380,7 +380,7 @@ export function ApiManager() {
                   onChange={(e) =>
                     setFormData({ ...formData, name: e.target.value })
                   }
-                  placeholder="e.g. Gemini 3 Pro Image"
+                  placeholder="e.g. Gemini 3 Pro Image\u2026"
                 />
               </div>
               <div className="space-y-2">
@@ -419,7 +419,7 @@ export function ApiManager() {
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                placeholder="Optional description of this API..."
+                placeholder="Optional description of this API\u2026"
                 rows={2}
               />
             </div>
@@ -438,7 +438,7 @@ export function ApiManager() {
                   onChange={(e) =>
                     setFormData({ ...formData, endpoint: e.target.value })
                   }
-                  placeholder="https://api.example.com/v1/generate"
+                  placeholder="https://api.example.com/v1/generate\u2026"
                 />
               </div>
 
@@ -454,7 +454,7 @@ export function ApiManager() {
                     onChange={(e) =>
                       setFormData({ ...formData, api_key: e.target.value })
                     }
-                    placeholder={editingApi ? '••••••••••••••••' : 'Enter API key'}
+                    placeholder={editingApi ? '••••••••••••••••' : 'Enter API key\u2026'}
                     className="pr-10"
                   />
                   <Button
@@ -463,6 +463,7 @@ export function ApiManager() {
                     size="icon"
                     className="absolute right-0 top-0 h-full px-3"
                     onClick={() => setShowApiKey(!showApiKey)}
+                    aria-label={showApiKey ? 'Hide API key' : 'Show API key'}
                   >
                     {showApiKey ? (
                       <EyeOff className="w-4 h-4" />
@@ -485,7 +486,7 @@ export function ApiManager() {
                   onChange={(e) =>
                     setFormData({ ...formData, model_id: e.target.value })
                   }
-                  placeholder="e.g. gemini-3-pro-image"
+                  placeholder="e.g. gemini-3-pro-image\u2026"
                 />
               </div>
 

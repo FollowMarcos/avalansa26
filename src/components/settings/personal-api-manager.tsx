@@ -35,6 +35,16 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   getUserPersonalApiConfigs,
   createApiConfig,
   updateApiConfig,
@@ -89,6 +99,7 @@ export function PersonalApiManager() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [showKey, setShowKey] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm);
 
@@ -292,7 +303,7 @@ export function PersonalApiManager() {
                     variant="ghost"
                     size="icon"
                     className="size-8 rounded-full text-destructive hover:text-destructive hover:bg-destructive/10"
-                    onClick={() => handleDelete(api.id)}
+                    onClick={() => setDeleteConfirmId(api.id)}
                     disabled={deletingId === api.id}
                     aria-label={`Delete ${api.name}`}
                   >
@@ -333,7 +344,7 @@ export function PersonalApiManager() {
                 id="api-provider"
                 value={form.provider}
                 onChange={(e) => handleProviderChange(e.target.value)}
-                className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="flex h-10 w-full rounded-xl border border-input bg-background text-foreground px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {API_PROVIDERS.map((p) => (
                   <option key={p.id} value={p.id}>{p.name}</option>
@@ -348,7 +359,7 @@ export function PersonalApiManager() {
               </Label>
               <Input
                 id="api-name"
-                placeholder="My Fal.ai Key"
+                placeholder="My Fal.ai Key\u2026"
                 value={form.name}
                 onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
                 className="rounded-xl"
@@ -364,7 +375,7 @@ export function PersonalApiManager() {
                 <Input
                   id="api-key"
                   type={showKey ? 'text' : 'password'}
-                  placeholder={editingId ? '••••••••••••••••' : 'sk-...'}
+                  placeholder={editingId ? '••••••••••••••••' : 'sk-\u2026'}
                   value={form.apiKey}
                   onChange={(e) => setForm((prev) => ({ ...prev, apiKey: e.target.value }))}
                   className="rounded-xl pr-10"
@@ -373,7 +384,7 @@ export function PersonalApiManager() {
                 <button
                   type="button"
                   onClick={() => setShowKey(!showKey)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   aria-label={showKey ? 'Hide API key' : 'Show API key'}
                 >
                   {showKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
@@ -450,6 +461,34 @@ export function PersonalApiManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete API Key</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete{' '}
+              <span className="font-medium text-foreground">
+                {apis.find((a) => a.id === deleteConfirmId)?.name}
+              </span>
+              ? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-full">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                if (deleteConfirmId) handleDelete(deleteConfirmId);
+                setDeleteConfirmId(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

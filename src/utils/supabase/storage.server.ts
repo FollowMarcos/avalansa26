@@ -197,3 +197,57 @@ export async function uploadGeneratedImage(
     };
   }
 }
+
+/**
+ * Download an image from an external URL and upload it to Supabase Storage.
+ * Used to re-host images from provider CDNs (Fal.ai, OpenAI, etc.) so they
+ * are served from our own domain and work with Next.js Image optimization.
+ */
+export async function uploadImageFromUrl(
+  externalUrl: string,
+  userId: string
+): Promise<{ url: string; path?: string; error?: string }> {
+  try {
+    const response = await fetch(externalUrl);
+    if (!response.ok) {
+      return { url: externalUrl, error: `Failed to fetch image: ${response.status}` };
+    }
+
+    const contentType = response.headers.get('content-type') || 'image/png';
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    const supabase = await createClient();
+
+    const timestamp = Date.now();
+    const randomId = Math.random().toString(36).substring(2, 11);
+    const extension = contentType.includes('jpeg') || contentType.includes('jpg') ? 'jpg'
+      : contentType.includes('webp') ? 'webp'
+      : 'png';
+    const filename = `${userId}/${timestamp}-${randomId}.${extension}`;
+
+    const { data, error } = await supabase.storage
+      .from(GENERATIONS_BUCKET)
+      .upload(filename, buffer, {
+        contentType,
+        upsert: false,
+      });
+
+    if (error) {
+      console.error('Upload from URL error:', error);
+      return { url: externalUrl, error: error.message };
+    }
+
+    const { data: urlData } = supabase.storage
+      .from(GENERATIONS_BUCKET)
+      .getPublicUrl(data.path);
+
+    return { url: urlData.publicUrl, path: data.path };
+  } catch (error) {
+    console.error('Upload from URL error:', error);
+    return {
+      url: externalUrl,
+      error: error instanceof Error ? error.message : 'Upload failed',
+    };
+  }
+}

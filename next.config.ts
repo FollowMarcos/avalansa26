@@ -27,6 +27,16 @@ const nextConfig: NextConfig = {
         hostname: 'lh3.googleusercontent.com',
         port: '',
       },
+      {
+        protocol: 'https',
+        hostname: '**.fal.media',
+        port: '',
+      },
+      {
+        protocol: 'https',
+        hostname: 'fal.media',
+        port: '',
+      },
     ],
   },
   async headers() {
@@ -40,7 +50,7 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-eval' 'unsafe-inline'", // unsafe-inline needed for Next.js
               "style-src 'self' 'unsafe-inline'", // unsafe-inline needed for styled-components
-              "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://storage.googleapis.com",
+              "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://storage.googleapis.com https://*.fal.media https://fal.media",
               "font-src 'self' data:",
               "connect-src 'self' data: blob: https://*.supabase.co https://generativelanguage.googleapis.com wss://*.supabase.co",
               "media-src 'self' blob:",

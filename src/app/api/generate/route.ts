@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { getDecryptedApiKey, getApiConfig } from '@/utils/supabase/api-configs.server';
 import { createBatchJob, submitGeminiBatchJob } from '@/utils/supabase/batch-jobs.server';
-import { getImagesAsBase64, uploadGeneratedImage, getReferenceImageUrls } from '@/utils/supabase/storage.server';
+import { getImagesAsBase64, uploadGeneratedImage, uploadImageFromUrl, getReferenceImageUrls } from '@/utils/supabase/storage.server';
 import { saveGeneration } from '@/utils/supabase/generations.server';
 import type { BatchJobRequest } from '@/types/batch-job';
 
@@ -310,26 +310,30 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
       ? await getReferenceImageUrls(referenceImagePaths)
       : [];
 
-    // Upload base64 images to storage and get public URLs
+    // Upload images to Supabase storage so all gallery URLs are on our domain
     const processedImages: GeneratedImage[] = [];
     for (const image of images) {
       let imageUrl = image.url;
-
       let imagePath: string | undefined;
 
-      // Check if the URL is a base64 data URL
       if (image.url.startsWith('data:') || image.base64) {
+        // Base64 / data URL — upload directly
         const base64Data = image.base64 || image.url;
-        // Extract mime type from data URL
         const mimeMatch = base64Data.match(/^data:([^;]+);base64,/);
         const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
 
-        // Upload to storage
         const { url, path, error } = await uploadGeneratedImage(base64Data, user.id, mimeType);
         if (error) {
           console.error('Failed to upload generated image:', error);
-          // Fall back to base64 URL (will be large but still works)
-          imageUrl = image.url;
+        } else {
+          imageUrl = url;
+          imagePath = path;
+        }
+      } else if (image.url.startsWith('http')) {
+        // External URL (Fal.ai, OpenAI, etc.) — download and re-upload to Supabase
+        const { url, path, error } = await uploadImageFromUrl(image.url, user.id);
+        if (error) {
+          console.error('Failed to re-upload external image:', error);
         } else {
           imageUrl = url;
           imagePath = path;

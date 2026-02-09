@@ -353,7 +353,22 @@ export function BeforeAfterImageNode({ data, id, selected }: BeforeAfterImageNod
             {/* Drag handle */}
             <div
               onPointerDown={handlePointerDown}
-              className="absolute top-1/2 size-8 rounded-full bg-white shadow-lg flex items-center justify-center cursor-col-resize z-10 hover:scale-110 transition-transform"
+              onKeyDown={(e) => {
+                if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  setSliderPosition((prev) => Math.max(5, prev - 5));
+                } else if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  setSliderPosition((prev) => Math.min(95, prev + 5));
+                } else if (e.key === 'Home') {
+                  e.preventDefault();
+                  setSliderPosition(5);
+                } else if (e.key === 'End') {
+                  e.preventDefault();
+                  setSliderPosition(95);
+                }
+              }}
+              className="absolute top-1/2 size-8 rounded-full bg-white shadow-lg flex items-center justify-center cursor-col-resize z-10 hover:scale-110 transition-transform focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 outline-none"
               style={{ left: `${sliderPosition}%`, transform: 'translate(-50%, -50%)' }}
               role="slider"
               aria-label="Comparison slider"
