@@ -159,6 +159,44 @@ export function useWorkflow({ apiId }: UseWorkflowOptions) {
   }, [setNodes]);
 
   // ---------------------------------------------------------------------------
+  // Edge disconnect events (from base-workflow-node handle buttons)
+  // ---------------------------------------------------------------------------
+
+  React.useEffect(() => {
+    const handleDisconnect = (e: Event) => {
+      const { nodeId, handleId } = (e as CustomEvent).detail as {
+        nodeId: string;
+        handleId: string;
+      };
+      setEdges((eds) =>
+        eds.filter((edge) => {
+          if (handleId.startsWith('in-')) {
+            return !(edge.target === nodeId && edge.targetHandle === handleId);
+          }
+          if (handleId.startsWith('out-')) {
+            return !(edge.source === nodeId && edge.sourceHandle === handleId);
+          }
+          return true;
+        }),
+      );
+    };
+
+    const handleDisconnectAll = (e: Event) => {
+      const { nodeId } = (e as CustomEvent).detail as { nodeId: string };
+      setEdges((eds) =>
+        eds.filter((edge) => edge.source !== nodeId && edge.target !== nodeId),
+      );
+    };
+
+    window.addEventListener('workflow-disconnect-handle', handleDisconnect);
+    window.addEventListener('workflow-disconnect-all', handleDisconnectAll);
+    return () => {
+      window.removeEventListener('workflow-disconnect-handle', handleDisconnect);
+      window.removeEventListener('workflow-disconnect-all', handleDisconnectAll);
+    };
+  }, [setEdges]);
+
+  // ---------------------------------------------------------------------------
   // Wrapped onNodesChange — drag-to-group membership detection
   // ---------------------------------------------------------------------------
 

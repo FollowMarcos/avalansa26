@@ -1,9 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { Handle, Position, NodeResizer } from '@xyflow/react';
+import { Handle, Position, NodeResizer, useEdges } from '@xyflow/react';
 import { cn } from '@/lib/utils';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, X, Unplug } from 'lucide-react';
 import type {
   WorkflowNodeData,
   WorkflowNodeStatus,
@@ -60,6 +60,26 @@ const STATUS_DOT: Record<WorkflowNodeStatus, string> = {
   skipped: 'bg-muted-foreground/30',
 };
 
+// ---------------------------------------------------------------------------
+// Disconnect helpers
+// ---------------------------------------------------------------------------
+
+function disconnectHandle(nodeId: string, handleId: string): void {
+  window.dispatchEvent(
+    new CustomEvent('workflow-disconnect-handle', {
+      detail: { nodeId, handleId },
+    }),
+  );
+}
+
+function disconnectAll(nodeId: string): void {
+  window.dispatchEvent(
+    new CustomEvent('workflow-disconnect-all', {
+      detail: { nodeId },
+    }),
+  );
+}
+
 /**
  * Base shell for all workflow nodes. Renders header, typed handles,
  * children (node body), and error footer.
@@ -81,11 +101,25 @@ export function BaseWorkflowNode({
   const status = data.status ?? 'idle';
   const displayLabel = data.label ?? label;
 
+  // Track which handles are connected
+  const allEdges = useEdges();
+  const connectedHandles = React.useMemo(() => {
+    const ins = new Set<string>();
+    const outs = new Set<string>();
+    for (const edge of allEdges) {
+      if (edge.target === id && edge.targetHandle) ins.add(edge.targetHandle);
+      if (edge.source === id && edge.sourceHandle) outs.add(edge.sourceHandle);
+    }
+    return { inputs: ins, outputs: outs };
+  }, [allEdges, id]);
+
+  const hasAnyConnection = connectedHandles.inputs.size > 0 || connectedHandles.outputs.size > 0;
+
   return (
     <TooltipProvider delayDuration={300}>
     <div
       className={cn(
-        'relative rounded-xl border-2 bg-background shadow-md transition-all',
+        'group/node relative rounded-xl border-2 bg-background shadow-md transition-all',
         STATUS_BORDER[status],
         selected && status === 'idle' && 'border-primary ring-2 ring-primary/20',
         resizable && 'h-full flex flex-col',
@@ -105,6 +139,24 @@ export function BaseWorkflowNode({
       <div className="flex items-center gap-2 px-3 py-2 border-b border-border/50 bg-muted/30 rounded-t-[10px]">
         <div className="text-muted-foreground">{icon}</div>
         <span className="text-sm font-medium truncate flex-1">{displayLabel}</span>
+        {hasAnyConnection && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  disconnectAll(id);
+                }}
+                className="opacity-0 group-hover/node:opacity-100 transition-opacity size-5 rounded flex items-center justify-center hover:bg-destructive/20 text-muted-foreground hover:text-destructive nodrag"
+                aria-label="Clear all connections"
+              >
+                <Unplug className="size-3" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Clear All Connections</TooltipContent>
+          </Tooltip>
+        )}
         <div
           className={cn('size-2.5 rounded-full flex-shrink-0', STATUS_DOT[status])}
           aria-label={`Status: ${status}`}
@@ -114,11 +166,13 @@ export function BaseWorkflowNode({
       {/* Input handles */}
       {inputs.map((socket, index) => {
         const topOffset = 52 + index * 28;
+        const handleId = `in-${socket.id}`;
+        const isConnected = connectedHandles.inputs.has(handleId);
         return (
-          <Tooltip key={`in-${socket.id}`}>
+          <Tooltip key={handleId}>
             <TooltipTrigger asChild>
               <div
-                className="absolute flex items-center gap-1.5"
+                className="absolute flex items-center gap-1 group/handle"
                 style={{ left: 8, top: topOffset }}
               >
                 <span
@@ -128,6 +182,19 @@ export function BaseWorkflowNode({
                   {socket.label}
                   {socket.required && <span className="text-destructive ml-0.5">*</span>}
                 </span>
+                {isConnected && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      disconnectHandle(id, handleId);
+                    }}
+                    className="opacity-0 group-hover/handle:opacity-100 transition-opacity size-3.5 rounded-sm flex items-center justify-center hover:bg-destructive/20 text-muted-foreground hover:text-destructive nodrag"
+                    aria-label={`Disconnect ${socket.label}`}
+                  >
+                    <X className="size-2.5" />
+                  </button>
+                )}
               </div>
             </TooltipTrigger>
             <TooltipContent side="left">
@@ -136,7 +203,7 @@ export function BaseWorkflowNode({
             <Handle
               type="target"
               position={Position.Left}
-              id={`in-${socket.id}`}
+              id={handleId}
               className="!w-3 !h-3 !rounded-full !border-2 !border-background transition-colors"
               style={{
                 backgroundColor: socketColors[socket.type],
@@ -151,13 +218,28 @@ export function BaseWorkflowNode({
       {/* Output handles */}
       {outputs.map((socket, index) => {
         const topOffset = 52 + index * 28;
+        const handleId = `out-${socket.id}`;
+        const isConnected = connectedHandles.outputs.has(handleId);
         return (
-          <Tooltip key={`out-${socket.id}`}>
+          <Tooltip key={handleId}>
             <TooltipTrigger asChild>
               <div
-                className="absolute flex items-center gap-1.5"
+                className="absolute flex items-center gap-1 group/handle"
                 style={{ right: 8, top: topOffset }}
               >
+                {isConnected && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      disconnectHandle(id, handleId);
+                    }}
+                    className="opacity-0 group-hover/handle:opacity-100 transition-opacity size-3.5 rounded-sm flex items-center justify-center hover:bg-destructive/20 text-muted-foreground hover:text-destructive nodrag"
+                    aria-label={`Disconnect ${socket.label}`}
+                  >
+                    <X className="size-2.5" />
+                  </button>
+                )}
                 <span
                   className="text-[10px] text-muted-foreground"
                   style={{ color: socketColors[socket.type] }}
@@ -172,7 +254,7 @@ export function BaseWorkflowNode({
             <Handle
               type="source"
               position={Position.Right}
-              id={`out-${socket.id}`}
+              id={handleId}
               className="!w-3 !h-3 !rounded-full !border-2 !border-background transition-colors"
               style={{
                 backgroundColor: socketColors[socket.type],
