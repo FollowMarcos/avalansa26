@@ -44,7 +44,7 @@ export const characterTurnaroundDefinition: WorkflowNodeDefinition = {
   description: 'Generate a multi-angle character reference sheet',
   icon: 'RotateCcw',
   inputs: [
-    { id: 'prompt', label: 'Prompt', type: 'text', required: true },
+    { id: 'prompt', label: 'Prompt', type: 'text' },
     { id: 'negative', label: 'Negative', type: 'text' },
     { id: 'settings', label: 'Settings', type: 'settings' },
     { id: 'reference', label: 'Reference', type: 'image' },
@@ -134,10 +134,14 @@ function buildTurnaroundPrompt(
   // Shot type label
   const shotLabel = shotType === 'close-up' ? 'close-up' : shotType === 'medium-shot' ? 'medium shot' : 'full-body';
 
+  const characterLine = characterDescription
+    ? `CHARACTER: ${characterDescription}`
+    : `CHARACTER: Use the provided reference image as the character. Replicate it exactly.`;
+
   return [
     `Generate a professional character turnaround sheet based on the provided reference.`,
     ``,
-    `CHARACTER: ${characterDescription}`,
+    characterLine,
     ``,
     `STRICT LAYOUT REQUIREMENTS:`,
     `- VIEW COUNT: Generate EXACTLY ${viewCount} distinct character figures. No more, no less.`,
@@ -160,8 +164,7 @@ function buildTurnaroundPrompt(
 
 export const characterTurnaroundExecutor: NodeExecutor = async (inputs, config, context) => {
   const rawPrompt = inputs.prompt;
-  const prompt = typeof rawPrompt === 'string' ? rawPrompt : '';
-  if (!prompt) throw new Error('Prompt is required');
+  const prompt = typeof rawPrompt === 'string' ? rawPrompt.trim() : '';
 
   const negative = typeof inputs.negative === 'string' ? inputs.negative : '';
   const settings =
@@ -174,6 +177,11 @@ export const characterTurnaroundExecutor: NodeExecutor = async (inputs, config, 
   if (inputs.reference) {
     const resolved = await resolveRefPath(inputs.reference);
     if (resolved) referenceImagePaths.push(resolved);
+  }
+
+  // Need at least a prompt or a reference image
+  if (!prompt && referenceImagePaths.length === 0) {
+    throw new Error('Provide a prompt, a reference image, or both');
   }
 
   // Determine API ID
@@ -389,7 +397,7 @@ export function CharacterTurnaroundNode({ data, id, selected }: CharacterTurnaro
           </div>
         ) : status === 'idle' ? (
           <p className="text-[10px] text-muted-foreground text-center py-2">
-            Connect a prompt and run the workflow
+            Connect a prompt or reference image
           </p>
         ) : null}
       </div>
