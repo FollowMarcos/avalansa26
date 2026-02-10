@@ -222,6 +222,7 @@ export const characterTurnaroundExecutor: NodeExecutor = async (inputs, config, 
       outputCount: 1,
       referenceImagePaths,
       mode: typeof settings.generationSpeed === 'string' ? settings.generationSpeed : 'fast',
+      source: 'characterTurnaround',
     }),
     signal: context.signal,
   });
@@ -287,7 +288,7 @@ export function CharacterTurnaroundNode({ data, id, selected }: CharacterTurnaro
       data={data}
       selected={selected}
       label={characterTurnaroundDefinition.label}
-      icon={<RotateCcw className="size-4" />}
+      icon={<RotateCcw className="size-4" aria-hidden="true" />}
       inputs={characterTurnaroundDefinition.inputs}
       outputs={characterTurnaroundDefinition.outputs}
       minWidth={characterTurnaroundDefinition.minWidth}
@@ -305,7 +306,7 @@ export function CharacterTurnaroundNode({ data, id, selected }: CharacterTurnaro
                 type="button"
                 onClick={() => toggleView(view.key)}
                 className={cn(
-                  'px-1.5 py-1 rounded text-[10px] font-medium transition-colors',
+                  'px-1.5 py-1 rounded text-[10px] font-medium transition-colors focus-visible:ring-1 focus-visible:ring-ring',
                   views[view.key]
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-muted/40 text-muted-foreground hover:bg-muted',
@@ -329,7 +330,7 @@ export function CharacterTurnaroundNode({ data, id, selected }: CharacterTurnaro
                 type="button"
                 onClick={() => update('shotType', shot.id)}
                 className={cn(
-                  'flex-1 px-1.5 py-1 rounded text-[10px] font-medium transition-colors',
+                  'flex-1 px-1.5 py-1 rounded text-[10px] font-medium transition-colors focus-visible:ring-1 focus-visible:ring-ring',
                   shotType === shot.id
                     ? 'bg-primary text-primary-foreground'
                     : 'bg-muted/40 text-muted-foreground hover:bg-muted',
@@ -354,7 +355,7 @@ export function CharacterTurnaroundNode({ data, id, selected }: CharacterTurnaro
                   type="button"
                   onClick={() => update('backgroundMode', mode)}
                   className={cn(
-                    'px-2 py-0.5 rounded text-[10px] font-medium transition-colors capitalize',
+                    'px-2 py-0.5 rounded text-[10px] font-medium transition-colors capitalize focus-visible:ring-1 focus-visible:ring-ring',
                     backgroundMode === mode
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-muted/40 text-muted-foreground hover:bg-muted',
@@ -388,10 +389,13 @@ export function CharacterTurnaroundNode({ data, id, selected }: CharacterTurnaro
 
         {status === 'success' && outputImage ? (
           <div className="relative rounded-md overflow-hidden border border-border">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={outputImage}
               alt="Character turnaround sheet"
               className="w-full object-contain"
+              width={280}
+              height={187}
               draggable={false}
             />
           </div>

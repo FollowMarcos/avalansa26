@@ -78,9 +78,10 @@ export async function getGeneration(id: string): Promise<Generation | null> {
 }
 
 /**
- * Delete a generation by ID (removes from both storage and database)
+ * Delete a generation by ID (removes from both storage and database).
+ * Throws on failure so callers can detect and handle errors.
  */
-export async function deleteGeneration(id: string): Promise<boolean> {
+export async function deleteGeneration(id: string): Promise<void> {
   const supabase = await createClient();
 
   // First, fetch the image_path so we can delete from storage
@@ -91,8 +92,7 @@ export async function deleteGeneration(id: string): Promise<boolean> {
     .single();
 
   if (fetchError) {
-    console.error('Error fetching generation for deletion:', fetchError.message);
-    return false;
+    throw new Error(`Failed to fetch generation for deletion: ${fetchError.message}`);
   }
 
   // Delete from storage if image_path exists
@@ -114,11 +114,8 @@ export async function deleteGeneration(id: string): Promise<boolean> {
     .eq('id', id);
 
   if (error) {
-    console.error('Error deleting generation:', error.message);
-    return false;
+    throw new Error(`Failed to delete generation: ${error.message}`);
   }
-
-  return true;
 }
 
 /**

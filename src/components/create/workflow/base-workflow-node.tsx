@@ -119,7 +119,7 @@ export function BaseWorkflowNode({
     <TooltipProvider delayDuration={300}>
     <div
       className={cn(
-        'group/node relative rounded-xl border-2 bg-background shadow-md transition-all',
+        'group/node relative rounded-xl border-2 bg-background shadow-md transition-colors transition-shadow',
         STATUS_BORDER[status],
         selected && status === 'idle' && 'border-primary ring-2 ring-primary/20',
         resizable && 'h-full flex flex-col',
@@ -148,16 +148,17 @@ export function BaseWorkflowNode({
                   e.stopPropagation();
                   disconnectAll(id);
                 }}
-                className="opacity-0 group-hover/node:opacity-100 transition-opacity size-5 rounded flex items-center justify-center hover:bg-destructive/20 text-muted-foreground hover:text-destructive nodrag"
+                className="opacity-0 group-hover/node:opacity-100 transition-opacity size-5 rounded flex items-center justify-center hover:bg-destructive/20 text-muted-foreground hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring focus-visible:opacity-100 nodrag"
                 aria-label="Clear all connections"
               >
-                <Unplug className="size-3" />
+                <Unplug className="size-3" aria-hidden="true" />
               </button>
             </TooltipTrigger>
             <TooltipContent side="top">Clear All Connections</TooltipContent>
           </Tooltip>
         )}
         <div
+          role="status"
           className={cn('size-2.5 rounded-full flex-shrink-0', STATUS_DOT[status])}
           aria-label={`Status: ${status}`}
         />
@@ -189,10 +190,10 @@ export function BaseWorkflowNode({
                       e.stopPropagation();
                       disconnectHandle(id, handleId);
                     }}
-                    className="opacity-0 group-hover/handle:opacity-100 transition-opacity size-3.5 rounded-sm flex items-center justify-center hover:bg-destructive/20 text-muted-foreground hover:text-destructive nodrag"
+                    className="opacity-0 group-hover/handle:opacity-100 transition-opacity size-3.5 rounded-sm flex items-center justify-center hover:bg-destructive/20 text-muted-foreground hover:text-destructive focus-visible:ring-1 focus-visible:ring-ring focus-visible:opacity-100 nodrag"
                     aria-label={`Disconnect ${socket.label}`}
                   >
-                    <X className="size-2.5" />
+                    <X className="size-2.5" aria-hidden="true" />
                   </button>
                 )}
               </div>
@@ -234,10 +235,10 @@ export function BaseWorkflowNode({
                       e.stopPropagation();
                       disconnectHandle(id, handleId);
                     }}
-                    className="opacity-0 group-hover/handle:opacity-100 transition-opacity size-3.5 rounded-sm flex items-center justify-center hover:bg-destructive/20 text-muted-foreground hover:text-destructive nodrag"
+                    className="opacity-0 group-hover/handle:opacity-100 transition-opacity size-3.5 rounded-sm flex items-center justify-center hover:bg-destructive/20 text-muted-foreground hover:text-destructive focus-visible:ring-1 focus-visible:ring-ring focus-visible:opacity-100 nodrag"
                     aria-label={`Disconnect ${socket.label}`}
                   >
-                    <X className="size-2.5" />
+                    <X className="size-2.5" aria-hidden="true" />
                   </button>
                 )}
                 <span
@@ -279,7 +280,7 @@ export function BaseWorkflowNode({
       {/* Error footer */}
       {status === 'error' && data.error && (
         <div className="flex items-start gap-1.5 px-3 py-2 border-t border-destructive/30 bg-destructive/5 rounded-b-[10px]">
-          <AlertCircle className="size-3.5 text-destructive flex-shrink-0 mt-0.5" />
+          <AlertCircle className="size-3.5 text-destructive flex-shrink-0 mt-0.5" aria-hidden="true" />
           <p className="text-xs text-destructive line-clamp-2">{data.error}</p>
         </div>
       )}

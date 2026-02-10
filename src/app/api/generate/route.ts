@@ -19,6 +19,8 @@ export interface GenerateRequest {
   outputCount?: number;
   referenceImagePaths?: string[]; // Storage paths (not base64)
   mode?: 'fast' | 'relaxed'; // Generation mode
+  /** Optional source identifier (e.g. 'characterTurnaround') for workflow-generated images */
+  source?: string;
 }
 
 export interface GeneratedImage {
@@ -57,7 +59,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
 
     // Parse request body
     const body: GenerateRequest = await request.json();
-    const { apiId, prompt, negativePrompt, aspectRatio, imageSize, outputCount = 1, referenceImagePaths, mode = 'fast' } = body;
+    const { apiId, prompt, negativePrompt, aspectRatio, imageSize, outputCount = 1, referenceImagePaths, mode = 'fast', source } = body;
 
     // ========================================================================
     // INPUT VALIDATION
@@ -357,6 +359,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
           generationSpeed: mode,
           model: apiConfig.name,
           referenceImages: referenceImageInfo.length > 0 ? referenceImageInfo : undefined,
+          ...(source ? { source } : {}),
         },
       });
     }

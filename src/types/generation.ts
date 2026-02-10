@@ -16,6 +16,8 @@ export interface GenerationSettings {
   generationSpeed?: string;
   model?: string;
   referenceImages?: ReferenceImageInfo[];
+  /** Source identifier for workflow-generated images (e.g. 'characterTurnaround') */
+  source?: string;
 }
 
 export interface Generation {

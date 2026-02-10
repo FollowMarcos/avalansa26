@@ -53,6 +53,10 @@ import { TagInput } from "./tag-input";
 import { CollectionSelector } from "./collection-selector";
 import { SocialShareMenu } from "./social-share-menu";
 
+const SOURCE_LABELS: Record<string, string> = {
+  characterTurnaround: "Character Turnaround Sheet",
+};
+
 interface ImageDetailModalProps {
   image: GeneratedImage | null;
   isOpen: boolean;
@@ -235,13 +239,15 @@ export function ImageDetailModal({
 
   const getRelativeTime = (timestamp: number) => {
     const diff = Date.now() - timestamp;
-    const minutes = Math.floor(diff / 60000);
-    if (minutes < 1) return "Just now";
-    if (minutes < 60) return `${minutes} minutes ago`;
+    const seconds = Math.floor(diff / 1000);
+    if (seconds < 60) return "Just now";
+    const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto", style: "long" });
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return rtf.format(-minutes, "minute");
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours} hours ago`;
+    if (hours < 24) return rtf.format(-hours, "hour");
     const days = Math.floor(hours / 24);
-    if (days < 7) return `${days} days ago`;
+    if (days < 7) return rtf.format(-days, "day");
     return new Intl.DateTimeFormat(undefined, {
       month: "short",
       day: "numeric",
@@ -309,14 +315,16 @@ export function ImageDetailModal({
           </Button>
         )}
 
-        <Image
-          src={image.url}
-          alt={image.prompt || "Generated image"}
-          fill
-          className="object-contain p-8"
-          unoptimized
-          onClick={(e) => e.stopPropagation()}
-        />
+        {/* Image wrapper prevents backdrop close when clicking the image */}
+        <div className="relative w-full h-full p-8" onClick={(e) => e.stopPropagation()}>
+          <Image
+            src={image.url}
+            alt={image.prompt || "Generated image"}
+            fill
+            className="object-contain p-8"
+            unoptimized
+          />
+        </div>
       </div>
     );
   }
@@ -380,35 +388,46 @@ export function ImageDetailModal({
             <ScrollArea className="flex-1">
               <div className="p-4 space-y-4">
                 {/* Prompt */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
+                {image.settings.source ? (
+                  <div className="space-y-2">
                     <span className="text-xs font-mono text-muted-foreground uppercase">
-                      Prompt
+                      Source
                     </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 px-2 gap-1"
-                      onClick={handleCopyPrompt}
-                      disabled={!image.prompt}
-                    >
-                      {copied ? (
-                        <>
-                          <Check className="size-3" aria-hidden="true" />
-                          <span className="text-xs">Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="size-3" aria-hidden="true" />
-                          <span className="text-xs">Copy</span>
-                        </>
-                      )}
-                    </Button>
+                    <p className="text-sm font-medium">
+                      {SOURCE_LABELS[image.settings.source] ?? image.settings.source}
+                    </p>
                   </div>
-                  <p className="text-sm leading-relaxed break-words">
-                    {image.prompt || <span className="text-muted-foreground italic">No prompt</span>}
-                  </p>
-                </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-mono text-muted-foreground uppercase">
+                        Prompt
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 gap-1"
+                        onClick={handleCopyPrompt}
+                        disabled={!image.prompt}
+                      >
+                        {copied ? (
+                          <>
+                            <Check className="size-3" aria-hidden="true" />
+                            <span className="text-xs">Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="size-3" aria-hidden="true" />
+                            <span className="text-xs">Copy</span>
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    <p className="text-sm leading-relaxed break-words">
+                      {image.prompt || <span className="text-muted-foreground italic">No prompt</span>}
+                    </p>
+                  </div>
+                )}
 
                 {/* Negative Prompt */}
                 {image.settings.negativePrompt && (
@@ -649,7 +668,7 @@ export function ImageDetailModal({
                       onClick={handleSplitDownload}
                     >
                       <Grid2x2 className="size-4" aria-hidden="true" />
-                      Split &amp; Download (4 Slices)
+                      Split & Download (4 Slices)
                     </Button>
 
                     {/* Social Share */}

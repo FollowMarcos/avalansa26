@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { useCreate, type GeneratedImage } from "./create-context";
 import { Download, Copy, ImagePlus, RotateCw, Check, Heart, Link2, Grid2x2 } from "lucide-react";
 import { toast } from "sonner";
-import { motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
 import { GalleryToolbar } from "./gallery-toolbar";
@@ -14,7 +14,6 @@ import { BulkActionBar } from "./bulk-action-bar";
 import { ImageDetailModal } from "./image-detail-modal";
 
 export function GenerationGallery() {
-  const prefersReducedMotion = useReducedMotion();
   const {
     selectedImage,
     addReferenceImageFromUrl,
@@ -184,12 +183,14 @@ export function GenerationGallery() {
 
   const formatTime = (timestamp: number) => {
     const diff = Date.now() - timestamp;
-    const minutes = Math.floor(diff / 60000);
-    if (minutes < 1) return "Just now";
-    if (minutes < 60) return `${minutes}m ago`;
+    const seconds = Math.floor(diff / 1000);
+    if (seconds < 60) return "Just now";
+    const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto", style: "narrow" });
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return rtf.format(-minutes, "minute");
     const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ago`;
-    return `${Math.floor(hours / 24)}d ago`;
+    if (hours < 24) return rtf.format(-hours, "hour");
+    return rtf.format(-Math.floor(hours / 24), "day");
   };
 
   const isSelected = (id: string) => galleryFilterState.bulkSelection.selectedIds.has(id);
@@ -348,11 +349,18 @@ const GalleryItem = React.memo(function GalleryItem({
           type="button"
           className={cn(
             "absolute top-1 right-1 z-10 size-11 rounded-full flex items-center justify-center",
-            "bg-background/80 hover:bg-background transition-all duration-150",
+            "bg-background/80 hover:bg-background transition-colors transition-opacity duration-150",
+            "focus-visible:ring-2 focus-visible:ring-ring focus-visible:opacity-100",
             image.isFavorite ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus:opacity-100"
           )}
           aria-label={image.isFavorite ? "Remove from favorites" : "Add to favorites"}
           onClick={(e) => onToggleFavorite(e, image.id)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onToggleFavorite(e as unknown as React.MouseEvent, image.id);
+            }
+          }}
         >
           <Heart
             className={cn(
@@ -498,7 +506,7 @@ function PendingCard({ image }: { image: GeneratedImage }) {
       <div className="aspect-square flex flex-col items-center justify-center gap-3 p-4">
         <Loader size="sm" />
         <p className="text-xs text-muted-foreground font-mono text-center line-clamp-2">
-          {image.prompt || "Generating..."}
+          {image.prompt || "Generating\u2026"}
         </p>
       </div>
     </div>

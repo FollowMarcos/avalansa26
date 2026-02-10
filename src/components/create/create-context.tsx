@@ -86,6 +86,8 @@ export interface CreateSettings {
   styleStrength: number;
   negativePrompt: string;
   referenceImages?: ReferenceImageInfo[];
+  /** Source identifier for workflow-generated images (e.g. 'characterTurnaround') */
+  source?: string;
 }
 
 interface CreateContextType {
@@ -502,6 +504,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
           styleStrength: 75,
           negativePrompt: gen.negative_prompt || "",
           referenceImages: gen.settings.referenceImages,
+          source: gen.settings.source,
         },
       }));
 
@@ -1381,14 +1384,26 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
   // Bulk delete images
   const bulkDeleteImages = React.useCallback(async (ids: string[]) => {
-    try {
-      const { deleteGeneration } = await import("@/utils/supabase/generations.server");
+    const { deleteGeneration } = await import("@/utils/supabase/generations.server");
 
-      // Delete each generation from database
-      await Promise.all(ids.map(id => deleteGeneration(id)));
+    // Delete each generation — use allSettled to handle partial failures
+    const results = await Promise.allSettled(ids.map(id => deleteGeneration(id)));
 
-      // Remove from local history
-      setHistory(prev => prev.filter(img => !ids.includes(img.id)));
+    // Determine which deletions succeeded
+    const deletedIds: string[] = [];
+    const failedIds: string[] = [];
+    results.forEach((result, i) => {
+      if (result.status === "fulfilled") {
+        deletedIds.push(ids[i]);
+      } else {
+        console.error(`Failed to delete ${ids[i]}:`, result.reason);
+        failedIds.push(ids[i]);
+      }
+    });
+
+    // Only remove successfully deleted images from local state
+    if (deletedIds.length > 0) {
+      setHistory(prev => prev.filter(img => !deletedIds.includes(img.id)));
 
       // Clear selection
       setGalleryFilterState(prev => ({
@@ -1400,12 +1415,14 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       }));
 
       // Clear selected image if it was deleted
-      if (selectedImage && ids.includes(selectedImage.id)) {
+      if (selectedImage && deletedIds.includes(selectedImage.id)) {
         setSelectedImage(null);
       }
-    } catch (error) {
-      console.error("Failed to delete images:", error);
-      throw error;
+    }
+
+    // If any deletions failed, throw so the UI can show an error
+    if (failedIds.length > 0) {
+      throw new Error(`Failed to delete ${failedIds.length} image(s)`);
     }
   }, [selectedImage]);
 
