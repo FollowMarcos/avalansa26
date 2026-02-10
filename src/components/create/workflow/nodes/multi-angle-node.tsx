@@ -8,6 +8,7 @@ import { CameraAngleViewport } from './camera-angle-viewport';
 import type { WorkflowNodeData, WorkflowNodeDefinition } from '@/types/workflow';
 import type { NodeExecutor } from '../node-registry';
 import { cn } from '@/lib/utils';
+import { useConnectedInputValue } from '../hooks/use-connected-input';
 
 // ---------------------------------------------------------------------------
 // Definition
@@ -150,6 +151,7 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
   configRef.current = config;
 
   const status = data.status ?? 'idle';
+  const connectedImageUrl = useConnectedInputValue(id, 'image') as string | undefined;
 
   const horizontalAngle = Number(config.horizontalAngle) || 0;
   const verticalAngle = Number(config.verticalAngle) || 0;
@@ -200,6 +202,7 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
           zoom={zoom}
           onAngleChange={handleAngleChange}
           onZoomChange={handleZoomChange}
+          imageUrl={connectedImageUrl}
         />
 
         {/* Angle readouts */}

@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
-import { OrbitControls, Grid } from '@react-three/drei';
+import { OrbitControls, Grid, useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 
 // ---------------------------------------------------------------------------
@@ -27,6 +27,7 @@ interface CameraAngleViewportProps {
   zoom: number; // 0–10
   onAngleChange: (horizontal: number, vertical: number) => void;
   onZoomChange: (zoom: number) => void;
+  imageUrl?: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -223,6 +224,27 @@ function SubjectSphere() {
 }
 
 // ---------------------------------------------------------------------------
+// Subject image plane (replaces sphere when an image is connected)
+// ---------------------------------------------------------------------------
+
+function SubjectImagePlane({ url }: { url: string }) {
+  const texture = useTexture(url);
+
+  const img = texture.image as HTMLImageElement | undefined;
+  const aspect = img?.width && img?.height ? img.width / img.height : 1;
+
+  const height = 1.5;
+  const width = height * aspect;
+
+  return (
+    <mesh position={[0, 0, 0]}>
+      <planeGeometry args={[width, height]} />
+      <meshStandardMaterial map={texture} side={THREE.DoubleSide} />
+    </mesh>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main viewport component
 // ---------------------------------------------------------------------------
 
@@ -232,6 +254,7 @@ export function CameraAngleViewport({
   zoom,
   onAngleChange,
   onZoomChange,
+  imageUrl,
 }: CameraAngleViewportProps) {
   const handleKeyDown = React.useCallback(
     (e: React.KeyboardEvent) => {
@@ -299,7 +322,9 @@ export function CameraAngleViewport({
         <directionalLight position={[3, 5, 4]} intensity={0.8} />
         <directionalLight position={[-2, 3, -3]} intensity={0.3} />
 
-        <SubjectSphere />
+        <React.Suspense fallback={<SubjectSphere />}>
+          {imageUrl ? <SubjectImagePlane url={imageUrl} /> : <SubjectSphere />}
+        </React.Suspense>
         <CameraIndicator
           horizontalAngle={horizontalAngle}
           verticalAngle={verticalAngle}
