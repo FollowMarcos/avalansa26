@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils';
 import { useConnectedInputValue } from '../hooks/use-connected-input';
 import { ImageUploadSlot } from '../shared/image-upload-slot';
 import type { UploadedImage } from '../shared/image-upload-slot';
+import { createClient } from '@/utils/supabase/client';
 
 // ---------------------------------------------------------------------------
 // Definition
@@ -53,33 +54,15 @@ export const multiAngleDefinition: WorkflowNodeDefinition = {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Resolve a reference image URL to a public URL for the API. */
-async function resolveImageUrl(raw: unknown): Promise<string | null> {
-  if (!raw || typeof raw !== 'string') return null;
+/** Resolve a value (URL or storage path) to a displayable / API-accessible URL. */
+function resolveToPublicUrl(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  if (raw.startsWith('http') || raw.startsWith('blob:') || raw.startsWith('data:')) return raw;
 
-  // Already a URL — use directly
-  if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
-
-  // Storage path — upload to get a public URL
-  try {
-    const { uploadReferenceImage } = await import('@/utils/supabase/storage');
-    const { createClient } = await import('@/utils/supabase/client');
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return null;
-
-    const res = await fetch(raw);
-    const blob = await res.blob();
-    const file = new File([blob], `workflow-ref-${Date.now()}.jpg`, {
-      type: blob.type || 'image/jpeg',
-    });
-    const result = await uploadReferenceImage(file, user.id);
-    return result.path || null;
-  } catch {
-    return null;
-  }
+  // Storage path — resolve to a public URL via Supabase
+  const supabase = createClient();
+  const { data } = supabase.storage.from('reference-images').getPublicUrl(raw);
+  return data.publicUrl;
 }
 
 // ---------------------------------------------------------------------------
@@ -88,14 +71,36 @@ async function resolveImageUrl(raw: unknown): Promise<string | null> {
 
 export const multiAngleExecutor: NodeExecutor = async (inputs, config, context) => {
   // Prefer connected wire input; fall back to locally uploaded image
-  const imageInput = inputs.image;
-  const localImg = config.localImage as UploadedImage | null;
-  const rawImage = imageInput || localImg?.storagePath || localImg?.url;
-  if (!rawImage) throw new Error('Image input is required — connect one or upload directly');
+  const imageInput = inputs.image as string | undefined;
+  const localImg = config.localImage as Record<string, unknown> | null;
 
-  // Resolve image to a URL the API can access
-  const imageUrl = await resolveImageUrl(rawImage);
-  if (!imageUrl) throw new Error('Could not resolve input image');
+  // Build image source — send storage paths to server for reliable resolution
+  let imageUrls: string[] | undefined;
+  let imageStoragePaths: string[] | undefined;
+
+  if (imageInput) {
+    // Connected wire — could be a URL or a storage path from another node
+    const resolved = resolveToPublicUrl(imageInput);
+    if (resolved?.startsWith('http')) {
+      imageUrls = [resolved];
+    } else if (imageInput) {
+      imageStoragePaths = [imageInput];
+    }
+  } else if (localImg) {
+    // Locally uploaded image — prefer storagePath (server resolves reliably)
+    const path = (localImg.storagePath || localImg.path) as string | undefined;
+    const url = localImg.url as string | undefined;
+
+    if (path) {
+      imageStoragePaths = [path];
+    } else if (url?.startsWith('http')) {
+      imageUrls = [url];
+    }
+  }
+
+  if (!imageUrls?.length && !imageStoragePaths?.length) {
+    throw new Error('Image input is required — connect one or upload directly');
+  }
 
   // Priority: settings wire > global context
   const settings = (inputs.settings as Record<string, unknown>) || {};
@@ -106,7 +111,8 @@ export const multiAngleExecutor: NodeExecutor = async (inputs, config, context) 
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       apiId,
-      imageUrls: [imageUrl],
+      ...(imageUrls ? { imageUrls } : {}),
+      ...(imageStoragePaths ? { imageStoragePaths } : {}),
       horizontalAngle: Number(config.horizontalAngle) || 0,
       verticalAngle: Number(config.verticalAngle) || 0,
       zoom: Number(config.zoom) ?? 5,
@@ -156,7 +162,11 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
   const localImage = config.localImage as UploadedImage | null;
 
   // Priority: connected image > local upload > undefined (sphere)
-  const viewportImageUrl = connectedImageUrl || localImage?.url || undefined;
+  // Resolve storage paths to displayable public URLs
+  const viewportImageUrl = React.useMemo(
+    () => resolveToPublicUrl(connectedImageUrl || localImage?.url),
+    [connectedImageUrl, localImage?.url],
+  );
 
   const horizontalAngle = Number(config.horizontalAngle) || 0;
   const verticalAngle = Number(config.verticalAngle) || 0;
