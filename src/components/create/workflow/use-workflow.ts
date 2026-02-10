@@ -69,9 +69,11 @@ function savePersistedWorkflow(state: PersistedWorkflowState): void {
 
 interface UseWorkflowOptions {
   apiId: string;
+  /** When false, keyboard shortcuts (Ctrl+Enter to run, etc.) are disabled. */
+  active?: boolean;
 }
 
-export function useWorkflow({ apiId }: UseWorkflowOptions) {
+export function useWorkflow({ apiId, active = true }: UseWorkflowOptions) {
   // React Flow state
   const [nodes, setNodes, rawOnNodesChange] = useNodesState<Node<WorkflowNodeData>>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge<WorkflowEdgeData>>([]);
@@ -1001,6 +1003,8 @@ export function useWorkflow({ apiId }: UseWorkflowOptions) {
   // ---------------------------------------------------------------------------
 
   React.useEffect(() => {
+    if (!active) return;
+
     const handler = (e: KeyboardEvent) => {
       // Ctrl+Enter to run
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
@@ -1037,7 +1041,7 @@ export function useWorkflow({ apiId }: UseWorkflowOptions) {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [isExecuting, runWorkflow, stopWorkflow, saveWorkflow, selectedGroupId, createGroup, deleteGroup]);
+  }, [active, isExecuting, runWorkflow, stopWorkflow, saveWorkflow, selectedGroupId, createGroup, deleteGroup]);
 
   // ---------------------------------------------------------------------------
   // Recompose single node (re-execute one node using existing upstream outputs)

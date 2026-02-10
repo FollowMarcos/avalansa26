@@ -28,7 +28,7 @@ export function StudioLayout() {
   const { addReferenceImages, prompt, setPrompt, settings, updateSettings, selectedApiId, viewMode } = useCreate();
 
   // Workflow hook
-  const workflow = useWorkflow({ apiId: selectedApiId ?? '' });
+  const workflow = useWorkflow({ apiId: selectedApiId ?? '', active: viewMode === 'workflow' });
 
   // Prompt vault hook
   const promptVault = usePromptVault({
