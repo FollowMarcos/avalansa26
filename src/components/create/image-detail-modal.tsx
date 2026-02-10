@@ -23,6 +23,7 @@ import {
   Link2,
   Images,
   Cpu,
+  Grid2x2,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -160,6 +161,51 @@ export function ImageDetailModal({
     await reuseImageSetup(image);
     toast.success("Setup restored");
     onClose();
+  };
+
+  const handleSplitDownload = async () => {
+    toast.info("Splitting image\u2026");
+    try {
+      const img = new window.Image();
+      img.crossOrigin = "anonymous";
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error("Failed to load image"));
+        img.src = image.url;
+      });
+
+      const sliceCount = 4;
+      const sliceHeight = img.height / sliceCount;
+
+      const blobs = await Promise.all(
+        Array.from({ length: sliceCount }, (_, i) => {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width;
+          canvas.height = sliceHeight;
+          const ctx = canvas.getContext("2d")!;
+          ctx.drawImage(img, 0, i * sliceHeight, img.width, sliceHeight, 0, 0, img.width, sliceHeight);
+          return new Promise<Blob>((resolve, reject) => {
+            canvas.toBlob((blob) => {
+              if (blob) resolve(blob);
+              else reject(new Error("Failed to create slice"));
+            }, "image/png");
+          });
+        }),
+      );
+
+      for (let i = 0; i < blobs.length; i++) {
+        const blobUrl = URL.createObjectURL(blobs[i]);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = `${image.id}-slice-${i + 1}.png`;
+        a.click();
+        URL.revokeObjectURL(blobUrl);
+      }
+      toast.success(`Downloaded ${blobs.length} slices`);
+    } catch (error) {
+      console.error("Split failed:", error);
+      toast.error("Failed to split image");
+    }
   };
 
   const handleDelete = async () => {
@@ -594,6 +640,16 @@ export function ImageDetailModal({
                     >
                       <RotateCw className="size-4" aria-hidden="true" />
                       Reuse Setup
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-2 font-mono text-xs justify-start col-span-2"
+                      onClick={handleSplitDownload}
+                    >
+                      <Grid2x2 className="size-4" aria-hidden="true" />
+                      Split &amp; Download (4 Slices)
                     </Button>
 
                     {/* Social Share */}

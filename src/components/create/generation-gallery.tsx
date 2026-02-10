@@ -4,7 +4,7 @@ import * as React from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { useCreate, type GeneratedImage } from "./create-context";
-import { Download, Copy, ImagePlus, RotateCw, Check, Heart, Link2 } from "lucide-react";
+import { Download, Copy, ImagePlus, RotateCw, Check, Heart, Link2, Grid2x2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
@@ -107,6 +107,52 @@ export function GenerationGallery() {
     toast.success("Setup restored");
   };
 
+  const handleSplitDownload = async (e: React.MouseEvent, url: string, id: string) => {
+    e.stopPropagation();
+    toast.info("Splitting image\u2026");
+    try {
+      const img = new window.Image();
+      img.crossOrigin = "anonymous";
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error("Failed to load image"));
+        img.src = url;
+      });
+
+      const sliceCount = 4;
+      const sliceHeight = img.height / sliceCount;
+
+      const blobs = await Promise.all(
+        Array.from({ length: sliceCount }, (_, i) => {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width;
+          canvas.height = sliceHeight;
+          const ctx = canvas.getContext("2d")!;
+          ctx.drawImage(img, 0, i * sliceHeight, img.width, sliceHeight, 0, 0, img.width, sliceHeight);
+          return new Promise<Blob>((resolve, reject) => {
+            canvas.toBlob((blob) => {
+              if (blob) resolve(blob);
+              else reject(new Error("Failed to create slice"));
+            }, "image/png");
+          });
+        }),
+      );
+
+      for (let i = 0; i < blobs.length; i++) {
+        const blobUrl = URL.createObjectURL(blobs[i]);
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = `${id}-slice-${i + 1}.png`;
+        a.click();
+        URL.revokeObjectURL(blobUrl);
+      }
+      toast.success(`Downloaded ${blobs.length} slices`);
+    } catch (error) {
+      console.error("Split failed:", error);
+      toast.error("Failed to split image");
+    }
+  };
+
   const handleImageClick = (image: GeneratedImage) => {
     if (galleryFilterState.bulkSelection.enabled) {
       toggleImageSelection(image.id);
@@ -196,6 +242,7 @@ export function GenerationGallery() {
                   onCopyUrl={handleCopyUrl}
                   onUseAsReference={handleUseAsReference}
                   onReuseSetup={handleReuseSetup}
+                  onSplitDownload={handleSplitDownload}
                   onToggleSelection={toggleImageSelection}
                   onToggleFavorite={handleToggleFavorite}
                   formatTime={formatTime}
@@ -241,6 +288,7 @@ interface GalleryItemProps {
   onCopyUrl: (e: React.MouseEvent, url: string) => void;
   onUseAsReference: (e: React.MouseEvent, url: string) => void;
   onReuseSetup: (e: React.MouseEvent, image: GeneratedImage) => void;
+  onSplitDownload: (e: React.MouseEvent, url: string, id: string) => void;
   onToggleSelection: (id: string) => void;
   onToggleFavorite: (e: React.MouseEvent, id: string) => void;
   formatTime: (timestamp: number) => string;
@@ -257,6 +305,7 @@ const GalleryItem = React.memo(function GalleryItem({
   onCopyUrl,
   onUseAsReference,
   onReuseSetup,
+  onSplitDownload,
   onToggleSelection,
   onToggleFavorite,
   formatTime,
@@ -379,6 +428,15 @@ const GalleryItem = React.memo(function GalleryItem({
               }}
             >
               <Download className="size-4" aria-hidden="true" />
+            </Button>
+            <Button
+              variant="secondary"
+              size="icon"
+              className="size-8 rounded-lg"
+              aria-label="Split image into 4 slices and download"
+              onClick={(e) => onSplitDownload(e, image.url, image.id)}
+            >
+              <Grid2x2 className="size-4" aria-hidden="true" />
             </Button>
             <Button
               variant="secondary"
