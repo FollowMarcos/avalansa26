@@ -86,8 +86,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<MultiAngl
       verticalAngle,
       zoom,
       loraScale = 1,
-      guidanceScale = 4.5,
-      numInferenceSteps = 28,
+      guidanceScale = 1,
+      numInferenceSteps = 4,
       additionalPrompt = '',
       numImages = 1,
       outputFormat = 'png',
@@ -138,9 +138,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<MultiAngl
       );
     }
 
-    if (typeof verticalAngle !== 'number' || verticalAngle < -30 || verticalAngle > 90) {
+    if (typeof verticalAngle !== 'number' || verticalAngle < -30 || verticalAngle > 60) {
       return NextResponse.json(
-        { success: false, error: 'Vertical angle must be between -30 and 90' },
+        { success: false, error: 'Vertical angle must be between -30 and 60' },
         { status: 400 },
       );
     }

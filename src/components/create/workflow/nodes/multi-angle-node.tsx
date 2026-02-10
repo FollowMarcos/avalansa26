@@ -5,7 +5,7 @@ import { Rotate3d, ChevronDown, ChevronRight, Upload, X, Loader2 } from 'lucide-
 import { toast } from 'sonner';
 import { BaseWorkflowNode } from '../base-workflow-node';
 import { Loader } from '@/components/ui/loader';
-import { CameraAngleViewport } from './camera-angle-viewport';
+import { CameraAngleViewport, buildCameraPrompt } from './camera-angle-viewport';
 import type { WorkflowNodeData, WorkflowNodeDefinition } from '@/types/workflow';
 import type { NodeExecutor } from '../node-registry';
 import { cn } from '@/lib/utils';
@@ -40,8 +40,8 @@ export const multiAngleDefinition: WorkflowNodeDefinition = {
     verticalAngle: 0,
     zoom: 5,
     loraScale: 1,
-    guidanceScale: 4.5,
-    numInferenceSteps: 28,
+    guidanceScale: 1,
+    numInferenceSteps: 4,
     numImages: 1,
     outputFormat: 'png',
     additionalPrompt: '',
@@ -112,8 +112,8 @@ export const multiAngleExecutor: NodeExecutor = async (inputs, config, context) 
       verticalAngle: Number(config.verticalAngle) || 0,
       zoom: Number(config.zoom) ?? 5,
       loraScale: Number(config.loraScale) ?? 1,
-      guidanceScale: Number(config.guidanceScale) ?? 4.5,
-      numInferenceSteps: Number(config.numInferenceSteps) ?? 28,
+      guidanceScale: Number(config.guidanceScale) ?? 1,
+      numInferenceSteps: Number(config.numInferenceSteps) ?? 4,
       numImages: Number(config.numImages) || 1,
       outputFormat: (config.outputFormat as string) || 'png',
       additionalPrompt: (config.additionalPrompt as string) || '',
@@ -269,6 +269,7 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
         type="file"
         accept="image/*"
         className="hidden"
+        aria-label="Select image file to upload"
         onChange={handleFileSelect}
       />
 
@@ -311,13 +312,13 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
             />
             {isUploading && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                <Loader2 className="size-4 text-white animate-spin" aria-hidden="true" />
+                <Loader2 className="size-4 text-white motion-safe:animate-spin" aria-hidden="true" />
               </div>
             )}
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); removeLocalImage(); }}
-              className="absolute top-0.5 right-0.5 size-5 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-black/80 transition-opacity focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-ring"
+              className="absolute -top-1 -right-1 size-8 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-black/80 transition-opacity focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-ring"
               aria-label="Remove uploaded image"
             >
               <X className="size-3 text-white" aria-hidden="true" />
@@ -342,6 +343,11 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
           <span>Z: {zoom.toFixed(1)}</span>
         </div>
 
+        {/* Snap position preview */}
+        <p className="text-[10px] text-muted-foreground text-center truncate px-0.5">
+          {buildCameraPrompt(horizontalAngle, verticalAngle)}
+        </p>
+
         {/* Additional prompt */}
         <div>
           <label className="text-[10px] text-muted-foreground mb-1 block">
@@ -361,7 +367,7 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
         <button
           type="button"
           onClick={() => update('showAdvanced', !showAdvanced)}
-          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors w-full"
+          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors w-full focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded"
           aria-expanded={showAdvanced}
           aria-controls={`${id}-advanced`}
         >
@@ -379,7 +385,7 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
             <div>
               <label className="text-[10px] text-muted-foreground mb-0.5 flex justify-between">
                 <span>LoRA Scale</span>
-                <span className="font-mono">{Number(config.loraScale ?? 1).toFixed(1)}</span>
+                <span className="font-mono tabular-nums">{Number(config.loraScale ?? 1).toFixed(2)}</span>
               </label>
               <input
                 type="range"
@@ -397,14 +403,14 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
             <div>
               <label className="text-[10px] text-muted-foreground mb-0.5 flex justify-between">
                 <span>Guidance</span>
-                <span className="font-mono">{Number(config.guidanceScale ?? 4.5).toFixed(1)}</span>
+                <span className="font-mono tabular-nums">{Number(config.guidanceScale ?? 1).toFixed(1)}</span>
               </label>
               <input
                 type="range"
                 min={1}
                 max={20}
                 step={0.5}
-                value={Number(config.guidanceScale ?? 4.5)}
+                value={Number(config.guidanceScale ?? 1)}
                 onChange={(e) => update('guidanceScale', parseFloat(e.target.value))}
                 className="w-full h-1.5 accent-primary"
                 aria-label="Guidance scale"
@@ -415,14 +421,14 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
             <div>
               <label className="text-[10px] text-muted-foreground mb-0.5 flex justify-between">
                 <span>Steps</span>
-                <span className="font-mono">{Number(config.numInferenceSteps ?? 28)}</span>
+                <span className="font-mono tabular-nums">{Number(config.numInferenceSteps ?? 4)}</span>
               </label>
               <input
                 type="range"
                 min={1}
                 max={50}
                 step={1}
-                value={Number(config.numInferenceSteps ?? 28)}
+                value={Number(config.numInferenceSteps ?? 4)}
                 onChange={(e) => update('numInferenceSteps', parseInt(e.target.value, 10))}
                 className="w-full h-1.5 accent-primary"
                 aria-label="Number of inference steps"
@@ -431,8 +437,8 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
 
             {/* Num Images */}
             <div>
-              <label className="text-[10px] text-muted-foreground mb-0.5 block">Images</label>
-              <div className="flex gap-0.5">
+              <span id={`${id}-images-label`} className="text-[10px] text-muted-foreground mb-0.5 block">Images</span>
+              <div className="flex gap-0.5" role="radiogroup" aria-labelledby={`${id}-images-label`}>
                 {[1, 2, 3, 4].map((n) => (
                   <button
                     key={n}
@@ -455,8 +461,8 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
 
             {/* Output Format */}
             <div>
-              <label className="text-[10px] text-muted-foreground mb-0.5 block">Format</label>
-              <div className="flex gap-0.5">
+              <span id={`${id}-format-label`} className="text-[10px] text-muted-foreground mb-0.5 block">Format</span>
+              <div className="flex gap-0.5" role="radiogroup" aria-labelledby={`${id}-format-label`}>
                 {(['png', 'jpeg', 'webp'] as const).map((fmt) => (
                   <button
                     key={fmt}
@@ -481,9 +487,9 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
 
         {/* Status display */}
         {status === 'running' && (
-          <div className="flex items-center gap-2 py-2">
+          <div className="flex items-center gap-2 py-2" role="status" aria-live="polite">
             <Loader size="sm" />
-            <span className="text-xs text-muted-foreground">Generating angles\u2026</span>
+            <span className="text-xs text-muted-foreground">Generating angles{"\u2026"}</span>
           </div>
         )}
 
