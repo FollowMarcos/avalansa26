@@ -5,6 +5,7 @@ import { Combine } from 'lucide-react';
 import { BaseWorkflowNode } from '../base-workflow-node';
 import type { WorkflowNodeData, WorkflowNodeDefinition } from '@/types/workflow';
 import type { NodeExecutor } from '../node-registry';
+import { useNodeConfig } from '../hooks/use-node-config';
 import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
@@ -232,12 +233,6 @@ export const collageComposerExecutor: NodeExecutor = async (inputs, config) => {
 // Component
 // ---------------------------------------------------------------------------
 
-function dispatchConfig(nodeId: string, config: Record<string, unknown>) {
-  window.dispatchEvent(
-    new CustomEvent('workflow-node-config', { detail: { nodeId, config } }),
-  );
-}
-
 interface CollageComposerNodeProps {
   data: WorkflowNodeData;
   id: string;
@@ -245,7 +240,7 @@ interface CollageComposerNodeProps {
 }
 
 export function CollageComposerNode({ data, id, selected }: CollageComposerNodeProps) {
-  const config = data.config;
+  const [config, update] = useNodeConfig(id, data.config);
   const status = data.status ?? 'idle';
   const outputImage = data.outputValues?.image as string | undefined;
 
@@ -260,10 +255,6 @@ export function CollageComposerNode({ data, id, selected }: CollageComposerNodeP
 
   const activePreset = LAYOUT_PRESETS.find((p) => p.id === layoutPreset) ?? LAYOUT_PRESETS[0];
   const [arW, arH] = parseAspectRatio(aspectRatio);
-
-  const update = (key: string, value: unknown) => {
-    dispatchConfig(id, { ...config, [key]: value });
-  };
 
   return (
     <BaseWorkflowNode

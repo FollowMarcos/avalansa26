@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Merge } from 'lucide-react';
 import { BaseWorkflowNode } from '../base-workflow-node';
+import { useNodeConfig } from '../hooks/use-node-config';
 import type { WorkflowNodeData, WorkflowNodeDefinition } from '@/types/workflow';
 import type { NodeExecutor } from '../node-registry';
 
@@ -42,14 +43,6 @@ export const promptMergeExecutor: NodeExecutor = async (inputs, config) => {
   return { prompt: prompts.join(separator).trim() };
 };
 
-function dispatchConfig(nodeId: string, config: Record<string, unknown>) {
-  window.dispatchEvent(
-    new CustomEvent('workflow-node-config', {
-      detail: { nodeId, config },
-    }),
-  );
-}
-
 interface PromptMergeNodeProps {
   data: WorkflowNodeData;
   id: string;
@@ -57,7 +50,7 @@ interface PromptMergeNodeProps {
 }
 
 export function PromptMergeNode({ data, id, selected }: PromptMergeNodeProps) {
-  const config = data.config;
+  const [config, update] = useNodeConfig(id, data.config);
   const mode: string = typeof config.mode === 'string' ? config.mode : 'concatenate';
 
   return (
@@ -78,7 +71,7 @@ export function PromptMergeNode({ data, id, selected }: PromptMergeNodeProps) {
             <button
               key={m}
               type="button"
-              onClick={() => dispatchConfig(id, { ...config, mode: m })}
+              onClick={() => update('mode', m)}
               className={`flex-1 px-2 py-0.5 text-[10px] rounded-md border transition-colors capitalize ${
                 mode === m
                   ? 'bg-foreground text-background border-foreground'
@@ -99,9 +92,7 @@ export function PromptMergeNode({ data, id, selected }: PromptMergeNodeProps) {
             <input
               type="text"
               value={typeof config.separator === 'string' ? config.separator : ', '}
-              onChange={(e) =>
-                dispatchConfig(id, { ...config, separator: e.target.value })
-              }
+              onChange={(e) => update('separator', e.target.value)}
               className="flex-1 rounded-md border border-border bg-muted/30 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
               aria-label="Prompt separator"
             />
@@ -113,9 +104,7 @@ export function PromptMergeNode({ data, id, selected }: PromptMergeNodeProps) {
             </label>
             <textarea
               value={typeof config.template === 'string' ? config.template : '{A}, {B}, {C}'}
-              onChange={(e) =>
-                dispatchConfig(id, { ...config, template: e.target.value })
-              }
+              onChange={(e) => update('template', e.target.value)}
               rows={2}
               className="w-full resize-none rounded-md border border-border bg-muted/30 px-2.5 py-1.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
               aria-label="Merge template"

@@ -149,10 +149,10 @@ export function WorkflowToolbar({
                   className="gap-1.5 h-8"
                 >
                   <Play className="size-3.5" />
-                  Run
+                  Run All
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Run Workflow (Ctrl+Enter)</TooltipContent>
+              <TooltipContent>Run All Nodes (Ctrl+Enter)</TooltipContent>
             </Tooltip>
           )}
 

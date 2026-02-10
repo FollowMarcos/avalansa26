@@ -1,15 +1,14 @@
 'use client';
 
 import * as React from 'react';
-import { Columns2, GripVertical, Upload, FolderOpen, X, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { Columns2, GripVertical } from 'lucide-react';
 import { BaseWorkflowNode } from '../base-workflow-node';
-import { useCreate } from '../../create-context';
 import { createClient } from '@/utils/supabase/client';
 import type { WorkflowNodeData, WorkflowNodeDefinition } from '@/types/workflow';
 import type { NodeExecutor } from '../node-registry';
-import type { ReferenceImageWithUrl } from '@/types/reference-image';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { useNodeConfig } from '../hooks/use-node-config';
+import { ImageUploadSlot } from '../shared/image-upload-slot';
+import type { UploadedImage } from '../shared/image-upload-slot';
 
 /** Resolve a value that may be a storage path or a displayable URL */
 function resolveImageUrl(value: string | undefined): string | undefined {
@@ -19,11 +18,6 @@ function resolveImageUrl(value: string | undefined): string | undefined {
   const supabase = createClient();
   const { data } = supabase.storage.from('reference-images').getPublicUrl(value);
   return data.publicUrl;
-}
-
-interface SlotImage {
-  url: string;
-  storagePath: string;
 }
 
 export const beforeAfterDefinition: WorkflowNodeDefinition = {
@@ -49,8 +43,8 @@ export const beforeAfterExecutor: NodeExecutor = async (inputs, config) => {
   const beforeInput = inputs.before as string | undefined;
   const afterInput = inputs.after as string | undefined;
 
-  const beforeConfig = config.beforeImage as SlotImage | undefined;
-  const afterConfig = config.afterImage as SlotImage | undefined;
+  const beforeConfig = config.beforeImage as UploadedImage | undefined;
+  const afterConfig = config.afterImage as UploadedImage | undefined;
 
   const before = beforeInput || beforeConfig?.storagePath || beforeConfig?.url;
   const after = afterInput || afterConfig?.storagePath || afterConfig?.url;
@@ -59,126 +53,23 @@ export const beforeAfterExecutor: NodeExecutor = async (inputs, config) => {
   return { before, after, before_out: before, after_out: after };
 };
 
-function dispatchConfig(nodeId: string, config: Record<string, unknown>) {
-  window.dispatchEvent(
-    new CustomEvent('workflow-node-config', {
-      detail: { nodeId, config },
-    }),
-  );
-}
-
 interface BeforeAfterImageNodeProps {
   data: WorkflowNodeData;
   id: string;
   selected?: boolean;
 }
 
-/** Upload/picker for a single image slot */
-function ImageSlot({
-  label,
-  image,
-  onUpload,
-  onPickFromLibrary,
-  onRemove,
-  isUploading,
-}: {
-  label: string;
-  image: SlotImage | undefined;
-  onUpload: (file: File) => void;
-  onPickFromLibrary: () => void;
-  onRemove: () => void;
-  isUploading: boolean;
-}) {
-  const inputRef = React.useRef<HTMLInputElement>(null);
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) onUpload(file);
-    if (inputRef.current) inputRef.current.value = '';
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file?.type.startsWith('image/')) onUpload(file);
-  };
-
-  return (
-    <div className="flex-1 min-w-0">
-      <span className="text-[10px] font-medium text-muted-foreground mb-1 block">{label}</span>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleFileSelect}
-      />
-      {image ? (
-        <div className="relative group rounded-md overflow-hidden border border-border aspect-square">
-          <img
-            src={image.url}
-            alt={label}
-            className="w-full h-full object-cover"
-            draggable={false}
-          />
-          {isUploading && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-              <Loader2 className="size-4 text-white animate-spin" />
-            </div>
-          )}
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onRemove(); }}
-            className="absolute top-0.5 right-0.5 size-5 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-black/80 transition-all"
-            aria-label={`Remove ${label} image`}
-          >
-            <X className="size-3 text-white" />
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-1">
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => inputRef.current?.click()}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                inputRef.current?.click();
-              }
-            }}
-            onDrop={handleDrop}
-            onDragOver={(e) => e.preventDefault()}
-            className="flex flex-col items-center justify-center aspect-square rounded-md border border-dashed border-border bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer"
-          >
-            <Upload className="size-3.5 text-muted-foreground mb-0.5" />
-            <span className="text-[9px] text-muted-foreground">Upload</span>
-          </div>
-          <button
-            type="button"
-            onClick={onPickFromLibrary}
-            className="flex items-center justify-center gap-1 w-full py-1 rounded text-[9px] text-muted-foreground hover:text-foreground border border-border hover:bg-muted/40 transition-colors"
-          >
-            <FolderOpen className="size-3" />
-            Library
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function BeforeAfterImageNode({ data, id, selected }: BeforeAfterImageNodeProps) {
   const status = data.status ?? 'idle';
-  const config = data.config;
+  const [config, , updateMultiple] = useNodeConfig(id, data.config);
 
   // Wire-connected images (from execution output)
   const connectedBefore = data.outputValues?.before as string | undefined;
   const connectedAfter = data.outputValues?.after as string | undefined;
 
   // Config images (uploaded/picked directly)
-  const configBefore = config.beforeImage as SlotImage | undefined;
-  const configAfter = config.afterImage as SlotImage | undefined;
+  const configBefore = config.beforeImage as UploadedImage | undefined;
+  const configAfter = config.afterImage as UploadedImage | undefined;
 
   // Use connected images when executed, otherwise show config images for preview
   // Resolve storage paths to public URLs (reference image node outputs paths, not URLs)
@@ -191,80 +82,6 @@ export function BeforeAfterImageNode({ data, id, selected }: BeforeAfterImageNod
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [sliderPosition, setSliderPosition] = React.useState(50);
   const [isDragging, setIsDragging] = React.useState(false);
-  const [librarySlot, setLibrarySlot] = React.useState<'before' | 'after' | null>(null);
-  const [uploadingSlot, setUploadingSlot] = React.useState<'before' | 'after' | null>(null);
-
-  const { savedReferences, loadSavedReferences } = useCreate();
-
-  React.useEffect(() => {
-    if (librarySlot && savedReferences.length === 0) {
-      loadSavedReferences();
-    }
-  }, [librarySlot, savedReferences.length, loadSavedReferences]);
-
-  const updateConfig = React.useCallback(
-    (updates: Record<string, unknown>) => {
-      dispatchConfig(id, { ...config, ...updates });
-    },
-    [id, config],
-  );
-
-  const uploadFile = React.useCallback(
-    async (file: File, slot: 'before' | 'after') => {
-      if (!file.type.startsWith('image/')) {
-        toast.error('Please select an image file');
-        return;
-      }
-
-      const preview = URL.createObjectURL(file);
-      const key = slot === 'before' ? 'beforeImage' : 'afterImage';
-      const tempImg: SlotImage = { url: preview, storagePath: '' };
-      updateConfig({ [key]: tempImg });
-      setUploadingSlot(slot);
-
-      try {
-        const { uploadReferenceImage } = await import('@/utils/supabase/storage');
-        const { createClient } = await import('@/utils/supabase/client');
-        const supabase = createClient();
-        const { data: userData } = await supabase.auth.getUser();
-        if (!userData.user) throw new Error('Not authenticated');
-
-        const result = await uploadReferenceImage(file, userData.user.id);
-        if (result.error || !result.path) throw new Error(result.error || 'Upload failed');
-
-        updateConfig({ [key]: { url: result.url, storagePath: result.path } });
-
-        try {
-          const { createReferenceImageRecord } = await import(
-            '@/utils/supabase/reference-images.server'
-          );
-          await createReferenceImageRecord(result.path, file.name);
-          loadSavedReferences();
-        } catch {
-          // Non-critical
-        }
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Upload failed';
-        toast.error(message);
-        updateConfig({ [key]: undefined });
-      } finally {
-        setUploadingSlot(null);
-        URL.revokeObjectURL(preview);
-      }
-    },
-    [updateConfig, loadSavedReferences],
-  );
-
-  const handlePickSaved = (saved: ReferenceImageWithUrl, slot: 'before' | 'after') => {
-    const key = slot === 'before' ? 'beforeImage' : 'afterImage';
-    updateConfig({ [key]: { url: saved.url, storagePath: saved.storage_path } });
-    setLibrarySlot(null);
-  };
-
-  const removeImage = (slot: 'before' | 'after') => {
-    const key = slot === 'before' ? 'beforeImage' : 'afterImage';
-    updateConfig({ [key]: undefined });
-  };
 
   // Slider drag logic
   const updateSlider = React.useCallback((clientX: number) => {
@@ -394,7 +211,7 @@ export function BeforeAfterImageNode({ data, id, selected }: BeforeAfterImageNod
             <button
               type="button"
               onClick={() => {
-                updateConfig({ beforeImage: configAfter, afterImage: configBefore });
+                updateMultiple({ beforeImage: configAfter, afterImage: configBefore });
               }}
               className="text-[9px] text-muted-foreground hover:text-foreground transition-colors"
             >
@@ -404,74 +221,31 @@ export function BeforeAfterImageNode({ data, id, selected }: BeforeAfterImageNod
         </div>
       ) : (
         <div className="space-y-1.5">
-          {/* Two side-by-side upload slots */}
           <div className="flex gap-2">
-            <ImageSlot
-              label="Before"
-              image={configBefore}
-              onUpload={(file) => uploadFile(file, 'before')}
-              onPickFromLibrary={() => setLibrarySlot('before')}
-              onRemove={() => removeImage('before')}
-              isUploading={uploadingSlot === 'before'}
-            />
-            <ImageSlot
-              label="After"
-              image={configAfter}
-              onUpload={(file) => uploadFile(file, 'after')}
-              onPickFromLibrary={() => setLibrarySlot('after')}
-              onRemove={() => removeImage('after')}
-              isUploading={uploadingSlot === 'after'}
-            />
+            <div className="flex-1 min-w-0">
+              <span className="text-[10px] font-medium text-muted-foreground mb-1 block">Before</span>
+              <ImageUploadSlot
+                images={configBefore ? [configBefore] : []}
+                onChange={(imgs) => updateMultiple({ beforeImage: imgs[0] ?? undefined })}
+                maxImages={1}
+                emptyLabel="Upload"
+                previewHeight="h-20"
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="text-[10px] font-medium text-muted-foreground mb-1 block">After</span>
+              <ImageUploadSlot
+                images={configAfter ? [configAfter] : []}
+                onChange={(imgs) => updateMultiple({ afterImage: imgs[0] ?? undefined })}
+                maxImages={1}
+                emptyLabel="Upload"
+                previewHeight="h-20"
+              />
+            </div>
           </div>
-
           <p className="text-[9px] text-muted-foreground text-center">
             Upload images or connect inputs
           </p>
-        </div>
-      )}
-
-      {/* Library picker */}
-      {librarySlot && (
-        <div className="mt-1.5 rounded-md border border-border overflow-hidden">
-          <div className="flex items-center justify-between px-2 py-1.5 bg-muted/30 border-b border-border">
-            <span className="text-[10px] font-medium">
-              Pick {librarySlot === 'before' ? 'Before' : 'After'} Image
-            </span>
-            <button
-              type="button"
-              onClick={() => setLibrarySlot(null)}
-              className="text-muted-foreground hover:text-foreground"
-              aria-label="Close library"
-            >
-              <X className="size-3" />
-            </button>
-          </div>
-          <ScrollArea className="nodrag nowheel h-32">
-            {savedReferences.length === 0 ? (
-              <p className="text-[10px] text-muted-foreground text-center py-3">
-                No saved images yet
-              </p>
-            ) : (
-              <div className="grid grid-cols-4 gap-0.5 p-1">
-                {savedReferences.map((ref) => (
-                  <button
-                    key={ref.id}
-                    type="button"
-                    onClick={() => handlePickSaved(ref, librarySlot)}
-                    className="relative aspect-square rounded-sm overflow-hidden border border-border hover:ring-1 hover:ring-primary transition-all"
-                    title={ref.name || 'Reference image'}
-                  >
-                    <img
-                      src={ref.url}
-                      alt={ref.name || 'Reference'}
-                      className="w-full h-full object-cover"
-                      draggable={false}
-                    />
-                  </button>
-                ))}
-              </div>
-            )}
-          </ScrollArea>
         </div>
       )}
     </BaseWorkflowNode>

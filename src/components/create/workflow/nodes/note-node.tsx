@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { StickyNote } from 'lucide-react';
 import { BaseWorkflowNode } from '../base-workflow-node';
+import { useNodeConfig } from '../hooks/use-node-config';
 import type { WorkflowNodeData, WorkflowNodeDefinition } from '@/types/workflow';
 import type { NodeExecutor } from '../node-registry';
 
@@ -21,14 +22,6 @@ export const noteDefinition: WorkflowNodeDefinition = {
 /** No-op executor — notes don't produce outputs */
 export const noteExecutor: NodeExecutor = async () => ({});
 
-function dispatchConfig(nodeId: string, config: Record<string, unknown>) {
-  window.dispatchEvent(
-    new CustomEvent('workflow-node-config', {
-      detail: { nodeId, config },
-    }),
-  );
-}
-
 interface NoteNodeProps {
   data: WorkflowNodeData;
   id: string;
@@ -36,11 +29,7 @@ interface NoteNodeProps {
 }
 
 export function NoteNode({ data, id, selected }: NoteNodeProps) {
-  const config = data.config;
-
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    dispatchConfig(id, { ...config, text: e.target.value });
-  };
+  const [config, update] = useNodeConfig(id, data.config);
 
   return (
     <BaseWorkflowNode
@@ -58,7 +47,7 @@ export function NoteNode({ data, id, selected }: NoteNodeProps) {
       <div className="flex flex-col flex-1 min-h-0">
         <textarea
           value={(config.text as string) || ''}
-          onChange={handleChange}
+          onChange={(e) => update('text', e.target.value)}
           placeholder="Add a note&#8230;"
           className="nodrag nowheel w-full flex-1 min-h-[2.5rem] resize-none rounded-md bg-amber-50/50 dark:bg-amber-950/20 border-0 px-2.5 py-1.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           aria-label="Note text"

@@ -6,6 +6,7 @@ import { BaseWorkflowNode } from '../base-workflow-node';
 import type { WorkflowNodeData, WorkflowNodeDefinition } from '@/types/workflow';
 import type { NodeExecutor } from '../node-registry';
 import type { Prompt } from '@/types/prompt';
+import { useNodeConfig } from '../hooks/use-node-config';
 import { cn } from '@/lib/utils';
 
 export const promptVaultDefinition: WorkflowNodeDefinition = {
@@ -28,14 +29,6 @@ export const promptVaultExecutor: NodeExecutor = async (_inputs, config) => ({
   negative: (config.negativePrompt as string) || '',
 });
 
-function dispatchConfig(nodeId: string, config: Record<string, unknown>) {
-  window.dispatchEvent(
-    new CustomEvent('workflow-node-config', {
-      detail: { nodeId, config },
-    }),
-  );
-}
-
 interface PromptVaultNodeProps {
   data: WorkflowNodeData;
   id: string;
@@ -46,7 +39,7 @@ export function PromptVaultNode({ data, id, selected }: PromptVaultNodeProps) {
   const [prompts, setPrompts] = React.useState<Prompt[]>([]);
   const [isOpen, setIsOpen] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
-  const config = data.config;
+  const [config, , updateMultiple] = useNodeConfig(id, data.config);
   const selectedName = (config.promptName as string) || '';
   const promptText = (config.promptText as string) || '';
 
@@ -65,8 +58,7 @@ export function PromptVaultNode({ data, id, selected }: PromptVaultNodeProps) {
   }, [prompts.length]);
 
   const handleSelect = (prompt: Prompt) => {
-    dispatchConfig(id, {
-      ...config,
+    updateMultiple({
       promptId: prompt.id,
       promptName: prompt.name,
       promptText: prompt.prompt_text,

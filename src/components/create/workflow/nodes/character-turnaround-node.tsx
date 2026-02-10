@@ -6,6 +6,7 @@ import { BaseWorkflowNode } from '../base-workflow-node';
 import { Loader } from '@/components/ui/loader';
 import type { WorkflowNodeData, WorkflowNodeDefinition } from '@/types/workflow';
 import type { NodeExecutor } from '../node-registry';
+import { useNodeConfig } from '../hooks/use-node-config';
 import { cn } from '@/lib/utils';
 
 // ---------------------------------------------------------------------------
@@ -249,12 +250,6 @@ export const characterTurnaroundExecutor: NodeExecutor = async (inputs, config, 
 // Component
 // ---------------------------------------------------------------------------
 
-function dispatchConfig(nodeId: string, config: Record<string, unknown>): void {
-  window.dispatchEvent(
-    new CustomEvent('workflow-node-config', { detail: { nodeId, config } }),
-  );
-}
-
 interface CharacterTurnaroundNodeProps {
   data: WorkflowNodeData;
   id: string;
@@ -262,7 +257,7 @@ interface CharacterTurnaroundNodeProps {
 }
 
 export function CharacterTurnaroundNode({ data, id, selected }: CharacterTurnaroundNodeProps) {
-  const config = data.config;
+  const [config, update] = useNodeConfig(id, data.config);
   const status = data.status ?? 'idle';
   const outputImage = data.outputValues?.sheet as string | undefined;
 
@@ -273,13 +268,9 @@ export function CharacterTurnaroundNode({ data, id, selected }: CharacterTurnaro
 
   const enabledCount = VIEW_ANGLES.filter((v) => views[v.key]).length;
 
-  const update = (key: string, value: unknown): void => {
-    dispatchConfig(id, { ...config, [key]: value });
-  };
-
   const toggleView = (viewKey: string): void => {
     const newViews = { ...views, [viewKey]: !views[viewKey] };
-    dispatchConfig(id, { ...config, views: newViews });
+    update('views', newViews);
   };
 
   return (

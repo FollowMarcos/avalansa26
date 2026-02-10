@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Handle, Position, NodeResizer, useEdges } from '@xyflow/react';
 import { cn } from '@/lib/utils';
-import { AlertCircle, X, Unplug } from 'lucide-react';
+import { AlertCircle, Play, X, Unplug } from 'lucide-react';
 import type {
   WorkflowNodeData,
   WorkflowNodeStatus,
@@ -155,6 +155,28 @@ export function BaseWorkflowNode({
               </button>
             </TooltipTrigger>
             <TooltipContent side="top">Clear All Connections</TooltipContent>
+          </Tooltip>
+        )}
+        {status !== 'running' && status !== 'queued' && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.dispatchEvent(
+                    new CustomEvent('workflow-run-from-node', {
+                      detail: { nodeId: id },
+                    }),
+                  );
+                }}
+                className="opacity-0 group-hover/node:opacity-100 transition-opacity size-5 rounded flex items-center justify-center hover:bg-primary/20 text-muted-foreground hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:opacity-100 nodrag"
+                aria-label="Run this node"
+              >
+                <Play className="size-3" aria-hidden="true" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Run From Here</TooltipContent>
           </Tooltip>
         )}
         <div

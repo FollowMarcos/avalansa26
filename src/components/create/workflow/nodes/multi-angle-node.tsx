@@ -1,20 +1,17 @@
 'use client';
 
 import * as React from 'react';
-import { Rotate3d, ChevronDown, ChevronRight, Upload, X, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { Rotate3d, ChevronDown, ChevronRight } from 'lucide-react';
 import { BaseWorkflowNode } from '../base-workflow-node';
 import { Loader } from '@/components/ui/loader';
 import { CameraAngleViewport, buildCameraPrompt } from './camera-angle-viewport';
 import type { WorkflowNodeData, WorkflowNodeDefinition } from '@/types/workflow';
 import type { NodeExecutor } from '../node-registry';
+import { useNodeConfig } from '../hooks/use-node-config';
 import { cn } from '@/lib/utils';
 import { useConnectedInputValue } from '../hooks/use-connected-input';
-
-interface LocalImage {
-  url: string;
-  storagePath: string;
-}
+import { ImageUploadSlot } from '../shared/image-upload-slot';
+import type { UploadedImage } from '../shared/image-upload-slot';
 
 // ---------------------------------------------------------------------------
 // Definition
@@ -91,7 +88,7 @@ async function resolveImageUrl(raw: unknown): Promise<string | null> {
 export const multiAngleExecutor: NodeExecutor = async (inputs, config, context) => {
   // Prefer connected wire input; fall back to locally uploaded image
   const imageInput = inputs.image;
-  const localImg = config.localImage as LocalImage | null;
+  const localImg = config.localImage as UploadedImage | null;
   const rawImage = imageInput || localImg?.storagePath || localImg?.url;
   if (!rawImage) throw new Error('Image input is required — connect one or upload directly');
 
@@ -143,12 +140,6 @@ export const multiAngleExecutor: NodeExecutor = async (inputs, config, context) 
 // Component
 // ---------------------------------------------------------------------------
 
-function dispatchConfig(nodeId: string, config: Record<string, unknown>): void {
-  window.dispatchEvent(
-    new CustomEvent('workflow-node-config', { detail: { nodeId, config } }),
-  );
-}
-
 interface MultiAngleNodeProps {
   data: WorkflowNodeData;
   id: string;
@@ -156,15 +147,11 @@ interface MultiAngleNodeProps {
 }
 
 export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
-  const config = data.config;
-  const configRef = React.useRef(config);
-  configRef.current = config;
+  const [config, update, updateMultiple] = useNodeConfig(id, data.config);
 
   const status = data.status ?? 'idle';
   const connectedImageUrl = useConnectedInputValue(id, 'image') as string | undefined;
-  const localImage = config.localImage as LocalImage | null;
-  const [isUploading, setIsUploading] = React.useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const localImage = config.localImage as UploadedImage | null;
 
   // Priority: connected image > local upload > undefined (sphere)
   const viewportImageUrl = connectedImageUrl || localImage?.url || undefined;
@@ -183,75 +170,17 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
 
   const handleAngleChange = React.useCallback(
     (h: number, v: number) => {
-      dispatchConfig(id, { ...configRef.current, horizontalAngle: h, verticalAngle: v });
+      updateMultiple({ horizontalAngle: h, verticalAngle: v });
     },
-    [id],
+    [updateMultiple],
   );
 
   const handleZoomChange = React.useCallback(
     (z: number) => {
-      dispatchConfig(id, { ...configRef.current, zoom: z });
+      update('zoom', z);
     },
-    [id],
+    [update],
   );
-
-  const update = (key: string, value: unknown): void => {
-    dispatchConfig(id, { ...config, [key]: value });
-  };
-
-  const uploadFile = React.useCallback(
-    async (file: File) => {
-      if (!file.type.startsWith('image/')) {
-        toast.error('Please select an image file');
-        return;
-      }
-
-      const preview = URL.createObjectURL(file);
-      const tempImg: LocalImage = { url: preview, storagePath: '' };
-      dispatchConfig(id, { ...configRef.current, localImage: tempImg });
-      setIsUploading(true);
-
-      try {
-        const { uploadReferenceImage } = await import('@/utils/supabase/storage');
-        const { createClient } = await import('@/utils/supabase/client');
-        const supabase = createClient();
-        const { data: userData } = await supabase.auth.getUser();
-        if (!userData.user) throw new Error('Not authenticated');
-
-        const result = await uploadReferenceImage(file, userData.user.id);
-        if (result.error || !result.path) throw new Error(result.error || 'Upload failed');
-
-        dispatchConfig(id, {
-          ...configRef.current,
-          localImage: { url: result.url, storagePath: result.path },
-        });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Upload failed';
-        toast.error(message);
-        dispatchConfig(id, { ...configRef.current, localImage: null });
-      } finally {
-        setIsUploading(false);
-        URL.revokeObjectURL(preview);
-      }
-    },
-    [id],
-  );
-
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>): void => {
-    const file = e.target.files?.[0];
-    if (file) uploadFile(file);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const handleDrop = (e: React.DragEvent): void => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file?.type.startsWith('image/')) uploadFile(file);
-  };
-
-  const removeLocalImage = (): void => {
-    dispatchConfig(id, { ...configRef.current, localImage: null });
-  };
 
   return (
     <BaseWorkflowNode
@@ -264,66 +193,17 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
       outputs={multiAngleDefinition.outputs}
       minWidth={multiAngleDefinition.minWidth}
     >
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        aria-label="Select image file to upload"
-        onChange={handleFileSelect}
-      />
-
       <div className="space-y-2.5 nodrag nowheel">
         {/* Image source: upload or connected */}
-        {!connectedImageUrl && !localImage && (
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={() => fileInputRef.current?.click()}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                fileInputRef.current?.click();
-              }
-            }}
-            onDrop={handleDrop}
-            onDragOver={(e) => e.preventDefault()}
-            aria-label="Upload reference image"
-            className="flex flex-col items-center justify-center gap-1 py-3 rounded-md border border-dashed border-border bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer"
-          >
-            <Upload className="size-4 text-muted-foreground" aria-hidden="true" />
-            <span className="text-[10px] text-muted-foreground">
-              Upload image or connect input
-            </span>
-          </div>
-        )}
-
-        {/* Local image thumbnail with remove */}
-        {!connectedImageUrl && localImage && (
-          <div className="relative group rounded-md overflow-hidden border border-border">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={localImage.url}
-              alt="Uploaded reference"
-              className="w-full h-16 object-cover"
-              width={300}
-              height={64}
-              draggable={false}
-            />
-            {isUploading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                <Loader2 className="size-4 text-white motion-safe:animate-spin" aria-hidden="true" />
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); removeLocalImage(); }}
-              className="absolute -top-1 -right-1 size-8 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-black/80 transition-opacity focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-ring"
-              aria-label="Remove uploaded image"
-            >
-              <X className="size-3 text-white" aria-hidden="true" />
-            </button>
-          </div>
+        {!connectedImageUrl && (
+          <ImageUploadSlot
+            images={localImage ? [localImage] : []}
+            onChange={(imgs) => update('localImage', imgs[0] ?? null)}
+            maxImages={1}
+            showLibraryPicker={false}
+            emptyLabel="Upload image or connect input"
+            previewHeight="h-16"
+          />
         )}
 
         {/* 3D Camera Viewport */}

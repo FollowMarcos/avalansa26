@@ -213,3 +213,182 @@ export async function executeWorkflow(
 
   return { dataMap, completedCount, errorCount, skippedCount };
 }
+
+// ---------------------------------------------------------------------------
+// Upstream Dependency Resolution
+// ---------------------------------------------------------------------------
+
+/**
+ * Walk edges backward from a target node to collect all transitive upstream
+ * dependencies. Returns a Set of node IDs (NOT including the target itself).
+ */
+export function getUpstreamNodeIds(
+  targetId: string,
+  edges: Edge<WorkflowEdgeData>[],
+): Set<string> {
+  const upstream = new Set<string>();
+  const queue = [targetId];
+
+  while (queue.length > 0) {
+    const current = queue.pop()!;
+    for (const edge of edges) {
+      if (edge.target === current && !upstream.has(edge.source)) {
+        upstream.add(edge.source);
+        queue.push(edge.source);
+      }
+    }
+  }
+
+  return upstream;
+}
+
+// ---------------------------------------------------------------------------
+// Single-Node Execution (Run From Here)
+// ---------------------------------------------------------------------------
+
+/**
+ * Execute a single target node and only its upstream dependencies.
+ *
+ * Nodes that already have status === 'success' with outputValues are
+ * treated as cache hits and their outputs are reused — unless forceRun
+ * is true, in which case everything re-executes.
+ */
+export async function executeFromNode(
+  targetNodeId: string,
+  allNodes: Node<WorkflowNodeData>[],
+  edges: Edge<WorkflowEdgeData>[],
+  groups: (GroupData & { locked?: boolean })[],
+  context: ExecutionContext,
+  options?: { forceRun?: boolean },
+): Promise<ExecutionResult> {
+  const forceRun = options?.forceRun ?? false;
+
+  // 1. Get upstream dependencies + the target itself
+  const relevantIds = getUpstreamNodeIds(targetNodeId, edges);
+  relevantIds.add(targetNodeId);
+
+  // 2. Filter to relevant subset
+  const subsetNodes = allNodes.filter((n) => relevantIds.has(n.id));
+  const subsetEdges = edges.filter(
+    (e) => relevantIds.has(e.source) && relevantIds.has(e.target),
+  );
+
+  // 3. Validate and sort the subset
+  const { valid, error, order } = validateAndSort(subsetNodes, subsetEdges);
+  if (!valid || !order) {
+    throw new Error(error ?? 'Invalid subgraph');
+  }
+
+  // 4. Determine locked nodes
+  const lockedNodeIds = new Set<string>();
+  for (const group of groups) {
+    if (group.locked) {
+      for (const nodeId of group.nodeIds) {
+        lockedNodeIds.add(nodeId);
+      }
+    }
+  }
+
+  // 5. Build lookups
+  const nodeMap = new Map<string, Node<WorkflowNodeData>>();
+  for (const node of allNodes) {
+    nodeMap.set(node.id, node);
+  }
+
+  const incomingEdges = new Map<string, Edge<WorkflowEdgeData>[]>();
+  for (const edge of subsetEdges) {
+    const list = incomingEdges.get(edge.target) ?? [];
+    list.push(edge);
+    incomingEdges.set(edge.target, list);
+  }
+
+  // 6. Execute in topological order
+  const dataMap = new Map<string, Record<string, unknown>>();
+  const failedNodes = new Set<string>();
+  let completedCount = 0;
+  let errorCount = 0;
+  let skippedCount = 0;
+
+  for (const nodeId of order) {
+    if (context.signal.aborted) break;
+
+    const node = nodeMap.get(nodeId);
+    if (!node) continue;
+
+    if (lockedNodeIds.has(nodeId)) {
+      context.onStatusUpdate(nodeId, 'skipped', 'Group is locked');
+      skippedCount++;
+      continue;
+    }
+
+    // Cache hit: reuse existing outputs if upstream node already succeeded
+    if (!forceRun && nodeId !== targetNodeId) {
+      const existing = node.data.outputValues;
+      if (node.data.status === 'success' && existing) {
+        dataMap.set(nodeId, existing);
+        completedCount++;
+        continue;
+      }
+    }
+
+    const nodeIncoming = incomingEdges.get(nodeId) ?? [];
+    const hasFailedUpstream = nodeIncoming.some((e) => failedNodes.has(e.source));
+    if (hasFailedUpstream) {
+      context.onStatusUpdate(nodeId, 'error', 'Upstream node failed');
+      failedNodes.add(nodeId);
+      errorCount++;
+      continue;
+    }
+
+    const entry = getNodeEntry(node.data.definitionType);
+    if (!entry) {
+      context.onStatusUpdate(nodeId, 'error', `Unknown node type: ${node.data.definitionType}`);
+      failedNodes.add(nodeId);
+      errorCount++;
+      continue;
+    }
+
+    const nodeInputs: Record<string, unknown> = {};
+    for (const edge of nodeIncoming) {
+      const sourceOutputs = dataMap.get(edge.source);
+      if (sourceOutputs) {
+        const sourceSocketId = edge.sourceHandle?.replace('out-', '');
+        const targetSocketId = edge.targetHandle?.replace('in-', '');
+        if (sourceSocketId && targetSocketId) {
+          nodeInputs[targetSocketId] = sourceOutputs[sourceSocketId];
+        }
+      }
+    }
+
+    let missingRequired = false;
+    for (const input of entry.definition.inputs) {
+      if (input.required && nodeInputs[input.id] === undefined) {
+        if (input.defaultValue !== undefined) {
+          nodeInputs[input.id] = input.defaultValue;
+        } else {
+          context.onStatusUpdate(nodeId, 'error', `Missing required input: ${input.label}`);
+          failedNodes.add(nodeId);
+          errorCount++;
+          missingRequired = true;
+          break;
+        }
+      }
+    }
+    if (missingRequired) continue;
+
+    context.onStatusUpdate(nodeId, 'running');
+    try {
+      const outputs = await entry.executor(nodeInputs, node.data.config, context);
+      dataMap.set(nodeId, outputs);
+      context.onStatusUpdate(nodeId, 'success');
+      completedCount++;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Execution failed';
+      context.onStatusUpdate(nodeId, 'error', message);
+      failedNodes.add(nodeId);
+      errorCount++;
+    }
+  }
+
+  return { dataMap, completedCount, errorCount, skippedCount };
+}

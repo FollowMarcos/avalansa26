@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Settings } from 'lucide-react';
 import { BaseWorkflowNode } from '../base-workflow-node';
+import { useNodeConfig } from '../hooks/use-node-config';
 import { useCreate } from '../../create-context';
 import type { WorkflowNodeData, WorkflowNodeDefinition } from '@/types/workflow';
 import type { NodeExecutor } from '../node-registry';
@@ -40,14 +41,6 @@ export const settingsExecutor: NodeExecutor = async (_inputs, config) => ({
   },
 });
 
-function dispatchConfig(nodeId: string, config: Record<string, unknown>) {
-  window.dispatchEvent(
-    new CustomEvent('workflow-node-config', {
-      detail: { nodeId, config },
-    }),
-  );
-}
-
 interface SettingsNodeProps {
   data: WorkflowNodeData;
   id: string;
@@ -55,7 +48,7 @@ interface SettingsNodeProps {
 }
 
 export function SettingsNode({ data, id, selected }: SettingsNodeProps) {
-  const config = data.config;
+  const [config, update] = useNodeConfig(id, data.config);
   const { availableApis } = useCreate();
 
   return (
@@ -78,7 +71,7 @@ export function SettingsNode({ data, id, selected }: SettingsNodeProps) {
           <select
             value={(config.apiId as string) || ''}
             onChange={(e) =>
-              dispatchConfig(id, { ...config, apiId: e.target.value || null })
+              update('apiId', e.target.value || null)
             }
             className="flex-1 rounded-md border border-border bg-muted/30 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring truncate"
             aria-label="API provider"
@@ -100,7 +93,7 @@ export function SettingsNode({ data, id, selected }: SettingsNodeProps) {
           <select
             value={(config.aspectRatio as string) || '1:1'}
             onChange={(e) =>
-              dispatchConfig(id, { ...config, aspectRatio: e.target.value })
+              update('aspectRatio', e.target.value)
             }
             className="flex-1 rounded-md border border-border bg-muted/30 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
             aria-label="Aspect ratio"
@@ -119,7 +112,7 @@ export function SettingsNode({ data, id, selected }: SettingsNodeProps) {
           <select
             value={(config.imageSize as string) || '2K'}
             onChange={(e) =>
-              dispatchConfig(id, { ...config, imageSize: e.target.value })
+              update('imageSize', e.target.value)
             }
             className="flex-1 rounded-md border border-border bg-muted/30 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
             aria-label="Image size"
@@ -141,10 +134,7 @@ export function SettingsNode({ data, id, selected }: SettingsNodeProps) {
             max={4}
             value={(config.outputCount as number) || 1}
             onChange={(e) =>
-              dispatchConfig(id, {
-                ...config,
-                outputCount: Math.max(1, Math.min(4, Number(e.target.value))),
-              })
+              update('outputCount', Math.max(1, Math.min(4, Number(e.target.value))))
             }
             className="flex-1 rounded-md border border-border bg-muted/30 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
             aria-label="Output count"
@@ -161,7 +151,7 @@ export function SettingsNode({ data, id, selected }: SettingsNodeProps) {
               <button
                 key={speed}
                 type="button"
-                onClick={() => dispatchConfig(id, { ...config, generationSpeed: speed })}
+                onClick={() => update('generationSpeed', speed)}
                 className={`px-2 py-0.5 text-[10px] rounded-md border transition-colors ${
                   config.generationSpeed === speed
                     ? 'bg-foreground text-background border-foreground'

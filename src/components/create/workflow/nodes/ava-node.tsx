@@ -7,6 +7,7 @@ import type { WorkflowNodeData, WorkflowNodeDefinition } from '@/types/workflow'
 import type { NodeExecutor } from '../node-registry';
 import type { Ava } from '@/types/ava';
 import type { RunAvaResponse } from '@/types/ava';
+import { useNodeConfig } from '../hooks/use-node-config';
 import { cn } from '@/lib/utils';
 
 export const avaDefinition: WorkflowNodeDefinition = {
@@ -57,14 +58,6 @@ export const avaExecutor: NodeExecutor = async (inputs, config, context) => {
   };
 };
 
-function dispatchConfig(nodeId: string, config: Record<string, unknown>) {
-  window.dispatchEvent(
-    new CustomEvent('workflow-node-config', {
-      detail: { nodeId, config },
-    }),
-  );
-}
-
 interface AvaNodeProps {
   data: WorkflowNodeData;
   id: string;
@@ -75,7 +68,7 @@ export function AvaNode({ data, id, selected }: AvaNodeProps) {
   const [avas, setAvas] = React.useState<Ava[]>([]);
   const [isOpen, setIsOpen] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
-  const config = data.config;
+  const [config, update, updateMultiple] = useNodeConfig(id, data.config);
   const selectedName = (config.avaName as string) || '';
   const status = data.status ?? 'idle';
   const outputPrompt = data.outputValues?.prompt as string | undefined;
@@ -95,12 +88,12 @@ export function AvaNode({ data, id, selected }: AvaNodeProps) {
   }, [avas.length]);
 
   const handleSelect = (ava: Ava) => {
-    dispatchConfig(id, { ...config, avaId: ava.id, avaName: ava.name });
+    updateMultiple({ avaId: ava.id, avaName: ava.name });
     setIsOpen(false);
   };
 
   const handleSeedChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    dispatchConfig(id, { ...config, seedText: e.target.value });
+    update('seedText', e.target.value);
   };
 
   return (

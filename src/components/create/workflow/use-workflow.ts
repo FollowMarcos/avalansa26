@@ -19,7 +19,7 @@ import type {
 import { isSocketCompatible, SOCKET_COLORS } from '@/types/workflow';
 import type { GroupData, CanvasViewport } from '@/types/canvas';
 import { getNodeEntry, getAllDefinitions, type ExecutionContext } from './node-registry';
-import { executeWorkflow } from './execution-engine';
+import { executeWorkflow, executeFromNode, getUpstreamNodeIds } from './execution-engine';
 import { GROUP_PADDING, GROUP_TITLE_HEIGHT, getRandomGroupColor } from '../groups/group-utils';
 
 // Ensure nodes are registered
@@ -1044,75 +1044,117 @@ export function useWorkflow({ apiId, active = true }: UseWorkflowOptions) {
   }, [active, isExecuting, runWorkflow, stopWorkflow, saveWorkflow, selectedGroupId, createGroup, deleteGroup]);
 
   // ---------------------------------------------------------------------------
-  // Recompose single node (re-execute one node using existing upstream outputs)
+  // Run from a single node (execute it + its upstream dependencies)
   // ---------------------------------------------------------------------------
 
+  const runFromNode = React.useCallback(
+    async (targetNodeId: string, forceRun = false) => {
+      if (isExecuting) return;
+
+      const node = nodes.find((n) => n.id === targetNodeId);
+      if (!node) return;
+
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      setIsExecuting(true);
+
+      // Determine which nodes are in the execution subset
+      const upstreamIds = getUpstreamNodeIds(targetNodeId, edges);
+      upstreamIds.add(targetNodeId);
+
+      // Reset statuses for relevant nodes (keep cached successes unless forceRun)
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (!upstreamIds.has(n.id)) return n;
+          if (
+            !forceRun &&
+            n.id !== targetNodeId &&
+            n.data.status === 'success' &&
+            n.data.outputValues
+          ) {
+            return n; // cached — leave as-is
+          }
+          return {
+            ...n,
+            data: { ...n.data, status: 'queued' as const, error: undefined },
+          };
+        }),
+      );
+
+      const context: ExecutionContext = {
+        apiId,
+        signal: controller.signal,
+        onStatusUpdate: (nodeId, status, message) => {
+          setNodes((nds) =>
+            nds.map((n) => {
+              if (n.id !== nodeId) return n;
+              return {
+                ...n,
+                data: {
+                  ...n.data,
+                  status,
+                  error: status === 'error' ? message : undefined,
+                },
+              };
+            }),
+          );
+        },
+      };
+
+      try {
+        const result = await executeFromNode(
+          targetNodeId,
+          nodes,
+          edges,
+          groups,
+          context,
+          { forceRun },
+        );
+
+        // Store output values
+        setNodes((nds) =>
+          nds.map((n) => {
+            const outputs = result.dataMap.get(n.id);
+            if (!outputs) return n;
+            return { ...n, data: { ...n.data, outputValues: outputs } };
+          }),
+        );
+
+        if (result.errorCount > 0) {
+          toast.error(`Execution completed with ${result.errorCount} error(s)`);
+        } else {
+          toast.success('Node executed');
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Execution failed';
+        toast.error(message);
+      } finally {
+        setIsExecuting(false);
+        abortControllerRef.current = null;
+      }
+    },
+    [isExecuting, nodes, edges, groups, apiId, setNodes],
+  );
+
+  // Listen for per-node "Run from here" events (play button on node header)
   React.useEffect(() => {
     const handler = async (e: Event) => {
       const { nodeId } = (e as CustomEvent<{ nodeId: string }>).detail;
-      if (!nodeId || isExecuting) return;
-
-      const node = nodes.find((n) => n.id === nodeId);
-      if (!node) return;
-
-      const entry = getNodeEntry(node.data.definitionType);
-      if (!entry) return;
-
-      // Resolve inputs from upstream nodes' existing outputValues
-      const nodeInputs: Record<string, unknown> = {};
-      for (const edge of edges) {
-        if (edge.target !== nodeId) continue;
-        const sourceNode = nodes.find((n) => n.id === edge.source);
-        const sourceOutputs = sourceNode?.data?.outputValues as Record<string, unknown> | undefined;
-        if (sourceOutputs) {
-          const sourceSocketId = edge.sourceHandle?.replace('out-', '');
-          const targetSocketId = edge.targetHandle?.replace('in-', '');
-          if (sourceSocketId && targetSocketId) {
-            nodeInputs[targetSocketId] = sourceOutputs[sourceSocketId];
-          }
-        }
-      }
-
-      // Mark as running
-      setNodes((nds) =>
-        nds.map((n) =>
-          n.id === nodeId
-            ? { ...n, data: { ...n.data, status: 'running' as const, error: undefined } }
-            : n,
-        ),
-      );
-
-      try {
-        const ctx: ExecutionContext = {
-          apiId,
-          signal: new AbortController().signal,
-          onStatusUpdate: () => {},
-        };
-        const outputs = await entry.executor(nodeInputs, node.data.config, ctx);
-        setNodes((nds) =>
-          nds.map((n) =>
-            n.id === nodeId
-              ? { ...n, data: { ...n.data, status: 'success' as const, outputValues: outputs } }
-              : n,
-          ),
-        );
-        toast.success('Recomposed');
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'Recompose failed';
-        setNodes((nds) =>
-          nds.map((n) =>
-            n.id === nodeId
-              ? { ...n, data: { ...n.data, status: 'error' as const, error: message } }
-              : n,
-          ),
-        );
-        toast.error(message);
-      }
+      if (nodeId) await runFromNode(nodeId, false);
     };
+    window.addEventListener('workflow-run-from-node', handler);
+    return () => window.removeEventListener('workflow-run-from-node', handler);
+  }, [runFromNode]);
 
+  // Recompose: re-execute a single node with forceRun (used by manga-panel)
+  React.useEffect(() => {
+    const handler = async (e: Event) => {
+      const { nodeId } = (e as CustomEvent<{ nodeId: string }>).detail;
+      if (nodeId) await runFromNode(nodeId, true);
+    };
     window.addEventListener('workflow-recompose-node', handler);
     return () => window.removeEventListener('workflow-recompose-node', handler);
-  }, [nodes, edges, apiId, isExecuting, setNodes]);
+  }, [runFromNode]);
 
   return {
     // React Flow state
@@ -1143,6 +1185,7 @@ export function useWorkflow({ apiId, active = true }: UseWorkflowOptions) {
     isExecuting,
     executionProgress,
     runWorkflow,
+    runFromNode,
     stopWorkflow,
 
     // Metadata
