@@ -7,9 +7,12 @@ import { GenerationGallery } from "./generation-gallery";
 interface CanvasViewportProps {
   /** When in workflow mode, render the workflow canvas instead */
   workflowCanvas?: React.ReactNode;
+  /** Prompt Vault controls (threaded to gallery toolbar) */
+  vaultOpen?: boolean;
+  onToggleVault?: () => void;
 }
 
-export function CanvasViewport({ workflowCanvas }: CanvasViewportProps) {
+export function CanvasViewport({ workflowCanvas, vaultOpen, onToggleVault }: CanvasViewportProps) {
   const { viewMode } = useCreate();
 
   // Workflow mode: render the workflow canvas
@@ -22,5 +25,5 @@ export function CanvasViewport({ workflowCanvas }: CanvasViewportProps) {
   }
 
   // Gallery mode: render the gallery as the primary view
-  return <GenerationGallery />;
+  return <GenerationGallery vaultOpen={vaultOpen} onToggleVault={onToggleVault} />;
 }

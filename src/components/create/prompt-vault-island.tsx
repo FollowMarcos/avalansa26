@@ -34,6 +34,8 @@ type VaultSection = "all" | "favorites" | "recent" | "avas" | string; // string 
 interface PromptVaultIslandProps {
   open: boolean;
   onToggle: () => void;
+  /** When false, the floating toggle button is hidden (e.g. when embedded in toolbar). */
+  showToggle?: boolean;
   prompts: Prompt[];
   folders: PromptFolder[];
   tags: PromptTag[];
@@ -62,6 +64,7 @@ export function PromptVaultIsland({
   onToggleFavorite,
   onSharePrompt,
   onDeletePrompt,
+  showToggle = true,
   avas = [],
   avaFolders = [],
   onRunAva,
@@ -413,7 +416,7 @@ export function PromptVaultIsland({
                 </ScrollArea>
               </div>
             </motion.div>
-          ) : (
+          ) : showToggle ? (
             <motion.div
               key="button"
               initial={
@@ -454,7 +457,7 @@ export function PromptVaultIsland({
                 </TooltipContent>
               </Tooltip>
             </motion.div>
-          )}
+          ) : null}
         </AnimatePresence>
       </div>
     </TooltipProvider>

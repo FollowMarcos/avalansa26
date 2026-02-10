@@ -205,6 +205,52 @@ export const GalleryItem = React.memo(function GalleryItem({
                 </div>
               )}
 
+              {/* Hover action buttons */}
+              {!isBulkMode && (
+                <div
+                  className={cn(
+                    "absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex items-center gap-0.5",
+                    "rounded-lg bg-background/90 backdrop-blur-sm border border-border shadow-sm px-1 py-0.5",
+                    "opacity-0 group-hover:opacity-100 focus-within:opacity-100",
+                    "transition-opacity duration-150",
+                  )}
+                >
+                  <button
+                    type="button"
+                    className="size-7 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+                    aria-label="Download"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDownload(image.url, image.id);
+                    }}
+                  >
+                    <Download className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    className="size-7 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+                    aria-label="Split & download"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSplitDownload(image.url, image.id);
+                    }}
+                  >
+                    <Grid2x2 className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    className="size-7 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+                    aria-label="Reuse setup"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onReuseSetup(image);
+                    }}
+                  >
+                    <RotateCw className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                  </button>
+                </div>
+              )}
+
               {/* Info badge */}
               <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between pointer-events-none">
                 <span className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono tabular-nums">
@@ -280,7 +326,7 @@ export const GalleryItem = React.memo(function GalleryItem({
         </ContextMenuItem>
         <ContextMenuItem onClick={() => onCompare(image)}>
           <GitCompareArrows className="size-4" aria-hidden="true" />
-          Compare With\u2026
+          Compare With…
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem
@@ -319,7 +365,7 @@ export function PendingCard({ image }: { image: GeneratedImage }) {
         <div className="absolute inset-0 bg-gradient-to-r from-transparent via-muted-foreground/5 to-transparent animate-pulse" />
         <Loader size="sm" />
         <p className="text-xs text-muted-foreground font-mono text-center line-clamp-2 relative">
-          {image.prompt || "Generating\u2026"}
+          {image.prompt || "Generating…"}
         </p>
       </div>
     </div>

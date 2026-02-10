@@ -134,7 +134,7 @@ export function CollectionSidebar({ open, onClose }: CollectionSidebarProps) {
                 type="text"
                 name="collection-name"
                 autoComplete="off"
-                placeholder="Collection name\u2026"
+                placeholder="Collection name…"
                 aria-label="New collection name"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}

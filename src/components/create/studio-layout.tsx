@@ -94,6 +94,8 @@ export function StudioLayout() {
 
             {/* Canvas Viewport — passes workflow canvas when in workflow mode */}
             <CanvasViewport
+              vaultOpen={promptVault.vaultOpen}
+              onToggleVault={promptVault.toggleVault}
               workflowCanvas={
                 viewMode === "workflow" ? (
                   <WorkflowCanvas
@@ -158,6 +160,7 @@ export function StudioLayout() {
             <PromptVaultIsland
               open={promptVault.vaultOpen}
               onToggle={promptVault.toggleVault}
+              showToggle={viewMode === "workflow"}
               prompts={promptVault.prompts}
               folders={promptVault.folders}
               tags={promptVault.tags}

@@ -85,7 +85,22 @@ export function ImageDetailModal({
   const [urlCopied, setUrlCopied] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
+  const [promptExpanded, setPromptExpanded] = React.useState(false);
+  const promptRef = React.useRef<HTMLParagraphElement>(null);
+  const [promptClamped, setPromptClamped] = React.useState(false);
 
+  // Detect if prompt text is actually clamped (overflows 3 lines)
+  React.useEffect(() => {
+    const el = promptRef.current;
+    if (!el) { setPromptClamped(false); return; }
+    setPromptClamped(el.scrollHeight > el.clientHeight + 1);
+  }, [image?.prompt, image?.id]);
+
+
+  // Reset expanded state when navigating to a different image
+  React.useEffect(() => {
+    setPromptExpanded(false);
+  }, [image?.id]);
 
   // Keyboard navigation
   React.useEffect(() => {
@@ -168,7 +183,7 @@ export function ImageDetailModal({
   };
 
   const handleSplitDownload = async () => {
-    toast.info("Splitting image\u2026");
+    toast.info("Splitting image…");
     try {
       const img = new window.Image();
       img.crossOrigin = "anonymous";
@@ -423,22 +438,30 @@ export function ImageDetailModal({
                         )}
                       </Button>
                     </div>
-                    <p className="text-sm leading-relaxed break-words">
+                    <p
+                      ref={promptRef}
+                      className={cn(
+                        "text-sm leading-relaxed break-words",
+                        !promptExpanded && "line-clamp-3",
+                      )}
+                    >
                       {image.prompt || <span className="text-muted-foreground italic">No prompt</span>}
                     </p>
+                    {(promptClamped || promptExpanded) && (
+                      <button
+                        type="button"
+                        className="text-xs text-muted-foreground hover:text-foreground font-mono transition-colors focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+                        onClick={() => setPromptExpanded((v) => !v)}
+                      >
+                        {promptExpanded ? "View less" : "View more"}
+                      </button>
+                    )}
                   </div>
                 )}
 
                 {/* Negative Prompt */}
                 {image.settings.negativePrompt && (
-                  <div className="space-y-2">
-                    <span className="text-xs font-mono text-muted-foreground uppercase">
-                      Negative Prompt
-                    </span>
-                    <p className="text-sm text-muted-foreground leading-relaxed break-words">
-                      {image.settings.negativePrompt}
-                    </p>
-                  </div>
+                  <NegativePromptSection text={image.settings.negativePrompt} />
                 )}
 
                 {/* Reference Images */}
@@ -722,5 +745,43 @@ export function ImageDetailModal({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function NegativePromptSection({ text }: { text: string }) {
+  const [expanded, setExpanded] = React.useState(false);
+  const ref = React.useRef<HTMLParagraphElement>(null);
+  const [clamped, setClamped] = React.useState(false);
+
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) { setClamped(false); return; }
+    setClamped(el.scrollHeight > el.clientHeight + 1);
+  }, [text]);
+
+  return (
+    <div className="space-y-2">
+      <span className="text-xs font-mono text-muted-foreground uppercase">
+        Negative Prompt
+      </span>
+      <p
+        ref={ref}
+        className={cn(
+          "text-sm text-muted-foreground leading-relaxed break-words",
+          !expanded && "line-clamp-2",
+        )}
+      >
+        {text}
+      </p>
+      {(clamped || expanded) && (
+        <button
+          type="button"
+          className="text-xs text-muted-foreground hover:text-foreground font-mono transition-colors focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+          onClick={() => setExpanded((v) => !v)}
+        >
+          {expanded ? "View less" : "View more"}
+        </button>
+      )}
+    </div>
   );
 }

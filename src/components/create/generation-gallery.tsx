@@ -98,7 +98,12 @@ const formatTime = (timestamp: number) => {
 // Main component
 // ---------------------------------------------------------------------------
 
-export function GenerationGallery() {
+interface GenerationGalleryProps {
+  vaultOpen?: boolean;
+  onToggleVault?: () => void;
+}
+
+export function GenerationGallery({ vaultOpen, onToggleVault }: GenerationGalleryProps) {
   const {
     selectedImage,
     addReferenceImageFromUrl,
@@ -252,7 +257,7 @@ export function GenerationGallery() {
   };
 
   const handleSplitDownload = async (url: string, id: string) => {
-    toast.info("Splitting image\u2026");
+    toast.info("Splitting image…");
     try {
       const img = new window.Image();
       img.crossOrigin = "anonymous";
@@ -427,6 +432,8 @@ export function GenerationGallery() {
             favCount={favCount}
             sidebarOpen={sidebarOpen}
             onToggleSidebar={() => setSidebarOpen((s) => !s)}
+            vaultOpen={vaultOpen}
+            onToggleVault={onToggleVault}
           />
         </div>
 

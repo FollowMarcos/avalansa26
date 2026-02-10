@@ -13,6 +13,7 @@ import {
   Minus,
   Plus,
   ImageIcon,
+  BookMarked,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -47,6 +48,8 @@ interface GalleryToolbarProps {
   favCount: number;
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
+  vaultOpen?: boolean;
+  onToggleVault?: () => void;
 }
 
 export function GalleryToolbar({
@@ -56,6 +59,8 @@ export function GalleryToolbar({
   favCount,
   sidebarOpen,
   onToggleSidebar,
+  vaultOpen,
+  onToggleVault,
 }: GalleryToolbarProps) {
   const {
     viewMode,
@@ -108,8 +113,8 @@ export function GalleryToolbar({
   const sortOptions: { value: GallerySortOption; label: string }[] = [
     { value: "newest", label: "Newest first" },
     { value: "oldest", label: "Oldest first" },
-    { value: "prompt-asc", label: "Prompt A\u2013Z" },
-    { value: "prompt-desc", label: "Prompt Z\u2013A" },
+    { value: "prompt-asc", label: "Prompt A–Z" },
+    { value: "prompt-desc", label: "Prompt Z–A" },
   ];
 
   return (
@@ -133,6 +138,25 @@ export function GalleryToolbar({
           </TooltipTrigger>
           <TooltipContent>Collections</TooltipContent>
         </Tooltip>
+
+        {/* Prompt Vault toggle */}
+        {onToggleVault && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-9"
+                onClick={onToggleVault}
+                aria-label={vaultOpen ? "Close prompt vault" : "Open prompt vault"}
+                aria-pressed={vaultOpen}
+              >
+                <BookMarked className="size-4" strokeWidth={1.5} aria-hidden="true" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Prompt Vault</TooltipContent>
+          </Tooltip>
+        )}
 
         {/* View Mode Switcher */}
         <div className="flex items-center border border-border rounded-lg p-0.5" role="group" aria-label="View mode">
@@ -183,7 +207,7 @@ export function GalleryToolbar({
             type="search"
             name="gallery-search"
             autoComplete="off"
-            placeholder="Search prompts\u2026"
+            placeholder="Search prompts…"
             aria-label="Search prompts"
             value={localSearch}
             onChange={(e) => handleSearchChange(e.target.value)}
