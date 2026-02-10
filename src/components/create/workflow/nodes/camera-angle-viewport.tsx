@@ -512,7 +512,7 @@ export function CameraAngleViewport({
   return (
     <div
       className="nodrag nowheel rounded-md overflow-hidden border border-border/50 focus-visible:ring-2 focus-visible:ring-ring"
-      style={{ width: '100%', height: 200, touchAction: 'manipulation' }}
+      style={{ width: '100%', aspectRatio: '1', touchAction: 'manipulation' }}
       role="group"
       tabIndex={0}
       aria-label={`Camera angle control — ${buildCameraPrompt(horizontalAngle, verticalAngle)} — drag handles to adjust, arrow keys to step`}

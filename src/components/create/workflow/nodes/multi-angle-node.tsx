@@ -25,6 +25,7 @@ export const multiAngleDefinition: WorkflowNodeDefinition = {
   icon: 'Rotate3d',
   inputs: [
     { id: 'image', label: 'Image', type: 'image' },
+    { id: 'settings', label: 'Settings', type: 'settings' },
   ],
   outputs: [
     { id: 'image', label: 'Image 1', type: 'image' },
@@ -96,8 +97,9 @@ export const multiAngleExecutor: NodeExecutor = async (inputs, config, context) 
   const imageUrl = await resolveImageUrl(rawImage);
   if (!imageUrl) throw new Error('Could not resolve input image');
 
-  // Use the globally selected API (from CreateContext → workflow execution context)
-  const apiId = context.apiId;
+  // Priority: settings wire > global context
+  const settings = (inputs.settings as Record<string, unknown>) || {};
+  const apiId = (settings.apiId as string) || context.apiId;
 
   const response = await fetch('/api/multi-angle', {
     method: 'POST',
