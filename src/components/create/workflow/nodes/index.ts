@@ -21,6 +21,7 @@ import { CollageComposerNode, collageComposerDefinition, collageComposerExecutor
 import { MangaPanelNode, mangaPanelDefinition, mangaPanelExecutor } from './manga-panel-node';
 import { BeforeAfterImageNode, beforeAfterDefinition, beforeAfterExecutor } from './before-after-node';
 import { CharacterTurnaroundNode, characterTurnaroundDefinition, characterTurnaroundExecutor } from './character-turnaround-node';
+import { MultiAngleNode, multiAngleDefinition, multiAngleExecutor } from './multi-angle-node';
 
 registerNode({ definition: promptInputDefinition, component: PromptInputNode, executor: promptInputExecutor });
 registerNode({ definition: settingsDefinition, component: SettingsNode, executor: settingsExecutor });
@@ -36,3 +37,4 @@ registerNode({ definition: collageComposerDefinition, component: CollageComposer
 registerNode({ definition: mangaPanelDefinition, component: MangaPanelNode, executor: mangaPanelExecutor });
 registerNode({ definition: beforeAfterDefinition, component: BeforeAfterImageNode, executor: beforeAfterExecutor });
 registerNode({ definition: characterTurnaroundDefinition, component: CharacterTurnaroundNode, executor: characterTurnaroundExecutor });
+registerNode({ definition: multiAngleDefinition, component: MultiAngleNode, executor: multiAngleExecutor });

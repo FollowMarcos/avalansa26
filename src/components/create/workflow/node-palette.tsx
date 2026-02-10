@@ -13,6 +13,7 @@ import {
   LayoutGrid,
   BookOpen,
   RotateCcw,
+  Rotate3d,
   Search,
   ChevronDown,
   ChevronRight,
@@ -45,6 +46,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   LayoutGrid: <LayoutGrid className="size-4" />,
   BookOpen: <BookOpen className="size-4" />,
   RotateCcw: <RotateCcw className="size-4" />,
+  Rotate3d: <Rotate3d className="size-4" />,
 };
 
 interface NodePaletteProps {
