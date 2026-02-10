@@ -4,7 +4,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import type { GroupData } from "@/types/canvas";
 import { hexToRgba, GROUP_TITLE_HEIGHT } from "./group-utils";
-import { ChevronDown, ChevronRight, GripHorizontal, Pencil, Moon, Sun } from "lucide-react";
+import { ChevronDown, ChevronRight, GripHorizontal, Pencil, Moon, Sun, Play } from "lucide-react";
 
 interface GroupItemProps {
   group: GroupData;
@@ -223,6 +223,26 @@ export const GroupItem = React.memo(function GroupItem({
             aria-label="Rename group"
           >
             <Pencil className="size-3" style={{ color: group.color }} />
+          </button>
+        )}
+
+        {/* Run group button */}
+        {!isEditing && isTitleHovered && !group.locked && (
+          <button
+            type="button"
+            className="flex items-center justify-center size-6 rounded hover:bg-black/10"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.dispatchEvent(
+                new CustomEvent('workflow-run-group', { detail: { groupId: group.id } }),
+              );
+            }}
+            onMouseDown={(e) => e.stopPropagation()}
+            style={{ transform: `scale(${iconScale})` }}
+            aria-label={`Run group "${group.title}"`}
+            title="Run Group"
+          >
+            <Play className="size-3" style={{ color: group.color }} />
           </button>
         )}
 

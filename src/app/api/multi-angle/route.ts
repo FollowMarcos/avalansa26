@@ -195,6 +195,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<MultiAngl
       num_inference_steps: numInferenceSteps,
       num_images: numImages,
       output_format: outputFormat,
+      enable_safety_checker: false,
     };
 
     if (additionalPrompt) {
@@ -202,6 +203,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<MultiAngl
     }
 
     const falEndpoint = 'https://fal.run/fal-ai/qwen-image-edit-2511-multiple-angles';
+
+    console.log('[Multi-Angle] Request payload:', JSON.stringify(falRequestBody, null, 2));
 
     const response = await fetchWithTimeout(falEndpoint, {
       method: 'POST',
@@ -219,6 +222,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<MultiAngl
     }
 
     const data = await response.json();
+    console.log('[Multi-Angle] Response:', JSON.stringify({
+      has_images: !!data.images?.length,
+      image_count: data.images?.length ?? 0,
+      seed: data.seed,
+      has_nsfw_concepts: data.has_nsfw_concepts,
+    }));
 
     if (!data.images || data.images.length === 0) {
       throw new Error('No images returned from multi-angle generation');

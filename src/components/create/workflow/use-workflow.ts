@@ -19,7 +19,7 @@ import type {
 import { isSocketCompatible, SOCKET_COLORS } from '@/types/workflow';
 import type { GroupData, CanvasViewport } from '@/types/canvas';
 import { getNodeEntry, getAllDefinitions, type ExecutionContext } from './node-registry';
-import { executeWorkflow, executeFromNode, getUpstreamNodeIds } from './execution-engine';
+import { executeWorkflow, executeFromNode, executeGroup, getUpstreamNodeIds } from './execution-engine';
 import { GROUP_PADDING, GROUP_TITLE_HEIGHT, getRandomGroupColor } from '../groups/group-utils';
 
 // Ensure nodes are registered
@@ -1006,11 +1006,6 @@ export function useWorkflow({ apiId, active = true }: UseWorkflowOptions) {
     if (!active) return;
 
     const handler = (e: KeyboardEvent) => {
-      // Ctrl+Enter to run
-      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-        e.preventDefault();
-        if (!isExecuting) runWorkflow();
-      }
       // Escape to stop execution or deselect group
       if (e.key === 'Escape') {
         if (isExecuting) {
@@ -1041,7 +1036,7 @@ export function useWorkflow({ apiId, active = true }: UseWorkflowOptions) {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [active, isExecuting, runWorkflow, stopWorkflow, saveWorkflow, selectedGroupId, createGroup, deleteGroup]);
+  }, [active, isExecuting, stopWorkflow, saveWorkflow, selectedGroupId, createGroup, deleteGroup]);
 
   // ---------------------------------------------------------------------------
   // Run from a single node (execute it + its upstream dependencies)
@@ -1136,6 +1131,107 @@ export function useWorkflow({ apiId, active = true }: UseWorkflowOptions) {
     [isExecuting, nodes, edges, groups, apiId, setNodes],
   );
 
+  // ---------------------------------------------------------------------------
+  // Run a group (execute all nodes in a group + upstream dependencies)
+  // ---------------------------------------------------------------------------
+
+  const runGroup = React.useCallback(
+    async (groupId: string) => {
+      if (isExecuting) return;
+
+      const group = groups.find((g) => g.id === groupId);
+      if (!group || group.nodeIds.length === 0) {
+        toast.error('Group has no nodes');
+        return;
+      }
+
+      if (group.locked) {
+        toast.error('Group is sleeping — wake it before running');
+        return;
+      }
+
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+      setIsExecuting(true);
+
+      // Reset statuses for group nodes (keep cached successes for upstream)
+      const groupNodeSet = new Set(group.nodeIds);
+      setNodes((nds) =>
+        nds.map((n) => {
+          if (!groupNodeSet.has(n.id)) return n;
+          return {
+            ...n,
+            data: { ...n.data, status: 'queued' as const, error: undefined },
+          };
+        }),
+      );
+
+      setExecutionProgress({ completed: 0, total: group.nodeIds.length });
+
+      const context: ExecutionContext = {
+        apiId,
+        signal: controller.signal,
+        onStatusUpdate: (nodeId, status, message) => {
+          setNodes((nds) =>
+            nds.map((n) => {
+              if (n.id !== nodeId) return n;
+              return {
+                ...n,
+                data: {
+                  ...n.data,
+                  status,
+                  error: status === 'error' ? message : undefined,
+                },
+              };
+            }),
+          );
+
+          if (status === 'success' || status === 'error' || status === 'skipped') {
+            setExecutionProgress((prev) => ({
+              ...prev,
+              completed: prev.completed + 1,
+            }));
+          }
+        },
+      };
+
+      try {
+        const result = await executeGroup(
+          group.nodeIds,
+          nodes,
+          edges,
+          groups,
+          context,
+        );
+
+        // Store output values
+        setNodes((nds) =>
+          nds.map((n) => {
+            const outputs = result.dataMap.get(n.id);
+            if (!outputs) return n;
+            return { ...n, data: { ...n.data, outputValues: outputs } };
+          }),
+        );
+
+        if (result.errorCount > 0) {
+          toast.error(`Group executed with ${result.errorCount} error(s)`);
+        } else {
+          toast.success(
+            `Group "${group.title}" complete: ${result.completedCount} nodes executed` +
+              (result.skippedCount > 0 ? `, ${result.skippedCount} skipped` : ''),
+          );
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Group execution failed';
+        toast.error(message);
+      } finally {
+        setIsExecuting(false);
+        abortControllerRef.current = null;
+      }
+    },
+    [isExecuting, nodes, edges, groups, apiId, setNodes],
+  );
+
   // Listen for per-node "Run from here" events (play button on node header)
   React.useEffect(() => {
     const handler = async (e: Event) => {
@@ -1155,6 +1251,16 @@ export function useWorkflow({ apiId, active = true }: UseWorkflowOptions) {
     window.addEventListener('workflow-recompose-node', handler);
     return () => window.removeEventListener('workflow-recompose-node', handler);
   }, [runFromNode]);
+
+  // Listen for group "Run" events (play button on group header)
+  React.useEffect(() => {
+    const handler = async (e: Event) => {
+      const { groupId } = (e as CustomEvent<{ groupId: string }>).detail;
+      if (groupId) await runGroup(groupId);
+    };
+    window.addEventListener('workflow-run-group', handler);
+    return () => window.removeEventListener('workflow-run-group', handler);
+  }, [runGroup]);
 
   return {
     // React Flow state
@@ -1186,6 +1292,7 @@ export function useWorkflow({ apiId, active = true }: UseWorkflowOptions) {
     executionProgress,
     runWorkflow,
     runFromNode,
+    runGroup,
     stopWorkflow,
 
     // Metadata

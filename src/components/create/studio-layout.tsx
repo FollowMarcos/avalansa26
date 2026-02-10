@@ -132,7 +132,6 @@ export function StudioLayout() {
                 isExecuting={workflow.isExecuting}
                 executionProgress={workflow.executionProgress}
                 workflowName={workflow.workflowName}
-                onRun={workflow.runWorkflow}
                 onStop={workflow.stopWorkflow}
                 onSave={workflow.saveWorkflow}
                 onExport={workflow.exportWorkflowJSON}

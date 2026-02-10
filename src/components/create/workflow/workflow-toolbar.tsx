@@ -3,7 +3,6 @@
 import * as React from 'react';
 import { cn } from '@/lib/utils';
 import {
-  Play,
   Square,
   Save,
   Download,
@@ -24,7 +23,6 @@ interface WorkflowToolbarProps {
   isExecuting: boolean;
   executionProgress: { completed: number; total: number };
   workflowName: string;
-  onRun: () => void;
   onStop: () => void;
   onSave: () => void;
   onExport: () => void;
@@ -41,7 +39,6 @@ export function WorkflowToolbar({
   isExecuting,
   executionProgress,
   workflowName,
-  onRun,
   onStop,
   onSave,
   onExport,
@@ -123,50 +120,34 @@ export function WorkflowToolbar({
 
           <div className="w-px h-5 bg-border mx-1" />
 
-          {/* Run / Stop */}
-          {isExecuting ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={onStop}
-                  className="gap-1.5 h-8"
-                >
-                  <Square className="size-3.5" />
-                  Stop
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Stop Execution (Esc)</TooltipContent>
-            </Tooltip>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={onRun}
-                  className="gap-1.5 h-8"
-                >
-                  <Play className="size-3.5" />
-                  Run All
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Run All Nodes (Ctrl+Enter)</TooltipContent>
-            </Tooltip>
-          )}
-
-          {/* Progress indicator */}
+          {/* Stop + progress (shown only during execution) */}
           {isExecuting && (
-            <div className="flex items-center gap-1.5 px-2">
-              <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
-              <span className="text-xs text-muted-foreground font-mono">
-                {executionProgress.completed}/{executionProgress.total}
-              </span>
-            </div>
-          )}
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={onStop}
+                    className="gap-1.5 h-8"
+                  >
+                    <Square className="size-3.5" aria-hidden="true" />
+                    Stop
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Stop Execution (Esc)</TooltipContent>
+              </Tooltip>
 
-          <div className="w-px h-5 bg-border mx-1" />
+              <div className="flex items-center gap-1.5 px-2">
+                <Loader2 className="size-3.5 animate-spin text-muted-foreground" aria-hidden="true" />
+                <span className="text-xs text-muted-foreground font-mono tabular-nums">
+                  {executionProgress.completed}/{executionProgress.total}
+                </span>
+              </div>
+
+              <div className="w-px h-5 bg-border mx-1" />
+            </>
+          )}
 
           {/* Save */}
           <Tooltip>

@@ -47,7 +47,7 @@ export const multiAngleDefinition: WorkflowNodeDefinition = {
     showAdvanced: false,
     localImage: null,
   },
-  minWidth: 300,
+  minWidth: 380,
 };
 
 // ---------------------------------------------------------------------------
