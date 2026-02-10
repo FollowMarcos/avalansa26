@@ -39,8 +39,8 @@ export const multiAngleDefinition: WorkflowNodeDefinition = {
     verticalAngle: 0,
     zoom: 5,
     loraScale: 1,
-    guidanceScale: 1,
-    numInferenceSteps: 4,
+    guidanceScale: 4.5,
+    numInferenceSteps: 28,
     numImages: 1,
     outputFormat: 'png',
     additionalPrompt: '',
@@ -117,8 +117,8 @@ export const multiAngleExecutor: NodeExecutor = async (inputs, config, context) 
       verticalAngle: Number(config.verticalAngle) || 0,
       zoom: Number(config.zoom) ?? 5,
       loraScale: Number(config.loraScale) ?? 1,
-      guidanceScale: Number(config.guidanceScale) ?? 1,
-      numInferenceSteps: Number(config.numInferenceSteps) ?? 4,
+      guidanceScale: Number(config.guidanceScale) ?? 4.5,
+      numInferenceSteps: Number(config.numInferenceSteps) ?? 28,
       numImages: Number(config.numImages) || 1,
       outputFormat: (config.outputFormat as string) || 'png',
       additionalPrompt: (config.additionalPrompt as string) || '',
@@ -295,14 +295,14 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
             <div>
               <label className="text-[10px] text-muted-foreground mb-0.5 flex justify-between">
                 <span>Guidance</span>
-                <span className="font-mono tabular-nums">{Number(config.guidanceScale ?? 1).toFixed(1)}</span>
+                <span className="font-mono tabular-nums">{Number(config.guidanceScale ?? 4.5).toFixed(1)}</span>
               </label>
               <input
                 type="range"
                 min={1}
                 max={20}
                 step={0.5}
-                value={Number(config.guidanceScale ?? 1)}
+                value={Number(config.guidanceScale ?? 4.5)}
                 onChange={(e) => update('guidanceScale', parseFloat(e.target.value))}
                 className="w-full h-1.5 accent-primary"
                 aria-label="Guidance scale"
@@ -313,14 +313,14 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
             <div>
               <label className="text-[10px] text-muted-foreground mb-0.5 flex justify-between">
                 <span>Steps</span>
-                <span className="font-mono tabular-nums">{Number(config.numInferenceSteps ?? 4)}</span>
+                <span className="font-mono tabular-nums">{Number(config.numInferenceSteps ?? 28)}</span>
               </label>
               <input
                 type="range"
                 min={1}
                 max={50}
                 step={1}
-                value={Number(config.numInferenceSteps ?? 4)}
+                value={Number(config.numInferenceSteps ?? 28)}
                 onChange={(e) => update('numInferenceSteps', parseInt(e.target.value, 10))}
                 className="w-full h-1.5 accent-primary"
                 aria-label="Number of inference steps"
