@@ -240,6 +240,17 @@ export const GalleryItem = React.memo(function GalleryItem({
                   <button
                     type="button"
                     className="size-7 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+                    aria-label="Use as reference"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onUseAsReference(image.url);
+                    }}
+                  >
+                    <ImagePlus className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    className="size-7 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
                     aria-label="Reuse setup"
                     onClick={(e) => {
                       e.stopPropagation();

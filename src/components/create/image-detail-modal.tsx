@@ -90,14 +90,27 @@ export function ImageDetailModal({
   const [promptClamped, setPromptClamped] = React.useState(false);
 
   // Detect if prompt text is actually clamped (overflows 3 lines).
-  // Uses ResizeObserver so the check fires after the dialog content is laid out.
+  // line-clamp makes scrollHeight === clientHeight in many browsers,
+  // so we temporarily remove the clamp to measure the real height.
   React.useEffect(() => {
     if (promptExpanded) return; // keep previous value while expanded
     const el = promptRef.current;
     if (!el) { setPromptClamped(false); return; }
 
     const check = () => {
-      setPromptClamped(el.scrollHeight > el.clientHeight + 1);
+      // Temporarily remove line-clamp to measure full content height
+      el.style.display = 'block';
+      el.style.webkitLineClamp = 'unset';
+      el.style.overflow = 'visible';
+      const fullHeight = el.scrollHeight;
+
+      // Restore clamped styles (clear inline overrides, let class take over)
+      el.style.display = '';
+      el.style.webkitLineClamp = '';
+      el.style.overflow = '';
+      const clampedHeight = el.clientHeight;
+
+      setPromptClamped(fullHeight > clampedHeight + 1);
     };
 
     const observer = new ResizeObserver(check);
@@ -770,7 +783,18 @@ function NegativePromptSection({ text }: { text: string }) {
     if (!el) { setClamped(false); return; }
 
     const check = () => {
-      setClamped(el.scrollHeight > el.clientHeight + 1);
+      // Temporarily remove line-clamp to measure full content height
+      el.style.display = 'block';
+      el.style.webkitLineClamp = 'unset';
+      el.style.overflow = 'visible';
+      const fullHeight = el.scrollHeight;
+
+      el.style.display = '';
+      el.style.webkitLineClamp = '';
+      el.style.overflow = '';
+      const clampedHeight = el.clientHeight;
+
+      setClamped(fullHeight > clampedHeight + 1);
     };
 
     const observer = new ResizeObserver(check);

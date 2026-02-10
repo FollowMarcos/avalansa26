@@ -21,7 +21,6 @@ export const multiAngleDefinition: WorkflowNodeDefinition = {
   icon: 'Rotate3d',
   inputs: [
     { id: 'image', label: 'Image', type: 'image', required: true },
-    { id: 'settings', label: 'Settings', type: 'settings' },
   ],
   outputs: [
     { id: 'image', label: 'Image 1', type: 'image' },
@@ -89,14 +88,8 @@ export const multiAngleExecutor: NodeExecutor = async (inputs, config, context) 
   const imageUrl = await resolveImageUrl(imageInput);
   if (!imageUrl) throw new Error('Could not resolve input image');
 
-  const settings =
-    inputs.settings && typeof inputs.settings === 'object' && !Array.isArray(inputs.settings)
-      ? (inputs.settings as Record<string, unknown>)
-      : {};
-
-  // Determine API ID
-  const settingsApiId = typeof settings.apiId === 'string' ? settings.apiId : '';
-  const apiId = settingsApiId || context.apiId;
+  // Use the globally selected API (from CreateContext → workflow execution context)
+  const apiId = context.apiId;
 
   const response = await fetch('/api/multi-angle', {
     method: 'POST',
@@ -224,7 +217,7 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
           <textarea
             value={(config.additionalPrompt as string) || ''}
             onChange={(e) => update('additionalPrompt', e.target.value)}
-            placeholder="Optional: describe desired changes\u2026"
+            placeholder={"Optional: describe desired changes\u2026"}
             rows={2}
             className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-ring"
             aria-label="Additional prompt for image editing"

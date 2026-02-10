@@ -9,9 +9,9 @@ import * as THREE from 'three';
 // Constants
 // ---------------------------------------------------------------------------
 
-/** Map zoom 0–10 to camera distance 8–2 (inverted: high zoom = close) */
+/** Map zoom 0–10 to camera distance 5–2 (inverted: high zoom = close) */
 const MIN_DISTANCE = 2;
-const MAX_DISTANCE = 8;
+const MAX_DISTANCE = 5;
 
 /** Vertical angle limits in radians (polar angle measured from +Y axis) */
 const MIN_POLAR = THREE.MathUtils.degToRad(0); // looking straight down = vertical 90°
@@ -216,7 +216,7 @@ function SceneController({
 function SubjectSphere() {
   return (
     <mesh position={[0, 0, 0]}>
-      <sphereGeometry args={[0.6, 32, 32]} />
+      <sphereGeometry args={[0.8, 32, 32]} />
       <meshStandardMaterial color="#6366f1" roughness={0.4} metalness={0.2} />
     </mesh>
   );
@@ -291,7 +291,7 @@ export function CameraAngleViewport({
       onKeyDown={handleKeyDown}
     >
       <Canvas
-        camera={{ position: initialCameraPosition, fov: 45, near: 0.1, far: 50 }}
+        camera={{ position: initialCameraPosition, fov: 50, near: 0.1, far: 50 }}
         style={{ background: '#0a0a12' }}
         gl={{ antialias: true, alpha: false }}
       >
