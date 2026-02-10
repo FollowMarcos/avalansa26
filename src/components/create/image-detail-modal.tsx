@@ -89,12 +89,23 @@ export function ImageDetailModal({
   const promptRef = React.useRef<HTMLParagraphElement>(null);
   const [promptClamped, setPromptClamped] = React.useState(false);
 
-  // Detect if prompt text is actually clamped (overflows 3 lines)
+  // Detect if prompt text is actually clamped (overflows 3 lines).
+  // Uses ResizeObserver so the check fires after the dialog content is laid out.
   React.useEffect(() => {
+    if (promptExpanded) return; // keep previous value while expanded
     const el = promptRef.current;
     if (!el) { setPromptClamped(false); return; }
-    setPromptClamped(el.scrollHeight > el.clientHeight + 1);
-  }, [image?.prompt, image?.id]);
+
+    const check = () => {
+      setPromptClamped(el.scrollHeight > el.clientHeight + 1);
+    };
+
+    const observer = new ResizeObserver(check);
+    observer.observe(el);
+    check();
+
+    return () => observer.disconnect();
+  }, [image?.prompt, image?.id, promptExpanded]);
 
 
   // Reset expanded state when navigating to a different image
@@ -754,10 +765,20 @@ function NegativePromptSection({ text }: { text: string }) {
   const [clamped, setClamped] = React.useState(false);
 
   React.useEffect(() => {
+    if (expanded) return;
     const el = ref.current;
     if (!el) { setClamped(false); return; }
-    setClamped(el.scrollHeight > el.clientHeight + 1);
-  }, [text]);
+
+    const check = () => {
+      setClamped(el.scrollHeight > el.clientHeight + 1);
+    };
+
+    const observer = new ResizeObserver(check);
+    observer.observe(el);
+    check();
+
+    return () => observer.disconnect();
+  }, [text, expanded]);
 
   return (
     <div className="space-y-2">
