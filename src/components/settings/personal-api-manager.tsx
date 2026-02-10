@@ -18,6 +18,7 @@ import {
   Settings,
   KeyRound,
   ExternalLink,
+  type LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -54,7 +55,7 @@ import { createClient } from '@/utils/supabase/client';
 import type { ApiConfig, ApiConfigInsert, ApiConfigUpdate } from '@/types/api-config';
 import { API_PROVIDERS } from '@/types/api-config';
 
-const providerIcons: Record<string, React.ElementType> = {
+const providerIcons: Record<string, LucideIcon> = {
   google: Sparkles,
   openai: Brain,
   anthropic: MessageSquare,

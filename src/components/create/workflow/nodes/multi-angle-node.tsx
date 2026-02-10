@@ -210,7 +210,7 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
         />
 
         {/* Angle readouts */}
-        <div className="flex items-center justify-between text-[10px] font-mono text-muted-foreground px-0.5">
+        <div className="flex items-center justify-between text-[10px] font-mono tabular-nums text-muted-foreground px-0.5">
           <span>H: {horizontalAngle.toFixed(1)}&deg;</span>
           <span>V: {verticalAngle.toFixed(1)}&deg;</span>
           <span>Z: {zoom.toFixed(1)}</span>
@@ -224,7 +224,7 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
           <textarea
             value={(config.additionalPrompt as string) || ''}
             onChange={(e) => update('additionalPrompt', e.target.value)}
-            placeholder="Optional: describe desired changes..."
+            placeholder="Optional: describe desired changes\u2026"
             rows={2}
             className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-ring"
             aria-label="Additional prompt for image editing"
@@ -357,7 +357,7 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
         {status === 'running' && (
           <div className="flex items-center gap-2 py-2">
             <Loader size="sm" />
-            <span className="text-xs text-muted-foreground">Generating angles...</span>
+            <span className="text-xs text-muted-foreground">Generating angles\u2026</span>
           </div>
         )}
 
@@ -378,6 +378,9 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
                   src={url}
                   alt={`Multi-angle result ${i + 1}`}
                   className="w-full h-28 object-cover"
+                  width={280}
+                  height={112}
+                  loading="lazy"
                   draggable={false}
                 />
               </div>

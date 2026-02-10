@@ -22,6 +22,7 @@ import {
   Check,
   Server,
   Key,
+  type LucideIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -59,7 +60,7 @@ import {
 } from '@/utils/supabase/api-configs.server';
 
 // Provider icon mapping
-const providerIcons: Record<string, React.ElementType> = {
+const providerIcons: Record<string, LucideIcon> = {
   google: Sparkles,
   openai: Brain,
   anthropic: MessageSquare,
@@ -70,7 +71,7 @@ const providerIcons: Record<string, React.ElementType> = {
 };
 
 // Access level icon mapping
-const accessLevelIcons: Record<ApiAccessLevel, React.ElementType> = {
+const accessLevelIcons: Record<ApiAccessLevel, LucideIcon> = {
   public: Globe,
   authenticated: Users,
   restricted: Fingerprint,

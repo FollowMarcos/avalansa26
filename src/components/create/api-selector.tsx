@@ -12,6 +12,7 @@ import {
   ChevronDown,
   Check,
   Server,
+  type LucideIcon,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -25,7 +26,7 @@ import { Button } from '@/components/ui/button';
 import type { ApiConfig } from '@/types/api-config';
 
 // Provider icon mapping
-const providerIcons: Record<string, React.ElementType> = {
+const providerIcons: Record<string, LucideIcon> = {
   google: Sparkles,
   openai: Brain,
   anthropic: MessageSquare,

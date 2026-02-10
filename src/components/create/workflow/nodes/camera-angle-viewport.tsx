@@ -115,9 +115,7 @@ function CameraLine({
     return ln;
   }, []);
 
-  React.useEffect(() => {
-    lineRef.current = lineObj;
-  }, [lineObj]);
+  lineRef.current = lineObj;
 
   return <primitive object={lineObj} />;
 }
@@ -285,9 +283,9 @@ export function CameraAngleViewport({
 
   return (
     <div
-      className="nodrag nowheel rounded-md overflow-hidden border border-border/50"
-      style={{ width: '100%', height: 180 }}
-      role="img"
+      className="nodrag nowheel rounded-md overflow-hidden border border-border/50 focus-visible:ring-2 focus-visible:ring-ring"
+      style={{ width: '100%', height: 180, touchAction: 'manipulation' }}
+      role="group"
       tabIndex={0}
       aria-label={`Camera angle control — H:${horizontalAngle.toFixed(0)}° V:${verticalAngle.toFixed(0)}° Z:${zoom.toFixed(1)} — drag to orbit, scroll to zoom, arrow keys to adjust`}
       onKeyDown={handleKeyDown}

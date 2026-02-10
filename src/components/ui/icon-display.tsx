@@ -13,7 +13,7 @@ interface IconDisplayProps extends React.ComponentProps<"svg"> {
 export function IconDisplay({ name, className, ...props }: IconDisplayProps) {
     if (!name) return null;
 
-    let Icon: React.ElementType | null = null;
+    let Icon: React.ComponentType<{ className?: string }> | null = null;
 
     // Determine provider
     if (name.startsWith("hugeicons:")) {
