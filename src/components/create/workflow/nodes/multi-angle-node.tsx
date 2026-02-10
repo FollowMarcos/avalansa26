@@ -1,7 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { Rotate3d, ChevronDown, ChevronRight } from 'lucide-react';
+import { Rotate3d, ChevronDown, ChevronRight, Upload, X, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { BaseWorkflowNode } from '../base-workflow-node';
 import { Loader } from '@/components/ui/loader';
 import { CameraAngleViewport } from './camera-angle-viewport';
@@ -9,6 +10,11 @@ import type { WorkflowNodeData, WorkflowNodeDefinition } from '@/types/workflow'
 import type { NodeExecutor } from '../node-registry';
 import { cn } from '@/lib/utils';
 import { useConnectedInputValue } from '../hooks/use-connected-input';
+
+interface LocalImage {
+  url: string;
+  storagePath: string;
+}
 
 // ---------------------------------------------------------------------------
 // Definition
@@ -21,7 +27,7 @@ export const multiAngleDefinition: WorkflowNodeDefinition = {
   description: 'Re-render an image from a different camera angle',
   icon: 'Rotate3d',
   inputs: [
-    { id: 'image', label: 'Image', type: 'image', required: true },
+    { id: 'image', label: 'Image', type: 'image' },
   ],
   outputs: [
     { id: 'image', label: 'Image 1', type: 'image' },
@@ -40,6 +46,7 @@ export const multiAngleDefinition: WorkflowNodeDefinition = {
     outputFormat: 'png',
     additionalPrompt: '',
     showAdvanced: false,
+    localImage: null,
   },
   minWidth: 300,
 };
@@ -82,11 +89,14 @@ async function resolveImageUrl(raw: unknown): Promise<string | null> {
 // ---------------------------------------------------------------------------
 
 export const multiAngleExecutor: NodeExecutor = async (inputs, config, context) => {
+  // Prefer connected wire input; fall back to locally uploaded image
   const imageInput = inputs.image;
-  if (!imageInput) throw new Error('Image input is required');
+  const localImg = config.localImage as LocalImage | null;
+  const rawImage = imageInput || localImg?.storagePath || localImg?.url;
+  if (!rawImage) throw new Error('Image input is required — connect one or upload directly');
 
   // Resolve image to a URL the API can access
-  const imageUrl = await resolveImageUrl(imageInput);
+  const imageUrl = await resolveImageUrl(rawImage);
   if (!imageUrl) throw new Error('Could not resolve input image');
 
   // Use the globally selected API (from CreateContext → workflow execution context)
@@ -152,6 +162,12 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
 
   const status = data.status ?? 'idle';
   const connectedImageUrl = useConnectedInputValue(id, 'image') as string | undefined;
+  const localImage = config.localImage as LocalImage | null;
+  const [isUploading, setIsUploading] = React.useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Priority: connected image > local upload > undefined (sphere)
+  const viewportImageUrl = connectedImageUrl || localImage?.url || undefined;
 
   const horizontalAngle = Number(config.horizontalAngle) || 0;
   const verticalAngle = Number(config.verticalAngle) || 0;
@@ -183,6 +199,60 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
     dispatchConfig(id, { ...config, [key]: value });
   };
 
+  const uploadFile = React.useCallback(
+    async (file: File) => {
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file');
+        return;
+      }
+
+      const preview = URL.createObjectURL(file);
+      const tempImg: LocalImage = { url: preview, storagePath: '' };
+      dispatchConfig(id, { ...configRef.current, localImage: tempImg });
+      setIsUploading(true);
+
+      try {
+        const { uploadReferenceImage } = await import('@/utils/supabase/storage');
+        const { createClient } = await import('@/utils/supabase/client');
+        const supabase = createClient();
+        const { data: userData } = await supabase.auth.getUser();
+        if (!userData.user) throw new Error('Not authenticated');
+
+        const result = await uploadReferenceImage(file, userData.user.id);
+        if (result.error || !result.path) throw new Error(result.error || 'Upload failed');
+
+        dispatchConfig(id, {
+          ...configRef.current,
+          localImage: { url: result.url, storagePath: result.path },
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Upload failed';
+        toast.error(message);
+        dispatchConfig(id, { ...configRef.current, localImage: null });
+      } finally {
+        setIsUploading(false);
+        URL.revokeObjectURL(preview);
+      }
+    },
+    [id],
+  );
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const file = e.target.files?.[0];
+    if (file) uploadFile(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleDrop = (e: React.DragEvent): void => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file?.type.startsWith('image/')) uploadFile(file);
+  };
+
+  const removeLocalImage = (): void => {
+    dispatchConfig(id, { ...configRef.current, localImage: null });
+  };
+
   return (
     <BaseWorkflowNode
       id={id}
@@ -194,7 +264,67 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
       outputs={multiAngleDefinition.outputs}
       minWidth={multiAngleDefinition.minWidth}
     >
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileSelect}
+      />
+
       <div className="space-y-2.5 nodrag nowheel">
+        {/* Image source: upload or connected */}
+        {!connectedImageUrl && !localImage && (
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => fileInputRef.current?.click()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                fileInputRef.current?.click();
+              }
+            }}
+            onDrop={handleDrop}
+            onDragOver={(e) => e.preventDefault()}
+            aria-label="Upload reference image"
+            className="flex flex-col items-center justify-center gap-1 py-3 rounded-md border border-dashed border-border bg-muted/20 hover:bg-muted/40 transition-colors cursor-pointer"
+          >
+            <Upload className="size-4 text-muted-foreground" aria-hidden="true" />
+            <span className="text-[10px] text-muted-foreground">
+              Upload image or connect input
+            </span>
+          </div>
+        )}
+
+        {/* Local image thumbnail with remove */}
+        {!connectedImageUrl && localImage && (
+          <div className="relative group rounded-md overflow-hidden border border-border">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={localImage.url}
+              alt="Uploaded reference"
+              className="w-full h-16 object-cover"
+              width={300}
+              height={64}
+              draggable={false}
+            />
+            {isUploading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                <Loader2 className="size-4 text-white animate-spin" aria-hidden="true" />
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); removeLocalImage(); }}
+              className="absolute top-0.5 right-0.5 size-5 rounded-full bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-black/80 transition-opacity focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-ring"
+              aria-label="Remove uploaded image"
+            >
+              <X className="size-3 text-white" aria-hidden="true" />
+            </button>
+          </div>
+        )}
+
         {/* 3D Camera Viewport */}
         <CameraAngleViewport
           horizontalAngle={horizontalAngle}
@@ -202,7 +332,7 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
           zoom={zoom}
           onAngleChange={handleAngleChange}
           onZoomChange={handleZoomChange}
-          imageUrl={connectedImageUrl}
+          imageUrl={viewportImageUrl}
         />
 
         {/* Angle readouts */}
@@ -222,7 +352,7 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
             onChange={(e) => update('additionalPrompt', e.target.value)}
             placeholder={"Optional: describe desired changes\u2026"}
             rows={2}
-            className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+            className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs resize-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             aria-label="Additional prompt for image editing"
           />
         </div>
@@ -384,9 +514,9 @@ export function MultiAngleNode({ data, id, selected }: MultiAngleNodeProps) {
           </div>
         )}
 
-        {status === 'idle' && (
+        {status === 'idle' && !viewportImageUrl && (
           <p className="text-[10px] text-muted-foreground text-center py-2">
-            Connect an image and adjust camera angle
+            Upload or connect an image, then adjust camera angle
           </p>
         )}
       </div>
