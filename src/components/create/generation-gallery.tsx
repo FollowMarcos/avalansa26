@@ -1,17 +1,102 @@
 "use client";
 
 import * as React from "react";
-import Image from "next/image";
-import { cn } from "@/lib/utils";
 import { useCreate, type GeneratedImage } from "./create-context";
-import { Download, Copy, ImagePlus, RotateCw, Check, Heart, Link2, Grid2x2 } from "lucide-react";
 import { toast } from "sonner";
-import { motion } from "motion/react";
-import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
+import { Sparkles, ImageIcon } from "lucide-react";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { GalleryToolbar } from "./gallery-toolbar";
 import { BulkActionBar } from "./bulk-action-bar";
 import { ImageDetailModal } from "./image-detail-modal";
+import { GalleryItem, PendingCard, FailedCard } from "./gallery-item";
+import { ComparisonModal } from "./gallery-comparison-modal";
+import { CollectionSidebar } from "./gallery-collection-sidebar";
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
+
+const COLUMN_COUNT_KEY = "gallery-column-count";
+const SIDEBAR_KEY = "gallery-sidebar-open";
+
+function loadColumnCount(): number {
+  if (typeof window === "undefined") return 4;
+  try {
+    const v = localStorage.getItem(COLUMN_COUNT_KEY);
+    return v ? Math.max(2, Math.min(8, Number(v))) : 4;
+  } catch {
+    return 4;
+  }
+}
+
+function loadSidebarOpen(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return localStorage.getItem(SIDEBAR_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Date grouping helpers
+// ---------------------------------------------------------------------------
+
+function getDateGroupKey(timestamp: number): string {
+  const now = new Date();
+  const date = new Date(timestamp);
+
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfYesterday = new Date(startOfToday.getTime() - 86_400_000);
+  const startOfWeek = new Date(startOfToday.getTime() - startOfToday.getDay() * 86_400_000);
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  if (date >= startOfToday) return "Today";
+  if (date >= startOfYesterday) return "Yesterday";
+  if (date >= startOfWeek) return "This Week";
+  if (date >= startOfMonth) return "This Month";
+  return new Intl.DateTimeFormat(undefined, {
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function groupByDate(
+  images: GeneratedImage[],
+): Array<[string, GeneratedImage[]]> {
+  const groups = new Map<string, GeneratedImage[]>();
+  for (const image of images) {
+    const key = getDateGroupKey(image.timestamp);
+    const list = groups.get(key) ?? [];
+    list.push(image);
+    groups.set(key, list);
+  }
+  return Array.from(groups.entries());
+}
+
+// ---------------------------------------------------------------------------
+// Format helper
+// ---------------------------------------------------------------------------
+
+const formatTime = (timestamp: number) => {
+  const diff = Date.now() - timestamp;
+  const seconds = Math.floor(diff / 1000);
+  if (seconds < 60) return "Just now";
+  const rtf = new Intl.RelativeTimeFormat(undefined, {
+    numeric: "auto",
+    style: "narrow",
+  });
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return rtf.format(-minutes, "minute");
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return rtf.format(-hours, "hour");
+  return rtf.format(-Math.floor(hours / 24), "day");
+};
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
 
 export function GenerationGallery() {
   const {
@@ -22,37 +107,103 @@ export function GenerationGallery() {
     toggleImageSelection,
     getFilteredHistory,
     toggleFavorite,
-    isGenerating,
     history,
     loadMoreHistory,
     hasMoreHistory,
     isLoadingMoreHistory,
   } = useCreate();
 
+  // Local UI state
   const [detailImage, setDetailImage] = React.useState<GeneratedImage | null>(null);
+  const [columnCount, setColumnCount] = React.useState(loadColumnCount);
+  const [sidebarOpen, setSidebarOpen] = React.useState(loadSidebarOpen);
+  const [focusedIndex, setFocusedIndex] = React.useState(-1);
+  const [comparisonA, setComparisonA] = React.useState<GeneratedImage | null>(null);
+  const [comparisonPair, setComparisonPair] = React.useState<[GeneratedImage, GeneratedImage] | null>(null);
+  const [lastSelectedIndex, setLastSelectedIndex] = React.useState<number | null>(null);
+
   const filteredHistory = getFilteredHistory();
+  const completedImages = filteredHistory.filter((img) => img.status !== "pending" && img.status !== "failed");
   const sentinelRef = React.useRef<HTMLDivElement>(null);
+  const itemRefs = React.useRef<Map<number, HTMLElement>>(new Map());
 
-  // Count pending images for loading state
-  const pendingCount = history.filter(img => img.status === "pending").length;
+  const pendingCount = history.filter((img) => img.status === "pending").length;
 
-  // Infinite scroll — load more when sentinel enters viewport
+  // Persist column count
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(COLUMN_COUNT_KEY, String(columnCount));
+    } catch {}
+  }, [columnCount]);
+
+  // Persist sidebar state
+  React.useEffect(() => {
+    try {
+      localStorage.setItem(SIDEBAR_KEY, String(sidebarOpen));
+    } catch {}
+  }, [sidebarOpen]);
+
+  // Infinite scroll
   React.useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel || !hasMoreHistory) return;
-
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && !isLoadingMoreHistory) {
           loadMoreHistory();
         }
       },
-      { rootMargin: "200px" }
+      { rootMargin: "200px" },
     );
-
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [hasMoreHistory, isLoadingMoreHistory, loadMoreHistory]);
+
+  // Keyboard navigation
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      )
+        return;
+
+      const total = completedImages.length;
+      if (total === 0) return;
+
+      let newIndex = focusedIndex;
+
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        newIndex = Math.min(focusedIndex + 1, total - 1);
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        newIndex = Math.max(focusedIndex - 1, 0);
+      } else if (e.key === "ArrowDown") {
+        e.preventDefault();
+        newIndex = Math.min(focusedIndex + columnCount, total - 1);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        newIndex = Math.max(focusedIndex - columnCount, 0);
+      } else {
+        return;
+      }
+
+      if (newIndex !== focusedIndex) {
+        setFocusedIndex(newIndex);
+        itemRefs.current.get(newIndex)?.focus();
+      }
+    };
+
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [focusedIndex, completedImages.length, columnCount]);
+
+  // ---------------------------------------------------------------------------
+  // Handlers
+  // ---------------------------------------------------------------------------
 
   const handleDownload = async (url: string, id: string) => {
     try {
@@ -67,8 +218,7 @@ export function GenerationGallery() {
       document.body.removeChild(a);
       URL.revokeObjectURL(downloadUrl);
       toast.success("Download started");
-    } catch (error) {
-      console.error("Download failed:", error);
+    } catch {
       toast.error("Download failed");
     }
   };
@@ -77,37 +227,31 @@ export function GenerationGallery() {
     try {
       await navigator.clipboard.writeText(prompt);
       toast.success("Copied to clipboard");
-    } catch (error) {
-      console.error("Copy failed:", error);
+    } catch {
       toast.error("Failed to copy");
     }
   };
 
-  const handleCopyUrl = async (e: React.MouseEvent, url: string) => {
-    e.stopPropagation();
+  const handleCopyUrl = async (url: string) => {
     try {
       await navigator.clipboard.writeText(url);
       toast.success("Image URL copied");
-    } catch (error) {
-      console.error("Copy URL failed:", error);
+    } catch {
       toast.error("Failed to copy URL");
     }
   };
 
-  const handleUseAsReference = async (e: React.MouseEvent, url: string) => {
-    e.stopPropagation();
+  const handleUseAsReference = async (url: string) => {
     await addReferenceImageFromUrl(url);
     toast.success("Added as reference");
   };
 
-  const handleReuseSetup = async (e: React.MouseEvent, image: GeneratedImage) => {
-    e.stopPropagation();
+  const handleReuseSetup = async (image: GeneratedImage) => {
     await reuseImageSetup(image);
     toast.success("Setup restored");
   };
 
-  const handleSplitDownload = async (e: React.MouseEvent, url: string, id: string) => {
-    e.stopPropagation();
+  const handleSplitDownload = async (url: string, id: string) => {
     toast.info("Splitting image\u2026");
     try {
       const img = new window.Image();
@@ -127,7 +271,17 @@ export function GenerationGallery() {
           canvas.width = img.width;
           canvas.height = sliceHeight;
           const ctx = canvas.getContext("2d")!;
-          ctx.drawImage(img, 0, i * sliceHeight, img.width, sliceHeight, 0, 0, img.width, sliceHeight);
+          ctx.drawImage(
+            img,
+            0,
+            i * sliceHeight,
+            img.width,
+            sliceHeight,
+            0,
+            0,
+            img.width,
+            sliceHeight,
+          );
           return new Promise<Blob>((resolve, reject) => {
             canvas.toBlob((blob) => {
               if (blob) resolve(blob);
@@ -146,390 +300,328 @@ export function GenerationGallery() {
         URL.revokeObjectURL(blobUrl);
       }
       toast.success(`Downloaded ${blobs.length} slices`);
-    } catch (error) {
-      console.error("Split failed:", error);
+    } catch {
       toast.error("Failed to split image");
     }
   };
 
-  const handleImageClick = (image: GeneratedImage) => {
+  const handleDelete = async (id: string) => {
+    try {
+      const { deleteGeneration } = await import(
+        "@/utils/supabase/generations.server"
+      );
+      await deleteGeneration(id);
+      toast.success("Image deleted");
+    } catch {
+      toast.error("Failed to delete image");
+    }
+  };
+
+  const handleImageClick = (image: GeneratedImage, e: React.MouseEvent) => {
     if (galleryFilterState.bulkSelection.enabled) {
+      // Shift+click for range selection
+      if (e.shiftKey && lastSelectedIndex !== null) {
+        const currentIndex = filteredHistory.findIndex(
+          (img) => img.id === image.id,
+        );
+        if (currentIndex !== -1) {
+          const start = Math.min(lastSelectedIndex, currentIndex);
+          const end = Math.max(lastSelectedIndex, currentIndex);
+          for (let i = start; i <= end; i++) {
+            const img = filteredHistory[i];
+            if (
+              img.status !== "pending" &&
+              img.status !== "failed" &&
+              !galleryFilterState.bulkSelection.selectedIds.has(img.id)
+            ) {
+              toggleImageSelection(img.id);
+            }
+          }
+          return;
+        }
+      }
+      const idx = filteredHistory.findIndex((img) => img.id === image.id);
+      setLastSelectedIndex(idx);
       toggleImageSelection(image.id);
     } else {
       setDetailImage(image);
     }
   };
 
-  const handleToggleFavorite = async (e: React.MouseEvent, imageId: string) => {
-    e.stopPropagation();
+  const handleToggleFavorite = async (imageId: string) => {
     await toggleFavorite(imageId);
+  };
+
+  const handleCompare = (image: GeneratedImage) => {
+    if (!comparisonA) {
+      setComparisonA(image);
+      toast.info("Select another image to compare");
+    } else {
+      setComparisonPair([comparisonA, image]);
+      setComparisonA(null);
+    }
   };
 
   // Navigation for detail modal
   const handleDetailNavigate = (direction: "prev" | "next") => {
     if (!detailImage) return;
-    const currentIndex = filteredHistory.findIndex(img => img.id === detailImage.id);
+    const currentIndex = filteredHistory.findIndex(
+      (img) => img.id === detailImage.id,
+    );
     if (currentIndex === -1) return;
-
-    const newIndex = direction === "prev" ? currentIndex - 1 : currentIndex + 1;
+    const newIndex =
+      direction === "prev" ? currentIndex - 1 : currentIndex + 1;
     if (newIndex >= 0 && newIndex < filteredHistory.length) {
       setDetailImage(filteredHistory[newIndex]);
     }
   };
 
   const detailImageIndex = detailImage
-    ? filteredHistory.findIndex(img => img.id === detailImage.id)
+    ? filteredHistory.findIndex((img) => img.id === detailImage.id)
     : -1;
 
-  const formatTime = (timestamp: number) => {
-    const diff = Date.now() - timestamp;
-    const seconds = Math.floor(diff / 1000);
-    if (seconds < 60) return "Just now";
-    const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: "auto", style: "narrow" });
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return rtf.format(-minutes, "minute");
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return rtf.format(-hours, "hour");
-    return rtf.format(-Math.floor(hours / 24), "day");
+  const isSelected = (id: string) =>
+    galleryFilterState.bulkSelection.selectedIds.has(id);
+
+  // Date-grouped images (only for time-based sorts)
+  const shouldGroupByDate =
+    galleryFilterState.sortBy === "newest" ||
+    galleryFilterState.sortBy === "oldest";
+
+  const dateGroups = React.useMemo(() => {
+    if (!shouldGroupByDate) return null;
+    return groupByDate(filteredHistory);
+  }, [filteredHistory, shouldGroupByDate]);
+
+  // Stats
+  const totalCount = history.filter(
+    (img) => img.status !== "pending" && img.status !== "failed",
+  ).length;
+  const favCount = history.filter((img) => img.isFavorite).length;
+
+  // Track item refs for keyboard nav
+  let globalIndex = 0;
+  const setItemRef = (idx: number) => (el: HTMLElement | null) => {
+    if (el) itemRefs.current.set(idx, el);
+    else itemRefs.current.delete(idx);
   };
 
-  const isSelected = (id: string) => galleryFilterState.bulkSelection.selectedIds.has(id);
+  // Grid style
+  const gridStyle: React.CSSProperties = {
+    gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
+  };
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-background">
-      {/* Toolbar */}
-      <div className="px-6 py-3 border-b border-border shrink-0">
-        <GalleryToolbar />
-      </div>
+    <TooltipProvider delayDuration={400}>
+      <div className="flex-1 flex flex-col min-h-0 bg-background">
+        {/* Toolbar */}
+        <div className="px-6 py-3 border-b border-border shrink-0">
+          <GalleryToolbar
+            columnCount={columnCount}
+            onColumnCountChange={setColumnCount}
+            totalCount={totalCount}
+            favCount={favCount}
+            sidebarOpen={sidebarOpen}
+            onToggleSidebar={() => setSidebarOpen((s) => !s)}
+          />
+        </div>
 
-      {/* Masonry Gallery Grid */}
-      <div className="flex-1 overflow-auto px-6 py-4">
-        {filteredHistory.length === 0 && pendingCount === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center p-8">
-            <p className="text-muted-foreground font-mono">
-              {galleryFilterState.searchQuery ||
-               galleryFilterState.filters.aspectRatio.length > 0 ||
-               galleryFilterState.filters.imageSize.length > 0
-                ? "No images match your filters"
-                : "No generations yet"}
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">
-              {galleryFilterState.searchQuery ||
-               galleryFilterState.filters.aspectRatio.length > 0 ||
-               galleryFilterState.filters.imageSize.length > 0
-                ? "Try adjusting your search or filters"
-                : "Enter a prompt below to start creating"}
-            </p>
-          </div>
-        ) : (
-          <div
-            className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
-          >
-            {filteredHistory.map((image) =>
-              image.status === "pending" ? (
-                <PendingCard key={image.id} image={image} />
-              ) : image.status === "failed" ? (
-                <FailedCard key={image.id} image={image} />
-              ) : (
-                <GalleryItem
-                  key={image.id}
-                  image={image}
-                  isSelected={isSelected(image.id)}
-                  isBulkMode={galleryFilterState.bulkSelection.enabled}
-                  isCurrentSelected={selectedImage?.id === image.id}
-                  onImageClick={handleImageClick}
-                  onDownload={handleDownload}
-                  onCopyPrompt={handleCopyPrompt}
-                  onCopyUrl={handleCopyUrl}
-                  onUseAsReference={handleUseAsReference}
-                  onReuseSetup={handleReuseSetup}
-                  onSplitDownload={handleSplitDownload}
-                  onToggleSelection={toggleImageSelection}
-                  onToggleFavorite={handleToggleFavorite}
-                  formatTime={formatTime}
-                />
-              )
+        {/* Main content area with optional sidebar */}
+        <div className="flex-1 flex min-h-0">
+          {/* Collection sidebar */}
+          <CollectionSidebar
+            open={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+          />
+
+          {/* Gallery grid */}
+          <div className="flex-1 overflow-auto px-6 py-4">
+            {filteredHistory.length === 0 && pendingCount === 0 ? (
+              /* Empty state */
+              <div className="flex flex-col items-center justify-center h-full text-center p-8 max-w-sm mx-auto">
+                <div className="size-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
+                  <ImageIcon
+                    className="size-8 text-muted-foreground"
+                    strokeWidth={1.5}
+                    aria-hidden="true"
+                  />
+                </div>
+                <p className="text-muted-foreground font-mono text-balance">
+                  {galleryFilterState.searchQuery ||
+                  galleryFilterState.filters.aspectRatio.length > 0 ||
+                  galleryFilterState.filters.imageSize.length > 0
+                    ? "No images match your filters"
+                    : "No generations yet"}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1 text-pretty">
+                  {galleryFilterState.searchQuery ||
+                  galleryFilterState.filters.aspectRatio.length > 0 ||
+                  galleryFilterState.filters.imageSize.length > 0
+                    ? "Try adjusting your search or filters"
+                    : "Enter a prompt below to start creating"}
+                </p>
+                {!(
+                  galleryFilterState.searchQuery ||
+                  galleryFilterState.filters.aspectRatio.length > 0 ||
+                  galleryFilterState.filters.imageSize.length > 0
+                ) && (
+                  <button
+                    type="button"
+                    className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+                    onClick={() => {
+                      // Focus the prompt input
+                      const input = document.querySelector<HTMLTextAreaElement>(
+                        'textarea[name="prompt"]',
+                      );
+                      input?.focus();
+                    }}
+                  >
+                    <Sparkles className="size-4" aria-hidden="true" />
+                    Start Creating
+                  </button>
+                )}
+              </div>
+            ) : dateGroups ? (
+              /* Date-grouped layout */
+              <div className="space-y-6">
+                {dateGroups.map(([dateLabel, images]) => {
+                  const startIdx = globalIndex;
+                  return (
+                    <section key={dateLabel} aria-label={dateLabel}>
+                      <h3 className="sticky top-0 z-10 text-xs font-mono font-medium text-muted-foreground uppercase tracking-wider py-2 px-1 bg-background/95 backdrop-blur-sm border-b border-border/30 mb-3">
+                        {dateLabel}
+                        <span className="ml-2 tabular-nums text-muted-foreground/60">
+                          ({images.length})
+                        </span>
+                      </h3>
+                      <div className="grid gap-3" style={gridStyle}>
+                        {images.map((image) => {
+                          const idx = globalIndex++;
+                          return image.status === "pending" ? (
+                            <PendingCard key={image.id} image={image} />
+                          ) : image.status === "failed" ? (
+                            <FailedCard key={image.id} image={image} />
+                          ) : (
+                            <GalleryItem
+                              key={image.id}
+                              image={image}
+                              isSelected={isSelected(image.id)}
+                              isBulkMode={
+                                galleryFilterState.bulkSelection.enabled
+                              }
+                              isCurrentSelected={
+                                selectedImage?.id === image.id
+                              }
+                              isFocused={focusedIndex === idx}
+                              onImageClick={handleImageClick}
+                              onDownload={handleDownload}
+                              onCopyPrompt={handleCopyPrompt}
+                              onCopyUrl={handleCopyUrl}
+                              onUseAsReference={handleUseAsReference}
+                              onReuseSetup={handleReuseSetup}
+                              onSplitDownload={handleSplitDownload}
+                              onToggleSelection={toggleImageSelection}
+                              onToggleFavorite={handleToggleFavorite}
+                              onDelete={handleDelete}
+                              onCompare={handleCompare}
+                              onViewDetails={setDetailImage}
+                              formatTime={formatTime}
+                              itemRef={setItemRef(idx)}
+                            />
+                          );
+                        })}
+                      </div>
+                    </section>
+                  );
+                })}
+              </div>
+            ) : (
+              /* Flat layout (prompt sort) */
+              <div className="grid gap-3" style={gridStyle}>
+                {filteredHistory.map((image) => {
+                  const idx = globalIndex++;
+                  return image.status === "pending" ? (
+                    <PendingCard key={image.id} image={image} />
+                  ) : image.status === "failed" ? (
+                    <FailedCard key={image.id} image={image} />
+                  ) : (
+                    <GalleryItem
+                      key={image.id}
+                      image={image}
+                      isSelected={isSelected(image.id)}
+                      isBulkMode={galleryFilterState.bulkSelection.enabled}
+                      isCurrentSelected={selectedImage?.id === image.id}
+                      isFocused={focusedIndex === idx}
+                      onImageClick={handleImageClick}
+                      onDownload={handleDownload}
+                      onCopyPrompt={handleCopyPrompt}
+                      onCopyUrl={handleCopyUrl}
+                      onUseAsReference={handleUseAsReference}
+                      onReuseSetup={handleReuseSetup}
+                      onSplitDownload={handleSplitDownload}
+                      onToggleSelection={toggleImageSelection}
+                      onToggleFavorite={handleToggleFavorite}
+                      onDelete={handleDelete}
+                      onCompare={handleCompare}
+                      onViewDetails={setDetailImage}
+                      formatTime={formatTime}
+                      itemRef={setItemRef(idx)}
+                    />
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Infinite scroll sentinel */}
+            {hasMoreHistory && filteredHistory.length > 0 && (
+              <div
+                ref={sentinelRef}
+                className="flex items-center justify-center py-8"
+              >
+                {isLoadingMoreHistory && <Loader size="sm" />}
+              </div>
             )}
           </div>
-        )}
+        </div>
 
-        {/* Infinite scroll sentinel */}
-        {hasMoreHistory && filteredHistory.length > 0 && (
-          <div ref={sentinelRef} className="flex items-center justify-center py-8">
-            {isLoadingMoreHistory && <Loader size="sm" />}
+        {/* Comparison hint */}
+        {comparisonA && (
+          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-30 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-mono shadow-lg flex items-center gap-2">
+            <span>Click another image to compare</span>
+            <button
+              type="button"
+              className="ml-1 underline hover:no-underline"
+              onClick={() => setComparisonA(null)}
+            >
+              Cancel
+            </button>
           </div>
         )}
-      </div>
 
-      {/* Bulk Action Bar */}
-      <BulkActionBar />
+        {/* Bulk Action Bar */}
+        <BulkActionBar />
 
-      {/* Image Detail Modal */}
-      <ImageDetailModal
-        image={detailImage}
-        isOpen={!!detailImage}
-        onClose={() => setDetailImage(null)}
-        onNavigate={handleDetailNavigate}
-        hasPrev={detailImageIndex > 0}
-        hasNext={detailImageIndex < filteredHistory.length - 1}
-      />
-    </div>
-  );
-}
+        {/* Image Detail Modal */}
+        <ImageDetailModal
+          image={detailImage}
+          isOpen={!!detailImage}
+          onClose={() => setDetailImage(null)}
+          onNavigate={handleDetailNavigate}
+          hasPrev={detailImageIndex > 0}
+          hasNext={detailImageIndex < filteredHistory.length - 1}
+        />
 
-// Memoized gallery item for performance
-interface GalleryItemProps {
-  image: GeneratedImage;
-  isSelected: boolean;
-  isBulkMode: boolean;
-  isCurrentSelected: boolean;
-  onImageClick: (image: GeneratedImage) => void;
-  onDownload: (url: string, id: string) => void;
-  onCopyPrompt: (prompt: string) => void;
-  onCopyUrl: (e: React.MouseEvent, url: string) => void;
-  onUseAsReference: (e: React.MouseEvent, url: string) => void;
-  onReuseSetup: (e: React.MouseEvent, image: GeneratedImage) => void;
-  onSplitDownload: (e: React.MouseEvent, url: string, id: string) => void;
-  onToggleSelection: (id: string) => void;
-  onToggleFavorite: (e: React.MouseEvent, id: string) => void;
-  formatTime: (timestamp: number) => string;
-}
-
-const GalleryItem = React.memo(function GalleryItem({
-  image,
-  isSelected,
-  isBulkMode,
-  isCurrentSelected,
-  onImageClick,
-  onDownload,
-  onCopyPrompt,
-  onCopyUrl,
-  onUseAsReference,
-  onReuseSetup,
-  onSplitDownload,
-  onToggleSelection,
-  onToggleFavorite,
-  formatTime,
-}: GalleryItemProps) {
-  return (
-    <motion.article
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className={cn(
-        "relative group rounded-lg overflow-hidden bg-muted border",
-        isCurrentSelected && !isBulkMode && "ring-2 ring-foreground",
-        isSelected && isBulkMode && "ring-2 ring-primary border-primary"
-      )}
-      style={{ contentVisibility: "auto" }}
-    >
-      <button
-        type="button"
-        aria-label={`${isBulkMode ? "Select" : "View"} image: ${image.prompt || "Generated image"}`}
-        className="w-full text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
-        onClick={() => onImageClick(image)}
-      >
-      {/* Image container - using aspect ratio from settings */}
-      <div className="relative w-full">
-        <Image
-          src={image.url}
-          alt={image.prompt || "Generated"}
-          width={512}
-          height={512}
-          className="w-full h-auto object-cover"
-          loading="lazy"
-          sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
-          quality={75}
+        {/* Comparison Modal */}
+        <ComparisonModal
+          images={comparisonPair}
+          isOpen={!!comparisonPair}
+          onClose={() => setComparisonPair(null)}
         />
       </div>
-      </button>
-
-      {/* Favorite button - always visible on hover or when favorited */}
-      {!isBulkMode && (
-        <button
-          type="button"
-          className={cn(
-            "absolute top-1 right-1 z-10 size-11 rounded-full flex items-center justify-center",
-            "bg-background/80 hover:bg-background transition-colors transition-opacity duration-150",
-            "focus-visible:ring-2 focus-visible:ring-ring focus-visible:opacity-100",
-            image.isFavorite ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus:opacity-100"
-          )}
-          aria-label={image.isFavorite ? "Remove from favorites" : "Add to favorites"}
-          onClick={(e) => onToggleFavorite(e, image.id)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              onToggleFavorite(e as unknown as React.MouseEvent, image.id);
-            }
-          }}
-        >
-          <Heart
-            className={cn(
-              "size-5 transition-colors",
-              image.isFavorite ? "fill-red-500 text-red-500" : "text-muted-foreground hover:text-red-500"
-            )}
-            aria-hidden="true"
-          />
-        </button>
-      )}
-
-      {/* Selection checkbox overlay */}
-      {isBulkMode && (
-        <div
-          role="checkbox"
-          aria-checked={isSelected}
-          aria-label={`Select image: ${image.prompt || "Generated image"}`}
-          tabIndex={0}
-          className={cn(
-            "absolute top-2 left-2 z-10 cursor-pointer",
-            isSelected ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus:opacity-100",
-            "transition-opacity duration-150"
-          )}
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleSelection(image.id);
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              e.stopPropagation();
-              onToggleSelection(image.id);
-            }
-          }}
-        >
-          <div
-            className={cn(
-              "size-6 rounded-md border-2 flex items-center justify-center",
-              isSelected
-                ? "bg-primary border-primary text-primary-foreground"
-                : "bg-background/80 border-border hover:border-primary"
-            )}
-          >
-            {isSelected && <Check className="size-4" strokeWidth={3} aria-hidden="true" />}
-          </div>
-        </div>
-      )}
-
-      {/* Hover overlay - hide in bulk mode */}
-      {!isBulkMode && (
-        <div
-          className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none"
-          aria-hidden="true"
-        >
-          <div className="flex items-center gap-2 pointer-events-auto">
-            <Button
-              variant="secondary"
-              size="icon"
-              className="size-8 rounded-lg"
-              aria-label="Use as reference image"
-              onClick={(e) => onUseAsReference(e, image.url)}
-            >
-              <ImagePlus className="size-4" aria-hidden="true" />
-            </Button>
-            <Button
-              variant="secondary"
-              size="icon"
-              className="size-8 rounded-lg"
-              aria-label="Download image"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDownload(image.url, image.id);
-              }}
-            >
-              <Download className="size-4" aria-hidden="true" />
-            </Button>
-            <Button
-              variant="secondary"
-              size="icon"
-              className="size-8 rounded-lg"
-              aria-label="Split image into 4 slices and download"
-              onClick={(e) => onSplitDownload(e, image.url, image.id)}
-            >
-              <Grid2x2 className="size-4" aria-hidden="true" />
-            </Button>
-            <Button
-              variant="secondary"
-              size="icon"
-              className="size-8 rounded-lg"
-              aria-label="Copy image URL"
-              onClick={(e) => onCopyUrl(e, image.url)}
-            >
-              <Link2 className="size-4" aria-hidden="true" />
-            </Button>
-            {image.prompt && (
-              <Button
-                variant="secondary"
-                size="icon"
-                className="size-8 rounded-lg"
-                aria-label="Copy prompt"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCopyPrompt(image.prompt);
-                }}
-              >
-                <Copy className="size-4" aria-hidden="true" />
-              </Button>
-            )}
-            <Button
-              variant="secondary"
-              size="icon"
-              className="size-8 rounded-lg"
-              aria-label="Reuse setup (image + prompt + settings)"
-              onClick={(e) => onReuseSetup(e, image)}
-            >
-              <RotateCw className="size-4" aria-hidden="true" />
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Info badge */}
-      <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between">
-        <span className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono tabular-nums">
-          {image.settings.imageSize}
-        </span>
-        <span className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono tabular-nums text-muted-foreground">
-          {formatTime(image.timestamp)}
-        </span>
-      </div>
-    </motion.article>
-  );
-});
-
-/** Placeholder card shown while an image is being generated */
-function PendingCard({ image }: { image: GeneratedImage }) {
-  return (
-    <div
-      className="relative rounded-lg overflow-hidden bg-muted border border-border"
-      role="status"
-      aria-label="Generating image"
-    >
-      <div className="aspect-square flex flex-col items-center justify-center gap-3 p-4">
-        <Loader size="sm" />
-        <p className="text-xs text-muted-foreground font-mono text-center line-clamp-2">
-          {image.prompt || "Generating\u2026"}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/** Card shown when image generation failed */
-function FailedCard({ image }: { image: GeneratedImage }) {
-  return (
-    <div
-      className="relative rounded-lg overflow-hidden bg-destructive/5 border border-destructive/20"
-      role="alert"
-      aria-label="Generation failed"
-    >
-      <div className="aspect-square flex flex-col items-center justify-center gap-2 p-4">
-        <div className="size-8 rounded-full bg-destructive/10 flex items-center justify-center">
-          <span className="text-destructive text-sm" aria-hidden="true">!</span>
-        </div>
-        <p className="text-xs text-destructive font-mono text-center">Failed</p>
-        <p className="text-[10px] text-muted-foreground text-center line-clamp-4">
-          {image.error || image.prompt}
-        </p>
-      </div>
-    </div>
+    </TooltipProvider>
   );
 }
