@@ -26,6 +26,7 @@ import {
   Music,
   Layers,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 /* ─────────────────────────────────────────────
    PROFILE DESIGN 1 — "BENTO GRID"
@@ -64,7 +65,7 @@ const MOCK_WORKS = [
   { id: 6, title: 'Recursive Form', color: 'from-pink-500/20 to-rose-500/20' },
 ];
 
-const interestIcons: Record<string, React.ElementType> = {
+const interestIcons: Record<string, LucideIcon> = {
   'generative-art': Sparkles,
   'spatial-computing': Layers,
   'creative-coding': Code2,
