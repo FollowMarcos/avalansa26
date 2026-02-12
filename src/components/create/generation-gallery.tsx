@@ -422,7 +422,7 @@ export function GenerationGallery({ vaultOpen, onToggleVault }: GenerationGaller
 
   return (
     <TooltipProvider delayDuration={400}>
-      <div className="flex-1 flex flex-col min-h-0 bg-background">
+      <div className="flex-1 flex flex-col min-h-0 bg-background pl-20">
         {/* Toolbar */}
         <div className="px-6 py-3 border-b border-border shrink-0">
           <GalleryToolbar
