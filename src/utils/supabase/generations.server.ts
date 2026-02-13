@@ -58,6 +58,30 @@ export async function getGenerationHistory(
 }
 
 /**
+ * Search generations by prompt text (server-side, returns all matches)
+ */
+export async function searchGenerations(
+  query: string,
+  limit: number = 200
+): Promise<Generation[]> {
+  const supabase = await createClient();
+
+  const { data: generations, error } = await supabase
+    .from('generations')
+    .select('*')
+    .ilike('prompt', `%${query}%`)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('Error searching generations:', error.message);
+    return [];
+  }
+
+  return generations ?? [];
+}
+
+/**
  * Get a single generation by ID
  */
 export async function getGeneration(id: string): Promise<Generation | null> {

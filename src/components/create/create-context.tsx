@@ -1234,6 +1234,58 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     setGalleryFilterState(prev => ({ ...prev, searchQuery: query }));
   }, []);
 
+  // Server-side search: fetch all matching generations from DB when query changes
+  React.useEffect(() => {
+    const query = galleryFilterState.searchQuery.trim();
+    if (!query) return;
+
+    let cancelled = false;
+    const fetchSearchResults = async () => {
+      try {
+        const { searchGenerations } = await import("@/utils/supabase/generations.server");
+        const generations = await searchGenerations(query);
+        if (cancelled) return;
+
+        if (generations.length > 0) {
+          const searchImages: GeneratedImage[] = generations.map((gen: Generation) => ({
+            id: gen.id,
+            url: gen.image_url,
+            prompt: gen.prompt,
+            timestamp: new Date(gen.created_at).getTime(),
+            isFavorite: gen.is_favorite ?? false,
+            settings: {
+              model: gen.settings.model || "Unknown",
+              imageSize: (gen.settings.imageSize as ImageSize) || "2K",
+              aspectRatio: (gen.settings.aspectRatio as AspectRatio) || "1:1",
+              outputCount: gen.settings.outputCount || 1,
+              generationSpeed: (gen.settings.generationSpeed as GenerationSpeed) || "fast",
+              styleStrength: 75,
+              negativePrompt: gen.negative_prompt || "",
+              referenceImages: gen.settings.referenceImages,
+            },
+          }));
+
+          // Merge search results into history (no duplicates)
+          setHistory(prev => {
+            const existingIds = new Set(prev.map(img => img.id));
+            const newImages = searchImages.filter(img => !existingIds.has(img.id));
+            if (newImages.length === 0) return prev;
+            return [...prev, ...newImages];
+          });
+        }
+      } catch (error) {
+        console.error("Failed to search generations:", error);
+      }
+    };
+
+    // Debounce: wait 300ms after user stops typing
+    const timer = setTimeout(fetchSearchResults, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [galleryFilterState.searchQuery]);
+
   const setSortBy = React.useCallback((sort: GallerySortOption) => {
     setGalleryFilterState(prev => ({ ...prev, sortBy: sort }));
   }, []);
