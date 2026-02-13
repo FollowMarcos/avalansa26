@@ -18,13 +18,24 @@ import {
   ChevronDown,
   ChevronRight,
   GripVertical,
+  BookMarked,
+  GitBranch,
+  Keyboard,
+  type LucideIcon,
 } from 'lucide-react';
 import { getAllDefinitions } from './node-registry';
 import type { WorkflowNodeDefinition, NodeCategory } from '@/types/workflow';
 import { SOCKET_COLORS } from '@/types/workflow';
+import { VaultTab, type VaultTabProps } from './node-palette-vault-tab';
+import {
+  WorkflowsTab,
+  type WorkflowsTabProps,
+} from './node-palette-workflows-tab';
 
 // Ensure registration
 import './nodes';
+
+type PanelTab = 'nodes' | 'vault' | 'workflows' | 'hotkeys';
 
 const CATEGORY_LABELS: Record<NodeCategory, string> = {
   input: 'Input',
@@ -33,7 +44,12 @@ const CATEGORY_LABELS: Record<NodeCategory, string> = {
   utility: 'Utility',
 };
 
-const CATEGORY_ORDER: NodeCategory[] = ['input', 'processing', 'output', 'utility'];
+const CATEGORY_ORDER: NodeCategory[] = [
+  'input',
+  'processing',
+  'output',
+  'utility',
+];
 
 const ICON_MAP: Record<string, React.ReactNode> = {
   Type: <Type className="size-4" />,
@@ -49,19 +65,57 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   Rotate3d: <Rotate3d className="size-4" />,
 };
 
+const HOTKEY_SECTIONS = [
+  {
+    title: 'Tools',
+    items: [
+      { keys: ['V'], description: 'Select tool' },
+      { keys: ['H'], description: 'Hand tool' },
+      { keys: ['Space', 'Drag'], description: 'Pan canvas' },
+    ],
+  },
+  {
+    title: 'Viewport',
+    items: [
+      { keys: ['Ctrl', '+'], description: 'Zoom in' },
+      { keys: ['Ctrl', '\u2013'], description: 'Zoom out' },
+      { keys: ['Ctrl', '0'], description: 'Fit view' },
+    ],
+  },
+  {
+    title: 'Editing',
+    items: [
+      { keys: ['Del'], description: 'Delete selected' },
+      { keys: ['Ctrl', 'Z'], description: 'Undo' },
+      { keys: ['Ctrl', 'Shift', 'Z'], description: 'Redo' },
+      { keys: ['Ctrl', 'S'], description: 'Save workflow' },
+    ],
+  },
+];
+
+const TAB_ITEMS: { id: PanelTab; icon: LucideIcon; label: string }[] = [
+  { id: 'nodes', icon: LayoutGrid, label: 'Nodes' },
+  { id: 'vault', icon: BookMarked, label: 'Vault' },
+  { id: 'workflows', icon: GitBranch, label: 'Flows' },
+  { id: 'hotkeys', icon: Keyboard, label: 'Keys' },
+];
+
 interface NodePaletteProps {
   className?: string;
+  vault: VaultTabProps;
+  workflows: WorkflowsTabProps;
 }
 
 /**
- * Draggable node palette sidebar for workflow mode.
- * Nodes can be dragged from here onto the canvas.
+ * Unified workflow panel combining node palette, prompt vault,
+ * workflow list, and hotkeys into a single tabbed island.
  */
-export function NodePalette({ className }: NodePaletteProps) {
+export function NodePalette({ className, vault, workflows }: NodePaletteProps) {
+  const [activeTab, setActiveTab] = React.useState<PanelTab>('nodes');
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [collapsedCategories, setCollapsedCategories] = React.useState<Set<string>>(
-    new Set(),
-  );
+  const [collapsedCategories, setCollapsedCategories] = React.useState<
+    Set<string>
+  >(new Set());
 
   const definitions = React.useMemo(() => getAllDefinitions(), []);
 
@@ -111,101 +165,201 @@ export function NodePalette({ className }: NodePaletteProps) {
   return (
     <div
       className={cn(
-        'absolute top-4 right-4 z-20 w-56',
+        'absolute top-4 right-4 z-20 w-72',
         'rounded-xl bg-background/95 backdrop-blur-xl border border-border shadow-lg',
         'flex flex-col max-h-[calc(100vh-8rem)] overflow-hidden',
         className,
       )}
     >
-      {/* Header */}
-      <div className="px-3 py-2.5 border-b border-border/50">
-        <h3 className="text-xs font-semibold text-foreground mb-2">Nodes</h3>
-        <div className="relative">
-          <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search nodes..."
-            className="w-full pl-7 pr-2 py-1.5 rounded-md border border-border bg-muted/30 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
-            aria-label="Search workflow nodes"
-          />
-        </div>
+      {/* Tab bar */}
+      <div className="flex" role="tablist" aria-label="Workflow panel tabs">
+        {TAB_ITEMS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            role="tab"
+            onClick={() => setActiveTab(tab.id)}
+            className={cn(
+              'flex-1 flex flex-col items-center gap-0.5 px-1 py-1.5 text-[10px] border-b-2 transition-colors',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+              activeTab === tab.id
+                ? 'text-foreground border-foreground'
+                : 'text-muted-foreground border-transparent hover:text-foreground',
+            )}
+            aria-selected={activeTab === tab.id}
+            aria-controls={`panel-${tab.id}`}
+          >
+            <tab.icon className="size-3.5" aria-hidden="true" />
+            <span className="font-medium">{tab.label}</span>
+          </button>
+        ))}
       </div>
 
-      {/* Node list */}
-      <div className="flex-1 overflow-y-auto px-2 py-2 space-y-1">
-        {CATEGORY_ORDER.map((cat) => {
-          const defs = groupedByCategory.get(cat) ?? [];
-          if (defs.length === 0) return null;
-          const isCollapsed = collapsedCategories.has(cat);
-
-          return (
-            <div key={cat}>
-              <button
-                type="button"
-                onClick={() => toggleCategory(cat)}
-                className="flex items-center gap-1 w-full px-1 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
-                aria-expanded={!isCollapsed}
-              >
-                {isCollapsed ? (
-                  <ChevronRight className="size-3" />
-                ) : (
-                  <ChevronDown className="size-3" />
-                )}
-                {CATEGORY_LABELS[cat]}
-              </button>
-
-              {!isCollapsed && (
-                <div className="space-y-0.5 mb-2">
-                  {defs.map((def) => (
-                    <div
-                      key={def.type}
-                      draggable
-                      onDragStart={(e) => onDragStart(e, def)}
-                      className={cn(
-                        'flex items-center gap-2 px-2 py-1.5 rounded-lg',
-                        'cursor-grab active:cursor-grabbing',
-                        'hover:bg-muted/60 transition-colors',
-                        'select-none',
-                      )}
-                      title={def.description}
-                    >
-                      <GripVertical className="size-3 text-muted-foreground/40 flex-shrink-0" />
-                      <div className="text-muted-foreground flex-shrink-0">
-                        {ICON_MAP[def.icon] ?? <Settings className="size-4" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium truncate">{def.label}</p>
-                        <p className="text-[10px] text-muted-foreground truncate">
-                          {def.description}
-                        </p>
-                      </div>
-                      {/* Socket type indicators */}
-                      <div className="flex gap-0.5 flex-shrink-0">
-                        {def.outputs.slice(0, 2).map((s) => (
-                          <div
-                            key={s.id}
-                            className="size-2 rounded-full"
-                            style={{ backgroundColor: SOCKET_COLORS[s.type] }}
-                            title={`${s.label} (${s.type})`}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+      {/* Nodes tab */}
+      {activeTab === 'nodes' && (
+        <div
+          id="panel-nodes"
+          role="tabpanel"
+          className="flex flex-col flex-1 overflow-hidden"
+        >
+          <div className="px-3 py-2 border-b border-border/50">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search nodes\u2026"
+                className="w-full pl-7 pr-2 py-1.5 rounded-md border border-border bg-muted/30 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+                aria-label="Search workflow nodes"
+              />
             </div>
-          );
-        })}
+          </div>
 
-        {filteredDefinitions.length === 0 && (
-          <p className="text-xs text-muted-foreground text-center py-4">
-            No matching nodes
-          </p>
-        )}
-      </div>
+          <div className="flex-1 overflow-y-auto px-2 py-1.5 space-y-0.5">
+            {CATEGORY_ORDER.map((cat) => {
+              const defs = groupedByCategory.get(cat) ?? [];
+              if (defs.length === 0) return null;
+              const isCollapsed = collapsedCategories.has(cat);
+
+              return (
+                <div key={cat}>
+                  <button
+                    type="button"
+                    onClick={() => toggleCategory(cat)}
+                    className="flex items-center gap-1 w-full px-1 py-0.5 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
+                    aria-expanded={!isCollapsed}
+                  >
+                    {isCollapsed ? (
+                      <ChevronRight className="size-3" />
+                    ) : (
+                      <ChevronDown className="size-3" />
+                    )}
+                    {CATEGORY_LABELS[cat]}
+                  </button>
+
+                  {!isCollapsed && (
+                    <div className="space-y-0 mb-1">
+                      {defs.map((def) => (
+                        <div
+                          key={def.type}
+                          draggable
+                          onDragStart={(e) => onDragStart(e, def)}
+                          className={cn(
+                            'flex items-center gap-2 px-2 py-1 rounded-lg',
+                            'cursor-grab active:cursor-grabbing',
+                            'hover:bg-muted/60 transition-colors',
+                            'select-none',
+                          )}
+                          title={def.description}
+                        >
+                          <GripVertical className="size-3 text-muted-foreground/40 flex-shrink-0" />
+                          <div className="text-muted-foreground flex-shrink-0">
+                            {ICON_MAP[def.icon] ?? (
+                              <Settings className="size-4" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium truncate">
+                              {def.label}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground truncate">
+                              {def.description}
+                            </p>
+                          </div>
+                          <div className="flex gap-0.5 flex-shrink-0">
+                            {def.outputs.slice(0, 2).map((s) => (
+                              <div
+                                key={s.id}
+                                className="size-2 rounded-full"
+                                style={{
+                                  backgroundColor: SOCKET_COLORS[s.type],
+                                }}
+                                title={`${s.label} (${s.type})`}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            {filteredDefinitions.length === 0 && (
+              <p className="text-xs text-muted-foreground text-center py-4">
+                No matching nodes
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Vault tab */}
+      {activeTab === 'vault' && (
+        <div id="panel-vault" role="tabpanel">
+          <VaultTab {...vault} />
+        </div>
+      )}
+
+      {/* Workflows tab */}
+      {activeTab === 'workflows' && (
+        <div id="panel-workflows" role="tabpanel">
+          <WorkflowsTab {...workflows} />
+        </div>
+      )}
+
+      {/* Hotkeys tab */}
+      {activeTab === 'hotkeys' && (
+        <div
+          id="panel-hotkeys"
+          role="tabpanel"
+          className="flex-1 overflow-y-auto px-3 py-2 space-y-3"
+        >
+          {HOTKEY_SECTIONS.map((section) => (
+            <div key={section.title}>
+              <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+                {section.title}
+              </h3>
+              <div className="space-y-1">
+                {section.items.map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between gap-3"
+                  >
+                    <span className="text-xs text-foreground">
+                      {item.description}
+                    </span>
+                    <div className="flex items-center gap-0.5">
+                      {item.keys.map((key, keyIdx) => (
+                        <React.Fragment key={keyIdx}>
+                          <kbd
+                            className={cn(
+                              'inline-flex items-center justify-center',
+                              'min-w-[20px] h-5 px-1.5',
+                              'text-[10px] font-medium',
+                              'bg-muted border border-border rounded',
+                              'text-muted-foreground',
+                            )}
+                          >
+                            {key}
+                          </kbd>
+                          {keyIdx < item.keys.length - 1 && (
+                            <span className="text-[10px] text-muted-foreground mx-0.5">
+                              +
+                            </span>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

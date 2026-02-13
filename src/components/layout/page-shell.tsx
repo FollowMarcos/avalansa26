@@ -22,7 +22,7 @@ export function PageShell({ children, className, contentClassName, showDock = tr
         <CreateProvider>
             <div className={cn("relative min-h-screen bg-background text-foreground flex flex-col antialiased", className)}>
                 {/* Analog Grain Texture */}
-                <div className="fixed inset-0 pointer-events-none z-[100] opacity-[0.03] mix-blend-multiply bg-noise"></div>
+                <div className="fixed inset-0 pointer-events-none z-[100] opacity-[0.03] mix-blend-multiply bg-noise dark:hidden"></div>
 
                 {/* Background Gradients / Effects could go here */}
 

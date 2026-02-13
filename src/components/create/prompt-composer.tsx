@@ -14,13 +14,14 @@ import {
   X,
   Maximize2,
   Minimize2,
-  Zap,
-  Clock,
   Trash2,
   ChevronDown,
   Minus,
   Plus,
   Bookmark,
+  Search,
+  Star,
+  Loader2,
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import {
@@ -39,6 +40,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { searchPrompts } from "@/utils/supabase/prompts.server";
+import type { Prompt } from "@/types/prompt";
 
 const aspectRatioOptions: { value: AspectRatio; label: string }[] = [
   { value: "1:1", label: "Square" },
@@ -113,8 +116,6 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
     allowedImageSizes,
     allowedAspectRatios,
     maxOutputCount,
-    allowFastMode,
-    allowRelaxedMode,
   } = useCreate();
 
   // Filter options based on admin settings
@@ -126,11 +127,57 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
     return imageSizeOptions.filter((opt) => allowedImageSizes.includes(opt.value));
   }, [allowedImageSizes]);
 
-  // Show speed toggle only if both modes are allowed
-  const showSpeedToggle = allowFastMode && allowRelaxedMode;
-
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const prefersReducedMotion = useReducedMotion();
+
+  // Prompt search state
+  const [promptSearchOpen, setPromptSearchOpen] = React.useState(false);
+  const [promptSearchQuery, setPromptSearchQuery] = React.useState("");
+  const [promptSearchResults, setPromptSearchResults] = React.useState<Prompt[]>([]);
+  const [isSearchingPrompts, setIsSearchingPrompts] = React.useState(false);
+  const promptSearchTimeoutRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
+  const promptSearchInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    if (!promptSearchOpen) {
+      setPromptSearchQuery("");
+      setPromptSearchResults([]);
+    }
+  }, [promptSearchOpen]);
+
+  React.useEffect(() => {
+    if (promptSearchTimeoutRef.current) {
+      clearTimeout(promptSearchTimeoutRef.current);
+    }
+
+    const q = promptSearchQuery.trim();
+    if (q.length < 2) {
+      setPromptSearchResults([]);
+      setIsSearchingPrompts(false);
+      return;
+    }
+
+    setIsSearchingPrompts(true);
+    promptSearchTimeoutRef.current = setTimeout(async () => {
+      const results = await searchPrompts(q, 8);
+      setPromptSearchResults(results);
+      setIsSearchingPrompts(false);
+    }, 300);
+
+    return () => {
+      if (promptSearchTimeoutRef.current) {
+        clearTimeout(promptSearchTimeoutRef.current);
+      }
+    };
+  }, [promptSearchQuery]);
+
+  const handleSelectSearchResult = (result: Prompt) => {
+    setPrompt(result.prompt_text);
+    if (result.negative_prompt) {
+      updateSettings({ negativePrompt: result.negative_prompt });
+    }
+    setPromptSearchOpen(false);
+  };
 
   // Auto-expand when prompt exceeds 150 characters
   React.useEffect(() => {
@@ -186,7 +233,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
         animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
         className="absolute bottom-0 left-0 right-0 z-30 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
       >
-        <div className={cn("mx-auto", viewMode === "workflow" ? "max-w-6xl" : "max-w-4xl")}>
+        <div className={cn("mx-auto", viewMode === "workflow" ? "max-w-7xl" : "max-w-5xl")}>
           <FileUpload
             onFilesAdded={addReferenceImages}
             multiple
@@ -493,38 +540,6 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                     ))}
                   </div>
 
-                  {/* Speed - Toggle Pill (only show if both modes are allowed) */}
-                  {showSpeedToggle && (
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          onClick={() => updateSettings({ generationSpeed: settings.generationSpeed === "fast" ? "relaxed" : "fast" })}
-                          aria-label={`Generation speed: ${settings.generationSpeed === "fast" ? "Fast" : "Relax"}`}
-                          className={cn(
-                            "flex items-center gap-1.5 h-8 px-3 rounded-lg transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-ring",
-                            settings.generationSpeed === "fast"
-                              ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/25"
-                              : "bg-blue-500/15 text-blue-600 dark:text-blue-400 hover:bg-blue-500/25"
-                          )}
-                        >
-                          {settings.generationSpeed === "fast" ? (
-                            <Zap className="size-3.5" aria-hidden="true" />
-                          ) : (
-                            <Clock className="size-3.5" aria-hidden="true" />
-                          )}
-                          <span className="text-xs font-medium">
-                            {settings.generationSpeed === "fast" ? "Fast" : "Relax"}
-                          </span>
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-[200px] text-xs">
-                        {settings.generationSpeed === "fast"
-                          ? "Generate images immediately"
-                          : "Queue images for background generation. Takes longer but doesn't block you."}
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-
                   {/* Quantity - Stepper */}
                   <div
                     role="spinbutton"
@@ -566,6 +581,81 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                       <Plus className="size-4" aria-hidden="true" />
                     </button>
                   </div>
+
+                  {/* Prompt Search */}
+                  <Popover open={promptSearchOpen} onOpenChange={setPromptSearchOpen}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <PopoverTrigger asChild>
+                          <button
+                            aria-label="Search saved prompts"
+                            className={cn(
+                              "size-8 rounded-lg flex items-center justify-center transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-ring",
+                              promptSearchOpen
+                                ? "bg-primary/10 text-primary"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-zinc-800"
+                            )}
+                          >
+                            <Search className="size-3.5" aria-hidden="true" />
+                          </button>
+                        </PopoverTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs">Search prompts</TooltipContent>
+                    </Tooltip>
+                    <PopoverContent align="end" side="top" className="w-80 p-0">
+                      <div className="p-2 border-b border-border">
+                        <div className="flex items-center gap-2 px-2">
+                          <Search className="size-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
+                          <input
+                            ref={promptSearchInputRef}
+                            type="text"
+                            value={promptSearchQuery}
+                            onChange={(e) => setPromptSearchQuery(e.target.value)}
+                            placeholder={"Search saved prompts\u2026"}
+                            autoComplete="off"
+                            spellCheck={false}
+                            className="flex-1 min-w-0 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                            aria-label="Search saved prompts"
+                            // eslint-disable-next-line jsx-a11y/no-autofocus
+                            autoFocus
+                          />
+                          {isSearchingPrompts && (
+                            <Loader2 className="size-3.5 text-muted-foreground animate-spin shrink-0" aria-hidden="true" />
+                          )}
+                        </div>
+                      </div>
+                      <div className="max-h-64 overflow-y-auto overscroll-contain">
+                        {promptSearchQuery.trim().length < 2 ? (
+                          <p className="text-xs text-muted-foreground text-center py-6">
+                            Type to search your saved prompts
+                          </p>
+                        ) : promptSearchResults.length === 0 && !isSearchingPrompts ? (
+                          <p className="text-xs text-muted-foreground text-center py-6">
+                            No prompts found
+                          </p>
+                        ) : (
+                          <div className="p-1">
+                            {promptSearchResults.map((result) => (
+                              <button
+                                key={result.id}
+                                type="button"
+                                onClick={() => handleSelectSearchResult(result)}
+                                className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-muted transition-colors group"
+                              >
+                                <div className="flex items-center gap-1.5 mb-0.5">
+                                  {result.is_favorite && (
+                                    <Star className="size-3 text-amber-500 fill-amber-500 shrink-0" aria-hidden="true" />
+                                  )}
+                                  <span className="text-sm font-medium truncate">{result.name}</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground line-clamp-2">{result.prompt_text}</p>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
 
                   {/* Negative Prompt - Inline Input */}
                   <div className="flex-1 min-w-0 ml-1">

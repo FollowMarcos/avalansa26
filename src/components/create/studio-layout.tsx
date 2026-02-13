@@ -7,7 +7,6 @@ import { CanvasViewport } from "./canvas-viewport";
 import { PromptComposer } from "./prompt-composer";
 import { UnifiedToolbar } from "./unified-toolbar";
 import { MaintenanceBanner } from "./maintenance-banner";
-import { HotkeysIsland } from "./hotkeys-island";
 import { PromptVaultIsland } from "./prompt-vault-island";
 import { SavePromptDialog } from "./save-prompt-dialog";
 import { SharePromptDialog } from "./share-prompt-dialog";
@@ -21,7 +20,6 @@ import { useWorkflow } from "./workflow/use-workflow";
 import { WorkflowCanvas } from "./workflow/workflow-canvas";
 import { NodePalette } from "./workflow/node-palette";
 import { WorkflowToolbar } from "./workflow/workflow-toolbar";
-import { WorkflowList } from "./workflow/workflow-list";
 
 export function StudioLayout() {
   const prefersReducedMotion = useReducedMotion();
@@ -62,13 +60,13 @@ export function StudioLayout() {
     },
   });
 
-  // Load avas when vault opens
+  // Load avas when vault opens or when entering workflow mode (vault is embedded in panel)
   React.useEffect(() => {
-    if (promptVault.vaultOpen && avaVault.avas.length === 0) {
+    if ((promptVault.vaultOpen || viewMode === 'workflow') && avaVault.avas.length === 0) {
       avaVault.loadAvas();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [promptVault.vaultOpen]);
+  }, [promptVault.vaultOpen, viewMode]);
 
 
   return (
@@ -83,7 +81,7 @@ export function StudioLayout() {
         <MaintenanceBanner />
 
         {/* Grain texture overlay */}
-        <div className="pointer-events-none fixed inset-0 z-50 bg-noise opacity-[0.03]" />
+        <div className="pointer-events-none fixed inset-0 z-50 bg-noise opacity-[0.03] dark:hidden" />
 
         {/* Main content area */}
         <div className="flex-1 flex overflow-hidden">
@@ -124,7 +122,33 @@ export function StudioLayout() {
             <PromptComposer onSaveToVault={promptVault.openSaveDialog} />
 
             {/* Workflow-specific UI */}
-            {viewMode === "workflow" && <NodePalette />}
+            {viewMode === "workflow" && (
+              <NodePalette
+                vault={{
+                  prompts: promptVault.prompts,
+                  onSelectPrompt: promptVault.usePrompt,
+                  onToggleFavorite: promptVault.toggleFavorite,
+                  onSharePrompt: promptVault.openShareDialog,
+                  onDeletePrompt: promptVault.deletePrompt,
+                  avas: avaVault.avas,
+                  onRunAva: avaVault.openRunDialog,
+                  onEditAva: (ava) => avaVault.openCreateDialog(ava),
+                  onCreateAva: () => avaVault.openCreateDialog(),
+                  onToggleAvaFavorite: avaVault.toggleFavorite,
+                  onShareAva: avaVault.openShareDialog,
+                  onDeleteAva: (avaId) => { avaVault.deleteAva(avaId); },
+                }}
+                workflows={{
+                  savedWorkflows: workflow.savedWorkflows,
+                  currentWorkflowId: workflow.currentWorkflowId,
+                  workflowName: workflow.workflowName,
+                  onCreateNew: workflow.createNewWorkflow,
+                  onSwitch: workflow.switchWorkflow,
+                  onRename: workflow.renameWorkflow,
+                  onDelete: workflow.deleteWorkflow,
+                }}
+              />
+            )}
             {viewMode === "workflow" && (
               <WorkflowToolbar
                 isExecuting={workflow.isExecuting}
@@ -140,46 +164,31 @@ export function StudioLayout() {
               />
             )}
 
-            {/* Floating Workflow List (left side) — only in workflow mode */}
-            {viewMode === "workflow" && (
-              <WorkflowList
-                savedWorkflows={workflow.savedWorkflows}
-                currentWorkflowId={workflow.currentWorkflowId}
-                workflowName={workflow.workflowName}
-                onCreateNew={workflow.createNewWorkflow}
-                onSwitch={workflow.switchWorkflow}
-                onRename={workflow.renameWorkflow}
-                onDelete={workflow.deleteWorkflow}
+            {/* Floating Prompt Vault Island — only in non-workflow mode (in workflow mode, vault is embedded in NodePalette) */}
+            {viewMode !== "workflow" && (
+              <PromptVaultIsland
+                open={promptVault.vaultOpen}
+                onToggle={promptVault.toggleVault}
+                showToggle={false}
+                prompts={promptVault.prompts}
+                folders={promptVault.folders}
+                tags={promptVault.tags}
+                onSelectPrompt={promptVault.usePrompt}
+                onToggleFavorite={promptVault.toggleFavorite}
+                onSharePrompt={promptVault.openShareDialog}
+                onDeletePrompt={promptVault.deletePrompt}
+                avas={avaVault.avas}
+                avaFolders={avaVault.folders}
+                onRunAva={avaVault.openRunDialog}
+                onEditAva={(ava) => avaVault.openCreateDialog(ava)}
+                onCreateAva={() => avaVault.openCreateDialog()}
+                onToggleAvaFavorite={avaVault.toggleFavorite}
+                onShareAva={avaVault.openShareDialog}
+                onDeleteAva={(avaId) => {
+                  avaVault.deleteAva(avaId);
+                }}
               />
             )}
-
-            {/* Floating Prompt Vault Island (top left, below canvas list) */}
-            <PromptVaultIsland
-              open={promptVault.vaultOpen}
-              onToggle={promptVault.toggleVault}
-              showToggle={viewMode === "workflow"}
-              prompts={promptVault.prompts}
-              folders={promptVault.folders}
-              tags={promptVault.tags}
-              onSelectPrompt={promptVault.usePrompt}
-              onToggleFavorite={promptVault.toggleFavorite}
-              onSharePrompt={promptVault.openShareDialog}
-              onDeletePrompt={promptVault.deletePrompt}
-              avas={avaVault.avas}
-              avaFolders={avaVault.folders}
-              onRunAva={avaVault.openRunDialog}
-              onEditAva={(ava) => avaVault.openCreateDialog(ava)}
-              onCreateAva={() => avaVault.openCreateDialog()}
-              onToggleAvaFavorite={avaVault.toggleFavorite}
-              onShareAva={avaVault.openShareDialog}
-              onDeleteAva={(avaId) => {
-                avaVault.deleteAva(avaId);
-              }}
-            />
-
-
-            {/* Floating Hotkeys Island (bottom right) */}
-            <HotkeysIsland />
           </div>
         </div>
 
