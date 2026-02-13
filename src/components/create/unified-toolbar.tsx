@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useCreate, type GallerySortOption } from "./create-context";
 import { GalleryFilters } from "./gallery-filters";
+import { CompactComposer } from "./compact-composer";
 import { useReactFlow } from "@xyflow/react";
 
 // ---------------------------------------------------------------------------
@@ -67,6 +68,7 @@ interface UnifiedToolbarProps {
   onToggleVault?: () => void;
   workflowsOpen?: boolean;
   onToggleWorkflows?: () => void;
+  onSaveToVault?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -78,6 +80,7 @@ export function UnifiedToolbar({
   onToggleVault,
   workflowsOpen,
   onToggleWorkflows,
+  onSaveToVault,
 }: UnifiedToolbarProps) {
   const {
     viewMode,
@@ -145,423 +148,505 @@ export function UnifiedToolbar({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 max-w-[calc(100vw-10rem)]">
+      <div
+        className={cn(
+          "absolute z-20",
+          isGallery
+            ? "top-0 left-0 right-0"
+            : "top-4 left-1/2 -translate-x-1/2 max-w-[calc(100vw-10rem)]",
+        )}
+      >
         <div className="flex flex-col gap-2">
           {/* Main island */}
           <div className="relative">
-            {/* Shadow layers for floating effect — matches composer */}
-            <div className="absolute inset-0 translate-y-4 bg-black/20 dark:bg-black/40 rounded-3xl blur-2xl" aria-hidden="true" />
-            <div className="absolute inset-0 translate-y-2 bg-black/10 dark:bg-black/20 rounded-3xl blur-xl" aria-hidden="true" />
-
-          <div className="relative flex items-center gap-1.5 rounded-3xl bg-background/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-border dark:border-white/10 shadow-lg dark:shadow-none px-2 py-1.5">
-            {/* --- Gallery: Sidebar + Vault toggles --- */}
-            {isGallery && (
-              <>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="size-8 rounded-lg dark:hover:bg-zinc-800"
-                      onClick={() => setGallerySidebarOpen(!gallerySidebarOpen)}
-                      aria-label={
-                        gallerySidebarOpen
-                          ? "Close collections sidebar"
-                          : "Open collections sidebar"
-                      }
-                      aria-pressed={gallerySidebarOpen}
-                    >
-                      <PanelLeft
-                        className="size-4"
-                        strokeWidth={1.5}
-                        aria-hidden="true"
-                      />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Collections</TooltipContent>
-                </Tooltip>
-
-                {onToggleVault && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 rounded-lg"
-                        onClick={onToggleVault}
-                        aria-label={
-                          vaultOpen
-                            ? "Close prompt vault"
-                            : "Open prompt vault"
-                        }
-                        aria-pressed={vaultOpen}
-                      >
-                        <BookMarked
-                          className="size-4"
-                          strokeWidth={1.5}
-                          aria-hidden="true"
-                        />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Prompt Vault</TooltipContent>
-                  </Tooltip>
-                )}
-
-                <div className="w-px h-5 bg-border dark:bg-zinc-700/50 mx-0.5" aria-hidden="true" />
-              </>
-            )}
-
-            {/* --- Workflow: Vault + Flows toggles --- */}
+            {/* Shadow layers — workflow only (floating pill) */}
             {isWorkflow && (
               <>
-                {onToggleVault && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 rounded-lg"
-                        onClick={onToggleVault}
-                        aria-label={
-                          vaultOpen
-                            ? "Close prompt vault"
-                            : "Open prompt vault"
-                        }
-                        aria-pressed={vaultOpen}
-                      >
-                        <BookMarked
-                          className="size-4"
-                          strokeWidth={1.5}
-                          aria-hidden="true"
-                        />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Prompt Vault</TooltipContent>
-                  </Tooltip>
-                )}
-
-                {onToggleWorkflows && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-8 rounded-lg"
-                        onClick={onToggleWorkflows}
-                        aria-label={
-                          workflowsOpen
-                            ? "Close workflows"
-                            : "Open workflows"
-                        }
-                        aria-pressed={workflowsOpen}
-                      >
-                        <GitBranch
-                          className="size-4"
-                          strokeWidth={1.5}
-                          aria-hidden="true"
-                        />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Workflows</TooltipContent>
-                  </Tooltip>
-                )}
-
-                <div className="w-px h-5 bg-border dark:bg-zinc-700/50 mx-0.5" aria-hidden="true" />
-              </>
-            )}
-
-            {/* --- View Mode Switcher --- */}
-            <div
-              className="flex items-center border border-border dark:border-zinc-700/50 rounded-lg p-0.5"
-              role="group"
-              aria-label="View mode"
-            >
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setViewMode("gallery")}
-                    aria-label="Gallery view"
-                    aria-pressed={isGallery}
-                    className={cn(
-                      "size-7 rounded-md",
-                      isGallery && "bg-muted dark:bg-zinc-700",
-                    )}
-                  >
-                    <LayoutGrid
-                      className="size-3.5"
-                      strokeWidth={1.5}
-                      aria-hidden="true"
-                    />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Gallery View</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setViewMode("workflow")}
-                    aria-label="Workflow view"
-                    aria-pressed={isWorkflow}
-                    className={cn(
-                      "size-7 rounded-md",
-                      isWorkflow && "bg-muted dark:bg-zinc-700",
-                    )}
-                  >
-                    <GitBranch
-                      className="size-3.5"
-                      strokeWidth={1.5}
-                      aria-hidden="true"
-                    />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Workflow View</TooltipContent>
-              </Tooltip>
-            </div>
-
-            <div className="w-px h-5 bg-border dark:bg-zinc-700/50 mx-0.5" aria-hidden="true" />
-
-            {/* --- Gallery-specific tools --- */}
-            {isGallery && (
-              <>
-                {/* Search */}
-                <div className="relative min-w-[160px] max-w-[220px]">
-                  <Search
-                    className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground dark:text-zinc-500"
-                    aria-hidden="true"
-                  />
-                  <Input
-                    type="search"
-                    name="gallery-search"
-                    autoComplete="off"
-                    placeholder="Search…"
-                    aria-label="Search prompts"
-                    value={localSearch}
-                    onChange={(e) => handleSearchChange(e.target.value)}
-                    className="pl-8 h-7 text-xs rounded-lg bg-muted/50 dark:bg-zinc-800/50 border-transparent hover:border-border dark:hover:border-zinc-700 focus:border-border dark:focus:border-zinc-700 dark:text-zinc-300 dark:placeholder:text-zinc-600"
-                  />
-                  {localSearch && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-0.5 top-1/2 -translate-y-1/2 size-5"
-                      aria-label="Clear search"
-                      onClick={() => {
-                        setLocalSearch("");
-                        setSearchQuery("");
-                      }}
-                    >
-                      <X className="size-3" aria-hidden="true" />
-                    </Button>
-                  )}
-                </div>
-
-                {/* Sort */}
-                <Select
-                  value={galleryFilterState.sortBy}
-                  onValueChange={(value) =>
-                    setSortBy(value as GallerySortOption)
-                  }
-                >
-                  <SelectTrigger aria-label="Sort order" className="w-[130px] h-7 text-xs rounded-lg bg-muted/50 dark:bg-zinc-800/50 border-transparent hover:border-border dark:hover:border-zinc-700 dark:text-zinc-300">
-                    <SelectValue placeholder="Sort by" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sortOptions.map((option) => (
-                      <SelectItem
-                        key={option.value}
-                        value={option.value}
-                        className="text-xs"
-                      >
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-
-                {/* Favorites */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant={showFavoritesOnly ? "secondary" : "ghost"}
-                      size="icon"
-                      className="size-8 rounded-lg dark:hover:bg-zinc-800"
-                      onClick={() =>
-                        setGalleryFilters({
-                          showFavoritesOnly: !showFavoritesOnly,
-                        })
-                      }
-                      aria-pressed={showFavoritesOnly}
-                      aria-label="Toggle favorites filter"
-                    >
-                      <Heart
-                        className={
-                          showFavoritesOnly
-                            ? "size-4 fill-red-500 text-red-500"
-                            : "size-4"
-                        }
-                        aria-hidden="true"
-                      />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Favorites</TooltipContent>
-                </Tooltip>
-
-                {/* Filters */}
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={activeFilterCount > 0 ? "secondary" : "ghost"}
-                      size="icon"
-                      className="size-8 rounded-lg relative dark:hover:bg-zinc-800"
-                      aria-label="Filters"
-                    >
-                      <SlidersHorizontal
-                        className="size-4"
-                        aria-hidden="true"
-                      />
-                      {activeFilterCount > 0 && (
-                        <span className="absolute -top-1 -right-1 size-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-mono">
-                          {activeFilterCount}
-                        </span>
-                      )}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-80 p-0" align="start">
-                    <GalleryFilters />
-                  </PopoverContent>
-                </Popover>
-
-                {/* Bulk Select */}
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant={
-                        galleryFilterState.bulkSelection.enabled
-                          ? "secondary"
-                          : "ghost"
-                      }
-                      size="icon"
-                      className="size-8 rounded-lg dark:hover:bg-zinc-800"
-                      onClick={toggleBulkSelection}
-                      aria-label={
-                        galleryFilterState.bulkSelection.enabled
-                          ? "Cancel selection"
-                          : "Bulk select"
-                      }
-                    >
-                      <CheckSquare className="size-4" aria-hidden="true" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    {galleryFilterState.bulkSelection.enabled
-                      ? "Cancel Selection"
-                      : "Bulk Select"}
-                  </TooltipContent>
-                </Tooltip>
-
                 <div
-                  className="w-px h-5 bg-border dark:bg-zinc-700/50 mx-0.5"
+                  className="absolute inset-0 translate-y-4 bg-black/20 dark:bg-black/40 rounded-3xl blur-2xl"
                   aria-hidden="true"
                 />
-
-                {/* Column count */}
-                <div className="flex items-center gap-1">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-6"
-                        disabled={galleryColumnCount <= 2}
-                        onClick={() =>
-                          setGalleryColumnCount(
-                            Math.max(2, galleryColumnCount - 1),
-                          )
-                        }
-                        aria-label="Fewer columns"
-                      >
-                        <Minus className="size-3" aria-hidden="true" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Fewer Columns</TooltipContent>
-                  </Tooltip>
-                  <Slider
-                    min={2}
-                    max={8}
-                    step={1}
-                    value={[galleryColumnCount]}
-                    onValueChange={([v]) => setGalleryColumnCount(v)}
-                    className="w-16"
-                    aria-label="Column count"
-                  />
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-6"
-                        disabled={galleryColumnCount >= 8}
-                        onClick={() =>
-                          setGalleryColumnCount(
-                            Math.min(8, galleryColumnCount + 1),
-                          )
-                        }
-                        aria-label="More columns"
-                      >
-                        <Plus className="size-3" aria-hidden="true" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>More Columns</TooltipContent>
-                  </Tooltip>
-                  <span className="text-[10px] text-muted-foreground tabular-nums w-3 text-center">
-                    {galleryColumnCount}
-                  </span>
-                </div>
-
-                {/* Stats */}
-                <div className="flex items-center gap-2 text-[10px] text-muted-foreground dark:text-zinc-500 tabular-nums ml-1">
-                  <span className="inline-flex items-center gap-1">
-                    <ImageIcon className="size-3" aria-hidden="true" />
-                    {totalCount}
-                  </span>
-                  {favCount > 0 && (
-                    <span className="inline-flex items-center gap-1">
-                      <Heart className="size-3" aria-hidden="true" />
-                      {favCount}
-                    </span>
-                  )}
-                  {filteredCount !== totalCount && (
-                    <span>{filteredCount} shown</span>
-                  )}
-                </div>
+                <div
+                  className="absolute inset-0 translate-y-2 bg-black/10 dark:bg-black/20 rounded-3xl blur-xl"
+                  aria-hidden="true"
+                />
               </>
             )}
 
-            {/* --- Workflow-specific tools --- */}
-            {isWorkflow && <WorkflowTools />}
-          </div>
+            <div
+              className={cn(
+                "relative flex items-center gap-1.5 backdrop-blur-xl",
+                isGallery
+                  ? "bg-background/95 dark:bg-zinc-900/95 border-b border-border dark:border-white/10 px-3 py-1.5"
+                  : "rounded-3xl bg-background/95 dark:bg-zinc-900/95 border border-border dark:border-white/10 shadow-lg dark:shadow-none px-2 py-1.5",
+              )}
+            >
+              {/* ============================================================
+                  GALLERY MODE — full-width top bar
+                  ============================================================ */}
+              {isGallery && (
+                <>
+                  {/* --- Nav toggles --- */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 rounded-lg dark:hover:bg-zinc-800"
+                        onClick={() =>
+                          setGallerySidebarOpen(!gallerySidebarOpen)
+                        }
+                        aria-label={
+                          gallerySidebarOpen
+                            ? "Close collections sidebar"
+                            : "Open collections sidebar"
+                        }
+                        aria-pressed={gallerySidebarOpen}
+                      >
+                        <PanelLeft
+                          className="size-4"
+                          strokeWidth={1.5}
+                          aria-hidden="true"
+                        />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Collections</TooltipContent>
+                  </Tooltip>
+
+                  {onToggleVault && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 rounded-lg"
+                          onClick={onToggleVault}
+                          aria-label={
+                            vaultOpen
+                              ? "Close prompt vault"
+                              : "Open prompt vault"
+                          }
+                          aria-pressed={vaultOpen}
+                        >
+                          <BookMarked
+                            className="size-4"
+                            strokeWidth={1.5}
+                            aria-hidden="true"
+                          />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Prompt Vault</TooltipContent>
+                    </Tooltip>
+                  )}
+
+                  <div
+                    className="w-px h-5 bg-border dark:bg-zinc-700/50 mx-0.5"
+                    aria-hidden="true"
+                  />
+
+                  {/* --- Gallery tools --- */}
+                  {/* Search */}
+                  <div className="relative min-w-[140px] max-w-[180px]">
+                    <Search
+                      className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground dark:text-zinc-500"
+                      aria-hidden="true"
+                    />
+                    <Input
+                      type="search"
+                      name="gallery-search"
+                      autoComplete="off"
+                      placeholder={"Search\u2026"}
+                      aria-label="Search prompts"
+                      value={localSearch}
+                      onChange={(e) => handleSearchChange(e.target.value)}
+                      className="pl-8 h-7 text-xs rounded-lg bg-muted/50 dark:bg-zinc-800/50 border-transparent hover:border-border dark:hover:border-zinc-700 focus:border-border dark:focus:border-zinc-700 dark:text-zinc-300 dark:placeholder:text-zinc-600"
+                    />
+                    {localSearch && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0.5 top-1/2 -translate-y-1/2 size-5"
+                        aria-label="Clear search"
+                        onClick={() => {
+                          setLocalSearch("");
+                          setSearchQuery("");
+                        }}
+                      >
+                        <X className="size-3" aria-hidden="true" />
+                      </Button>
+                    )}
+                  </div>
+
+                  {/* Sort */}
+                  <Select
+                    value={galleryFilterState.sortBy}
+                    onValueChange={(value) =>
+                      setSortBy(value as GallerySortOption)
+                    }
+                  >
+                    <SelectTrigger
+                      aria-label="Sort order"
+                      className="w-[120px] h-7 text-xs rounded-lg bg-muted/50 dark:bg-zinc-800/50 border-transparent hover:border-border dark:hover:border-zinc-700 dark:text-zinc-300"
+                    >
+                      <SelectValue placeholder="Sort by" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sortOptions.map((option) => (
+                        <SelectItem
+                          key={option.value}
+                          value={option.value}
+                          className="text-xs"
+                        >
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {/* Favorites */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={showFavoritesOnly ? "secondary" : "ghost"}
+                        size="icon"
+                        className="size-8 rounded-lg dark:hover:bg-zinc-800"
+                        onClick={() =>
+                          setGalleryFilters({
+                            showFavoritesOnly: !showFavoritesOnly,
+                          })
+                        }
+                        aria-pressed={showFavoritesOnly}
+                        aria-label="Toggle favorites filter"
+                      >
+                        <Heart
+                          className={
+                            showFavoritesOnly
+                              ? "size-4 fill-red-500 text-red-500"
+                              : "size-4"
+                          }
+                          aria-hidden="true"
+                        />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Favorites</TooltipContent>
+                  </Tooltip>
+
+                  {/* Filters */}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={
+                          activeFilterCount > 0 ? "secondary" : "ghost"
+                        }
+                        size="icon"
+                        className="size-8 rounded-lg relative dark:hover:bg-zinc-800"
+                        aria-label="Filters"
+                      >
+                        <SlidersHorizontal
+                          className="size-4"
+                          aria-hidden="true"
+                        />
+                        {activeFilterCount > 0 && (
+                          <span className="absolute -top-1 -right-1 size-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-mono">
+                            {activeFilterCount}
+                          </span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80 p-0" align="start">
+                      <GalleryFilters />
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* Bulk Select */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={
+                          galleryFilterState.bulkSelection.enabled
+                            ? "secondary"
+                            : "ghost"
+                        }
+                        size="icon"
+                        className="size-8 rounded-lg dark:hover:bg-zinc-800"
+                        onClick={toggleBulkSelection}
+                        aria-label={
+                          galleryFilterState.bulkSelection.enabled
+                            ? "Cancel selection"
+                            : "Bulk select"
+                        }
+                      >
+                        <CheckSquare
+                          className="size-4"
+                          aria-hidden="true"
+                        />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      {galleryFilterState.bulkSelection.enabled
+                        ? "Cancel Selection"
+                        : "Bulk Select"}
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <div
+                    className="w-px h-5 bg-border dark:bg-zinc-700/50 mx-0.5"
+                    aria-hidden="true"
+                  />
+
+                  {/* Column count */}
+                  <div className="flex items-center gap-1">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-6"
+                          disabled={galleryColumnCount <= 2}
+                          onClick={() =>
+                            setGalleryColumnCount(
+                              Math.max(2, galleryColumnCount - 1),
+                            )
+                          }
+                          aria-label="Fewer columns"
+                        >
+                          <Minus className="size-3" aria-hidden="true" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Fewer Columns</TooltipContent>
+                    </Tooltip>
+                    <Slider
+                      min={2}
+                      max={8}
+                      step={1}
+                      value={[galleryColumnCount]}
+                      onValueChange={([v]) => setGalleryColumnCount(v)}
+                      className="w-14"
+                      aria-label="Column count"
+                    />
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-6"
+                          disabled={galleryColumnCount >= 8}
+                          onClick={() =>
+                            setGalleryColumnCount(
+                              Math.min(8, galleryColumnCount + 1),
+                            )
+                          }
+                          aria-label="More columns"
+                        >
+                          <Plus className="size-3" aria-hidden="true" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>More Columns</TooltipContent>
+                    </Tooltip>
+                    <span className="text-[10px] text-muted-foreground tabular-nums w-3 text-center">
+                      {galleryColumnCount}
+                    </span>
+                  </div>
+
+                  <div
+                    className="w-px h-5 bg-border dark:bg-zinc-700/50 mx-0.5"
+                    aria-hidden="true"
+                  />
+
+                  {/* --- Compact Composer --- */}
+                  <CompactComposer onSaveToVault={onSaveToVault} />
+
+                  <div
+                    className="w-px h-5 bg-border dark:bg-zinc-700/50 mx-0.5"
+                    aria-hidden="true"
+                  />
+
+                  {/* Stats */}
+                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground dark:text-zinc-500 tabular-nums shrink-0">
+                    <span className="inline-flex items-center gap-1">
+                      <ImageIcon className="size-3" aria-hidden="true" />
+                      {totalCount}
+                    </span>
+                    {favCount > 0 && (
+                      <span className="inline-flex items-center gap-1">
+                        <Heart className="size-3" aria-hidden="true" />
+                        {favCount}
+                      </span>
+                    )}
+                    {filteredCount !== totalCount && (
+                      <span>{filteredCount} shown</span>
+                    )}
+                  </div>
+
+                  <div
+                    className="w-px h-5 bg-border dark:bg-zinc-700/50 mx-0.5"
+                    aria-hidden="true"
+                  />
+                </>
+              )}
+
+              {/* ============================================================
+                  WORKFLOW MODE — floating pill (unchanged)
+                  ============================================================ */}
+              {isWorkflow && (
+                <>
+                  {onToggleVault && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 rounded-lg"
+                          onClick={onToggleVault}
+                          aria-label={
+                            vaultOpen
+                              ? "Close prompt vault"
+                              : "Open prompt vault"
+                          }
+                          aria-pressed={vaultOpen}
+                        >
+                          <BookMarked
+                            className="size-4"
+                            strokeWidth={1.5}
+                            aria-hidden="true"
+                          />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Prompt Vault</TooltipContent>
+                    </Tooltip>
+                  )}
+
+                  {onToggleWorkflows && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-8 rounded-lg"
+                          onClick={onToggleWorkflows}
+                          aria-label={
+                            workflowsOpen
+                              ? "Close workflows"
+                              : "Open workflows"
+                          }
+                          aria-pressed={workflowsOpen}
+                        >
+                          <GitBranch
+                            className="size-4"
+                            strokeWidth={1.5}
+                            aria-hidden="true"
+                          />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Workflows</TooltipContent>
+                    </Tooltip>
+                  )}
+
+                  <div
+                    className="w-px h-5 bg-border dark:bg-zinc-700/50 mx-0.5"
+                    aria-hidden="true"
+                  />
+                </>
+              )}
+
+              {/* --- View Mode Switcher (always shown) --- */}
+              <ViewModeSwitcher />
+
+              {/* Workflow tools after view switcher */}
+              {isWorkflow && (
+                <>
+                  <div
+                    className="w-px h-5 bg-border dark:bg-zinc-700/50 mx-0.5"
+                    aria-hidden="true"
+                  />
+                  <WorkflowTools />
+                </>
+              )}
+            </div>
           </div>
 
           {/* Active filters row (gallery only) */}
-          {isGallery && (activeFilterCount > 0 || showFavoritesOnly || galleryFilterState.searchQuery) && (
-            <ActiveFiltersRow
-              galleryFilterState={galleryFilterState}
-              showFavoritesOnly={showFavoritesOnly}
-              activeFilterCount={activeFilterCount}
-              localSearch={localSearch}
-              setLocalSearch={setLocalSearch}
-              setSearchQuery={setSearchQuery}
-              setGalleryFilters={setGalleryFilters}
-              clearGalleryFilters={clearGalleryFilters}
-            />
-          )}
+          {isGallery &&
+            (activeFilterCount > 0 ||
+              showFavoritesOnly ||
+              galleryFilterState.searchQuery) && (
+              <ActiveFiltersRow
+                galleryFilterState={galleryFilterState}
+                showFavoritesOnly={showFavoritesOnly}
+                activeFilterCount={activeFilterCount}
+                localSearch={localSearch}
+                setLocalSearch={setLocalSearch}
+                setSearchQuery={setSearchQuery}
+                setGalleryFilters={setGalleryFilters}
+                clearGalleryFilters={clearGalleryFilters}
+              />
+            )}
         </div>
       </div>
     </TooltipProvider>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// View mode switcher sub-component
+// ---------------------------------------------------------------------------
+
+function ViewModeSwitcher() {
+  const { viewMode, setViewMode } = useCreate();
+  const isGallery = viewMode === "gallery";
+  const isWorkflow = viewMode === "workflow";
+
+  return (
+    <div
+      className="flex items-center border border-border dark:border-zinc-700/50 rounded-lg p-0.5"
+      role="group"
+      aria-label="View mode"
+    >
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setViewMode("gallery")}
+            aria-label="Gallery view"
+            aria-pressed={isGallery}
+            className={cn(
+              "size-7 rounded-md",
+              isGallery && "bg-muted dark:bg-zinc-700",
+            )}
+          >
+            <LayoutGrid
+              className="size-3.5"
+              strokeWidth={1.5}
+              aria-hidden="true"
+            />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Gallery View</TooltipContent>
+      </Tooltip>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setViewMode("workflow")}
+            aria-label="Workflow view"
+            aria-pressed={isWorkflow}
+            className={cn(
+              "size-7 rounded-md",
+              isWorkflow && "bg-muted dark:bg-zinc-700",
+            )}
+          >
+            <GitBranch
+              className="size-3.5"
+              strokeWidth={1.5}
+              aria-hidden="true"
+            />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>Workflow View</TooltipContent>
+      </Tooltip>
+    </div>
   );
 }
 
@@ -637,7 +722,10 @@ function WorkflowTools() {
         </Tooltip>
       </div>
 
-      <div className="w-px h-5 bg-border dark:bg-zinc-700/50 mx-0.5" aria-hidden="true" />
+      <div
+        className="w-px h-5 bg-border dark:bg-zinc-700/50 mx-0.5"
+        aria-hidden="true"
+      />
 
       {/* Zoom Controls */}
       <div className="flex items-center">
@@ -730,13 +818,18 @@ function ActiveFiltersRow({
   localSearch: string;
   setLocalSearch: (v: string) => void;
   setSearchQuery: (v: string) => void;
-  setGalleryFilters: (f: Parameters<ReturnType<typeof useCreate>["setGalleryFilters"]>[0]) => void;
+  setGalleryFilters: (
+    f: Parameters<ReturnType<typeof useCreate>["setGalleryFilters"]>[0],
+  ) => void;
   clearGalleryFilters: () => void;
 }) {
   return (
-    <div className="flex items-center gap-1.5 justify-center flex-wrap">
+    <div className="flex items-center gap-1.5 justify-center flex-wrap px-3">
       {showFavoritesOnly && (
-        <Badge variant="outline" className="gap-1 text-[10px] h-5 px-1.5 dark:border-zinc-700/50 dark:text-zinc-400">
+        <Badge
+          variant="outline"
+          className="gap-1 text-[10px] h-5 px-1.5 dark:border-zinc-700/50 dark:text-zinc-400"
+        >
           <Heart
             className="size-2.5 fill-red-500 text-red-500"
             aria-hidden="true"
@@ -754,7 +847,10 @@ function ActiveFiltersRow({
       )}
 
       {galleryFilterState.searchQuery && (
-        <Badge variant="outline" className="gap-1 text-[10px] h-5 px-1.5 dark:border-zinc-700/50 dark:text-zinc-400">
+        <Badge
+          variant="outline"
+          className="gap-1 text-[10px] h-5 px-1.5 dark:border-zinc-700/50 dark:text-zinc-400"
+        >
           &ldquo;{galleryFilterState.searchQuery}&rdquo;
           <button
             type="button"
