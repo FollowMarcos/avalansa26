@@ -476,12 +476,12 @@ export function GenerationGallery() {
                   const startIdx = globalIndex;
                   return (
                     <section key={dateLabel} aria-label={dateLabel}>
-                      <p role="heading" aria-level={2} className="sticky top-0 z-10 text-xs font-mono font-medium text-muted-foreground uppercase tracking-wider py-2 px-1 bg-background/95 backdrop-blur-sm border-b border-border/30 mb-3">
+                      <h2 className="sticky top-0 z-10 text-xs font-mono font-medium text-muted-foreground uppercase tracking-wider py-2 px-1 bg-background/95 backdrop-blur-sm border-b border-border/30 mb-3">
                         {dateLabel}
                         <span className="ml-2 tabular-nums text-muted-foreground/60">
                           ({images.length})
                         </span>
-                      </p>
+                      </h2>
                       <div className="grid gap-3" style={gridStyle}>
                         {images.map((image) => {
                           const idx = globalIndex++;

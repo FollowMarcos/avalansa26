@@ -366,7 +366,7 @@ export function UnifiedToolbar({
                     setSortBy(value as GallerySortOption)
                   }
                 >
-                  <SelectTrigger className="w-[130px] h-7 text-xs rounded-lg bg-muted/50 dark:bg-zinc-800/50 border-transparent hover:border-border dark:hover:border-zinc-700 dark:text-zinc-300">
+                  <SelectTrigger aria-label="Sort order" className="w-[130px] h-7 text-xs rounded-lg bg-muted/50 dark:bg-zinc-800/50 border-transparent hover:border-border dark:hover:border-zinc-700 dark:text-zinc-300">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>

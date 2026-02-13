@@ -87,39 +87,6 @@ export function ImageDetailModal({
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
   const [promptExpanded, setPromptExpanded] = React.useState(false);
-  const promptRef = React.useRef<HTMLParagraphElement>(null);
-  const [promptClamped, setPromptClamped] = React.useState(false);
-
-  // Detect if prompt text is actually clamped (overflows 3 lines).
-  // line-clamp makes scrollHeight === clientHeight in many browsers,
-  // so we temporarily remove the clamp to measure the real height.
-  React.useEffect(() => {
-    if (promptExpanded) return; // keep previous value while expanded
-    const el = promptRef.current;
-    if (!el) { setPromptClamped(false); return; }
-
-    const check = () => {
-      // Temporarily remove line-clamp to measure full content height
-      el.style.display = 'block';
-      el.style.webkitLineClamp = 'unset';
-      el.style.overflow = 'visible';
-      const fullHeight = el.scrollHeight;
-
-      // Restore clamped styles (clear inline overrides, let class take over)
-      el.style.display = '';
-      el.style.webkitLineClamp = '';
-      el.style.overflow = '';
-      const clampedHeight = el.clientHeight;
-
-      setPromptClamped(fullHeight > clampedHeight + 1);
-    };
-
-    const observer = new ResizeObserver(check);
-    observer.observe(el);
-    check();
-
-    return () => observer.disconnect();
-  }, [image?.prompt, image?.id, promptExpanded]);
 
 
   // Reset expanded state when navigating to a different image
@@ -398,7 +365,7 @@ export function ImageDetailModal({
               <Button
                 variant="secondary"
                 size="icon"
-                className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
                 onClick={() => onNavigate("prev")}
                 aria-label="Previous image"
               >
@@ -409,7 +376,7 @@ export function ImageDetailModal({
               <Button
                 variant="secondary"
                 size="icon"
-                className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute right-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
                 onClick={() => onNavigate("next")}
                 aria-label="Next image"
               >
@@ -421,7 +388,7 @@ export function ImageDetailModal({
             <Button
               variant="secondary"
               size="icon"
-              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
               onClick={() => setIsFullscreen(true)}
               aria-label="View fullscreen"
             >
@@ -474,7 +441,6 @@ export function ImageDetailModal({
                       </Button>
                     </div>
                     <p
-                      ref={promptRef}
                       className={cn(
                         "text-sm leading-relaxed break-words",
                         !promptExpanded && "line-clamp-3",
@@ -482,13 +448,13 @@ export function ImageDetailModal({
                     >
                       {image.prompt || <span className="text-muted-foreground italic">No prompt</span>}
                     </p>
-                    {(promptClamped || promptExpanded) && (
+                    {image.prompt && image.prompt.length > 100 && (
                       <button
                         type="button"
                         className="text-xs text-muted-foreground hover:text-foreground font-mono transition-colors focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
                         onClick={() => setPromptExpanded((v) => !v)}
                       >
-                        {promptExpanded ? "View less" : "View more"}
+                        {promptExpanded ? "Hide" : "See all"}
                       </button>
                     )}
                   </div>
