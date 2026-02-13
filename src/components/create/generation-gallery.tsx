@@ -108,6 +108,7 @@ export function GenerationGallery({ vaultOpen, onToggleVault }: GenerationGaller
     selectedImage,
     addReferenceImageFromUrl,
     reuseImageSetup,
+    setPrompt,
     galleryFilterState,
     toggleImageSelection,
     getFilteredHistory,
@@ -254,6 +255,11 @@ export function GenerationGallery({ vaultOpen, onToggleVault }: GenerationGaller
   const handleReuseSetup = async (image: GeneratedImage) => {
     await reuseImageSetup(image);
     toast.success("Setup restored");
+  };
+
+  const handlePasteToComposer = (prompt: string) => {
+    setPrompt(prompt);
+    toast.success("Prompt loaded into composer");
   };
 
   const handleSplitDownload = async (url: string, id: string) => {
@@ -534,6 +540,7 @@ export function GenerationGallery({ vaultOpen, onToggleVault }: GenerationGaller
                               onToggleSelection={toggleImageSelection}
                               onToggleFavorite={handleToggleFavorite}
                               onDelete={handleDelete}
+                              onPasteToComposer={handlePasteToComposer}
                               onCompare={handleCompare}
                               onViewDetails={setDetailImage}
                               formatTime={formatTime}
@@ -573,6 +580,7 @@ export function GenerationGallery({ vaultOpen, onToggleVault }: GenerationGaller
                       onToggleSelection={toggleImageSelection}
                       onToggleFavorite={handleToggleFavorite}
                       onDelete={handleDelete}
+                      onPasteToComposer={handlePasteToComposer}
                       onCompare={handleCompare}
                       onViewDetails={setDetailImage}
                       formatTime={formatTime}

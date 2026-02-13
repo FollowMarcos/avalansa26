@@ -8,6 +8,8 @@ import {
   Check,
   Download,
   Copy,
+  ClipboardCopy,
+  TextCursorInput,
   ImagePlus,
   RotateCw,
   Link2,
@@ -52,6 +54,7 @@ interface GalleryItemProps {
   onToggleSelection: (id: string) => void;
   onToggleFavorite: (id: string) => void;
   onDelete: (id: string) => void;
+  onPasteToComposer: (prompt: string) => void;
   onCompare: (image: GeneratedImage) => void;
   onViewDetails: (image: GeneratedImage) => void;
   formatTime: (timestamp: number) => string;
@@ -78,6 +81,7 @@ export const GalleryItem = React.memo(function GalleryItem({
   onToggleSelection,
   onToggleFavorite,
   onDelete,
+  onPasteToComposer,
   onCompare,
   onViewDetails,
   formatTime,
@@ -131,6 +135,41 @@ export const GalleryItem = React.memo(function GalleryItem({
                   quality={75}
                 />
               </div>
+
+              {/* Copy prompt & paste to composer buttons (top-left) */}
+              {!isBulkMode && image.prompt && (
+                <div
+                  className={cn(
+                    "absolute top-1 left-1 z-10 flex items-center gap-0.5",
+                    "rounded-lg bg-background/80 backdrop-blur-sm px-0.5 py-0.5",
+                    "opacity-0 group-hover:opacity-100 focus-within:opacity-100",
+                    "transition-opacity duration-150",
+                  )}
+                >
+                  <button
+                    type="button"
+                    className="size-7 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+                    aria-label="Copy prompt"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onCopyPrompt(image.prompt);
+                    }}
+                  >
+                    <ClipboardCopy className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                  </button>
+                  <button
+                    type="button"
+                    className="size-7 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+                    aria-label="Use prompt in composer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onPasteToComposer(image.prompt);
+                    }}
+                  >
+                    <TextCursorInput className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                  </button>
+                </div>
+              )}
 
               {/* Favorite button */}
               {!isBulkMode && (
