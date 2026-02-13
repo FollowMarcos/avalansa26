@@ -790,6 +790,26 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   }, [referenceImages.length]);
 
   /**
+   * Add a saved reference image to the active references (no re-upload needed)
+   */
+  const addSavedReferenceToActive = React.useCallback((saved: SavedReferenceImage) => {
+    if (referenceImages.length >= MAX_REFERENCE_IMAGES) {
+      console.warn('Maximum reference images reached');
+      return;
+    }
+
+    // Create a local reference pointing to the already-saved image
+    const newImage: ImageFile = {
+      id: `ref-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      file: new File([], saved.name || 'reference'), // Placeholder file
+      preview: saved.url,
+      storagePath: saved.storage_path,
+      isUploading: false,
+    };
+    setReferenceImages(prev => [...prev, newImage].slice(0, MAX_REFERENCE_IMAGES));
+  }, [referenceImages.length]);
+
+  /**
    * Reuse a generated image's complete setup (original reference images + prompt + settings)
    */
   const reuseImageSetup = React.useCallback(async (image: GeneratedImage) => {
@@ -799,7 +819,20 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     // Add the original reference images that were used for this generation
     if (image.settings?.referenceImages && image.settings.referenceImages.length > 0) {
       for (const ref of image.settings.referenceImages) {
-        await addReferenceImageFromUrl(ref.url);
+        if (ref.storagePath) {
+          // Image already exists in storage — reuse it directly (no re-upload)
+          addSavedReferenceToActive({
+            id: `reused-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            user_id: '',
+            storage_path: ref.storagePath,
+            name: null,
+            created_at: new Date().toISOString(),
+            url: ref.url,
+          });
+        } else {
+          // No storage path — fall back to fetching and uploading
+          await addReferenceImageFromUrl(ref.url);
+        }
       }
     }
 
@@ -811,7 +844,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       aspectRatio: image.settings?.aspectRatio || settings.aspectRatio,
       negativePrompt: image.settings?.negativePrompt || '',
     });
-  }, [addReferenceImageFromUrl, clearReferenceImages, setPrompt, updateSettings, settings.aspectRatio]);
+  }, [addReferenceImageFromUrl, addSavedReferenceToActive, clearReferenceImages, setPrompt, updateSettings, settings.aspectRatio]);
 
   /**
    * Load saved reference images from database
@@ -860,25 +893,6 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  /**
-   * Add a saved reference image to the active references (no re-upload needed)
-   */
-  const addSavedReferenceToActive = React.useCallback((saved: SavedReferenceImage) => {
-    if (referenceImages.length >= MAX_REFERENCE_IMAGES) {
-      console.warn('Maximum reference images reached');
-      return;
-    }
-
-    // Create a local reference pointing to the already-saved image
-    const newImage: ImageFile = {
-      id: `ref-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      file: new File([], saved.name || 'reference'), // Placeholder file
-      preview: saved.url,
-      storagePath: saved.storage_path,
-      isUploading: false,
-    };
-    setReferenceImages(prev => [...prev, newImage].slice(0, MAX_REFERENCE_IMAGES));
-  }, [referenceImages.length]);
 
   const selectImage = React.useCallback((image: GeneratedImage | null) => {
     setSelectedImage(image);
