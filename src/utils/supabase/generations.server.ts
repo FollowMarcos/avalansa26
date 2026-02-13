@@ -66,10 +66,13 @@ export async function searchGenerations(
 ): Promise<Generation[]> {
   const supabase = await createClient();
 
+  // Escape ILIKE metacharacters to prevent query injection
+  const escaped = query.replace(/[%_\\]/g, '\\$&');
+
   const { data: generations, error } = await supabase
     .from('generations')
     .select('*')
-    .ilike('prompt', `%${query}%`)
+    .ilike('prompt', `%${escaped}%`)
     .order('created_at', { ascending: false })
     .limit(limit);
 

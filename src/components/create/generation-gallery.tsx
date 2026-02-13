@@ -12,6 +12,16 @@ import { ImageDetailModal } from "./image-detail-modal";
 import { GalleryItem, PendingCard, FailedCard } from "./gallery-item";
 import { ComparisonModal } from "./gallery-comparison-modal";
 import { CollectionSidebar } from "./gallery-collection-sidebar";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -114,6 +124,7 @@ export function GenerationGallery({ vaultOpen, onToggleVault }: GenerationGaller
     toggleImageSelection,
     getFilteredHistory,
     toggleFavorite,
+    bulkDeleteImages,
     history,
     loadMoreHistory,
     hasMoreHistory,
@@ -128,6 +139,7 @@ export function GenerationGallery({ vaultOpen, onToggleVault }: GenerationGaller
   const [comparisonA, setComparisonA] = React.useState<GeneratedImage | null>(null);
   const [comparisonPair, setComparisonPair] = React.useState<[GeneratedImage, GeneratedImage] | null>(null);
   const [lastSelectedIndex, setLastSelectedIndex] = React.useState<number | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = React.useState<string | null>(null);
 
   const filteredHistory = getFilteredHistory();
   const completedImages = filteredHistory.filter((img) => img.status !== "pending" && img.status !== "failed");
@@ -317,12 +329,16 @@ export function GenerationGallery({ vaultOpen, onToggleVault }: GenerationGaller
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
+    setPendingDeleteId(id);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return;
+    const id = pendingDeleteId;
+    setPendingDeleteId(null);
     try {
-      const { deleteGeneration } = await import(
-        "@/utils/supabase/generations.server"
-      );
-      await deleteGeneration(id);
+      await bulkDeleteImages([id]);
       toast.success("Image deleted");
     } catch {
       toast.error("Failed to delete image");
@@ -506,12 +522,12 @@ export function GenerationGallery({ vaultOpen, onToggleVault }: GenerationGaller
                   const startIdx = globalIndex;
                   return (
                     <section key={dateLabel} aria-label={dateLabel}>
-                      <h3 className="sticky top-0 z-10 text-xs font-mono font-medium text-muted-foreground uppercase tracking-wider py-2 px-1 bg-background/95 backdrop-blur-sm border-b border-border/30 mb-3">
+                      <p role="heading" aria-level={2} className="sticky top-0 z-10 text-xs font-mono font-medium text-muted-foreground uppercase tracking-wider py-2 px-1 bg-background/95 backdrop-blur-sm border-b border-border/30 mb-3">
                         {dateLabel}
                         <span className="ml-2 tabular-nums text-muted-foreground/60">
                           ({images.length})
                         </span>
-                      </h3>
+                      </p>
                       <div className="grid gap-3" style={gridStyle}>
                         {images.map((image) => {
                           const idx = globalIndex++;
@@ -610,7 +626,7 @@ export function GenerationGallery({ vaultOpen, onToggleVault }: GenerationGaller
             <span>Click another image to compare</span>
             <button
               type="button"
-              className="ml-1 underline hover:no-underline"
+              className="ml-1 underline hover:no-underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-sm"
               onClick={() => setComparisonA(null)}
             >
               Cancel
@@ -637,6 +653,24 @@ export function GenerationGallery({ vaultOpen, onToggleVault }: GenerationGaller
           isOpen={!!comparisonPair}
           onClose={() => setComparisonPair(null)}
         />
+
+        {/* Delete Confirmation */}
+        <AlertDialog open={!!pendingDeleteId} onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Image</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete this image. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </TooltipProvider>
   );

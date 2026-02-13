@@ -115,6 +115,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
       );
     }
 
+    // Validate image size (allowlist)
+    const VALID_IMAGE_SIZES = ['1K', '2K', '4K'];
+    if (imageSize && !VALID_IMAGE_SIZES.includes(imageSize)) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid image size. Must be 1K, 2K, or 4K' },
+        { status: 400 }
+      );
+    }
+
     // Validate reference image paths
     const MAX_REFERENCE_IMAGES = 5;
     if (referenceImagePaths && referenceImagePaths.length > MAX_REFERENCE_IMAGES) {
@@ -540,10 +549,11 @@ async function generateWithGemini(params: ProviderParams): Promise<GeneratedImag
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
     try {
-      const response = await fetch(`${apiEndpoint}?key=${apiKey}`, {
+      const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
         },
         body: JSON.stringify(requestBody),
         signal: controller.signal,

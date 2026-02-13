@@ -246,8 +246,8 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                                         </div>
                                       )}
                                     </div>
-                                    <button onClick={() => removeReferenceImage(img.id)} aria-label="Remove from active" className="absolute -top-1 -right-1 size-4 rounded-full bg-background dark:bg-zinc-900 border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground">
-                                      <X className="size-2" />
+                                    <button onClick={() => removeReferenceImage(img.id)} aria-label="Remove from active" className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-background dark:bg-zinc-900 border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-ring">
+                                      <X className="size-2.5" />
                                     </button>
                                   </div>
                                 ))}
@@ -259,7 +259,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                           {/* Upload button */}
                           <FileUploadTrigger asChild>
                             <button className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-muted dark:bg-zinc-800 hover:bg-muted/80 dark:hover:bg-zinc-700 text-sm transition-colors border-2 border-dashed border-border dark:border-zinc-700" disabled={!hasAvailableSlots || referenceImages.length >= 14}>
-                              <ImagePlus className="size-4" />
+                              <ImagePlus className="size-4" aria-hidden="true" />
                               <span>Upload images</span>
                             </button>
                           </FileUploadTrigger>
@@ -282,8 +282,8 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                                       </TooltipTrigger>
                                       <TooltipContent side="top" className="text-xs">{saved.name || 'Reference image'}</TooltipContent>
                                     </Tooltip>
-                                    <button onClick={(e) => { e.stopPropagation(); removeSavedReference(saved.id); }} aria-label="Delete from library" className="absolute -top-1 -right-1 size-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <Trash2 className="size-2" />
+                                    <button onClick={(e) => { e.stopPropagation(); removeSavedReference(saved.id); }} aria-label="Delete from library" className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-ring">
+                                      <Trash2 className="size-2.5" />
                                     </button>
                                   </div>
                                 ))}
@@ -307,7 +307,6 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                           "transition-opacity duration-200 overflow-hidden",
                           hasReferences ? "opacity-100 max-h-20 mb-2" : "opacity-0 max-h-0"
                         )}
-                        style={{ transitionProperty: 'opacity, max-height' }}
                       >
                         <div className="overflow-hidden">
                           <div className="flex items-center gap-1.5">
@@ -321,8 +320,8 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                                       </div>
                                     )}
                                   </div>
-                                  <button onClick={() => removeReferenceImage(img.id)} aria-label="Remove" className="absolute -top-1 -right-1 size-4 rounded-full bg-background dark:bg-zinc-900 border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground">
-                                    <X className="size-2" />
+                                  <button onClick={() => removeReferenceImage(img.id)} aria-label="Remove" className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-background dark:bg-zinc-900 border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-ring">
+                                    <X className="size-2.5" />
                                   </button>
                                 </div>
                               ))}
@@ -335,7 +334,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
 
                       {/* Textarea */}
                       <div className="relative">
-                        <div className={cn("transition-all duration-200 overflow-hidden", isPromptExpanded ? "max-h-[200px]" : "max-h-[44px]")}>
+                        <div className={cn("overflow-hidden rounded-lg focus-within:ring-2 focus-within:ring-ring", isPromptExpanded ? "max-h-[200px]" : "max-h-[44px]")}>
                           <textarea
                             ref={textareaRef}
                             value={prompt}
@@ -343,17 +342,18 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                             onKeyDown={handleKeyDown}
                             onPaste={handlePaste}
                             placeholder={hasReferences ? "Describe how to transform your images…" : "What would you like to create?"}
+                            name="prompt"
                             aria-label="Image generation prompt"
                             rows={isPromptExpanded ? 5 : 1}
                             className={cn(
-                              "w-full bg-transparent text-base text-foreground dark:text-zinc-200 placeholder:text-muted-foreground dark:placeholder:text-zinc-500 resize-none focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-0",
+                              "w-full bg-transparent text-base text-foreground dark:text-zinc-200 placeholder:text-muted-foreground dark:placeholder:text-zinc-500 resize-none focus:outline-none",
                               isPromptExpanded ? "min-h-[120px] py-2.5" : "h-[44px] py-2.5"
                             )}
                           />
                         </div>
                         <div className="absolute bottom-0.5 right-0 flex items-center gap-1">
                           <span className="text-[10px] text-muted-foreground dark:text-zinc-600 font-mono tabular-nums">{prompt.length}</span>
-                          <button onClick={() => setIsPromptExpanded(!isPromptExpanded)} className="size-6 rounded-lg flex items-center justify-center text-muted-foreground dark:text-zinc-500 hover:text-foreground dark:hover:text-zinc-300 transition-colors" aria-label={isPromptExpanded ? "Collapse" : "Expand"}>
+                          <button onClick={() => setIsPromptExpanded(!isPromptExpanded)} className="size-6 rounded-lg flex items-center justify-center text-muted-foreground dark:text-zinc-500 hover:text-foreground dark:hover:text-zinc-300 transition-colors focus-visible:ring-2 focus-visible:ring-ring" aria-label={isPromptExpanded ? "Collapse" : "Expand"}>
                             {isPromptExpanded ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
                           </button>
                         </div>
@@ -531,12 +531,22 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                     aria-valuenow={Math.min(settings.outputCount, maxOutputCount)}
                     aria-valuemin={1}
                     aria-valuemax={maxOutputCount}
-                    className="flex items-center h-11 rounded-lg bg-muted/50 dark:bg-zinc-800/50 shrink-0"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        updateSettings({ outputCount: Math.min(maxOutputCount, settings.outputCount + 1) });
+                      } else if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        updateSettings({ outputCount: Math.max(1, settings.outputCount - 1) });
+                      }
+                    }}
+                    className="flex items-center h-11 rounded-lg bg-muted/50 dark:bg-zinc-800/50 shrink-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-lg"
                   >
                     <button
                       onClick={() => updateSettings({ outputCount: Math.max(1, settings.outputCount - 1) })}
                       disabled={settings.outputCount <= 1}
-                      className="size-11 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                      className="size-11 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors touch-manipulation"
                       aria-label="Decrease count"
                       tabIndex={-1}
                     >
@@ -548,7 +558,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                     <button
                       onClick={() => updateSettings({ outputCount: Math.min(maxOutputCount, settings.outputCount + 1) })}
                       disabled={settings.outputCount >= maxOutputCount}
-                      className="size-11 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors touch-manipulation focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                      className="size-11 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors touch-manipulation"
                       aria-label="Increase count"
                       tabIndex={-1}
                     >

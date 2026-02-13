@@ -148,7 +148,7 @@ export const GalleryItem = React.memo(function GalleryItem({
                 >
                   <button
                     type="button"
-                    className="size-7 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+                    className="size-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
                     aria-label="Copy prompt"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -159,7 +159,7 @@ export const GalleryItem = React.memo(function GalleryItem({
                   </button>
                   <button
                     type="button"
-                    className="size-7 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+                    className="size-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
                     aria-label="Use prompt in composer"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -177,7 +177,7 @@ export const GalleryItem = React.memo(function GalleryItem({
                   type="button"
                   className={cn(
                     "absolute top-1 right-1 z-10 size-9 rounded-full flex items-center justify-center",
-                    "bg-background/80 hover:bg-background transition-colors transition-opacity duration-150",
+                    "bg-background/80 hover:bg-background transition-[color,background-color,opacity] duration-150",
                     "focus-visible:ring-2 focus-visible:ring-ring focus-visible:opacity-100",
                     image.isFavorite
                       ? "opacity-100"
@@ -256,7 +256,7 @@ export const GalleryItem = React.memo(function GalleryItem({
                 >
                   <button
                     type="button"
-                    className="size-7 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+                    className="size-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
                     aria-label="Download"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -267,7 +267,7 @@ export const GalleryItem = React.memo(function GalleryItem({
                   </button>
                   <button
                     type="button"
-                    className="size-7 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+                    className="size-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
                     aria-label="Split & download"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -278,7 +278,7 @@ export const GalleryItem = React.memo(function GalleryItem({
                   </button>
                   <button
                     type="button"
-                    className="size-7 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+                    className="size-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
                     aria-label="Use as reference"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -289,7 +289,7 @@ export const GalleryItem = React.memo(function GalleryItem({
                   </button>
                   <button
                     type="button"
-                    className="size-7 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+                    className="size-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
                     aria-label="Reuse setup"
                     onClick={(e) => {
                       e.stopPropagation();
@@ -310,7 +310,7 @@ export const GalleryItem = React.memo(function GalleryItem({
                   <span className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono tabular-nums text-muted-foreground">
                     {image.settings.aspectRatio}
                   </span>
-                  <span className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono tabular-nums text-muted-foreground truncate max-w-[80px]">
+                  <span className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono tabular-nums text-muted-foreground truncate max-w-[80px]" title={image.settings.model}>
                     {image.settings.model}
                   </span>
                 </div>

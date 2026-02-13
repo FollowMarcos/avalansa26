@@ -198,6 +198,18 @@ export async function uploadGeneratedImage(
   }
 }
 
+/** Allowlist of trusted image provider hostnames for SSRF protection */
+const ALLOWED_IMAGE_HOSTS = new Set([
+  'fal.media',
+  'v3.fal.media',
+  'storage.googleapis.com',
+  'oaidalleapiprodscus.blob.core.windows.net',
+  'dalleprodsec.blob.core.windows.net',
+  'cdn.openai.com',
+  'images.openai.com',
+  'stability-images.s3.amazonaws.com',
+]);
+
 /**
  * Download an image from an external URL and upload it to Supabase Storage.
  * Used to re-host images from provider CDNs (Fal.ai, OpenAI, etc.) so they
@@ -208,6 +220,15 @@ export async function uploadImageFromUrl(
   userId: string
 ): Promise<{ url: string; path?: string; error?: string }> {
   try {
+    // Validate URL to prevent SSRF
+    const parsed = new URL(externalUrl);
+    if (parsed.protocol !== 'https:') {
+      return { url: externalUrl, error: 'Only HTTPS URLs are allowed' };
+    }
+    if (!ALLOWED_IMAGE_HOSTS.has(parsed.hostname)) {
+      return { url: externalUrl, error: `Untrusted image host: ${parsed.hostname}` };
+    }
+
     const response = await fetch(externalUrl);
     if (!response.ok) {
       return { url: externalUrl, error: `Failed to fetch image: ${response.status}` };
