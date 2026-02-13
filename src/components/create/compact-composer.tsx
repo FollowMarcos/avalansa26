@@ -215,7 +215,7 @@ export function CompactComposer({ onSaveToVault }: CompactComposerProps) {
   );
 
   return (
-    <div className="flex items-center gap-1.5 flex-1 min-w-0">
+    <div className="flex items-center gap-2.5 flex-1 min-w-0">
       {/* References button */}
       <DropdownMenu>
         <Tooltip>
@@ -223,7 +223,7 @@ export function CompactComposer({ onSaveToVault }: CompactComposerProps) {
             <DropdownMenuTrigger asChild>
               <button
                 className={cn(
-                  "size-8 rounded-lg flex items-center justify-center transition-colors shrink-0 relative focus-visible:ring-2 focus-visible:ring-ring",
+                  "size-10 rounded-xl flex items-center justify-center transition-colors shrink-0 relative focus-visible:ring-2 focus-visible:ring-ring",
                   hasReferences
                     ? "bg-primary text-primary-foreground"
                     : "text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-zinc-800",
@@ -231,12 +231,12 @@ export function CompactComposer({ onSaveToVault }: CompactComposerProps) {
                 aria-label="Reference images"
               >
                 <ImagePlus
-                  className="size-4"
+                  className="size-5"
                   strokeWidth={1.5}
                   aria-hidden="true"
                 />
                 {hasReferences && (
-                  <span className="absolute -top-1 -right-1 size-4 rounded-full bg-background dark:bg-zinc-900 border-2 border-primary text-[9px] font-mono font-medium text-primary flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 size-5 rounded-full bg-background dark:bg-zinc-900 border-2 border-primary text-[10px] font-mono font-medium text-primary flex items-center justify-center">
                     {referenceImages.length}
                   </span>
                 )}
@@ -391,7 +391,7 @@ export function CompactComposer({ onSaveToVault }: CompactComposerProps) {
         name="compact-prompt"
         aria-label="Image generation prompt"
         autoComplete="off"
-        className="flex-1 min-w-[120px] h-8 px-3 text-sm bg-muted/50 dark:bg-zinc-800/50 rounded-lg border border-transparent hover:border-border dark:hover:border-zinc-700 focus:border-border dark:focus:border-zinc-700 text-foreground dark:text-zinc-300 placeholder:text-muted-foreground dark:placeholder:text-zinc-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors"
+        className="flex-1 min-w-[120px] h-10 px-4 text-base bg-muted/50 dark:bg-zinc-800/50 rounded-xl border border-transparent hover:border-border dark:hover:border-zinc-700 focus:border-border dark:focus:border-zinc-700 text-foreground dark:text-zinc-300 placeholder:text-muted-foreground dark:placeholder:text-zinc-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-colors"
       />
 
       {/* Prompt search */}
@@ -400,13 +400,13 @@ export function CompactComposer({ onSaveToVault }: CompactComposerProps) {
           <button
             aria-label="Search saved prompts"
             className={cn(
-              "size-8 rounded-lg flex items-center justify-center transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-ring",
+              "size-10 rounded-xl flex items-center justify-center transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-ring",
               promptSearchOpen
                 ? "bg-primary/10 text-primary"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-zinc-800",
             )}
           >
-            <Search className="size-3.5" aria-hidden="true" />
+            <Search className="size-4" aria-hidden="true" />
           </button>
         </PopoverTrigger>
         <PopoverContent align="end" side="bottom" className="w-80 p-0">
@@ -481,25 +481,25 @@ export function CompactComposer({ onSaveToVault }: CompactComposerProps) {
         <PopoverTrigger asChild>
           <button
             aria-label="Generation settings"
-            className="flex items-center gap-1 h-8 px-2 rounded-lg bg-muted/50 dark:bg-zinc-800/50 hover:bg-muted dark:hover:bg-zinc-800 border border-transparent hover:border-border dark:hover:border-zinc-700 transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex items-center gap-1.5 h-10 px-3 rounded-xl bg-muted/50 dark:bg-zinc-800/50 hover:bg-muted dark:hover:bg-zinc-800 border border-transparent hover:border-border dark:hover:border-zinc-700 transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-ring"
           >
             <AspectRatioShape
               ratio={settings.aspectRatio}
               className="text-muted-foreground"
             />
-            <span className="text-xs text-foreground dark:text-zinc-300 tabular-nums">
+            <span className="text-sm text-foreground dark:text-zinc-300 tabular-nums">
               {settings.aspectRatio}
             </span>
-            <span className="text-xs text-muted-foreground">&middot;</span>
-            <span className="text-xs text-foreground dark:text-zinc-300">
+            <span className="text-sm text-muted-foreground">&middot;</span>
+            <span className="text-sm text-foreground dark:text-zinc-300">
               {settings.imageSize}
             </span>
-            <span className="text-xs text-muted-foreground">&middot;</span>
-            <span className="text-xs text-foreground dark:text-zinc-300 tabular-nums">
+            <span className="text-sm text-muted-foreground">&middot;</span>
+            <span className="text-sm text-foreground dark:text-zinc-300 tabular-nums">
               &times;{Math.min(settings.outputCount, maxOutputCount)}
             </span>
             <ChevronDown
-              className="size-3 text-muted-foreground ml-0.5"
+              className="size-3.5 text-muted-foreground ml-0.5"
               aria-hidden="true"
             />
           </button>
@@ -698,7 +698,7 @@ export function CompactComposer({ onSaveToVault }: CompactComposerProps) {
             disabled={!prompt.trim()}
             variant="ghost"
             size="icon"
-            className="size-8 rounded-lg shrink-0"
+            className="size-10 rounded-xl shrink-0"
             aria-label="Save to vault"
           >
             <Bookmark
@@ -717,11 +717,10 @@ export function CompactComposer({ onSaveToVault }: CompactComposerProps) {
           <Button
             onClick={handleSubmit}
             disabled={
-              !hasAvailableSlots &&
-              !prompt.trim() &&
-              referenceImages.length === 0
+              !hasAvailableSlots ||
+              (!prompt.trim() && referenceImages.length === 0)
             }
-            className="h-8 rounded-lg gap-1.5 px-3 bg-foreground dark:bg-white text-background dark:text-zinc-900 hover:bg-foreground/90 dark:hover:bg-zinc-100 disabled:opacity-50 shrink-0"
+            className="h-10 rounded-xl gap-2 px-4 bg-foreground dark:bg-white text-background dark:text-zinc-900 hover:bg-foreground/90 dark:hover:bg-zinc-100 disabled:opacity-50 shrink-0"
             aria-label="Generate image"
           >
             {isGenerating && !hasAvailableSlots ? (
@@ -737,7 +736,7 @@ export function CompactComposer({ onSaveToVault }: CompactComposerProps) {
                 aria-hidden="true"
               />
             )}
-            <span className="text-xs font-medium">Generate</span>
+            <span className="text-sm font-medium">Generate</span>
           </Button>
         </TooltipTrigger>
         <TooltipContent>Generate (Enter)</TooltipContent>

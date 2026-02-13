@@ -152,32 +152,34 @@ export function UnifiedToolbar({
         className={cn(
           "absolute z-20",
           isGallery
-            ? "top-0 left-0 right-0"
+            ? "top-4 inset-x-4"
             : "top-4 left-1/2 -translate-x-1/2 max-w-[calc(100vw-10rem)]",
         )}
       >
         <div className="flex flex-col gap-2">
           {/* Main island */}
           <div className="relative">
-            {/* Shadow layers — workflow only (floating pill) */}
-            {isWorkflow && (
-              <>
-                <div
-                  className="absolute inset-0 translate-y-4 bg-black/20 dark:bg-black/40 rounded-3xl blur-2xl"
-                  aria-hidden="true"
-                />
-                <div
-                  className="absolute inset-0 translate-y-2 bg-black/10 dark:bg-black/20 rounded-3xl blur-xl"
-                  aria-hidden="true"
-                />
-              </>
-            )}
+            {/* Shadow layers for floating island effect */}
+            <div
+              className={cn(
+                "absolute inset-0 translate-y-4 bg-black/20 dark:bg-black/40 blur-2xl",
+                isGallery ? "rounded-2xl" : "rounded-3xl",
+              )}
+              aria-hidden="true"
+            />
+            <div
+              className={cn(
+                "absolute inset-0 translate-y-2 bg-black/10 dark:bg-black/20 blur-xl",
+                isGallery ? "rounded-2xl" : "rounded-3xl",
+              )}
+              aria-hidden="true"
+            />
 
             <div
               className={cn(
                 "relative backdrop-blur-xl",
                 isGallery
-                  ? "bg-background/95 dark:bg-zinc-900/95 border-b border-border dark:border-white/10"
+                  ? "bg-background/95 dark:bg-zinc-900/95 rounded-2xl border border-border dark:border-white/10 shadow-lg dark:shadow-none overflow-hidden"
                   : "flex items-center gap-1.5 rounded-3xl bg-background/95 dark:bg-zinc-900/95 border border-border dark:border-white/10 shadow-lg dark:shadow-none px-2 py-1.5",
               )}
             >
@@ -187,18 +189,18 @@ export function UnifiedToolbar({
               {isGallery && (
                 <>
                   {/* Row 1: Compact Composer (prompt + generate) */}
-                  <div className="flex items-center gap-1.5 px-3 py-1.5">
+                  <div className="flex items-center gap-2.5 px-4 py-3">
                     <CompactComposer onSaveToVault={onSaveToVault} />
                   </div>
 
                   {/* Row divider */}
                   <div
-                    className="h-px bg-border/50 dark:bg-zinc-700/30 mx-3"
+                    className="h-px bg-border/50 dark:bg-zinc-700/30"
                     aria-hidden="true"
                   />
 
                   {/* Row 2: Gallery tools */}
-                  <div className="flex items-center gap-1.5 px-3 py-1">
+                  <div className="flex items-center gap-1.5 px-4 py-1.5">
                     {/* --- Nav toggles --- */}
                     <Tooltip>
                       <TooltipTrigger asChild>
