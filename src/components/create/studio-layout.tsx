@@ -120,10 +120,8 @@ export function StudioLayout() {
               }
             />
 
-            {/* Prompt Composer — hidden in workflow mode */}
-            {viewMode !== "workflow" && (
-              <PromptComposer onSaveToVault={promptVault.openSaveDialog} />
-            )}
+            {/* Prompt Composer */}
+            <PromptComposer onSaveToVault={promptVault.openSaveDialog} />
 
             {/* Workflow-specific UI */}
             {viewMode === "workflow" && <NodePalette />}

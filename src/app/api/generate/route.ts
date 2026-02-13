@@ -376,11 +376,42 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
     return NextResponse.json({ success: true, images: processedImages, mode: 'fast' });
   } catch (error) {
     console.error('Generation error:', error);
+
+    // Pass through user-friendly error messages from provider functions;
+    // fall back to generic message for unexpected/internal errors.
+    const message =
+      error instanceof Error && isUserFacingError(error.message)
+        ? error.message
+        : 'Image generation failed. Please try again.';
+
     return NextResponse.json(
-      { success: false, error: 'Image generation failed. Please try again.' },
+      { success: false, error: message },
       { status: 500 }
     );
   }
+}
+
+/**
+ * Known user-friendly error prefixes that are safe to surface to the client.
+ * All other messages are replaced with a generic fallback to prevent leaking
+ * internal API details, stack traces, or provider-specific error text.
+ */
+const USER_FACING_PREFIXES = [
+  'This model is experiencing high demand',
+  'Rate limit reached',
+  'Invalid request:',
+  'Content blocked',
+  'Image generation blocked by safety filters',
+  'Content blocked due to potential copyright',
+  'Image generation failed (IMAGE_OTHER)',
+  'Custom provider requires an endpoint',
+  'No images generated',
+  'Images are too large',
+  'Generation failed',
+] as const;
+
+function isUserFacingError(message: string): boolean {
+  return USER_FACING_PREFIXES.some((prefix) => message.startsWith(prefix));
 }
 
 // Provider-specific implementations
@@ -741,8 +772,12 @@ async function generateWithFal(params: ProviderParams): Promise<GeneratedImage[]
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Fal.ai API error: ${error}`);
+    const errorText = await response.text();
+    console.error('[Fal.ai] API error:', errorText);
+    if (response.status === 429) {
+      throw new Error('Rate limit reached. Please wait a moment before generating again.');
+    }
+    throw new Error('Image generation failed. Please try again.');
   }
 
   const data = await response.json();
@@ -788,8 +823,12 @@ async function generateWithOpenAI(params: ProviderParams): Promise<GeneratedImag
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`OpenAI API error: ${error}`);
+    const errorText = await response.text();
+    console.error('[OpenAI] API error:', errorText);
+    if (response.status === 429) {
+      throw new Error('Rate limit reached. Please wait a moment before generating again.');
+    }
+    throw new Error('Image generation failed. Please try again.');
   }
 
   const data = await response.json();
@@ -836,8 +875,12 @@ async function generateWithStability(params: ProviderParams): Promise<GeneratedI
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`Stability API error: ${error}`);
+    const errorText = await response.text();
+    console.error('[Stability] API error:', errorText);
+    if (response.status === 429) {
+      throw new Error('Rate limit reached. Please wait a moment before generating again.');
+    }
+    throw new Error('Image generation failed. Please try again.');
   }
 
   const data = await response.json();
@@ -885,8 +928,12 @@ async function generateWithCustomProvider(params: ProviderParams): Promise<Gener
   });
 
   if (!response.ok) {
-    const error = await response.text();
-    throw new Error(`API error: ${error}`);
+    const errorText = await response.text();
+    console.error('[Custom] API error:', errorText);
+    if (response.status === 429) {
+      throw new Error('Rate limit reached. Please wait a moment before generating again.');
+    }
+    throw new Error('Image generation failed. Please try again.');
   }
 
   const data = await response.json();

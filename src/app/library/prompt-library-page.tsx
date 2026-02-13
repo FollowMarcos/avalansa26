@@ -21,6 +21,7 @@ import {
   sharePromptWithUser,
   uploadPromptImage,
   deletePromptImage,
+  updatePrompt,
 } from "@/utils/supabase/prompts.server";
 import { createClient } from "@/utils/supabase/client";
 import {
@@ -44,6 +45,7 @@ import {
   MoreHorizontal,
   ExternalLink,
   ImagePlus,
+  Pencil,
 } from "lucide-react";
 import { resizeImageToSize, PROMPT_IMAGE_MAX_SIZE } from "@/lib/image-utils";
 import { toast } from "sonner";
@@ -122,6 +124,19 @@ export function PromptLibraryPage() {
   const [isSearchingUsers, setIsSearchingUsers] = React.useState(false);
   const [isSharing, setIsSharing] = React.useState(false);
   const shareSearchTimeoutRef = React.useRef<NodeJS.Timeout | undefined>(undefined);
+
+  // Edit prompt dialog state
+  const [editPromptDialogOpen, setEditPromptDialogOpen] = React.useState(false);
+  const [editingPrompt, setEditingPrompt] = React.useState<Prompt | null>(null);
+  const [editPromptName, setEditPromptName] = React.useState("");
+  const [editPromptText, setEditPromptText] = React.useState("");
+  const [editPromptDescription, setEditPromptDescription] = React.useState("");
+  const [editPromptNewImages, setEditPromptNewImages] = React.useState<File[]>([]);
+  const [editImagePreviewUrls, setEditImagePreviewUrls] = React.useState<string[]>([]);
+  const [existingEditImages, setExistingEditImages] = React.useState<PromptImage[]>([]);
+  const [deletedEditImageIds, setDeletedEditImageIds] = React.useState<string[]>([]);
+  const [isUpdatingPrompt, setIsUpdatingPrompt] = React.useState(false);
+  const editImageInputRef = React.useRef<HTMLInputElement>(null);
 
   // Load data on mount
   React.useEffect(() => {
@@ -298,6 +313,135 @@ export function PromptLibraryPage() {
     URL.revokeObjectURL(imagePreviewUrls[index]);
     setNewPromptImages((prev) => prev.filter((_, i) => i !== index));
     setImagePreviewUrls((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Open edit prompt dialog
+  const handleOpenEditDialog = (prompt: Prompt) => {
+    setEditingPrompt(prompt);
+    setEditPromptName(prompt.name);
+    setEditPromptText(prompt.prompt_text);
+    setEditPromptDescription(prompt.description || "");
+    setExistingEditImages(prompt.images ?? []);
+    setDeletedEditImageIds([]);
+    setEditPromptNewImages([]);
+    editImagePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+    setEditImagePreviewUrls([]);
+    setEditPromptDialogOpen(true);
+  };
+
+  // Handle image selection for edit dialog
+  const handleEditImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const currentCount = existingEditImages.length - deletedEditImageIds.length + editPromptNewImages.length;
+    const remainingSlots = 3 - currentCount;
+    const filesToAdd = files.slice(0, remainingSlots);
+
+    if (files.length > remainingSlots) {
+      toast.error(`Only ${remainingSlots} more image${remainingSlots !== 1 ? "s" : ""} allowed`);
+    }
+
+    const resizedFiles: File[] = [];
+    const previewUrls: string[] = [];
+
+    for (const file of filesToAdd) {
+      try {
+        const { blob } = await resizeImageToSize(file, PROMPT_IMAGE_MAX_SIZE);
+        const resizedFile = new File([blob], file.name, { type: "image/jpeg" });
+        resizedFiles.push(resizedFile);
+        previewUrls.push(URL.createObjectURL(blob));
+      } catch (error) {
+        console.error("Failed to resize image:", error);
+        toast.error(`Failed to process ${file.name}`);
+      }
+    }
+
+    setEditPromptNewImages((prev) => [...prev, ...resizedFiles]);
+    setEditImagePreviewUrls((prev) => [...prev, ...previewUrls]);
+
+    if (editImageInputRef.current) {
+      editImageInputRef.current.value = "";
+    }
+  };
+
+  // Remove existing image in edit dialog
+  const handleRemoveExistingEditImage = (imageId: string) => {
+    setDeletedEditImageIds((prev) => [...prev, imageId]);
+    setExistingEditImages((prev) => prev.filter((img) => img.id !== imageId));
+  };
+
+  // Remove new image in edit dialog
+  const handleRemoveEditNewImage = (index: number) => {
+    URL.revokeObjectURL(editImagePreviewUrls[index]);
+    setEditPromptNewImages((prev) => prev.filter((_, i) => i !== index));
+    setEditImagePreviewUrls((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Save edits
+  const handleUpdatePrompt = async () => {
+    if (!editingPrompt || !editPromptName.trim() || !editPromptText.trim()) {
+      toast.error("Please enter a name and prompt text");
+      return;
+    }
+
+    setIsUpdatingPrompt(true);
+    try {
+      const updated = await updatePrompt(editingPrompt.id, {
+        name: editPromptName.trim(),
+        description: editPromptDescription.trim() || null,
+        prompt_text: editPromptText.trim(),
+      });
+
+      if (!updated) {
+        toast.error("Failed to update prompt");
+        setIsUpdatingPrompt(false);
+        return;
+      }
+
+      // Delete removed images
+      for (const imageId of deletedEditImageIds) {
+        await deletePromptImage(imageId);
+      }
+
+      // Upload new images
+      const uploadedImages: PromptImage[] = [];
+      for (const file of editPromptNewImages) {
+        const formData = new FormData();
+        formData.append("file", file);
+        const image = await uploadPromptImage(editingPrompt.id, formData);
+        if (image) {
+          uploadedImages.push(image);
+        }
+      }
+
+      // Update local state
+      const remainingExisting = (editingPrompt.images ?? []).filter(
+        (img) => !deletedEditImageIds.includes(img.id)
+      );
+
+      setPrompts((prev) =>
+        prev.map((p) =>
+          p.id === editingPrompt.id
+            ? {
+                ...p,
+                ...updated,
+                images: [...remainingExisting, ...uploadedImages],
+              }
+            : p
+        )
+      );
+
+      // Cleanup
+      editImagePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+      setEditPromptDialogOpen(false);
+      setEditingPrompt(null);
+      toast.success("Prompt updated");
+    } catch {
+      toast.error("Failed to update prompt");
+    } finally {
+      setIsUpdatingPrompt(false);
+    }
   };
 
   // Add new prompt handler
@@ -658,6 +802,7 @@ export function PromptLibraryPage() {
                   onToggleFavorite={handleToggleFavorite}
                   onCopy={handleCopyPrompt}
                   onUseInCreate={handleUseInCreate}
+                  onEdit={handleOpenEditDialog}
                   onShare={handleOpenShareDialog}
                   prefersReducedMotion={prefersReducedMotion}
                 />
@@ -865,6 +1010,169 @@ export function PromptLibraryPage() {
           </DialogContent>
         </Dialog>
 
+        {/* Edit Prompt Dialog */}
+        <Dialog open={editPromptDialogOpen} onOpenChange={(open) => {
+          if (!open) {
+            editImagePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+            setEditPromptDialogOpen(false);
+            setEditingPrompt(null);
+          }
+        }}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Pencil className="size-4" />
+                Edit Prompt
+              </DialogTitle>
+              <DialogDescription>
+                Update your saved prompt
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-prompt-name">Name</Label>
+                <Input
+                  id="edit-prompt-name"
+                  value={editPromptName}
+                  onChange={(e) => setEditPromptName(e.target.value)}
+                  placeholder="My awesome prompt"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-prompt-text">Prompt</Label>
+                <Textarea
+                  id="edit-prompt-text"
+                  value={editPromptText}
+                  onChange={(e) => setEditPromptText(e.target.value)}
+                  placeholder="Enter your prompt text..."
+                  rows={4}
+                  className="font-mono text-sm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-prompt-description">
+                  Description{" "}
+                  <span className="text-muted-foreground font-normal">(optional)</span>
+                </Label>
+                <Input
+                  id="edit-prompt-description"
+                  value={editPromptDescription}
+                  onChange={(e) => setEditPromptDescription(e.target.value)}
+                  placeholder="What is this prompt for?"
+                />
+              </div>
+
+              {/* Image Section */}
+              <div className="space-y-2">
+                <Label>
+                  Images{" "}
+                  <span className="text-muted-foreground font-normal">(up to 3, optional)</span>
+                </Label>
+
+                {/* Existing images */}
+                {(existingEditImages.length > 0 || editImagePreviewUrls.length > 0) && (
+                  <div className="flex gap-2 flex-wrap">
+                    {existingEditImages.map((img) => (
+                      <div key={img.id} className="relative size-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                        <Image
+                          src={img.url}
+                          alt=""
+                          fill
+                          className="object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveExistingEditImage(img.id)}
+                          className="absolute top-0.5 right-0.5 size-4 rounded-full bg-background/80 flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                          aria-label="Remove image"
+                        >
+                          <X className="size-2.5" />
+                        </button>
+                      </div>
+                    ))}
+                    {editImagePreviewUrls.map((url, index) => (
+                      <div key={`new-${index}`} className="relative size-16 rounded-lg overflow-hidden bg-muted flex-shrink-0">
+                        <Image
+                          src={url}
+                          alt={`New ${index + 1}`}
+                          fill
+                          className="object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveEditNewImage(index)}
+                          className="absolute top-0.5 right-0.5 size-4 rounded-full bg-background/80 flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                          aria-label="Remove image"
+                        >
+                          <X className="size-2.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Upload button */}
+                {(existingEditImages.length + editPromptNewImages.length) < 3 && (
+                  <div>
+                    <input
+                      ref={editImageInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      multiple
+                      onChange={handleEditImageSelect}
+                      className="hidden"
+                      id="edit-prompt-image-upload"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => editImageInputRef.current?.click()}
+                      className="w-full"
+                    >
+                      <ImagePlus className="size-4 mr-2" />
+                      Add Images ({existingEditImages.length + editPromptNewImages.length}/3)
+                    </Button>
+                    <p className="text-[10px] text-muted-foreground mt-1 text-center">
+                      Images will be resized to 500KB max
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  editImagePreviewUrls.forEach((url) => URL.revokeObjectURL(url));
+                  setEditPromptDialogOpen(false);
+                  setEditingPrompt(null);
+                }}
+                disabled={isUpdatingPrompt}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUpdatePrompt}
+                disabled={!editPromptName.trim() || !editPromptText.trim() || isUpdatingPrompt}
+              >
+                {isUpdatingPrompt ? (
+                  <>
+                    <Loader2 className="size-4 mr-2 animate-spin" />
+                    {"Saving\u2026"}
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* Share Prompt Dialog */}
         <Dialog open={shareDialogOpen} onOpenChange={(open) => !open && handleCloseShareDialog()}>
           <DialogContent className="sm:max-w-md">
@@ -1006,6 +1314,7 @@ interface MyPromptsViewProps {
   onToggleFavorite: (id: string, isFavorite: boolean) => void;
   onCopy: (text: string) => void;
   onUseInCreate: (prompt: Prompt) => void;
+  onEdit: (prompt: Prompt) => void;
   onShare: (prompt: Prompt) => void;
   prefersReducedMotion: boolean | null;
 }
@@ -1017,6 +1326,7 @@ function MyPromptsView({
   onToggleFavorite,
   onCopy,
   onUseInCreate,
+  onEdit,
   onShare,
   prefersReducedMotion,
 }: MyPromptsViewProps) {
@@ -1059,6 +1369,7 @@ function MyPromptsView({
             }
             onCopy={() => onCopy(prompt.prompt_text)}
             onUseInCreate={() => onUseInCreate(prompt)}
+            onEdit={() => onEdit(prompt)}
             onShare={() => onShare(prompt)}
             prefersReducedMotion={prefersReducedMotion}
           />
@@ -1139,6 +1450,7 @@ interface PromptLibraryCardProps {
   onToggleFavorite: () => void;
   onCopy: () => void;
   onUseInCreate: () => void;
+  onEdit: () => void;
   onShare: () => void;
   prefersReducedMotion: boolean | null;
 }
@@ -1151,6 +1463,7 @@ function PromptLibraryCard({
   onToggleFavorite,
   onCopy,
   onUseInCreate,
+  onEdit,
   onShare,
   prefersReducedMotion,
 }: PromptLibraryCardProps) {
@@ -1298,6 +1611,10 @@ function PromptLibraryCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onEdit}>
+                <Pencil className="size-3.5 mr-2" />
+                Edit
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={onCopy}>
                 <Copy className="size-3.5 mr-2" />
                 Copy prompt

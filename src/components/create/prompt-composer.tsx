@@ -108,6 +108,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
     setSelectedApiId,
     isLoadingApis,
     activeGenerations,
+    viewMode,
     // Admin settings
     allowedImageSizes,
     allowedAspectRatios,
@@ -185,7 +186,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
         animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
         className="absolute bottom-0 left-0 right-0 z-30 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
       >
-        <div className="max-w-4xl mx-auto">
+        <div className={cn("mx-auto", viewMode === "workflow" ? "max-w-6xl" : "max-w-4xl")}>
           <FileUpload
             onFilesAdded={addReferenceImages}
             multiple

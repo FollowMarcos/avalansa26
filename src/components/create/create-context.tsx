@@ -155,6 +155,10 @@ interface CreateContextType {
   gallerySidebarOpen: boolean;
   setGallerySidebarOpen: (open: boolean) => void;
 
+  // Dock
+  dockCollapsed: boolean;
+  setDockCollapsed: (collapsed: boolean) => void;
+
   // Generation
   isGenerating: boolean;
   thinkingSteps: ThinkingStep[];
@@ -373,6 +377,12 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     return localStorage.getItem("gallery-sidebar-open") === "true";
   });
 
+  // Dock collapsed state (with localStorage persistence)
+  const [dockCollapsed, setDockCollapsed] = React.useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("dock-collapsed") === "true";
+  });
+
   // Persist gallery layout to localStorage
   React.useEffect(() => {
     localStorage.setItem("gallery-column-count", String(galleryColumnCount));
@@ -380,6 +390,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     localStorage.setItem("gallery-sidebar-open", String(gallerySidebarOpen));
   }, [gallerySidebarOpen]);
+  React.useEffect(() => {
+    localStorage.setItem("dock-collapsed", String(dockCollapsed));
+  }, [dockCollapsed]);
   const [historyPanelOpen, setHistoryPanelOpen] = React.useState(true);
   const [isInputVisible, setIsInputVisible] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState("create");
@@ -2000,6 +2013,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     setGalleryColumnCount,
     gallerySidebarOpen,
     setGallerySidebarOpen,
+    // Dock
+    dockCollapsed,
+    setDockCollapsed,
     // Generation
     isGenerating,
     thinkingSteps,
@@ -2054,7 +2070,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   }), [
     availableApis, selectedApiId, isLoadingApis, pendingBatchJobs,
     prompt, isPromptExpanded, settings, referenceImages, history, selectedImage,
-    viewMode, historyPanelOpen, isInputVisible, activeTab, interactionMode, galleryColumnCount, gallerySidebarOpen,
+    viewMode, historyPanelOpen, isInputVisible, activeTab, interactionMode, galleryColumnCount, gallerySidebarOpen, dockCollapsed,
     isGenerating, thinkingSteps,
     updateSettings, addReferenceImages, addReferenceImageFromUrl, removeReferenceImage, clearReferenceImages,
     savedReferences, loadSavedReferences, removeSavedReference, renameSavedReference, addSavedReferenceToActive,

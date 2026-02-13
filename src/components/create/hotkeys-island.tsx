@@ -3,6 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronUp, Keyboard } from "lucide-react";
+import { useCreate } from "./create-context";
 
 const HOTKEYS_COLLAPSED_KEY = "canvas-hotkeys-collapsed";
 
@@ -16,21 +17,30 @@ interface HotkeySection {
   items: HotkeyItem[];
 }
 
-const HOTKEY_SECTIONS: HotkeySection[] = [
+const WORKFLOW_HOTKEY_SECTIONS: HotkeySection[] = [
   {
-    title: "Gallery",
+    title: "Tools",
     items: [
-      { keys: ["Ctrl", "Enter"], description: "Generate" },
-      { keys: ["Esc"], description: "Close modal" },
-      { keys: ["←"], description: "Previous image" },
-      { keys: ["→"], description: "Next image" },
+      { keys: ["V"], description: "Select tool" },
+      { keys: ["H"], description: "Hand tool" },
+      { keys: ["Space", "Drag"], description: "Pan canvas" },
     ],
   },
   {
-    title: "General",
+    title: "Viewport",
     items: [
-      { keys: ["Ctrl", "A"], description: "Select all" },
-      { keys: ["Ctrl", "D"], description: "Deselect all" },
+      { keys: ["Ctrl", "+"], description: "Zoom in" },
+      { keys: ["Ctrl", "\u2013"], description: "Zoom out" },
+      { keys: ["Ctrl", "0"], description: "Fit view" },
+    ],
+  },
+  {
+    title: "Editing",
+    items: [
+      { keys: ["Del"], description: "Delete selected" },
+      { keys: ["Ctrl", "Z"], description: "Undo" },
+      { keys: ["Ctrl", "Shift", "Z"], description: "Redo" },
+      { keys: ["Ctrl", "S"], description: "Save workflow" },
     ],
   },
 ];
@@ -52,6 +62,8 @@ function KeyBadge({ children }: { children: React.ReactNode }) {
 }
 
 export function HotkeysIsland() {
+  const { viewMode } = useCreate();
+
   const [isCollapsed, setIsCollapsed] = React.useState(() => {
     if (typeof window === "undefined") return true;
     const saved = localStorage.getItem(HOTKEYS_COLLAPSED_KEY);
@@ -66,8 +78,11 @@ export function HotkeysIsland() {
     });
   }, []);
 
+  // Only show in workflow mode
+  if (viewMode !== "workflow") return null;
+
   return (
-    <div className="fixed bottom-4 right-4 z-[100] pointer-events-auto">
+    <div className="fixed bottom-4 right-4 z-20 pointer-events-auto">
       <div
         className={cn(
           "bg-background/95 backdrop-blur-sm border border-border rounded-xl shadow-lg",
@@ -103,7 +118,7 @@ export function HotkeysIsland() {
           )}
         >
           <div className="px-3 pb-3 space-y-3">
-            {HOTKEY_SECTIONS.map((section) => (
+            {WORKFLOW_HOTKEY_SECTIONS.map((section) => (
               <div key={section.title}>
                 <h3 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
                   {section.title}

@@ -29,6 +29,7 @@ const DEFAULT_ITEMS: DockItem[] = [
     { id: 'create', label: 'Create', icon: 'Sparkles', href: '/create', order: 1, is_visible: true, created_at: '', updated_at: '', bg_color: 'bg-gradient-to-br from-[#5856D6] to-[#AF52DE]', text_color: 'text-white' },
     { id: 'labs', label: 'Labs', icon: 'FlaskConical', href: '/labs', order: 2, is_visible: true, created_at: '', updated_at: '', bg_color: 'bg-gradient-to-br from-orange-400 to-orange-600', text_color: 'text-white' },
     { id: 'tools', label: 'Tools', icon: 'Hammer', href: '/tools', dropdown_items: [{ label: 'X Multi-Image', href: '/tools/x-multi-image-preview-and-split', icon: 'Sparkles' }], order: 3, is_visible: true, created_at: '', updated_at: '', bg_color: 'bg-zinc-100 dark:bg-zinc-800', text_color: 'text-zinc-900 dark:text-zinc-100' },
+    { id: 'assets', label: 'Assets', icon: 'Images', href: '/assets', order: 4, is_visible: true, created_at: '', updated_at: '', bg_color: 'bg-gradient-to-br from-emerald-400 to-emerald-600', text_color: 'text-white' },
 ];
 
 interface UserProfile {
@@ -77,7 +78,7 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
     const pathname = usePathname();
     const router = useRouter();
     const { theme, setTheme } = useTheme();
-    const { isInputVisible, toggleInputVisibility, setActiveTab } = useCreate();
+    const { isInputVisible, toggleInputVisibility, setActiveTab, dockCollapsed, setDockCollapsed } = useCreate();
     const [profile, setProfile] = React.useState<UserProfile | null>(null);
     const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null);
     const [items, setItems] = React.useState<DockItem[]>(DEFAULT_ITEMS);
@@ -177,12 +178,38 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
     // Hide dock on create page during input boards, or for logged out users/loading
     if ((isInputVisible && isCreatePage) || !isAuthenticated) return null;
 
+    // Collapsed dock on create page — show minimal expand button
+    if (isCreatePage && dockCollapsed) {
+        return (
+            <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="pointer-events-auto"
+            >
+                <button
+                    type="button"
+                    onClick={() => setDockCollapsed(false)}
+                    className={cn(
+                        "flex items-center justify-center w-10 h-10 rounded-xl border shadow-lg transition-all duration-200",
+                        "hover:scale-105 hover:shadow-xl active:scale-95",
+                        isDockDark
+                            ? "bg-zinc-900/80 backdrop-blur-xl border-zinc-700/50 text-zinc-400 hover:text-zinc-200"
+                            : "bg-white/80 backdrop-blur-xl border-zinc-200/50 text-zinc-500 hover:text-zinc-900"
+                    )}
+                    aria-label="Expand dock"
+                >
+                    <LucideIcons.ChevronsRight className="size-4" strokeWidth={1.5} />
+                </button>
+            </motion.div>
+        );
+    }
+
     const onDragStart = () => setIsDragging(true);
     const onDragEnd = () => setTimeout(() => setIsDragging(false), 100);
 
     const containerClass = isDockDark
-        ? "bg-zinc-900 border-zinc-700/50"
-        : "bg-white border-zinc-200/50";
+        ? "bg-zinc-900/80 backdrop-blur-xl border-zinc-700/50"
+        : "bg-white/80 backdrop-blur-xl border-zinc-200/50";
 
     const displayName = profile?.name || profile?.username || 'User';
     const avatarUrl = profile?.avatar_url;
@@ -483,6 +510,24 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
                         </DropdownMenu>
                     </div>
                 </div>
+
+                {/* Collapse button — only on Create page */}
+                {isCreatePage && vertical && (
+                    <button
+                        type="button"
+                        onClick={() => setDockCollapsed(true)}
+                        className={cn(
+                            "flex items-center justify-center w-10 h-7 rounded-xl border shadow-md transition-all duration-200",
+                            "hover:scale-105 active:scale-95",
+                            isDockDark
+                                ? "bg-zinc-900/80 backdrop-blur-xl border-zinc-700/50 text-zinc-400 hover:text-zinc-200"
+                                : "bg-white/80 backdrop-blur-xl border-zinc-200/50 text-zinc-500 hover:text-zinc-900"
+                        )}
+                        aria-label="Collapse dock"
+                    >
+                        <LucideIcons.ChevronsLeft className="size-4" strokeWidth={1.5} />
+                    </button>
+                )}
             </div>
         </motion.div>
     );

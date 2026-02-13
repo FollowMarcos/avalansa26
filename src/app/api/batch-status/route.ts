@@ -118,7 +118,7 @@ export async function GET(request: NextRequest): Promise<NextResponse<BatchStatu
   } catch (error) {
     console.error('Batch status error:', error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Failed to get batch status' },
+      { success: false, error: 'Failed to get batch status' },
       { status: 500 }
     );
   }

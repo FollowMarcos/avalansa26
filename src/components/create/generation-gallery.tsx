@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useCreate, type GeneratedImage } from "./create-context";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Loader } from "@/components/ui/loader";
 import { Sparkles, ImageIcon } from "lucide-react";
@@ -100,6 +101,7 @@ export function GenerationGallery() {
     galleryColumnCount: columnCount,
     gallerySidebarOpen: sidebarOpen,
     setGallerySidebarOpen,
+    dockCollapsed,
   } = useCreate();
 
   // Local UI state
@@ -394,7 +396,7 @@ export function GenerationGallery() {
 
   return (
     <TooltipProvider delayDuration={400}>
-      <div className="flex-1 flex flex-col min-h-0 bg-background pl-20">
+      <div className={cn("flex-1 flex flex-col min-h-0 bg-background transition-[padding] duration-200", dockCollapsed ? "pl-4" : "pl-20")}>
         {/* Main content area with optional sidebar */}
         <div className="flex-1 flex min-h-0">
           {/* Collection sidebar */}

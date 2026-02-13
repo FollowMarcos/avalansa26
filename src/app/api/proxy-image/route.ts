@@ -25,6 +25,14 @@ export async function GET(request: NextRequest) {
     // Validate URL is from allowed domains (our storage or known image hosts)
     const url = new URL(imageUrl);
 
+    // Only allow HTTPS (block file://, ftp://, data:, etc.)
+    if (url.protocol !== 'https:') {
+      return NextResponse.json(
+        { error: 'Only HTTPS URLs are allowed' },
+        { status: 400 }
+      );
+    }
+
     // Strict domain allowlist - only Supabase storage and known image CDNs
     const allowedDomains = [
       'supabase.co',
