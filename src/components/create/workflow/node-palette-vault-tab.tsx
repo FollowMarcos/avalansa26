@@ -104,7 +104,7 @@ export function VaultTab({
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder={isAvasView ? 'Search Avas\u2026' : 'Search prompts\u2026'}
             aria-label={isAvasView ? 'Search Avas' : 'Search prompts'}
-            className="w-full pl-7 pr-7 py-1.5 rounded-md border border-border bg-muted/30 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+            className="w-full pl-7 pr-7 py-1.5 rounded-md border border-border bg-muted/30 text-xs placeholder:text-muted-foreground/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
           {searchQuery && (
             <button

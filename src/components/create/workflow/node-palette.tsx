@@ -204,13 +204,13 @@ export function NodePalette({ className, vault, workflows }: NodePaletteProps) {
         >
           <div className="px-3 py-2 border-b border-border/50">
             <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" aria-hidden="true" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search nodes\u2026"
-                className="w-full pl-7 pr-2 py-1.5 rounded-md border border-border bg-muted/30 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+                placeholder={"Search nodes\u2026"}
+                className="w-full pl-7 pr-2 py-1.5 rounded-md border border-border bg-muted/30 text-xs placeholder:text-muted-foreground/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 aria-label="Search workflow nodes"
               />
             </div>
@@ -231,9 +231,9 @@ export function NodePalette({ className, vault, workflows }: NodePaletteProps) {
                     aria-expanded={!isCollapsed}
                   >
                     {isCollapsed ? (
-                      <ChevronRight className="size-3" />
+                      <ChevronRight className="size-3" aria-hidden="true" />
                     ) : (
-                      <ChevronDown className="size-3" />
+                      <ChevronDown className="size-3" aria-hidden="true" />
                     )}
                     {CATEGORY_LABELS[cat]}
                   </button>
@@ -253,7 +253,7 @@ export function NodePalette({ className, vault, workflows }: NodePaletteProps) {
                           )}
                           title={def.description}
                         >
-                          <GripVertical className="size-3 text-muted-foreground/40 flex-shrink-0" />
+                          <GripVertical className="size-3 text-muted-foreground/40 flex-shrink-0" aria-hidden="true" />
                           <div className="text-muted-foreground flex-shrink-0">
                             {ICON_MAP[def.icon] ?? (
                               <Settings className="size-4" />

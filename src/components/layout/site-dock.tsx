@@ -19,6 +19,12 @@ import {
 import type { DockIconPosition, UserRole, DockItem, DockDropdownItem } from "@/types/database";
 import { getDockPreferences, saveDockPreferences } from "@/utils/supabase/dock-preferences.client";
 import { getDockItems } from "@/utils/supabase/dock-items.client";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useTheme } from "next-themes";
 import { PortugalTopo } from "./portugal-topo";
 import { DefaultAvatar } from "@/components/ui/default-avatar";
@@ -265,6 +271,7 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
                     containerClass
                 )}>
                     <PortugalTopo dark={isDockDark} className="opacity-50 rounded-2xl pointer-events-none" />
+                    <TooltipProvider delayDuration={300}>
                     <Reorder.Group
                         axis={vertical ? "y" : "x"}
                         values={items}
@@ -288,21 +295,26 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
                                     >
                                         <div className="relative group/create">
                                             <div className="absolute -inset-1 bg-gradient-to-br from-[#5856D6] to-[#AF52DE] blur-lg opacity-0 group-hover/create:opacity-60 transition-opacity rounded-xl pointer-events-none" />
-                                            <button
-                                                onClick={() => {
-                                                    if (isDragging) return;
-                                                    if (isCreatePage) {
-                                                        toggleInputVisibility();
-                                                    } else {
-                                                        setActiveTab("create");
-                                                        router.push('/create');
-                                                    }
-                                                }}
-                                                className={cn(getItemStyle(item), "cursor-pointer")}
-                                                aria-label={item.label}
-                                            >
-                                                <IconComponent name={item.icon} className={cn("w-5 h-5 pointer-events-none", item.text_color || "text-white")} strokeWidth={1.5} aria-hidden="true" />
-                                            </button>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <button
+                                                        onClick={() => {
+                                                            if (isDragging) return;
+                                                            if (isCreatePage) {
+                                                                toggleInputVisibility();
+                                                            } else {
+                                                                setActiveTab("create");
+                                                                router.push('/create');
+                                                            }
+                                                        }}
+                                                        className={cn(getItemStyle(item), "cursor-pointer")}
+                                                        aria-label={item.label}
+                                                    >
+                                                        <IconComponent name={item.icon} className={cn("w-5 h-5 pointer-events-none", item.text_color || "text-white")} strokeWidth={1.5} aria-hidden="true" />
+                                                    </button>
+                                                </TooltipTrigger>
+                                                <TooltipContent side={vertical ? "right" : "top"} sideOffset={8}>{item.label}</TooltipContent>
+                                            </Tooltip>
                                         </div>
                                     </DraggableIcon>
                                 );
@@ -319,14 +331,19 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
                                         onDragEnd={onDragEnd}
                                     >
                                         <DropdownMenu>
-                                            <DropdownMenuTrigger asChild disabled={isDragging}>
-                                                <button
-                                                    className={cn(getItemStyle(item), "cursor-pointer")}
-                                                    aria-label={item.label}
-                                                >
-                                                    <IconComponent name={item.icon} className={cn("w-5 h-5 pointer-events-none", item.text_color || "text-white")} strokeWidth={1.5} aria-hidden="true" />
-                                                </button>
-                                            </DropdownMenuTrigger>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <DropdownMenuTrigger asChild disabled={isDragging}>
+                                                        <button
+                                                            className={cn(getItemStyle(item), "cursor-pointer")}
+                                                            aria-label={item.label}
+                                                        >
+                                                            <IconComponent name={item.icon} className={cn("w-5 h-5 pointer-events-none", item.text_color || "text-white")} strokeWidth={1.5} aria-hidden="true" />
+                                                        </button>
+                                                    </DropdownMenuTrigger>
+                                                </TooltipTrigger>
+                                                <TooltipContent side={vertical ? "right" : "top"} sideOffset={8}>{item.label}</TooltipContent>
+                                            </Tooltip>
                                             <DropdownMenuContent
                                                 side={vertical ? "right" : "top"}
                                                 align="center"
@@ -365,17 +382,23 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
                                     onDragStart={onDragStart}
                                     onDragEnd={onDragEnd}
                                 >
-                                    <button
-                                        onClick={() => handleNavigation(item.href || '/')}
-                                        className={cn(getItemStyle(item), "cursor-pointer")}
-                                        aria-label={item.label}
-                                    >
-                                        <IconComponent name={item.icon} className={cn("w-5 h-5 pointer-events-none", item.text_color || "text-white")} strokeWidth={1.5} aria-hidden="true" />
-                                    </button>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button
+                                                onClick={() => handleNavigation(item.href || '/')}
+                                                className={cn(getItemStyle(item), "cursor-pointer")}
+                                                aria-label={item.label}
+                                            >
+                                                <IconComponent name={item.icon} className={cn("w-5 h-5 pointer-events-none", item.text_color || "text-white")} strokeWidth={1.5} aria-hidden="true" />
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side={vertical ? "right" : "top"} sideOffset={8}>{item.label}</TooltipContent>
+                                    </Tooltip>
                                 </DraggableIcon>
                             );
                         })}
                     </Reorder.Group>
+                    </TooltipProvider>
                 </div>
 
                 {/* User Section */}
