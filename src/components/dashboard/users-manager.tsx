@@ -250,6 +250,7 @@ export function UsersManager({
                         <Button
                           variant="ghost"
                           size="icon"
+                          aria-label="Actions"
                           className="h-8 w-8 text-muted-foreground hover:text-foreground"
                         >
                           <MoreHorizontal className="w-4 h-4" />

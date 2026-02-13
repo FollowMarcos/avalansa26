@@ -70,10 +70,14 @@ export function PromptCard({
       animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
       whileHover={prefersReducedMotion ? undefined : { scale: 1.01 }}
       transition={{ duration: 0.15 }}
+      role="button"
+      tabIndex={0}
       onClick={() => onSelect?.(prompt)}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onSelect?.(prompt); } }}
       className={cn(
         "group relative rounded-xl border bg-card p-3 cursor-pointer transition-colors",
         "hover:border-foreground/20 hover:bg-accent/50",
+        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
         isSelected && "ring-2 ring-primary border-primary"
       )}
     >

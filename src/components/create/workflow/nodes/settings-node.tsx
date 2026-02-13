@@ -73,7 +73,7 @@ export function SettingsNode({ data, id, selected }: SettingsNodeProps) {
             onChange={(e) =>
               update('apiId', e.target.value || null)
             }
-            className="flex-1 rounded-md border border-border bg-muted/30 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring truncate"
+            className="flex-1 rounded-md border border-border bg-muted/30 px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring truncate"
             aria-label="API provider"
           >
             <option value="">Default</option>
@@ -95,7 +95,7 @@ export function SettingsNode({ data, id, selected }: SettingsNodeProps) {
             onChange={(e) =>
               update('aspectRatio', e.target.value)
             }
-            className="flex-1 rounded-md border border-border bg-muted/30 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+            className="flex-1 rounded-md border border-border bg-muted/30 px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             aria-label="Aspect ratio"
           >
             {ASPECT_RATIOS.map((r) => (
@@ -114,7 +114,7 @@ export function SettingsNode({ data, id, selected }: SettingsNodeProps) {
             onChange={(e) =>
               update('imageSize', e.target.value)
             }
-            className="flex-1 rounded-md border border-border bg-muted/30 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+            className="flex-1 rounded-md border border-border bg-muted/30 px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             aria-label="Image size"
           >
             {IMAGE_SIZES.map((s) => (
@@ -136,7 +136,7 @@ export function SettingsNode({ data, id, selected }: SettingsNodeProps) {
             onChange={(e) =>
               update('outputCount', Math.max(1, Math.min(4, Number(e.target.value))))
             }
-            className="flex-1 rounded-md border border-border bg-muted/30 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+            className="flex-1 rounded-md border border-border bg-muted/30 px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             aria-label="Output count"
           />
         </div>

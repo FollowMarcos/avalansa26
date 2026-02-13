@@ -191,7 +191,7 @@ export default function SettingsPage() {
                                     <TabsTrigger
                                         key={item.id}
                                         value={item.id}
-                                        className="w-full justify-start gap-3 px-4 py-3 rounded-xl data-[state=active]:bg-primary/5 data-[state=active]:text-primary transition-all duration-300 font-lato"
+                                        className="w-full justify-start gap-3 px-4 py-3 rounded-xl data-[state=active]:bg-primary/5 data-[state=active]:text-primary transition-colors duration-300 font-lato"
                                     >
                                         <item.icon className="h-4 w-4" />
                                         {item.label}
@@ -228,7 +228,7 @@ export default function SettingsPage() {
                                                 <Input
                                                     id="display-name"
                                                     placeholder="Your name"
-                                                    className="rounded-xl bg-primary/[0.02] border-primary/10 focus:bg-background transition-all h-12"
+                                                    className="rounded-xl bg-primary/[0.02] border-primary/10 focus:bg-background transition-colors h-12"
                                                     value={displayName}
                                                     onChange={(e) => setDisplayName(e.target.value)}
                                                 />
@@ -238,7 +238,7 @@ export default function SettingsPage() {
                                                 <Label htmlFor="username" className="font-lato font-semibold text-xs uppercase tracking-wider text-muted-foreground">Username</Label>
                                                 <div className="flex items-center">
                                                     <span className="px-3 py-2 bg-muted/50 border border-r-0 rounded-l-xl text-muted-foreground font-mono text-sm h-12 flex items-center">u/</span>
-                                                    <Input id="username" placeholder="username" className="rounded-l-none rounded-r-xl bg-primary/[0.02] border-primary/10 focus:bg-background transition-all h-12" defaultValue={profile?.username || usernameFromUrl} disabled aria-describedby="username-hint" spellCheck={false} />
+                                                    <Input id="username" placeholder="username" className="rounded-l-none rounded-r-xl bg-primary/[0.02] border-primary/10 focus:bg-background transition-colors h-12" defaultValue={profile?.username || usernameFromUrl} disabled aria-describedby="username-hint" spellCheck={false} />
                                                 </div>
                                                 <p id="username-hint" className="text-[11px] text-muted-foreground font-lato italic text-pretty">Your public profile will be at avalansa.com/u/{profile?.username || usernameFromUrl}</p>
                                             </div>
@@ -248,7 +248,7 @@ export default function SettingsPage() {
                                                 <Textarea
                                                     id="bio"
                                                     placeholder="Tell the world about your creative space..."
-                                                    className="rounded-xl bg-primary/[0.02] border-primary/10 focus:bg-background transition-all min-h-[120px] resize-none"
+                                                    className="rounded-xl bg-primary/[0.02] border-primary/10 focus:bg-background transition-colors min-h-[120px] resize-none"
                                                     value={userBio}
                                                     onChange={(e) => setUserBio(e.target.value.slice(0, 160))}
                                                     aria-describedby="bio-counter"
@@ -263,7 +263,7 @@ export default function SettingsPage() {
                                                     type="url"
                                                     placeholder="https://..."
                                                     className={cn(
-                                                        "rounded-xl bg-primary/[0.02] border-primary/10 focus:bg-background transition-all h-12",
+                                                        "rounded-xl bg-primary/[0.02] border-primary/10 focus:bg-background transition-colors h-12",
                                                         websiteError && "border-destructive ring-destructive/20 focus:border-destructive"
                                                     )}
                                                     value={website}
@@ -290,7 +290,7 @@ export default function SettingsPage() {
                                                 <RadioGroupItem value="public" id="public" className="peer sr-only" />
                                                 <Label
                                                     htmlFor="public"
-                                                    className="flex flex-col items-start justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary transition-all cursor-pointer"
+                                                    className="flex flex-col items-start justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary transition-colors cursor-pointer"
                                                 >
                                                     <div className="flex w-full items-center justify-between">
                                                         <div className="flex items-center gap-2">
@@ -309,7 +309,7 @@ export default function SettingsPage() {
                                                 <RadioGroupItem value="authenticated" id="authenticated" className="peer sr-only" />
                                                 <Label
                                                     htmlFor="authenticated"
-                                                    className="flex flex-col items-start justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary transition-all cursor-pointer"
+                                                    className="flex flex-col items-start justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary transition-colors cursor-pointer"
                                                 >
                                                     <div className="flex w-full items-center justify-between">
                                                         <div className="flex items-center gap-2">
@@ -328,7 +328,7 @@ export default function SettingsPage() {
                                                 <RadioGroupItem value="stealth" id="stealth" className="peer sr-only" />
                                                 <Label
                                                     htmlFor="stealth"
-                                                    className="flex flex-col items-start justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary transition-all cursor-pointer"
+                                                    className="flex flex-col items-start justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary transition-colors cursor-pointer"
                                                 >
                                                     <div className="flex w-full items-center justify-between">
                                                         <div className="flex items-center gap-2">
@@ -347,7 +347,7 @@ export default function SettingsPage() {
                                                 <RadioGroupItem value="restricted" id="restricted" className="peer sr-only" />
                                                 <Label
                                                     htmlFor="restricted"
-                                                    className="flex flex-col items-start justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary transition-all cursor-pointer"
+                                                    className="flex flex-col items-start justify-between rounded-xl border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary transition-colors cursor-pointer"
                                                 >
                                                     <div className="flex w-full items-center justify-between">
                                                         <div className="flex items-center gap-2">
@@ -446,7 +446,7 @@ export default function SettingsPage() {
                                             <button
                                                 onClick={() => setTheme("light")}
                                                 className={cn(
-                                                    "group relative aspect-video rounded-2xl border-2 overflow-hidden transition-all",
+                                                    "group relative aspect-video rounded-2xl border-2 overflow-hidden transition-colors",
                                                     theme === "light" ? "border-primary" : "border-transparent hover:border-primary/20"
                                                 )}
                                             >
@@ -464,7 +464,7 @@ export default function SettingsPage() {
                                             <button
                                                 onClick={() => setTheme("dark")}
                                                 className={cn(
-                                                    "group relative aspect-video rounded-2xl border-2 overflow-hidden transition-all",
+                                                    "group relative aspect-video rounded-2xl border-2 overflow-hidden transition-colors",
                                                     theme === "dark" ? "border-primary" : "border-transparent hover:border-primary/20"
                                                 )}
                                             >
@@ -482,7 +482,7 @@ export default function SettingsPage() {
                                             <button
                                                 onClick={() => setTheme("system")}
                                                 className={cn(
-                                                    "group relative aspect-video rounded-2xl border-2 overflow-hidden transition-all",
+                                                    "group relative aspect-video rounded-2xl border-2 overflow-hidden transition-colors",
                                                     theme === "system" ? "border-primary" : "border-transparent hover:border-primary/20"
                                                 )}
                                             >

@@ -180,6 +180,7 @@ export function SharePromptDialog({
                     {user.username || "Unknown"}
                     <button
                       onClick={() => handleRemoveUser(user.id)}
+                      aria-label={`Remove ${user.username || "user"}`}
                       className="size-5 rounded-full hover:bg-foreground/10 flex items-center justify-center ml-0.5"
                     >
                       <X className="size-3" />

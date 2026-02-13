@@ -355,7 +355,7 @@ export function CollageComposerNode({ data, id, selected }: CollageComposerNodeP
             <select
               value={aspectRatio}
               onChange={(e) => update('aspectRatio', e.target.value)}
-              className="flex-1 text-[10px] rounded border border-border bg-muted/30 px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-ring"
+              className="flex-1 text-[10px] rounded border border-border bg-muted/30 px-1.5 py-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               aria-label="Aspect ratio"
             >
               {ASPECT_RATIOS.map((r) => (

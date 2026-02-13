@@ -218,7 +218,7 @@ export default function Profile3Page() {
                 >
                   [S] SHARE
                 </button>
-                <button className="text-sm border border-primary/20 bg-primary/[0.05] text-primary/60 hover:bg-primary/[0.12] hover:text-primary transition-colors px-4 py-1.5">
+                <button disabled className="text-sm border border-primary/20 bg-primary/[0.05] text-primary/60 hover:bg-primary/[0.12] hover:text-primary transition-colors px-4 py-1.5">
                   [M] MESSAGE
                 </button>
               </div>

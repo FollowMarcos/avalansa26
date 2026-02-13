@@ -26,7 +26,7 @@ export default async function OnboardingLayout({
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+    <div className="min-h-dvh flex flex-col items-center justify-center bg-background">
       <div className="w-full max-w-md mx-auto px-4">
         <OnboardingProgress />
         <main className="mt-8">{children}</main>

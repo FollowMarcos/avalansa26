@@ -148,7 +148,7 @@ export function BaseWorkflowNode({
                   e.stopPropagation();
                   disconnectAll(id);
                 }}
-                className="opacity-0 group-hover/node:opacity-100 transition-opacity size-5 rounded flex items-center justify-center hover:bg-destructive/20 text-muted-foreground hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring focus-visible:opacity-100 nodrag"
+                className="opacity-0 group-hover/node:opacity-100 group-focus-within/node:opacity-100 transition-opacity size-5 rounded flex items-center justify-center hover:bg-destructive/20 text-muted-foreground hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring focus-visible:opacity-100 nodrag"
                 aria-label="Clear all connections"
               >
                 <Unplug className="size-3" aria-hidden="true" />
@@ -170,7 +170,7 @@ export function BaseWorkflowNode({
                     }),
                   );
                 }}
-                className="opacity-0 group-hover/node:opacity-100 transition-opacity size-5 rounded flex items-center justify-center hover:bg-primary/20 text-muted-foreground hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:opacity-100 nodrag"
+                className="opacity-0 group-hover/node:opacity-100 group-focus-within/node:opacity-100 transition-opacity size-5 rounded flex items-center justify-center hover:bg-primary/20 text-muted-foreground hover:text-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:opacity-100 nodrag"
                 aria-label="Run this node"
               >
                 <Play className="size-3" aria-hidden="true" />
@@ -212,7 +212,7 @@ export function BaseWorkflowNode({
                       e.stopPropagation();
                       disconnectHandle(id, handleId);
                     }}
-                    className="opacity-0 group-hover/handle:opacity-100 transition-opacity size-3.5 rounded-sm flex items-center justify-center hover:bg-destructive/20 text-muted-foreground hover:text-destructive focus-visible:ring-1 focus-visible:ring-ring focus-visible:opacity-100 nodrag"
+                    className="opacity-0 group-hover/handle:opacity-100 group-focus-within/handle:opacity-100 transition-opacity size-3.5 rounded-sm flex items-center justify-center hover:bg-destructive/20 text-muted-foreground hover:text-destructive focus-visible:ring-1 focus-visible:ring-ring focus-visible:opacity-100 nodrag"
                     aria-label={`Disconnect ${socket.label}`}
                   >
                     <X className="size-2.5" aria-hidden="true" />
@@ -257,7 +257,7 @@ export function BaseWorkflowNode({
                       e.stopPropagation();
                       disconnectHandle(id, handleId);
                     }}
-                    className="opacity-0 group-hover/handle:opacity-100 transition-opacity size-3.5 rounded-sm flex items-center justify-center hover:bg-destructive/20 text-muted-foreground hover:text-destructive focus-visible:ring-1 focus-visible:ring-ring focus-visible:opacity-100 nodrag"
+                    className="opacity-0 group-hover/handle:opacity-100 group-focus-within/handle:opacity-100 transition-opacity size-3.5 rounded-sm flex items-center justify-center hover:bg-destructive/20 text-muted-foreground hover:text-destructive focus-visible:ring-1 focus-visible:ring-ring focus-visible:opacity-100 nodrag"
                     aria-label={`Disconnect ${socket.label}`}
                   >
                     <X className="size-2.5" aria-hidden="true" />

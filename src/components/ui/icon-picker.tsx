@@ -233,7 +233,7 @@ export function IconPicker({ value, onChange, className }: IconPickerProps) {
                   setSearch('');
                 }}
                 className={cn(
-                  'flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-all',
+                  'flex-1 px-2 py-1.5 text-xs font-medium rounded-md transition-colors',
                   library === lib.id
                     ? 'bg-background shadow text-foreground'
                     : 'text-muted-foreground hover:text-foreground'
@@ -273,7 +273,7 @@ export function IconPicker({ value, onChange, className }: IconPickerProps) {
                       onClick={() => handleSelect(iconName)}
                       title={iconName}
                       className={cn(
-                        'flex items-center justify-center w-10 h-10 rounded-lg transition-all',
+                        'flex items-center justify-center w-10 h-10 rounded-lg transition-colors',
                         'hover:bg-muted hover:scale-110',
                         'focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1',
                         isSelected && 'bg-primary/10 ring-2 ring-primary text-primary'

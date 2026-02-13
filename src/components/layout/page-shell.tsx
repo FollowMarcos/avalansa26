@@ -20,7 +20,7 @@ export function PageShell({ children, className, contentClassName, showDock = tr
 
     return (
         <CreateProvider>
-            <div className={cn("relative min-h-screen bg-background text-foreground flex flex-col antialiased", className)}>
+            <div className={cn("relative min-h-dvh bg-background text-foreground flex flex-col antialiased", className)}>
                 {/* Analog Grain Texture */}
                 <div className="fixed inset-0 pointer-events-none z-[100] opacity-[0.03] mix-blend-multiply bg-noise dark:hidden"></div>
 

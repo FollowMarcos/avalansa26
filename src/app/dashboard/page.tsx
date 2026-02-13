@@ -63,7 +63,7 @@ export default async function DashboardOverviewPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {QUICK_LINKS.map((link) => (
             <Link key={link.href} href={link.href}>
-              <Card className="group h-full border-border/50 bg-card/50 backdrop-blur-sm hover:border-primary/50 hover:bg-card/80 transition-all duration-300 cursor-pointer">
+              <Card className="group h-full border-border/50 bg-card/50 backdrop-blur-sm hover:border-primary/50 hover:bg-card/80 transition-[border-color,background-color,box-shadow] duration-300 cursor-pointer">
                 <CardHeader className="pb-2">
                   <div className="flex items-center justify-between">
                     <div className="p-2 rounded-xl bg-background border border-border group-hover:border-primary/30 transition-colors">

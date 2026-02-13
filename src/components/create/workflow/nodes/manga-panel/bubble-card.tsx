@@ -42,7 +42,7 @@ export function BubbleCard({ bubble, maxPanel, onUpdate, onDelete }: BubbleCardP
         <select
           value={bubble.panelIndex}
           onChange={(e) => set('panelIndex', Number(e.target.value))}
-          className="text-[11px] rounded-md border border-zinc-700 bg-zinc-800 text-zinc-200 px-2 py-1 focus:outline-none focus:ring-1 focus:ring-violet-500"
+          className="text-[11px] rounded-md border border-zinc-700 bg-zinc-800 text-zinc-200 px-2 py-1 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500"
           aria-label="Panel"
         >
           {Array.from({ length: maxPanel + 1 }, (_, i) => (
@@ -79,7 +79,7 @@ export function BubbleCard({ bubble, maxPanel, onUpdate, onDelete }: BubbleCardP
         onChange={(e) => set('text', e.target.value)}
         rows={2}
         placeholder="Type dialogue..."
-        className="w-full text-[11px] rounded-lg border border-zinc-700/60 bg-zinc-900/60 text-zinc-200 placeholder:text-zinc-600 px-2.5 py-1.5 resize-none focus:outline-none focus:ring-1 focus:ring-violet-500"
+        className="w-full text-[11px] rounded-lg border border-zinc-700/60 bg-zinc-900/60 text-zinc-200 placeholder:text-zinc-600 px-2.5 py-1.5 resize-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-violet-500"
         aria-label="Bubble text"
       />
 

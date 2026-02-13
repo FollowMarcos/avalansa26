@@ -341,7 +341,7 @@ export function PromptDetailPage({ promptId, initialPrompt }: PromptDetailPagePr
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-dvh bg-background">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-xl border-b border-border">
           <div className="container max-w-4xl mx-auto px-4 py-4">
@@ -373,6 +373,7 @@ export function PromptDetailPage({ promptId, initialPrompt }: PromptDetailPagePr
                       variant="outline"
                       size="icon"
                       onClick={handleToggleFavorite}
+                      aria-label={prompt.is_favorite ? "Remove from favorites" : "Add to favorites"}
                     >
                       <Heart
                         className={cn(
@@ -394,6 +395,7 @@ export function PromptDetailPage({ promptId, initialPrompt }: PromptDetailPagePr
                         variant="outline"
                         size="icon"
                         onClick={() => setShareDialogOpen(true)}
+                        aria-label="Share prompt"
                       >
                         <Share2 className="size-4" />
                       </Button>
@@ -466,7 +468,8 @@ export function PromptDetailPage({ promptId, initialPrompt }: PromptDetailPagePr
                         {isOwner && (
                           <button
                             onClick={() => handleDeleteImage(image.id)}
-                            className="absolute top-2 right-2 size-8 rounded-full bg-background/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
+                            className="absolute top-2 right-2 size-8 rounded-full bg-background/80 flex items-center justify-center opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
+                            aria-label="Remove image"
                           >
                             <X className="size-4" />
                           </button>
@@ -798,6 +801,7 @@ export function PromptDetailPage({ promptId, initialPrompt }: PromptDetailPagePr
                         <button
                           onClick={() => handleRemoveShareUser(user.id)}
                           className="size-4 rounded-full hover:bg-foreground/10 flex items-center justify-center"
+                          aria-label={`Remove ${user.username || "user"}`}
                         >
                           <X className="size-2.5" />
                         </button>

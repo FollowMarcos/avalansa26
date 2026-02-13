@@ -303,7 +303,7 @@ export default function Profile2Page() {
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-muted-foreground/50 mb-3">Portfolio</p>
               <h2 className="text-4xl sm:text-5xl font-bold tracking-tighter font-lato">Selected Works</h2>
             </div>
-            <Button variant="ghost" className="rounded-full gap-2 text-muted-foreground hover:text-foreground hidden sm:flex">
+            <Button disabled variant="ghost" className="rounded-full gap-2 text-muted-foreground hover:text-foreground hidden sm:flex">
               View Archive
               <ArrowRight className="w-4 h-4" />
             </Button>
@@ -360,7 +360,7 @@ export default function Profile2Page() {
           <p className="text-2xl font-lato tracking-tight">
             Interested in collaborating?
           </p>
-          <Button size="lg" className="rounded-full gap-2 px-10 h-12 text-sm font-semibold">
+          <Button disabled size="lg" className="rounded-full gap-2 px-10 h-12 text-sm font-semibold">
             Get in Touch
             <ArrowRight className="w-4 h-4" />
           </Button>

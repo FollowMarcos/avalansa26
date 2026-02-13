@@ -583,7 +583,7 @@ export function PromptLibraryPage() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-dvh bg-background">
         {/* Header */}
         <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-xl border-b border-border">
           <div className="container max-w-7xl mx-auto px-4 py-4">
@@ -614,6 +614,7 @@ export function PromptLibraryPage() {
                     size="sm"
                     className="h-7 px-2"
                     onClick={() => setViewMode("grid")}
+                    aria-label="Grid view"
                   >
                     <LayoutGrid className="size-4" />
                   </Button>
@@ -622,6 +623,7 @@ export function PromptLibraryPage() {
                     size="sm"
                     className="h-7 px-2"
                     onClick={() => setViewMode("list")}
+                    aria-label="List view"
                   >
                     <List className="size-4" />
                   </Button>
@@ -666,6 +668,7 @@ export function PromptLibraryPage() {
                       size="icon"
                       onClick={() => setSearchQuery("")}
                       className="absolute right-1 top-1/2 -translate-y-1/2 size-7"
+                      aria-label="Clear search"
                     >
                       <X className="size-3.5" />
                     </Button>
@@ -753,6 +756,7 @@ export function PromptLibraryPage() {
                           size="icon"
                           className="size-6"
                           onClick={() => setNewFolderDialogOpen(true)}
+                          aria-label="Create folder"
                         >
                           <Plus className="size-3.5" />
                         </Button>
@@ -944,6 +948,7 @@ export function PromptLibraryPage() {
                           type="button"
                           onClick={() => handleRemoveImage(index)}
                           className="absolute top-0.5 right-0.5 size-4 rounded-full bg-background/80 flex items-center justify-center hover:bg-destructive hover:text-destructive-foreground transition-colors"
+                          aria-label={`Remove image ${index + 1}`}
                         >
                           <X className="size-2.5" />
                         </button>
@@ -1242,6 +1247,7 @@ export function PromptLibraryPage() {
                         <button
                           onClick={() => handleRemoveShareUser(user.id)}
                           className="size-4 rounded-full hover:bg-foreground/10 flex items-center justify-center"
+                          aria-label={`Remove ${user.username || "user"}`}
                         >
                           <X className="size-2.5" />
                         </button>
@@ -1606,6 +1612,7 @@ function PromptLibraryCard({
                 size="icon"
                 className="size-7"
                 onClick={(e) => e.preventDefault()}
+                aria-label="More options"
               >
                 <MoreHorizontal className="size-4" />
               </Button>
@@ -1815,6 +1822,7 @@ function SharedPromptCard({
                   e.preventDefault();
                   onCopy();
                 }}
+                aria-label="Copy prompt"
               >
                 <Copy className="size-3.5" />
               </Button>

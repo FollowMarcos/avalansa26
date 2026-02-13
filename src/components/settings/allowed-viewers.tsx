@@ -161,6 +161,7 @@ export function AllowedViewers({ currentAllowedIds, onChange }: AllowedViewersPr
                                 <span className="max-w-[100px] truncate">{user.username}</span>
                                 <button
                                     onClick={() => removeUser(user.id)}
+                                    aria-label={`Remove ${user.username}`}
                                     className="ml-1 hover:text-destructive transition-colors rounded-full p-0.5"
                                 >
                                     <X className="h-3 w-3" />

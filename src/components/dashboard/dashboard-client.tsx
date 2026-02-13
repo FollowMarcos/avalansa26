@@ -254,7 +254,7 @@ export function DashboardClient({
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: idx * 0.1 }}
           >
-            <Card className="relative overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm group hover:border-primary/50 transition-all duration-300">
+            <Card className="relative overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm group hover:border-primary/50 transition-[border-color,background-color] duration-300">
               <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {stat.label}
@@ -311,7 +311,7 @@ export function DashboardClient({
               <button
                 onClick={() => setActiveTab('users')}
                 className={cn(
-                  "px-4 py-1.5 text-sm font-medium rounded-md transition-all",
+                  "px-4 py-1.5 text-sm font-medium rounded-md transition-[border-color,background-color]",
                   activeTab === 'users' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -320,7 +320,7 @@ export function DashboardClient({
               <button
                 onClick={() => setActiveTab('dock')}
                 className={cn(
-                  "px-4 py-1.5 text-sm font-medium rounded-md transition-all",
+                  "px-4 py-1.5 text-sm font-medium rounded-md transition-[border-color,background-color]",
                   activeTab === 'dock' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -329,7 +329,7 @@ export function DashboardClient({
               <button
                 onClick={() => setActiveTab('apis')}
                 className={cn(
-                  "px-4 py-1.5 text-sm font-medium rounded-md transition-all",
+                  "px-4 py-1.5 text-sm font-medium rounded-md transition-[border-color,background-color]",
                   activeTab === 'apis' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -338,7 +338,7 @@ export function DashboardClient({
               <button
                 onClick={() => setActiveTab('create')}
                 className={cn(
-                  "px-4 py-1.5 text-sm font-medium rounded-md transition-all",
+                  "px-4 py-1.5 text-sm font-medium rounded-md transition-[border-color,background-color]",
                   activeTab === 'create' ? "bg-background shadow text-foreground" : "text-muted-foreground hover:text-foreground"
                 )}
               >
@@ -459,6 +459,7 @@ export function DashboardClient({
                             <Button
                               variant="ghost"
                               size="icon"
+                              aria-label="Actions"
                               className="h-8 w-8 text-muted-foreground hover:text-foreground"
                             >
                               <MoreHorizontal className="w-4 h-4" />

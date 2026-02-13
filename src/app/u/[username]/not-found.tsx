@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 
 export default function ProfileNotFound() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground px-6 relative overflow-hidden selection:bg-primary/10">
+    <div className="flex flex-col items-center justify-center min-h-dvh bg-background text-foreground px-6 relative overflow-hidden selection:bg-primary/10">
       {/* Analog Grain Texture */}
       <div className="fixed inset-0 pointer-events-none z-50 opacity-[0.03] mix-blend-multiply bg-noise"></div>
 

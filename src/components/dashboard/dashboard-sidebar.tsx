@@ -221,7 +221,7 @@ export function DashboardSidebar() {
         animate={{ width: isCollapsed ? 64 : 240 }}
         transition={{ duration: 0.2, ease: 'easeInOut' }}
         className={cn(
-          'hidden lg:flex flex-col fixed left-0 top-0 h-screen z-40',
+          'hidden lg:flex flex-col fixed left-0 top-0 h-dvh z-40',
           'bg-card/95 backdrop-blur-md border-r border-border/50'
         )}
       >
@@ -249,7 +249,7 @@ export function DashboardSidebar() {
               exit={{ x: '-100%' }}
               transition={{ duration: 0.2, ease: 'easeInOut' }}
               className={cn(
-                'lg:hidden flex flex-col fixed left-0 top-0 h-screen w-60 z-50',
+                'lg:hidden flex flex-col fixed left-0 top-0 h-dvh w-60 z-50',
                 'bg-card border-r border-border/50'
               )}
             >

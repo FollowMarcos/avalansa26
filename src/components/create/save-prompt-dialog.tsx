@@ -315,6 +315,7 @@ export function SavePromptDialog({
                           variant="secondary"
                           onClick={handleCreateFolder}
                           disabled={!newFolderName.trim() || isCreatingFolder}
+                          aria-label="Create folder"
                           className="h-8 px-2"
                         >
                           {isCreatingFolder ? (
@@ -351,6 +352,7 @@ export function SavePromptDialog({
                       {folder.name}
                       <button
                         onClick={() => toggleFolder(id)}
+                        aria-label={`Remove folder ${folder.name}`}
                         className="size-4 rounded-full hover:bg-foreground/10 flex items-center justify-center"
                       >
                         <X className="size-2.5" />
@@ -435,6 +437,7 @@ export function SavePromptDialog({
                           variant="secondary"
                           onClick={handleCreateTag}
                           disabled={!newTagName.trim() || isCreatingTag}
+                          aria-label="Create tag"
                           className="h-8 px-2"
                         >
                           {isCreatingTag ? (
@@ -469,6 +472,7 @@ export function SavePromptDialog({
                       {tag.name}
                       <button
                         onClick={() => toggleTag(id)}
+                        aria-label={`Remove tag ${tag.name}`}
                         className="size-4 rounded-full hover:bg-foreground/10 flex items-center justify-center"
                       >
                         <X className="size-2.5" />

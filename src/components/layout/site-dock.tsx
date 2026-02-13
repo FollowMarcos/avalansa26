@@ -196,7 +196,7 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
                     type="button"
                     onClick={() => setDockCollapsed(false)}
                     className={cn(
-                        "flex items-center justify-center w-10 h-10 rounded-xl border shadow-lg transition-all duration-200",
+                        "flex items-center justify-center w-10 h-10 rounded-xl border shadow-lg transition-[transform,box-shadow,opacity] duration-200",
                         "hover:scale-105 hover:shadow-xl active:scale-95",
                         isDockDark
                             ? "bg-zinc-900/80 backdrop-blur-xl border-zinc-700/50 text-zinc-400 hover:text-zinc-200"
@@ -221,7 +221,7 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
     const avatarUrl = profile?.avatar_url;
 
     // Base icon styles
-    const iconBase = "relative flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-200 shadow-md";
+    const iconBase = "relative flex items-center justify-center w-11 h-11 rounded-xl transition-[transform,box-shadow,opacity] duration-200 shadow-md";
     const iconHover = "hover:scale-105 hover:shadow-lg active:scale-95";
 
     // Helper to determine style based on item properties
@@ -252,7 +252,7 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
                 <Link
                     href="/"
                     className={cn(
-                        "relative flex items-center justify-center w-14 h-14 rounded-2xl border shadow-lg overflow-hidden transition-all duration-200",
+                        "relative flex items-center justify-center w-14 h-14 rounded-2xl border shadow-lg overflow-hidden transition-[transform,box-shadow,opacity] duration-200",
                         containerClass,
                         pathname === "/" ? "ring-2 ring-primary/50 scale-105" : "hover:scale-105 hover:shadow-xl active:scale-95"
                     )}
@@ -415,7 +415,7 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
                             <DropdownMenuTrigger asChild>
                                 <button
                                     className={cn(
-                                        "relative z-10 flex items-center justify-center w-11 h-11 rounded-xl transition-all duration-200 overflow-hidden",
+                                        "relative z-10 flex items-center justify-center w-11 h-11 rounded-xl transition-[transform,box-shadow,opacity] duration-200 overflow-hidden",
                                         "ring-2 ring-transparent hover:ring-primary/30",
                                         iconHover
                                     )}
@@ -540,7 +540,7 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
                         type="button"
                         onClick={() => setDockCollapsed(true)}
                         className={cn(
-                            "flex items-center justify-center w-10 h-7 rounded-xl border shadow-md transition-all duration-200",
+                            "flex items-center justify-center w-10 h-7 rounded-xl border shadow-md transition-[transform,box-shadow,opacity] duration-200",
                             "hover:scale-105 active:scale-95",
                             isDockDark
                                 ? "bg-zinc-900/80 backdrop-blur-xl border-zinc-700/50 text-zinc-400 hover:text-zinc-200"

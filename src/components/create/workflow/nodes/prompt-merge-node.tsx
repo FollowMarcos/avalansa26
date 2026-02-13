@@ -93,7 +93,7 @@ export function PromptMergeNode({ data, id, selected }: PromptMergeNodeProps) {
               type="text"
               value={typeof config.separator === 'string' ? config.separator : ', '}
               onChange={(e) => update('separator', e.target.value)}
-              className="flex-1 rounded-md border border-border bg-muted/30 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+              className="flex-1 rounded-md border border-border bg-muted/30 px-2 py-1 text-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               aria-label="Prompt separator"
             />
           </div>
@@ -106,7 +106,7 @@ export function PromptMergeNode({ data, id, selected }: PromptMergeNodeProps) {
               value={typeof config.template === 'string' ? config.template : '{A}, {B}, {C}'}
               onChange={(e) => update('template', e.target.value)}
               rows={2}
-              className="w-full resize-none rounded-md border border-border bg-muted/30 px-2.5 py-1.5 text-xs placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-full resize-none rounded-md border border-border bg-muted/30 px-2.5 py-1.5 text-xs placeholder:text-muted-foreground/50 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               aria-label="Merge template"
             />
           </div>

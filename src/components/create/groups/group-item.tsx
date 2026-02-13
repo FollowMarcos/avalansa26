@@ -213,6 +213,10 @@ export const GroupItem = React.memo(function GroupItem({
         )}
 
         {/* Edit button */}
+        {/* TODO: Keyboard accessibility limitation — these buttons are conditionally rendered
+            based on isTitleHovered state, so they are not in the DOM for keyboard-only users
+            to discover via Tab. A CSS-based approach (opacity-0 + focus-within:opacity-100)
+            would be needed instead of conditional rendering to fix this. */}
         {!isEditing && isTitleHovered && (
           <button
             type="button"

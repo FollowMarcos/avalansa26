@@ -291,7 +291,7 @@ export default function Profile6Page() {
 
                 {/* View all */}
                 <div className="p-6 sm:px-10 lg:px-12 xl:px-16 sm:py-6">
-                  <button className="text-xs font-bold uppercase tracking-[0.2em] font-lato hover:opacity-60 transition-opacity flex items-center gap-2">
+                  <button disabled className="text-xs font-bold uppercase tracking-[0.2em] font-lato hover:opacity-60 transition-opacity flex items-center gap-2">
                     View Complete Archive
                     <ArrowUpRight className="w-3.5 h-3.5" />
                   </button>

@@ -245,7 +245,7 @@ export default function Profile1Page() {
           <BentoCard className="lg:col-span-2 p-6" delay={0.25}>
             <div className="flex items-center justify-between mb-5">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Featured Work</p>
-              <Button variant="ghost" size="sm" className="text-xs rounded-full h-7 gap-1 text-muted-foreground hover:text-primary">
+              <Button disabled variant="ghost" size="sm" className="text-xs rounded-full h-7 gap-1 text-muted-foreground hover:text-primary">
                 View All <ArrowUpRight className="w-3 h-3" />
               </Button>
             </div>
