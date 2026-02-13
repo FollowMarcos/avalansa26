@@ -5,7 +5,7 @@ import { useCreate, type GeneratedImage } from "./create-context";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Loader } from "@/components/ui/loader";
-import { Sparkles, ImageIcon } from "lucide-react";
+import { Sparkles, ImageIcon, ArrowUp } from "lucide-react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BulkActionBar } from "./bulk-action-bar";
 import { ImageDetailModal } from "./image-detail-modal";
@@ -115,7 +115,9 @@ export function GenerationGallery() {
   const filteredHistory = getFilteredHistory();
   const completedImages = filteredHistory.filter((img) => img.status !== "pending" && img.status !== "failed");
   const sentinelRef = React.useRef<HTMLDivElement>(null);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const itemRefs = React.useRef<Map<number, HTMLElement>>(new Map());
+  const [showScrollTop, setShowScrollTop] = React.useState(false);
 
   const pendingCount = history.filter((img) => img.status === "pending").length;
 
@@ -134,6 +136,21 @@ export function GenerationGallery() {
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [hasMoreHistory, isLoadingMoreHistory, loadMoreHistory]);
+
+  // Scroll-to-top visibility
+  React.useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const handleScroll = () => {
+      setShowScrollTop(container.scrollTop > 400);
+    };
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToTop = React.useCallback(() => {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, []);
 
   // Keyboard navigation
   React.useEffect(() => {
@@ -406,7 +423,7 @@ export function GenerationGallery() {
           />
 
           {/* Gallery grid — top padding accounts for floating toolbar */}
-          <div className="flex-1 overflow-auto px-6 pt-16 pb-4">
+          <div ref={scrollContainerRef} className="flex-1 overflow-auto px-6 pt-16 pb-4">
             {filteredHistory.length === 0 && pendingCount === 0 ? (
               /* Empty state */
               <div className="flex flex-col items-center justify-center h-full text-center p-8 max-w-sm mx-auto">
@@ -556,6 +573,28 @@ export function GenerationGallery() {
             )}
           </div>
         </div>
+
+        {/* Scroll to top button */}
+        {showScrollTop && (
+          <button
+            type="button"
+            onClick={scrollToTop}
+            aria-label="Scroll to top"
+            className={cn(
+              "fixed bottom-24 z-40 size-10 rounded-full",
+              "bg-background/95 dark:bg-zinc-900/95 backdrop-blur-xl",
+              "border border-border dark:border-white/10",
+              "shadow-lg dark:shadow-none",
+              "flex items-center justify-center",
+              "text-muted-foreground dark:text-zinc-400 hover:text-foreground dark:hover:text-zinc-200",
+              "transition-colors",
+              "focus-visible:ring-2 focus-visible:ring-ring",
+              dockCollapsed ? "left-6" : "left-24",
+            )}
+          >
+            <ArrowUp className="size-4" strokeWidth={1.5} aria-hidden="true" />
+          </button>
+        )}
 
         {/* Comparison hint */}
         {comparisonA && (

@@ -148,7 +148,12 @@ export function UnifiedToolbar({
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 max-w-[calc(100vw-10rem)]">
         <div className="flex flex-col gap-2">
           {/* Main island */}
-          <div className="flex items-center gap-1.5 rounded-2xl bg-background/95 backdrop-blur-xl border border-border shadow-lg px-2 py-1.5">
+          <div className="relative">
+            {/* Shadow layers for floating effect — matches composer */}
+            <div className="absolute inset-0 translate-y-4 bg-black/20 dark:bg-black/40 rounded-3xl blur-2xl" aria-hidden="true" />
+            <div className="absolute inset-0 translate-y-2 bg-black/10 dark:bg-black/20 rounded-3xl blur-xl" aria-hidden="true" />
+
+          <div className="relative flex items-center gap-1.5 rounded-3xl bg-background/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-border dark:border-white/10 shadow-lg dark:shadow-none px-2 py-1.5">
             {/* --- Gallery: Sidebar + Vault toggles --- */}
             {isGallery && (
               <>
@@ -157,7 +162,7 @@ export function UnifiedToolbar({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-8 rounded-lg"
+                      className="size-8 rounded-lg dark:hover:bg-zinc-800"
                       onClick={() => setGallerySidebarOpen(!gallerySidebarOpen)}
                       aria-label={
                         gallerySidebarOpen
@@ -202,7 +207,7 @@ export function UnifiedToolbar({
                   </Tooltip>
                 )}
 
-                <div className="w-px h-5 bg-border mx-0.5" aria-hidden="true" />
+                <div className="w-px h-5 bg-border dark:bg-zinc-700/50 mx-0.5" aria-hidden="true" />
               </>
             )}
 
@@ -261,13 +266,13 @@ export function UnifiedToolbar({
                   </Tooltip>
                 )}
 
-                <div className="w-px h-5 bg-border mx-0.5" aria-hidden="true" />
+                <div className="w-px h-5 bg-border dark:bg-zinc-700/50 mx-0.5" aria-hidden="true" />
               </>
             )}
 
             {/* --- View Mode Switcher --- */}
             <div
-              className="flex items-center border border-border rounded-lg p-0.5"
+              className="flex items-center border border-border dark:border-zinc-700/50 rounded-lg p-0.5"
               role="group"
               aria-label="View mode"
             >
@@ -281,7 +286,7 @@ export function UnifiedToolbar({
                     aria-pressed={isGallery}
                     className={cn(
                       "size-7 rounded-md",
-                      isGallery && "bg-muted",
+                      isGallery && "bg-muted dark:bg-zinc-700",
                     )}
                   >
                     <LayoutGrid
@@ -303,7 +308,7 @@ export function UnifiedToolbar({
                     aria-pressed={isWorkflow}
                     className={cn(
                       "size-7 rounded-md",
-                      isWorkflow && "bg-muted",
+                      isWorkflow && "bg-muted dark:bg-zinc-700",
                     )}
                   >
                     <GitBranch
@@ -317,7 +322,7 @@ export function UnifiedToolbar({
               </Tooltip>
             </div>
 
-            <div className="w-px h-5 bg-border mx-0.5" aria-hidden="true" />
+            <div className="w-px h-5 bg-border dark:bg-zinc-700/50 mx-0.5" aria-hidden="true" />
 
             {/* --- Gallery-specific tools --- */}
             {isGallery && (
@@ -325,7 +330,7 @@ export function UnifiedToolbar({
                 {/* Search */}
                 <div className="relative min-w-[160px] max-w-[220px]">
                   <Search
-                    className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground"
+                    className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground dark:text-zinc-500"
                     aria-hidden="true"
                   />
                   <Input
@@ -336,7 +341,7 @@ export function UnifiedToolbar({
                     aria-label="Search prompts"
                     value={localSearch}
                     onChange={(e) => handleSearchChange(e.target.value)}
-                    className="pl-8 h-7 text-xs rounded-lg"
+                    className="pl-8 h-7 text-xs rounded-lg bg-muted/50 dark:bg-zinc-800/50 border-transparent hover:border-border dark:hover:border-zinc-700 focus:border-border dark:focus:border-zinc-700 dark:text-zinc-300 dark:placeholder:text-zinc-600"
                   />
                   {localSearch && (
                     <Button
@@ -361,7 +366,7 @@ export function UnifiedToolbar({
                     setSortBy(value as GallerySortOption)
                   }
                 >
-                  <SelectTrigger className="w-[130px] h-7 text-xs rounded-lg">
+                  <SelectTrigger className="w-[130px] h-7 text-xs rounded-lg bg-muted/50 dark:bg-zinc-800/50 border-transparent hover:border-border dark:hover:border-zinc-700 dark:text-zinc-300">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>
@@ -383,7 +388,7 @@ export function UnifiedToolbar({
                     <Button
                       variant={showFavoritesOnly ? "secondary" : "ghost"}
                       size="icon"
-                      className="size-8 rounded-lg"
+                      className="size-8 rounded-lg dark:hover:bg-zinc-800"
                       onClick={() =>
                         setGalleryFilters({
                           showFavoritesOnly: !showFavoritesOnly,
@@ -411,7 +416,7 @@ export function UnifiedToolbar({
                     <Button
                       variant={activeFilterCount > 0 ? "secondary" : "ghost"}
                       size="icon"
-                      className="size-8 rounded-lg relative"
+                      className="size-8 rounded-lg relative dark:hover:bg-zinc-800"
                       aria-label="Filters"
                     >
                       <SlidersHorizontal
@@ -440,7 +445,7 @@ export function UnifiedToolbar({
                           : "ghost"
                       }
                       size="icon"
-                      className="size-8 rounded-lg"
+                      className="size-8 rounded-lg dark:hover:bg-zinc-800"
                       onClick={toggleBulkSelection}
                       aria-label={
                         galleryFilterState.bulkSelection.enabled
@@ -459,7 +464,7 @@ export function UnifiedToolbar({
                 </Tooltip>
 
                 <div
-                  className="w-px h-5 bg-border mx-0.5"
+                  className="w-px h-5 bg-border dark:bg-zinc-700/50 mx-0.5"
                   aria-hidden="true"
                 />
 
@@ -518,7 +523,7 @@ export function UnifiedToolbar({
                 </div>
 
                 {/* Stats */}
-                <div className="flex items-center gap-2 text-[10px] text-muted-foreground tabular-nums ml-1">
+                <div className="flex items-center gap-2 text-[10px] text-muted-foreground dark:text-zinc-500 tabular-nums ml-1">
                   <span className="inline-flex items-center gap-1">
                     <ImageIcon className="size-3" aria-hidden="true" />
                     {totalCount}
@@ -538,6 +543,7 @@ export function UnifiedToolbar({
 
             {/* --- Workflow-specific tools --- */}
             {isWorkflow && <WorkflowTools />}
+          </div>
           </div>
 
           {/* Active filters row (gallery only) */}
@@ -597,8 +603,8 @@ function WorkflowTools() {
               aria-label="Select tool (V)"
               aria-pressed={interactionMode === "select"}
               className={cn(
-                "size-8 rounded-lg",
-                interactionMode === "select" && "bg-muted",
+                "size-8 rounded-lg dark:hover:bg-zinc-800",
+                interactionMode === "select" && "bg-muted dark:bg-zinc-700",
               )}
             >
               <MousePointer2
@@ -620,8 +626,8 @@ function WorkflowTools() {
               aria-label="Hand tool (H)"
               aria-pressed={interactionMode === "hand"}
               className={cn(
-                "size-8 rounded-lg",
-                interactionMode === "hand" && "bg-muted",
+                "size-8 rounded-lg dark:hover:bg-zinc-800",
+                interactionMode === "hand" && "bg-muted dark:bg-zinc-700",
               )}
             >
               <Hand className="size-4" strokeWidth={1.5} aria-hidden="true" />
@@ -631,7 +637,7 @@ function WorkflowTools() {
         </Tooltip>
       </div>
 
-      <div className="w-px h-5 bg-border mx-0.5" aria-hidden="true" />
+      <div className="w-px h-5 bg-border dark:bg-zinc-700/50 mx-0.5" aria-hidden="true" />
 
       {/* Zoom Controls */}
       <div className="flex items-center">
@@ -642,7 +648,7 @@ function WorkflowTools() {
               size="icon"
               onClick={() => zoomOut({ duration: 200 })}
               aria-label="Zoom out"
-              className="size-8 rounded-lg"
+              className="size-8 rounded-lg dark:hover:bg-zinc-800"
             >
               <ZoomOut
                 className="size-4"
@@ -657,7 +663,7 @@ function WorkflowTools() {
         <button
           onClick={() => fitView({ padding: 0.2, duration: 300 })}
           aria-label={`Current zoom ${currentZoom}%, click to fit view`}
-          className="px-2 py-1 min-h-[32px] text-xs tabular-nums text-muted-foreground hover:text-foreground transition-colors min-w-[3rem] text-center rounded focus-visible:ring-2 focus-visible:ring-ring"
+          className="px-2 py-1 min-h-[32px] text-xs tabular-nums text-muted-foreground dark:text-zinc-500 hover:text-foreground dark:hover:text-zinc-300 transition-colors min-w-[3rem] text-center rounded focus-visible:ring-2 focus-visible:ring-ring"
         >
           {currentZoom}%
         </button>
@@ -669,7 +675,7 @@ function WorkflowTools() {
               size="icon"
               onClick={() => zoomIn({ duration: 200 })}
               aria-label="Zoom in"
-              className="size-8 rounded-lg"
+              className="size-8 rounded-lg dark:hover:bg-zinc-800"
             >
               <ZoomIn
                 className="size-4"
@@ -688,7 +694,7 @@ function WorkflowTools() {
               size="icon"
               onClick={() => fitView({ padding: 0.2, duration: 300 })}
               aria-label="Fit view"
-              className="size-8 rounded-lg"
+              className="size-8 rounded-lg dark:hover:bg-zinc-800"
             >
               <Maximize2
                 className="size-4"
@@ -730,7 +736,7 @@ function ActiveFiltersRow({
   return (
     <div className="flex items-center gap-1.5 justify-center flex-wrap">
       {showFavoritesOnly && (
-        <Badge variant="outline" className="gap-1 text-[10px] h-5 px-1.5">
+        <Badge variant="outline" className="gap-1 text-[10px] h-5 px-1.5 dark:border-zinc-700/50 dark:text-zinc-400">
           <Heart
             className="size-2.5 fill-red-500 text-red-500"
             aria-hidden="true"
@@ -748,7 +754,7 @@ function ActiveFiltersRow({
       )}
 
       {galleryFilterState.searchQuery && (
-        <Badge variant="outline" className="gap-1 text-[10px] h-5 px-1.5">
+        <Badge variant="outline" className="gap-1 text-[10px] h-5 px-1.5 dark:border-zinc-700/50 dark:text-zinc-400">
           &ldquo;{galleryFilterState.searchQuery}&rdquo;
           <button
             type="button"
@@ -768,7 +774,7 @@ function ActiveFiltersRow({
         <Badge
           key={ratio}
           variant="outline"
-          className="gap-1 text-[10px] h-5 px-1.5"
+          className="gap-1 text-[10px] h-5 px-1.5 dark:border-zinc-700/50 dark:text-zinc-400"
         >
           {ratio}
           <button
@@ -792,7 +798,7 @@ function ActiveFiltersRow({
         <Badge
           key={size}
           variant="outline"
-          className="gap-1 text-[10px] h-5 px-1.5"
+          className="gap-1 text-[10px] h-5 px-1.5 dark:border-zinc-700/50 dark:text-zinc-400"
         >
           {size}
           <button
@@ -815,7 +821,7 @@ function ActiveFiltersRow({
         <Button
           variant="ghost"
           size="sm"
-          className="h-5 px-1.5 text-[10px] text-muted-foreground hover:text-foreground"
+          className="h-5 px-1.5 text-[10px] text-muted-foreground dark:text-zinc-500 hover:text-foreground dark:hover:text-zinc-300"
           onClick={clearGalleryFilters}
         >
           Clear all
