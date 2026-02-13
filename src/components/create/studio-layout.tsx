@@ -4,6 +4,7 @@ import * as React from "react";
 import { ReactFlowProvider } from "@xyflow/react";
 import { useCreate } from "./create-context";
 import { CanvasViewport } from "./canvas-viewport";
+import { PromptComposer } from "./prompt-composer";
 import { UnifiedToolbar } from "./unified-toolbar";
 import { MaintenanceBanner } from "./maintenance-banner";
 import { PromptVaultIsland } from "./prompt-vault-island";
@@ -101,7 +102,6 @@ export function StudioLayout() {
               onToggleVault={promptVault.toggleVault}
               workflowsOpen={workflowsOpen}
               onToggleWorkflows={toggleWorkflows}
-              onSaveToVault={promptVault.openSaveDialog}
             />
 
             {/* Canvas Viewport — passes workflow canvas when in workflow mode */}
@@ -129,7 +129,10 @@ export function StudioLayout() {
               }
             />
 
-            {/* Prompt composer is now integrated into the UnifiedToolbar top bar (gallery mode) */}
+            {/* Prompt Composer — hidden in workflow mode */}
+            {viewMode !== "workflow" && (
+              <PromptComposer onSaveToVault={promptVault.openSaveDialog} />
+            )}
 
             {/* Workflow-specific UI */}
             {viewMode === "workflow" && <NodePalette />}
