@@ -49,6 +49,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useCreate, type GeneratedImage } from "./create-context";
 import { cn } from "@/lib/utils";
+import { ZoomableImage } from "./zoomable-image";
 import { TagInput } from "./tag-input";
 import { CollectionSelector } from "./collection-selector";
 import { SocialShareMenu } from "./social-share-menu";
@@ -147,6 +148,16 @@ export function ImageDetailModal({
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, hasPrev, hasNext, onNavigate, onClose, isFullscreen]);
+
+  // Scroll-wheel navigation: scroll up = prev, scroll down = next
+  const handleScrollNavigate = React.useCallback(
+    (direction: -1 | 1) => {
+      if (!onNavigate) return;
+      if (direction === -1 && hasPrev) onNavigate("prev");
+      else if (direction === 1 && hasNext) onNavigate("next");
+    },
+    [onNavigate, hasPrev, hasNext],
+  );
 
   if (!image) return null;
 
@@ -354,16 +365,15 @@ export function ImageDetailModal({
           </Button>
         )}
 
-        {/* Image wrapper prevents backdrop close when clicking the image */}
-        <div className="relative w-full h-full p-8" onClick={(e) => e.stopPropagation()}>
-          <Image
-            src={image.url}
-            alt={image.prompt || "Generated image"}
-            fill
-            className="object-contain p-8"
-            unoptimized
-          />
-        </div>
+        {/* Zoomable image — double-click to zoom in/out, drag to pan */}
+        <ZoomableImage
+          src={image.url}
+          alt={image.prompt || "Generated image"}
+          className="w-full h-full p-8"
+          imageClassName="p-8"
+          onSingleClick={() => setIsFullscreen(false)}
+          onScrollNavigate={handleScrollNavigate}
+        />
       </div>
     );
   }
@@ -374,12 +384,13 @@ export function ImageDetailModal({
         <div className="flex flex-col md:flex-row h-full max-h-[90dvh]">
           {/* Image Section */}
           <div className="relative flex-1 min-h-[300px] md:min-h-0 bg-muted flex items-center justify-center group">
-            <Image
+            {/* Zoomable image — double-click to zoom in/out, drag to pan */}
+            <ZoomableImage
               src={image.url}
               alt={image.prompt || "Generated image"}
-              fill
-              className="object-contain p-4"
-              unoptimized
+              className="absolute inset-0"
+              imageClassName="p-4"
+              onScrollNavigate={handleScrollNavigate}
             />
 
             {/* Navigation arrows */}
