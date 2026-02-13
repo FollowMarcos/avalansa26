@@ -26,6 +26,8 @@ import { useCreate } from '../create-context';
 import { cn } from '@/lib/utils';
 import { CanvasContextMenu } from '../canvas-context-menu';
 import { ContextMenuTrigger } from '@/components/ui/context-menu';
+import { Compass } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Ensure all nodes are registered
 import './nodes';
@@ -345,6 +347,23 @@ export function WorkflowCanvas({
               style={{ width: 150, height: 100 }}
             />
           </ReactFlow>
+
+          {/* Fit View button — above MiniMap */}
+          <TooltipProvider delayDuration={300}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  onClick={() => fitView({ padding: 0.2, duration: 300 })}
+                  className="absolute bottom-[7.5rem] left-4 z-10 size-9 rounded-lg bg-background/80 backdrop-blur-sm border border-border shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label="Fit view to all nodes"
+                >
+                  <Compass className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Fit View</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
 
           {/* Group overlay — rendered outside ReactFlow for absolute positioning */}
           <GroupLayer

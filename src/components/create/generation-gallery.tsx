@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { Loader } from "@/components/ui/loader";
 import { Sparkles, ImageIcon } from "lucide-react";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { GalleryToolbar } from "./gallery-toolbar";
 import { BulkActionBar } from "./bulk-action-bar";
 import { ImageDetailModal } from "./image-detail-modal";
 import { GalleryItem, PendingCard, FailedCard } from "./gallery-item";
@@ -22,32 +21,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const COLUMN_COUNT_KEY = "gallery-column-count";
-const SIDEBAR_KEY = "gallery-sidebar-open";
-
-function loadColumnCount(): number {
-  if (typeof window === "undefined") return 4;
-  try {
-    const v = localStorage.getItem(COLUMN_COUNT_KEY);
-    return v ? Math.max(2, Math.min(8, Number(v))) : 4;
-  } catch {
-    return 4;
-  }
-}
-
-function loadSidebarOpen(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    return localStorage.getItem(SIDEBAR_KEY) === "true";
-  } catch {
-    return false;
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Date grouping helpers
@@ -108,12 +81,7 @@ const formatTime = (timestamp: number) => {
 // Main component
 // ---------------------------------------------------------------------------
 
-interface GenerationGalleryProps {
-  vaultOpen?: boolean;
-  onToggleVault?: () => void;
-}
-
-export function GenerationGallery({ vaultOpen, onToggleVault }: GenerationGalleryProps) {
+export function GenerationGallery() {
   const {
     selectedImage,
     addReferenceImageFromUrl,
@@ -129,12 +97,13 @@ export function GenerationGallery({ vaultOpen, onToggleVault }: GenerationGaller
     loadMoreHistory,
     hasMoreHistory,
     isLoadingMoreHistory,
+    galleryColumnCount: columnCount,
+    gallerySidebarOpen: sidebarOpen,
+    setGallerySidebarOpen,
   } = useCreate();
 
   // Local UI state
   const [detailImage, setDetailImage] = React.useState<GeneratedImage | null>(null);
-  const [columnCount, setColumnCount] = React.useState(loadColumnCount);
-  const [sidebarOpen, setSidebarOpen] = React.useState(loadSidebarOpen);
   const [focusedIndex, setFocusedIndex] = React.useState(-1);
   const [comparisonA, setComparisonA] = React.useState<GeneratedImage | null>(null);
   const [comparisonPair, setComparisonPair] = React.useState<[GeneratedImage, GeneratedImage] | null>(null);
@@ -147,20 +116,6 @@ export function GenerationGallery({ vaultOpen, onToggleVault }: GenerationGaller
   const itemRefs = React.useRef<Map<number, HTMLElement>>(new Map());
 
   const pendingCount = history.filter((img) => img.status === "pending").length;
-
-  // Persist column count
-  React.useEffect(() => {
-    try {
-      localStorage.setItem(COLUMN_COUNT_KEY, String(columnCount));
-    } catch {}
-  }, [columnCount]);
-
-  // Persist sidebar state
-  React.useEffect(() => {
-    try {
-      localStorage.setItem(SIDEBAR_KEY, String(sidebarOpen));
-    } catch {}
-  }, [sidebarOpen]);
 
   // Infinite scroll
   React.useEffect(() => {
@@ -421,12 +376,6 @@ export function GenerationGallery({ vaultOpen, onToggleVault }: GenerationGaller
     return groupByDate(filteredHistory);
   }, [filteredHistory, shouldGroupByDate]);
 
-  // Stats
-  const totalCount = history.filter(
-    (img) => img.status !== "pending" && img.status !== "failed",
-  ).length;
-  const favCount = history.filter((img) => img.isFavorite).length;
-
   // Track item refs for keyboard nav
   let globalIndex = 0;
   const setItemRef = (idx: number) => (el: HTMLElement | null) => {
@@ -446,30 +395,16 @@ export function GenerationGallery({ vaultOpen, onToggleVault }: GenerationGaller
   return (
     <TooltipProvider delayDuration={400}>
       <div className="flex-1 flex flex-col min-h-0 bg-background pl-20">
-        {/* Toolbar */}
-        <div className="px-6 py-3 border-b border-border shrink-0">
-          <GalleryToolbar
-            columnCount={columnCount}
-            onColumnCountChange={setColumnCount}
-            totalCount={totalCount}
-            favCount={favCount}
-            sidebarOpen={sidebarOpen}
-            onToggleSidebar={() => setSidebarOpen((s) => !s)}
-            vaultOpen={vaultOpen}
-            onToggleVault={onToggleVault}
-          />
-        </div>
-
         {/* Main content area with optional sidebar */}
         <div className="flex-1 flex min-h-0">
           {/* Collection sidebar */}
           <CollectionSidebar
             open={sidebarOpen}
-            onClose={() => setSidebarOpen(false)}
+            onClose={() => setGallerySidebarOpen(false)}
           />
 
-          {/* Gallery grid */}
-          <div className="flex-1 overflow-auto px-6 py-4">
+          {/* Gallery grid — top padding accounts for floating toolbar */}
+          <div className="flex-1 overflow-auto px-6 pt-16 pb-4">
             {filteredHistory.length === 0 && pendingCount === 0 ? (
               /* Empty state */
               <div className="flex flex-col items-center justify-center h-full text-center p-8 max-w-sm mx-auto">

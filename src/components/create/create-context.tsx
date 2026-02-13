@@ -8,6 +8,12 @@ import { createClient } from "@/utils/supabase/client";
 import type { ReferenceImageWithUrl } from "@/types/reference-image";
 import type { CreateSettings as AdminCreateSettings } from "@/types/create-settings";
 
+/** Check if a string is a valid UUID (database-backed IDs vs temporary local IDs) */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isDbId(id: string): boolean {
+  return UUID_RE.test(id);
+}
+
 // Gemini 3 Pro Image Preview API types
 export type ImageSize = "1K" | "2K" | "4K";
 export type AspectRatio =
@@ -142,6 +148,12 @@ interface CreateContextType {
   setActiveTab: (tab: string) => void;
   interactionMode: InteractionMode;
   setInteractionMode: (mode: InteractionMode) => void;
+
+  // Gallery layout
+  galleryColumnCount: number;
+  setGalleryColumnCount: (count: number) => void;
+  gallerySidebarOpen: boolean;
+  setGallerySidebarOpen: (open: boolean) => void;
 
   // Generation
   isGenerating: boolean;
@@ -349,6 +361,25 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [isLoadingMoreHistory, setIsLoadingMoreHistory] = React.useState(false);
   const [viewMode, setViewMode] = React.useState<"gallery" | "workflow">("gallery");
   const [interactionMode, setInteractionMode] = React.useState<InteractionMode>("select");
+
+  // Gallery layout state (with localStorage persistence)
+  const [galleryColumnCount, setGalleryColumnCount] = React.useState(() => {
+    if (typeof window === "undefined") return 4;
+    const saved = localStorage.getItem("gallery-column-count");
+    return saved ? Math.max(2, Math.min(8, parseInt(saved, 10) || 4)) : 4;
+  });
+  const [gallerySidebarOpen, setGallerySidebarOpen] = React.useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("gallery-sidebar-open") === "true";
+  });
+
+  // Persist gallery layout to localStorage
+  React.useEffect(() => {
+    localStorage.setItem("gallery-column-count", String(galleryColumnCount));
+  }, [galleryColumnCount]);
+  React.useEffect(() => {
+    localStorage.setItem("gallery-sidebar-open", String(gallerySidebarOpen));
+  }, [gallerySidebarOpen]);
   const [historyPanelOpen, setHistoryPanelOpen] = React.useState(true);
   const [isInputVisible, setIsInputVisible] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState("create");
@@ -1582,6 +1613,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       setSelectedImage(prev => prev ? { ...prev, isFavorite: newFavoriteState } : null);
     }
 
+    // Skip server call for local-only images
+    if (!isDbId(imageId)) return;
+
     try {
       const { toggleFavorite: toggleFavoriteServer } = await import("@/utils/supabase/generations.server");
       const success = await toggleFavoriteServer(imageId, newFavoriteState);
@@ -1674,6 +1708,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addToCollectionFn = React.useCallback(async (imageId: string, collectionId: string) => {
+    if (!isDbId(imageId)) return;
     try {
       const { addToCollection } = await import("@/utils/supabase/generations.server");
       const success = await addToCollection(imageId, collectionId);
@@ -1696,6 +1731,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const removeFromCollectionFn = React.useCallback(async (imageId: string, collectionId: string) => {
+    if (!isDbId(imageId)) return;
     try {
       const { removeFromCollection } = await import("@/utils/supabase/generations.server");
       const success = await removeFromCollection(imageId, collectionId);
@@ -1781,6 +1817,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addTagToImageFn = React.useCallback(async (imageId: string, tagId: string) => {
+    if (!isDbId(imageId)) return;
     try {
       const { addTagToGeneration } = await import("@/utils/supabase/generations.server");
       const success = await addTagToGeneration(imageId, tagId);
@@ -1803,6 +1840,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const removeTagFromImageFn = React.useCallback(async (imageId: string, tagId: string) => {
+    if (!isDbId(imageId)) return;
     try {
       const { removeTagFromGeneration } = await import("@/utils/supabase/generations.server");
       const success = await removeTagFromGeneration(imageId, tagId);
@@ -1867,6 +1905,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const loadImageOrganization = React.useCallback(async (imageId: string) => {
     // Skip if already loaded
     if (imageOrganization.has(imageId)) return;
+
+    // Skip DB queries for temporary/local IDs (not valid UUIDs)
+    if (!isDbId(imageId)) return;
 
     try {
       const { getGenerationTags, getGenerationCollections } = await import("@/utils/supabase/generations.server");
@@ -1954,6 +1995,11 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     setActiveTab,
     interactionMode,
     setInteractionMode,
+    // Gallery layout
+    galleryColumnCount,
+    setGalleryColumnCount,
+    gallerySidebarOpen,
+    setGallerySidebarOpen,
     // Generation
     isGenerating,
     thinkingSteps,
@@ -2008,7 +2054,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   }), [
     availableApis, selectedApiId, isLoadingApis, pendingBatchJobs,
     prompt, isPromptExpanded, settings, referenceImages, history, selectedImage,
-    viewMode, historyPanelOpen, isInputVisible, activeTab, interactionMode,
+    viewMode, historyPanelOpen, isInputVisible, activeTab, interactionMode, galleryColumnCount, gallerySidebarOpen,
     isGenerating, thinkingSteps,
     updateSettings, addReferenceImages, addReferenceImageFromUrl, removeReferenceImage, clearReferenceImages,
     savedReferences, loadSavedReferences, removeSavedReference, renameSavedReference, addSavedReferenceToActive,

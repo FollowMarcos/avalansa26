@@ -5,7 +5,7 @@ import { ReactFlowProvider } from "@xyflow/react";
 import { useCreate } from "./create-context";
 import { CanvasViewport } from "./canvas-viewport";
 import { PromptComposer } from "./prompt-composer";
-import { QuickToolbar } from "./quick-toolbar";
+import { UnifiedToolbar } from "./unified-toolbar";
 import { MaintenanceBanner } from "./maintenance-banner";
 import { HotkeysIsland } from "./hotkeys-island";
 import { PromptVaultIsland } from "./prompt-vault-island";
@@ -89,14 +89,14 @@ export function StudioLayout() {
         <div className="flex-1 flex overflow-hidden">
           {/* Center - Canvas/Gallery */}
           <div className="relative flex-1 flex flex-col overflow-hidden">
-            {/* Quick Toolbar */}
-            <QuickToolbar />
-
-            {/* Canvas Viewport — passes workflow canvas when in workflow mode */}
-            <CanvasViewport
+            {/* Unified floating toolbar */}
+            <UnifiedToolbar
               vaultOpen={promptVault.vaultOpen}
               onToggleVault={promptVault.toggleVault}
-              workflowCanvas={
+            />
+
+            {/* Canvas Viewport — passes workflow canvas when in workflow mode */}
+            <CanvasViewport workflowCanvas={
                 viewMode === "workflow" ? (
                   <WorkflowCanvas
                     nodes={workflow.nodes}

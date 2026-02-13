@@ -562,9 +562,26 @@ async function generateWithGemini(params: ProviderParams): Promise<GeneratedImag
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        const error = await response.text();
-        console.error(`[Gemini] Request ${requestIndex + 1} failed:`, error);
-        throw new Error(`Gemini API error: ${error}`);
+        const errorText = await response.text();
+        console.error(`[Gemini] Request ${requestIndex + 1} failed:`, errorText);
+
+        // Parse and provide user-friendly error messages
+        if (response.status === 503) {
+          throw new Error('This model is experiencing high demand. Please try again in a few moments.');
+        }
+        if (response.status === 429) {
+          throw new Error('Rate limit reached. Please wait a moment before generating again.');
+        }
+        if (response.status === 400) {
+          try {
+            const parsed = JSON.parse(errorText);
+            const msg = parsed?.error?.message || errorText;
+            throw new Error(`Invalid request: ${msg}`);
+          } catch (e) {
+            if (e instanceof Error && e.message.startsWith('Invalid request:')) throw e;
+          }
+        }
+        throw new Error(`Gemini API error (${response.status}): Please try again.`);
       }
 
       const data = await response.json();

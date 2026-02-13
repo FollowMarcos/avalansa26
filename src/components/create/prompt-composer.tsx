@@ -334,7 +334,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
 
                       {/* Textarea */}
                       <div className="relative">
-                        <div className={cn("overflow-hidden rounded-lg focus-within:ring-2 focus-within:ring-ring", isPromptExpanded ? "max-h-[200px]" : "max-h-[44px]")}>
+                        <div className={cn("overflow-hidden rounded-lg", isPromptExpanded ? "max-h-[200px]" : "max-h-[44px]")}>
                           <textarea
                             ref={textareaRef}
                             value={prompt}
