@@ -303,12 +303,15 @@ export const GalleryItem = React.memo(function GalleryItem({
 
               {/* Info badge */}
               <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between pointer-events-none">
-                <div className="flex items-center gap-1">
+                <div className="flex items-center gap-1 flex-wrap">
                   <span className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono tabular-nums">
                     {image.settings.imageSize}
                   </span>
                   <span className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono tabular-nums text-muted-foreground">
                     {image.settings.aspectRatio}
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono tabular-nums text-muted-foreground truncate max-w-[80px]">
+                    {image.settings.model}
                   </span>
                 </div>
                 <span className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono tabular-nums text-muted-foreground">
@@ -431,7 +434,15 @@ export function PendingCard({ image }: { image: GeneratedImage }) {
 // Failed card
 // ---------------------------------------------------------------------------
 
-export function FailedCard({ image }: { image: GeneratedImage }) {
+export function FailedCard({
+  image,
+  onRetry,
+  onDelete,
+}: {
+  image: GeneratedImage;
+  onRetry?: (image: GeneratedImage) => void;
+  onDelete?: (id: string) => void;
+}) {
   return (
     <div
       className="relative rounded-lg overflow-hidden bg-destructive/5 border border-destructive/20"
@@ -445,11 +456,32 @@ export function FailedCard({ image }: { image: GeneratedImage }) {
           </span>
         </div>
         <p className="text-xs text-destructive font-mono text-center">
-          Failed
+          {image.error || "Generation failed"}
         </p>
-        <p className="text-[10px] text-muted-foreground text-center line-clamp-4">
-          {image.error || image.prompt}
+        <p className="text-[10px] text-muted-foreground text-center line-clamp-2">
+          {image.prompt}
         </p>
+        <div className="flex items-center gap-2 mt-1">
+          {onRetry && (
+            <button
+              type="button"
+              className="px-2.5 py-1 rounded-md bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/90 transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+              onClick={() => onRetry(image)}
+            >
+              Try again
+            </button>
+          )}
+          {onDelete && (
+            <button
+              type="button"
+              className="px-2.5 py-1 rounded-md bg-muted text-muted-foreground text-[10px] font-medium hover:bg-muted/80 transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+              onClick={() => onDelete(image.id)}
+              aria-label="Dismiss"
+            >
+              Dismiss
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

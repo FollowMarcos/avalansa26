@@ -567,7 +567,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                         placeholder="blurry, watermark…"
                         aria-label="Negative prompt - things to avoid in generation"
                         autoComplete="off"
-                        className="flex-1 min-w-0 bg-transparent text-xs text-foreground dark:text-zinc-300 placeholder:text-muted-foreground/50 dark:placeholder:text-zinc-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="flex-1 min-w-0 bg-transparent text-xs text-foreground dark:text-zinc-300 placeholder:text-muted-foreground/50 dark:placeholder:text-zinc-600 focus:outline-none"
                       />
                     </div>
                   </div>

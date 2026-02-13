@@ -108,6 +108,7 @@ export function GenerationGallery({ vaultOpen, onToggleVault }: GenerationGaller
     selectedImage,
     addReferenceImageFromUrl,
     reuseImageSetup,
+    retryFailedImage,
     setPrompt,
     galleryFilterState,
     toggleImageSelection,
@@ -517,7 +518,7 @@ export function GenerationGallery({ vaultOpen, onToggleVault }: GenerationGaller
                           return image.status === "pending" ? (
                             <PendingCard key={image.id} image={image} />
                           ) : image.status === "failed" ? (
-                            <FailedCard key={image.id} image={image} />
+                            <FailedCard key={image.id} image={image} onRetry={retryFailedImage} onDelete={handleDelete} />
                           ) : (
                             <GalleryItem
                               key={image.id}
@@ -561,7 +562,7 @@ export function GenerationGallery({ vaultOpen, onToggleVault }: GenerationGaller
                   return image.status === "pending" ? (
                     <PendingCard key={image.id} image={image} />
                   ) : image.status === "failed" ? (
-                    <FailedCard key={image.id} image={image} />
+                    <FailedCard key={image.id} image={image} onRetry={retryFailedImage} onDelete={handleDelete} />
                   ) : (
                     <GalleryItem
                       key={image.id}

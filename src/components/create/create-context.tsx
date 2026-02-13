@@ -154,6 +154,9 @@ interface CreateContextType {
   hasAvailableSlots: boolean;
   activeGenerations: number;
 
+  // Retry
+  retryFailedImage: (image: GeneratedImage) => void;
+
   // Helper to build final prompt with negative injection
   buildFinalPrompt: () => string;
 
@@ -222,6 +225,20 @@ const MAX_REFERENCE_IMAGES = 14;
 
 // Hoisted RegExp for text content detection (performance optimization)
 const TEXT_CONTENT_REGEX = /["']|say|text|sign|label|title|headline|word/i;
+
+// Clear resolved pending entries from sessionStorage
+function clearPendingFromSession(ids: string[]): void {
+  try {
+    const existing = JSON.parse(sessionStorage.getItem('pending-generations') || '[]') as GeneratedImage[];
+    const idSet = new Set(ids);
+    const remaining = existing.filter(img => !idSet.has(img.id));
+    if (remaining.length > 0) {
+      sessionStorage.setItem('pending-generations', JSON.stringify(remaining));
+    } else {
+      sessionStorage.removeItem('pending-generations');
+    }
+  } catch { /* ignore */ }
+}
 
 // localStorage key prefix for persisting state (user ID will be appended)
 const STORAGE_KEY_PREFIX = "create-studio-state";
@@ -508,7 +525,22 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         },
       }));
 
-      setHistory(historyImages);
+      // Restore any pending generations from sessionStorage as failed (API call was lost on refresh)
+      let restoredFailed: GeneratedImage[] = [];
+      try {
+        const pendingRaw = sessionStorage.getItem('pending-generations');
+        if (pendingRaw) {
+          const pending = JSON.parse(pendingRaw) as GeneratedImage[];
+          restoredFailed = pending.map(img => ({
+            ...img,
+            status: 'failed' as const,
+            error: 'Generation interrupted — page was refreshed.',
+          }));
+          sessionStorage.removeItem('pending-generations');
+        }
+      } catch { /* ignore */ }
+
+      setHistory([...restoredFailed, ...historyImages]);
       setHasMoreHistory(generations.length >= 50);
       // Select the most recent image if available
       if (historyImages.length > 0) {
@@ -968,6 +1000,11 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     const selectedApi = availableApis.find(api => api.id === selectedApiId);
     const resolvedModelName = selectedApi?.name || settings.model;
 
+    // Capture current reference images for persistence
+    const currentRefImages: ReferenceImageInfo[] = referenceImages
+      .filter(img => img.storagePath && !img.isUploading)
+      .map(img => ({ url: img.preview || '', storagePath: img.storagePath }));
+
     // Create placeholder entries in history immediately
     const placeholderIds: string[] = [];
     const placeholders: GeneratedImage[] = [];
@@ -979,11 +1016,17 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         url: '',
         prompt: prompt,
         timestamp: Date.now(),
-        settings: { ...settings, model: resolvedModelName },
+        settings: { ...settings, model: resolvedModelName, referenceImages: currentRefImages },
         status: 'pending',
       });
     }
     setHistory(prev => [...placeholders, ...prev]);
+
+    // Persist pending entries to sessionStorage so they survive refresh
+    try {
+      const existing = JSON.parse(sessionStorage.getItem('pending-generations') || '[]') as GeneratedImage[];
+      sessionStorage.setItem('pending-generations', JSON.stringify([...placeholders, ...existing]));
+    } catch { /* ignore */ }
 
     try {
       // Show thinking steps animation
@@ -1106,10 +1149,14 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       });
       setSelectedImage(newImages[0]);
 
+      // Clear resolved pending entries from sessionStorage
+      clearPendingFromSession(placeholderIds);
+
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         // Generation was cancelled - remove placeholder entries
         setHistory(prev => prev.filter(img => !placeholderIds.includes(img.id)));
+        clearPendingFromSession(placeholderIds);
         return;
       }
       console.error("Generation error:", error);
@@ -1121,6 +1168,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
             : img
         )
       );
+      clearPendingFromSession(placeholderIds);
     } finally {
       setIsGenerating(false);
       setThinkingSteps([]);
@@ -1132,6 +1180,25 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     setIsGenerating(false);
     setThinkingSteps([]);
   }, []);
+
+  // Retry a failed image: restore its prompt + settings then re-generate
+  const retryFailedImage = React.useCallback((image: GeneratedImage) => {
+    // Remove the failed card
+    setHistory(prev => prev.filter(img => img.id !== image.id));
+    // Restore prompt and settings
+    setPrompt(image.prompt);
+    updateSettings({
+      aspectRatio: image.settings.aspectRatio,
+      imageSize: image.settings.imageSize,
+      negativePrompt: image.settings.negativePrompt,
+      outputCount: image.settings.outputCount,
+      generationSpeed: image.settings.generationSpeed,
+    });
+    // Trigger generation on next tick (after state updates)
+    setTimeout(() => {
+      generate();
+    }, 0);
+  }, [generate, setPrompt, updateSettings]);
 
 
 
@@ -1895,6 +1962,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     pendingBatchJobs,
     hasAvailableSlots,
     activeGenerations,
+    retryFailedImage,
     buildFinalPrompt,
     // Gallery filters
     galleryFilterState,
@@ -1946,7 +2014,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     savedReferences, loadSavedReferences, removeSavedReference, renameSavedReference, addSavedReferenceToActive,
     selectImage, clearHistory, loadMoreHistory, hasMoreHistory, isLoadingMoreHistory,
     toggleHistoryPanel, toggleInputVisibility, generate, cancelGeneration,
-    hasAvailableSlots, activeGenerations, buildFinalPrompt,
+    hasAvailableSlots, activeGenerations, retryFailedImage, buildFinalPrompt,
     galleryFilterState, setSearchQuery, setSortBy, setGalleryFilters, clearGalleryFilters,
     toggleBulkSelection, toggleImageSelection, selectAllImages, deselectAllImages, getFilteredHistory, bulkDeleteImages,
     toggleFavorite, collections, createCollectionFn, updateCollectionFn, deleteCollectionFn, addToCollectionFn, removeFromCollectionFn, getImageCollections,

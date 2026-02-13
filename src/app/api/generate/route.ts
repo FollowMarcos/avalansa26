@@ -579,6 +579,9 @@ async function generateWithGemini(params: ProviderParams): Promise<GeneratedImag
       if (finishReason === 'RECITATION') {
         throw new Error('Content blocked due to potential copyright issues.');
       }
+      if (finishReason === 'IMAGE_OTHER') {
+        throw new Error('Image generation failed (IMAGE_OTHER). Try a different prompt or reference image.');
+      }
 
       // Extract image from response
       if (data.candidates && data.candidates[0]?.content?.parts) {
