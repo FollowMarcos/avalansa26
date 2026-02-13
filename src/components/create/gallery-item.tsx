@@ -303,9 +303,14 @@ export const GalleryItem = React.memo(function GalleryItem({
 
               {/* Info badge */}
               <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between pointer-events-none">
-                <span className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono tabular-nums">
-                  {image.settings.imageSize}
-                </span>
+                <div className="flex items-center gap-1">
+                  <span className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono tabular-nums">
+                    {image.settings.imageSize}
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono tabular-nums text-muted-foreground">
+                    {image.settings.aspectRatio}
+                  </span>
+                </div>
                 <span className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono tabular-nums text-muted-foreground">
                   {formatTime(image.timestamp)}
                 </span>
