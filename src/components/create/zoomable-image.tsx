@@ -13,18 +13,16 @@ interface ZoomableImageProps {
   imageClassName?: string;
   /** Scale factor when zoomed in (default 2.5) */
   zoomScale?: number;
-  /** Called on single click (not double-click). Useful for backdrop close etc. */
-  onSingleClick?: () => void;
   /** Called when the user scrolls up/down while NOT zoomed. direction: -1 = up (prev), 1 = down (next) */
   onScrollNavigate?: (direction: -1 | 1) => void;
 }
 
 /**
- * Image with Midjourney-style double-click zoom.
+ * Image with single-click zoom.
  *
- * - Double-click zooms in centered on the click point.
- * - Double-click again (or Escape) zooms back out.
- * - When zoomed, drag to pan.
+ * - Click zooms in centered on the click point.
+ * - Click again (or Escape) zooms back out.
+ * - When zoomed, drag to pan (click without drag zooms out).
  * - Scroll up/down navigates prev/next (when not zoomed).
  */
 export function ZoomableImage({
@@ -33,14 +31,20 @@ export function ZoomableImage({
   className,
   imageClassName,
   zoomScale = 2.5,
-  onSingleClick,
   onScrollNavigate,
 }: ZoomableImageProps) {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [zoomed, setZoomed] = React.useState(false);
   const [origin, setOrigin] = React.useState({ x: 50, y: 50 });
   const [translate, setTranslate] = React.useState({ x: 0, y: 0 });
-  const dragRef = React.useRef({ dragging: false, startX: 0, startY: 0, startTx: 0, startTy: 0 });
+  const dragRef = React.useRef({
+    dragging: false,
+    didDrag: false,
+    startX: 0,
+    startY: 0,
+    startTx: 0,
+    startTy: 0,
+  });
 
   // Reset zoom when src changes (image navigation)
   React.useEffect(() => {
@@ -63,8 +67,48 @@ export function ZoomableImage({
     return () => window.removeEventListener("keydown", handleKey, true);
   }, [zoomed]);
 
-  const handleDoubleClick = (e: React.MouseEvent) => {
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (!zoomed) return;
+    e.preventDefault();
+    dragRef.current = {
+      dragging: true,
+      didDrag: false,
+      startX: e.clientX,
+      startY: e.clientY,
+      startTx: translate.x,
+      startTy: translate.y,
+    };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!dragRef.current.dragging) return;
+    const dx = e.clientX - dragRef.current.startX;
+    const dy = e.clientY - dragRef.current.startY;
+    // Mark as a real drag if moved beyond threshold
+    if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+      dragRef.current.didDrag = true;
+    }
+    setTranslate({
+      x: dragRef.current.startTx + dx,
+      y: dragRef.current.startTy + dy,
+    });
+  };
+
+  const handlePointerUp = () => {
+    dragRef.current.dragging = false;
+  };
+
+  // Single click toggles zoom (skipped if drag just happened)
+  const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+
+    // If the user just finished dragging, don't toggle zoom
+    if (dragRef.current.didDrag) {
+      dragRef.current.didDrag = false;
+      return;
+    }
+
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) return;
 
@@ -80,33 +124,6 @@ export function ZoomableImage({
       setZoomed(false);
       setTranslate({ x: 0, y: 0 });
     }
-  };
-
-  const handlePointerDown = (e: React.PointerEvent) => {
-    if (!zoomed) return;
-    e.preventDefault();
-    dragRef.current = {
-      dragging: true,
-      startX: e.clientX,
-      startY: e.clientY,
-      startTx: translate.x,
-      startTy: translate.y,
-    };
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!dragRef.current.dragging) return;
-    const dx = e.clientX - dragRef.current.startX;
-    const dy = e.clientY - dragRef.current.startY;
-    setTranslate({
-      x: dragRef.current.startTx + dx,
-      y: dragRef.current.startTy + dy,
-    });
-  };
-
-  const handlePointerUp = () => {
-    dragRef.current.dragging = false;
   };
 
   // Scroll-wheel navigation (when not zoomed)
@@ -128,28 +145,10 @@ export function ZoomableImage({
     [zoomed, onScrollNavigate],
   );
 
-  // Distinguish single click from double click
-  const clickTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (clickTimerRef.current) {
-      // Second click within threshold — double-click will fire, clear single-click
-      clearTimeout(clickTimerRef.current);
-      clickTimerRef.current = null;
-      return;
-    }
-    clickTimerRef.current = setTimeout(() => {
-      clickTimerRef.current = null;
-      onSingleClick?.();
-    }, 250);
-  };
-
   return (
     <div
       ref={containerRef}
       className={cn("relative overflow-hidden", className)}
-      onDoubleClick={handleDoubleClick}
       onClick={handleClick}
       onWheel={handleWheel}
       onPointerDown={handlePointerDown}

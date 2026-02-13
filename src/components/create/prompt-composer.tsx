@@ -584,24 +584,20 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
 
                   {/* Prompt Search */}
                   <Popover open={promptSearchOpen} onOpenChange={setPromptSearchOpen}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <PopoverTrigger asChild>
-                          <button
-                            aria-label="Search saved prompts"
-                            className={cn(
-                              "size-8 rounded-lg flex items-center justify-center transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-ring",
-                              promptSearchOpen
-                                ? "bg-primary/10 text-primary"
-                                : "text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-zinc-800"
-                            )}
-                          >
-                            <Search className="size-3.5" aria-hidden="true" />
-                          </button>
-                        </PopoverTrigger>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="text-xs">Search prompts</TooltipContent>
-                    </Tooltip>
+                    <PopoverTrigger asChild>
+                      <button
+                        aria-label="Search saved prompts"
+                        className={cn(
+                          "flex items-center gap-1.5 h-8 px-2.5 rounded-lg transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-ring",
+                          promptSearchOpen
+                            ? "bg-primary/10 text-primary"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-zinc-800"
+                        )}
+                      >
+                        <Search className="size-3.5" aria-hidden="true" />
+                        <span className="text-xs font-medium">Prompts</span>
+                      </button>
+                    </PopoverTrigger>
                     <PopoverContent align="end" side="top" className="w-80 p-0">
                       <div className="p-2 border-b border-border">
                         <div className="flex items-center gap-2 px-2">

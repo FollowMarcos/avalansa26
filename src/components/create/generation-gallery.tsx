@@ -114,6 +114,15 @@ export function GenerationGallery() {
 
   const filteredHistory = getFilteredHistory();
   const completedImages = filteredHistory.filter((img) => img.status !== "pending" && img.status !== "failed");
+
+  // Keep detailImage in sync with latest history (e.g. after toggling favorite)
+  React.useEffect(() => {
+    if (!detailImage) return;
+    const latest = history.find((img) => img.id === detailImage.id);
+    if (latest && latest !== detailImage) {
+      setDetailImage(latest);
+    }
+  }, [history]); // eslint-disable-line react-hooks/exhaustive-deps
   const sentinelRef = React.useRef<HTMLDivElement>(null);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
   const itemRefs = React.useRef<Map<number, HTMLElement>>(new Map());
