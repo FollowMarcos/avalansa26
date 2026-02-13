@@ -65,6 +65,8 @@ const sortOptions: { value: GallerySortOption; label: string }[] = [
 interface UnifiedToolbarProps {
   vaultOpen?: boolean;
   onToggleVault?: () => void;
+  workflowsOpen?: boolean;
+  onToggleWorkflows?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -74,6 +76,8 @@ interface UnifiedToolbarProps {
 export function UnifiedToolbar({
   vaultOpen,
   onToggleVault,
+  workflowsOpen,
+  onToggleWorkflows,
 }: UnifiedToolbarProps) {
   const {
     viewMode,
@@ -145,7 +149,7 @@ export function UnifiedToolbar({
         <div className="flex flex-col gap-2">
           {/* Main island */}
           <div className="flex items-center gap-1.5 rounded-2xl bg-background/95 backdrop-blur-xl border border-border shadow-lg px-2 py-1.5">
-            {/* --- Always visible: Sidebar + Vault toggles --- */}
+            {/* --- Gallery: Sidebar + Vault toggles --- */}
             {isGallery && (
               <>
                 <Tooltip>
@@ -195,6 +199,65 @@ export function UnifiedToolbar({
                       </Button>
                     </TooltipTrigger>
                     <TooltipContent>Prompt Vault</TooltipContent>
+                  </Tooltip>
+                )}
+
+                <div className="w-px h-5 bg-border mx-0.5" aria-hidden="true" />
+              </>
+            )}
+
+            {/* --- Workflow: Vault + Flows toggles --- */}
+            {isWorkflow && (
+              <>
+                {onToggleVault && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 rounded-lg"
+                        onClick={onToggleVault}
+                        aria-label={
+                          vaultOpen
+                            ? "Close prompt vault"
+                            : "Open prompt vault"
+                        }
+                        aria-pressed={vaultOpen}
+                      >
+                        <BookMarked
+                          className="size-4"
+                          strokeWidth={1.5}
+                          aria-hidden="true"
+                        />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Prompt Vault</TooltipContent>
+                  </Tooltip>
+                )}
+
+                {onToggleWorkflows && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 rounded-lg"
+                        onClick={onToggleWorkflows}
+                        aria-label={
+                          workflowsOpen
+                            ? "Close workflows"
+                            : "Open workflows"
+                        }
+                        aria-pressed={workflowsOpen}
+                      >
+                        <GitBranch
+                          className="size-4"
+                          strokeWidth={1.5}
+                          aria-hidden="true"
+                        />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Workflows</TooltipContent>
                   </Tooltip>
                 )}
 
@@ -273,7 +336,7 @@ export function UnifiedToolbar({
                     aria-label="Search prompts"
                     value={localSearch}
                     onChange={(e) => handleSearchChange(e.target.value)}
-                    className="pl-8 h-7 font-mono text-xs rounded-lg"
+                    className="pl-8 h-7 text-xs rounded-lg"
                   />
                   {localSearch && (
                     <Button
@@ -298,7 +361,7 @@ export function UnifiedToolbar({
                     setSortBy(value as GallerySortOption)
                   }
                 >
-                  <SelectTrigger className="w-[130px] h-7 font-mono text-xs rounded-lg">
+                  <SelectTrigger className="w-[130px] h-7 text-xs rounded-lg">
                     <SelectValue placeholder="Sort by" />
                   </SelectTrigger>
                   <SelectContent>
@@ -306,7 +369,7 @@ export function UnifiedToolbar({
                       <SelectItem
                         key={option.value}
                         value={option.value}
-                        className="font-mono text-xs"
+                        className="text-xs"
                       >
                         {option.label}
                       </SelectItem>
@@ -449,13 +512,13 @@ export function UnifiedToolbar({
                     </TooltipTrigger>
                     <TooltipContent>More Columns</TooltipContent>
                   </Tooltip>
-                  <span className="text-[10px] text-muted-foreground font-mono tabular-nums w-3 text-center">
+                  <span className="text-[10px] text-muted-foreground tabular-nums w-3 text-center">
                     {galleryColumnCount}
                   </span>
                 </div>
 
                 {/* Stats */}
-                <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-mono tabular-nums ml-1">
+                <div className="flex items-center gap-2 text-[10px] text-muted-foreground tabular-nums ml-1">
                   <span className="inline-flex items-center gap-1">
                     <ImageIcon className="size-3" aria-hidden="true" />
                     {totalCount}
@@ -594,7 +657,7 @@ function WorkflowTools() {
         <button
           onClick={() => fitView({ padding: 0.2, duration: 300 })}
           aria-label={`Current zoom ${currentZoom}%, click to fit view`}
-          className="px-2 py-1 min-h-[32px] text-xs font-mono text-muted-foreground hover:text-foreground transition-colors min-w-[3rem] text-center rounded focus-visible:ring-2 focus-visible:ring-ring"
+          className="px-2 py-1 min-h-[32px] text-xs tabular-nums text-muted-foreground hover:text-foreground transition-colors min-w-[3rem] text-center rounded focus-visible:ring-2 focus-visible:ring-ring"
         >
           {currentZoom}%
         </button>
@@ -667,7 +730,7 @@ function ActiveFiltersRow({
   return (
     <div className="flex items-center gap-1.5 justify-center flex-wrap">
       {showFavoritesOnly && (
-        <Badge variant="outline" className="gap-1 font-mono text-[10px] h-5 px-1.5">
+        <Badge variant="outline" className="gap-1 text-[10px] h-5 px-1.5">
           <Heart
             className="size-2.5 fill-red-500 text-red-500"
             aria-hidden="true"
@@ -685,7 +748,7 @@ function ActiveFiltersRow({
       )}
 
       {galleryFilterState.searchQuery && (
-        <Badge variant="outline" className="gap-1 font-mono text-[10px] h-5 px-1.5">
+        <Badge variant="outline" className="gap-1 text-[10px] h-5 px-1.5">
           &ldquo;{galleryFilterState.searchQuery}&rdquo;
           <button
             type="button"
@@ -705,7 +768,7 @@ function ActiveFiltersRow({
         <Badge
           key={ratio}
           variant="outline"
-          className="gap-1 font-mono text-[10px] h-5 px-1.5"
+          className="gap-1 text-[10px] h-5 px-1.5"
         >
           {ratio}
           <button
@@ -729,7 +792,7 @@ function ActiveFiltersRow({
         <Badge
           key={size}
           variant="outline"
-          className="gap-1 font-mono text-[10px] h-5 px-1.5"
+          className="gap-1 text-[10px] h-5 px-1.5"
         >
           {size}
           <button

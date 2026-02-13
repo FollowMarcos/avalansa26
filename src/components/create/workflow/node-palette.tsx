@@ -18,24 +18,17 @@ import {
   ChevronDown,
   ChevronRight,
   GripVertical,
-  BookMarked,
-  GitBranch,
   Keyboard,
   type LucideIcon,
 } from 'lucide-react';
 import { getAllDefinitions } from './node-registry';
 import type { WorkflowNodeDefinition, NodeCategory } from '@/types/workflow';
 import { SOCKET_COLORS } from '@/types/workflow';
-import { VaultTab, type VaultTabProps } from './node-palette-vault-tab';
-import {
-  WorkflowsTab,
-  type WorkflowsTabProps,
-} from './node-palette-workflows-tab';
 
 // Ensure registration
 import './nodes';
 
-type PanelTab = 'nodes' | 'vault' | 'workflows' | 'hotkeys';
+type PanelTab = 'nodes' | 'hotkeys';
 
 const CATEGORY_LABELS: Record<NodeCategory, string> = {
   input: 'Input',
@@ -95,22 +88,17 @@ const HOTKEY_SECTIONS = [
 
 const TAB_ITEMS: { id: PanelTab; icon: LucideIcon; label: string }[] = [
   { id: 'nodes', icon: LayoutGrid, label: 'Nodes' },
-  { id: 'vault', icon: BookMarked, label: 'Vault' },
-  { id: 'workflows', icon: GitBranch, label: 'Flows' },
   { id: 'hotkeys', icon: Keyboard, label: 'Keys' },
 ];
 
 interface NodePaletteProps {
   className?: string;
-  vault: VaultTabProps;
-  workflows: WorkflowsTabProps;
 }
 
 /**
- * Unified workflow panel combining node palette, prompt vault,
- * workflow list, and hotkeys into a single tabbed island.
+ * Workflow node palette with draggable nodes and hotkeys reference.
  */
-export function NodePalette({ className, vault, workflows }: NodePaletteProps) {
+export function NodePalette({ className }: NodePaletteProps) {
   const [activeTab, setActiveTab] = React.useState<PanelTab>('nodes');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [collapsedCategories, setCollapsedCategories] = React.useState<
@@ -293,20 +281,6 @@ export function NodePalette({ className, vault, workflows }: NodePaletteProps) {
               </p>
             )}
           </div>
-        </div>
-      )}
-
-      {/* Vault tab */}
-      {activeTab === 'vault' && (
-        <div id="panel-vault" role="tabpanel">
-          <VaultTab {...vault} />
-        </div>
-      )}
-
-      {/* Workflows tab */}
-      {activeTab === 'workflows' && (
-        <div id="panel-workflows" role="tabpanel">
-          <WorkflowsTab {...workflows} />
         </div>
       )}
 

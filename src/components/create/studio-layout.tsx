@@ -15,11 +15,16 @@ import { useAvaVault } from "./use-ava-vault";
 import { CreateAvaDialog } from "./create-ava-dialog";
 import { RunAvaDialog } from "./run-ava-dialog";
 import { ShareAvaDialog } from "./share-ava-dialog";
-import { motion, useReducedMotion } from "motion/react";
+import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { useWorkflow } from "./workflow/use-workflow";
 import { WorkflowCanvas } from "./workflow/workflow-canvas";
 import { NodePalette } from "./workflow/node-palette";
 import { WorkflowToolbar } from "./workflow/workflow-toolbar";
+import {
+  WorkflowsTab,
+} from "./workflow/node-palette-workflows-tab";
+import { GitBranch, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export function StudioLayout() {
   const prefersReducedMotion = useReducedMotion();
@@ -27,6 +32,10 @@ export function StudioLayout() {
 
   // Workflow hook
   const workflow = useWorkflow({ apiId: selectedApiId ?? '', active: viewMode === 'workflow' });
+
+  // Workflows panel toggle
+  const [workflowsOpen, setWorkflowsOpen] = React.useState(false);
+  const toggleWorkflows = React.useCallback(() => setWorkflowsOpen((prev) => !prev), []);
 
   // Prompt vault hook
   const promptVault = usePromptVault({
@@ -60,13 +69,13 @@ export function StudioLayout() {
     },
   });
 
-  // Load avas when vault opens or when entering workflow mode (vault is embedded in panel)
+  // Load avas when vault opens
   React.useEffect(() => {
-    if ((promptVault.vaultOpen || viewMode === 'workflow') && avaVault.avas.length === 0) {
+    if (promptVault.vaultOpen && avaVault.avas.length === 0) {
       avaVault.loadAvas();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [promptVault.vaultOpen, viewMode]);
+  }, [promptVault.vaultOpen]);
 
 
   return (
@@ -91,6 +100,8 @@ export function StudioLayout() {
             <UnifiedToolbar
               vaultOpen={promptVault.vaultOpen}
               onToggleVault={promptVault.toggleVault}
+              workflowsOpen={workflowsOpen}
+              onToggleWorkflows={toggleWorkflows}
             />
 
             {/* Canvas Viewport — passes workflow canvas when in workflow mode */}
@@ -118,37 +129,13 @@ export function StudioLayout() {
               }
             />
 
-            {/* Prompt Composer */}
-            <PromptComposer onSaveToVault={promptVault.openSaveDialog} />
+            {/* Prompt Composer — hidden in workflow mode */}
+            {viewMode !== "workflow" && (
+              <PromptComposer onSaveToVault={promptVault.openSaveDialog} />
+            )}
 
             {/* Workflow-specific UI */}
-            {viewMode === "workflow" && (
-              <NodePalette
-                vault={{
-                  prompts: promptVault.prompts,
-                  onSelectPrompt: promptVault.usePrompt,
-                  onToggleFavorite: promptVault.toggleFavorite,
-                  onSharePrompt: promptVault.openShareDialog,
-                  onDeletePrompt: promptVault.deletePrompt,
-                  avas: avaVault.avas,
-                  onRunAva: avaVault.openRunDialog,
-                  onEditAva: (ava) => avaVault.openCreateDialog(ava),
-                  onCreateAva: () => avaVault.openCreateDialog(),
-                  onToggleAvaFavorite: avaVault.toggleFavorite,
-                  onShareAva: avaVault.openShareDialog,
-                  onDeleteAva: (avaId) => { avaVault.deleteAva(avaId); },
-                }}
-                workflows={{
-                  savedWorkflows: workflow.savedWorkflows,
-                  currentWorkflowId: workflow.currentWorkflowId,
-                  workflowName: workflow.workflowName,
-                  onCreateNew: workflow.createNewWorkflow,
-                  onSwitch: workflow.switchWorkflow,
-                  onRename: workflow.renameWorkflow,
-                  onDelete: workflow.deleteWorkflow,
-                }}
-              />
-            )}
+            {viewMode === "workflow" && <NodePalette />}
             {viewMode === "workflow" && (
               <WorkflowToolbar
                 isExecuting={workflow.isExecuting}
@@ -164,30 +151,74 @@ export function StudioLayout() {
               />
             )}
 
-            {/* Floating Prompt Vault Island — only in non-workflow mode (in workflow mode, vault is embedded in NodePalette) */}
-            {viewMode !== "workflow" && (
-              <PromptVaultIsland
-                open={promptVault.vaultOpen}
-                onToggle={promptVault.toggleVault}
-                showToggle={false}
-                prompts={promptVault.prompts}
-                folders={promptVault.folders}
-                tags={promptVault.tags}
-                onSelectPrompt={promptVault.usePrompt}
-                onToggleFavorite={promptVault.toggleFavorite}
-                onSharePrompt={promptVault.openShareDialog}
-                onDeletePrompt={promptVault.deletePrompt}
-                avas={avaVault.avas}
-                avaFolders={avaVault.folders}
-                onRunAva={avaVault.openRunDialog}
-                onEditAva={(ava) => avaVault.openCreateDialog(ava)}
-                onCreateAva={() => avaVault.openCreateDialog()}
-                onToggleAvaFavorite={avaVault.toggleFavorite}
-                onShareAva={avaVault.openShareDialog}
-                onDeleteAva={(avaId) => {
-                  avaVault.deleteAva(avaId);
-                }}
-              />
+            {/* Floating Prompt Vault Island */}
+            <PromptVaultIsland
+              open={promptVault.vaultOpen}
+              onToggle={promptVault.toggleVault}
+              showToggle={false}
+              prompts={promptVault.prompts}
+              folders={promptVault.folders}
+              tags={promptVault.tags}
+              onSelectPrompt={promptVault.usePrompt}
+              onToggleFavorite={promptVault.toggleFavorite}
+              onSharePrompt={promptVault.openShareDialog}
+              onDeletePrompt={promptVault.deletePrompt}
+              avas={avaVault.avas}
+              avaFolders={avaVault.folders}
+              onRunAva={avaVault.openRunDialog}
+              onEditAva={(ava) => avaVault.openCreateDialog(ava)}
+              onCreateAva={() => avaVault.openCreateDialog()}
+              onToggleAvaFavorite={avaVault.toggleFavorite}
+              onShareAva={avaVault.openShareDialog}
+              onDeleteAva={(avaId) => {
+                avaVault.deleteAva(avaId);
+              }}
+            />
+
+            {/* Floating Workflows Panel — workflow mode only */}
+            {viewMode === "workflow" && (
+              <AnimatePresence>
+                {workflowsOpen && (
+                  <motion.div
+                    initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, x: -20 }}
+                    animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1, x: 0 }}
+                    exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95, x: -20 }}
+                    transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
+                    className="absolute top-[4.25rem] left-[5.25rem] z-20 w-72 bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-lg overflow-hidden"
+                  >
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+                      <div className="flex items-center gap-2">
+                        <GitBranch className="size-4 text-muted-foreground" aria-hidden="true" />
+                        <span className="text-sm font-medium">Workflows</span>
+                        {workflow.savedWorkflows.length > 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            ({workflow.savedWorkflows.length})
+                          </span>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={toggleWorkflows}
+                        aria-label="Close workflows"
+                        className="size-7 rounded-lg"
+                      >
+                        <X className="size-3.5" aria-hidden="true" />
+                      </Button>
+                    </div>
+                    <WorkflowsTab
+                      savedWorkflows={workflow.savedWorkflows}
+                      currentWorkflowId={workflow.currentWorkflowId}
+                      workflowName={workflow.workflowName}
+                      onCreateNew={workflow.createNewWorkflow}
+                      onSwitch={workflow.switchWorkflow}
+                      onRename={workflow.renameWorkflow}
+                      onDelete={workflow.deleteWorkflow}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
             )}
           </div>
         </div>
