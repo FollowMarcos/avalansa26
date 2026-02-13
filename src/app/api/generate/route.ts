@@ -476,25 +476,25 @@ async function generateWithGemini(params: ProviderParams): Promise<GeneratedImag
     responseModalities: ['IMAGE', 'TEXT'],
   };
 
-  // Add image_config for models that support it (Gemini 3 Pro Image Preview)
+  // Add imageConfig for models that support it (Gemini 3 Pro Image Preview)
   if (supportsImageConfig) {
     const imageConfig: Record<string, string> = {};
 
-    // Add aspect_ratio if specified (snake_case for API)
+    // Add aspectRatio if specified (camelCase for current API)
     if (aspectRatio) {
-      imageConfig.aspect_ratio = aspectRatio;
+      imageConfig.aspectRatio = aspectRatio;
     }
 
-    // Add image_size if specified (supports "1K", "2K", "4K")
+    // Add imageSize if specified (supports "1K", "2K", "4K")
     if (imageSize) {
-      imageConfig.image_size = imageSize;
+      imageConfig.imageSize = imageSize;
     }
 
     if (Object.keys(imageConfig).length > 0) {
-      generationConfig.image_config = imageConfig;
+      generationConfig.imageConfig = imageConfig;
     }
 
-    console.log('[Gemini] Using image_config:', imageConfig);
+    console.log('[Gemini] Using imageConfig:', imageConfig);
   } else {
     // For older models without image_config support, add hints to the prompt
     const aspectHint = aspectRatio ? getAspectRatioHint(aspectRatio) : '';
