@@ -170,8 +170,9 @@ interface CreateContextType {
   hasAvailableSlots: boolean;
   activeGenerations: number;
 
-  // Retry
+  // Retry / dismiss
   retryFailedImage: (image: GeneratedImage) => void;
+  dismissFailedImage: (id: string) => void;
 
   // Helper to build final prompt with negative injection
   buildFinalPrompt: () => string;
@@ -1244,8 +1245,10 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     }, 0);
   }, [generate, setPrompt, updateSettings]);
 
-
-
+  // Dismiss a failed image card without server deletion or confirmation
+  const dismissFailedImage = React.useCallback((id: string) => {
+    setHistory(prev => prev.filter(img => img.id !== id));
+  }, []);
 
 
 
@@ -2025,6 +2028,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     hasAvailableSlots,
     activeGenerations,
     retryFailedImage,
+    dismissFailedImage,
     buildFinalPrompt,
     // Gallery filters
     galleryFilterState,
@@ -2076,7 +2080,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     savedReferences, loadSavedReferences, removeSavedReference, renameSavedReference, addSavedReferenceToActive,
     selectImage, clearHistory, loadMoreHistory, hasMoreHistory, isLoadingMoreHistory,
     toggleHistoryPanel, toggleInputVisibility, generate, cancelGeneration,
-    hasAvailableSlots, activeGenerations, retryFailedImage, buildFinalPrompt,
+    hasAvailableSlots, activeGenerations, retryFailedImage, dismissFailedImage, buildFinalPrompt,
     galleryFilterState, setSearchQuery, setSortBy, setGalleryFilters, clearGalleryFilters,
     toggleBulkSelection, toggleImageSelection, selectAllImages, deselectAllImages, getFilteredHistory, bulkDeleteImages,
     toggleFavorite, collections, createCollectionFn, updateCollectionFn, deleteCollectionFn, addToCollectionFn, removeFromCollectionFn, getImageCollections,

@@ -94,6 +94,7 @@ export function GenerationGallery() {
     getFilteredHistory,
     toggleFavorite,
     bulkDeleteImages,
+    dismissFailedImage,
     history,
     loadMoreHistory,
     hasMoreHistory,
@@ -497,7 +498,7 @@ export function GenerationGallery() {
                           return image.status === "pending" ? (
                             <PendingCard key={image.id} image={image} />
                           ) : image.status === "failed" ? (
-                            <FailedCard key={image.id} image={image} onRetry={retryFailedImage} onDelete={handleDelete} />
+                            <FailedCard key={image.id} image={image} onRetry={retryFailedImage} onDelete={dismissFailedImage} />
                           ) : (
                             <GalleryItem
                               key={image.id}
@@ -541,7 +542,7 @@ export function GenerationGallery() {
                   return image.status === "pending" ? (
                     <PendingCard key={image.id} image={image} />
                   ) : image.status === "failed" ? (
-                    <FailedCard key={image.id} image={image} onRetry={retryFailedImage} onDelete={handleDelete} />
+                    <FailedCard key={image.id} image={image} onRetry={retryFailedImage} onDelete={dismissFailedImage} />
                   ) : (
                     <GalleryItem
                       key={image.id}
