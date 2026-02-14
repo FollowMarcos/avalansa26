@@ -6,18 +6,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Loader } from "@/components/ui/loader";
 import { Sparkles, ImageIcon, ArrowUp, ChevronDown } from "lucide-react";
-import Image from "next/image";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragStartEvent,
-  type DragEndEvent,
-  type DragOverEvent,
-} from "@dnd-kit/core";
 import { BulkActionBar } from "./bulk-action-bar";
 import { ImageDetailModal } from "./image-detail-modal";
 import { GalleryItem, PendingCard, FailedCard } from "./gallery-item";
@@ -139,57 +128,32 @@ export function GenerationGallery() {
     bulkAddToCollection,
   } = useCreate();
 
-  // DnD sensors
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: { distance: 8 },
-    }),
+  // Native drag — set dataTransfer with image IDs for collection drops
+  const handleNativeDragStart = React.useCallback(
+    (e: React.DragEvent) => {
+      const target = (e.target as HTMLElement).closest("[data-image-id]");
+      if (!target) return;
+      const imageId = target.getAttribute("data-image-id")!;
+
+      // Build IDs: if bulk selection active and dragged image is selected, include all
+      let ids: string[];
+      if (
+        galleryFilterState.bulkSelection.enabled &&
+        galleryFilterState.bulkSelection.selectedIds.has(imageId) &&
+        galleryFilterState.bulkSelection.selectedIds.size > 1
+      ) {
+        ids = Array.from(galleryFilterState.bulkSelection.selectedIds);
+      } else {
+        ids = [imageId];
+      }
+
+      e.dataTransfer.setData("application/x-image-ids", JSON.stringify(ids));
+      e.dataTransfer.effectAllowed = "copy";
+
+      if (!sidebarOpen) setGallerySidebarOpen(true);
+    },
+    [galleryFilterState.bulkSelection, sidebarOpen, setGallerySidebarOpen],
   );
-  const [activeDragId, setActiveDragId] = React.useState<string | null>(null);
-  const [isDraggingOver, setIsDraggingOver] = React.useState<string | null>(null);
-
-  const handleDragStart = React.useCallback((event: DragStartEvent) => {
-    setActiveDragId(event.active.id as string);
-    if (!sidebarOpen) setGallerySidebarOpen(true);
-  }, [sidebarOpen, setGallerySidebarOpen]);
-
-  const handleDragOver = React.useCallback((event: DragOverEvent) => {
-    setIsDraggingOver(event.over?.id?.toString() ?? null);
-  }, []);
-
-  const handleDragEnd = React.useCallback(async (event: DragEndEvent) => {
-    const { active, over } = event;
-    setActiveDragId(null);
-    setIsDraggingOver(null);
-
-    if (!over || !over.id.toString().startsWith("collection-")) return;
-
-    const collectionId = over.id.toString().replace("collection-", "");
-    const imageId = active.id as string;
-
-    // If bulk-selected and the dragged image is among them, add all selected
-    if (
-      galleryFilterState.bulkSelection.enabled &&
-      galleryFilterState.bulkSelection.selectedIds.has(imageId) &&
-      galleryFilterState.bulkSelection.selectedIds.size > 1
-    ) {
-      const ids = Array.from(galleryFilterState.bulkSelection.selectedIds);
-      await bulkAddToCollection(ids, collectionId);
-      toast.success(`Added ${ids.length} images to collection`);
-    } else {
-      await addToCollection(imageId, collectionId);
-      toast.success("Added to collection");
-    }
-  }, [galleryFilterState.bulkSelection, addToCollection, bulkAddToCollection]);
-
-  // Drag preview data
-  const dragImage = activeDragId ? history.find(img => img.id === activeDragId) : null;
-  const dragCount =
-    activeDragId &&
-    galleryFilterState.bulkSelection.enabled &&
-    galleryFilterState.bulkSelection.selectedIds.has(activeDragId)
-      ? galleryFilterState.bulkSelection.selectedIds.size
-      : 1;
 
   // Local UI state
   const [detailImage, setDetailImage] = React.useState<GeneratedImage | null>(null);
@@ -526,12 +490,6 @@ export function GenerationGallery() {
   // ---------------------------------------------------------------------------
 
   return (
-    <DndContext
-      sensors={sensors}
-      onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
-      onDragEnd={handleDragEnd}
-    >
     <TooltipProvider delayDuration={400}>
       <div className={cn("flex-1 flex flex-col min-h-0 bg-background transition-[padding] duration-200", dockCollapsed ? "pl-4" : "pl-20")}>
         {/* Main content area with optional sidebar */}
@@ -540,11 +498,10 @@ export function GenerationGallery() {
           <CollectionSidebar
             open={sidebarOpen}
             onClose={() => setGallerySidebarOpen(false)}
-            isDraggingOver={isDraggingOver}
           />
 
           {/* Gallery grid — top padding accounts for floating toolbar */}
-          <div ref={scrollContainerRef} className="flex-1 overflow-auto px-6 pt-16 pb-4">
+          <div ref={scrollContainerRef} className="flex-1 overflow-auto px-6 pt-16 pb-4" onDragStart={handleNativeDragStart}>
             {filteredHistory.length === 0 && pendingCount === 0 ? (
               /* Empty state */
               <div className="flex flex-col items-center justify-center h-full text-center p-8 max-w-sm mx-auto">
@@ -847,26 +804,5 @@ export function GenerationGallery() {
         </AlertDialog>
       </div>
     </TooltipProvider>
-
-    {/* DnD drag overlay */}
-    <DragOverlay>
-      {dragImage ? (
-        <div className="relative w-24 h-24 rounded-lg overflow-hidden shadow-2xl border-2 border-primary pointer-events-none">
-          <Image
-            src={dragImage.url}
-            alt="Dragging"
-            width={96}
-            height={96}
-            className="w-full h-full object-cover"
-          />
-          {dragCount > 1 && (
-            <div className="absolute top-1 right-1 size-5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
-              {dragCount}
-            </div>
-          )}
-        </div>
-      ) : null}
-    </DragOverlay>
-    </DndContext>
   );
 }

@@ -32,7 +32,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Loader } from "@/components/ui/loader";
-import { useDraggable } from "@dnd-kit/core";
 import type { GeneratedImage } from "./create-context";
 
 // ---------------------------------------------------------------------------
@@ -88,43 +87,22 @@ export const GalleryItem = React.memo(function GalleryItem({
   formatTime,
   itemRef,
 }: GalleryItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef: setDragNodeRef,
-    isDragging,
-  } = useDraggable({
-    id: image.id,
-  });
-
-  // Merge the drag ref with the keyboard-nav itemRef
-  const mergedRef = React.useCallback(
-    (node: HTMLElement | null) => {
-      setDragNodeRef(node);
-      if (typeof itemRef === "function") {
-        itemRef(node);
-      } else if (itemRef && "current" in itemRef) {
-        (itemRef as React.MutableRefObject<HTMLElement | null>).current = node;
-      }
-    },
-    [setDragNodeRef, itemRef],
-  );
-
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <Tooltip>
           <TooltipTrigger asChild>
             <article
-              ref={mergedRef}
+              ref={itemRef}
               tabIndex={0}
+              draggable
+              data-image-id={image.id}
               className={cn(
                 "relative group rounded-lg overflow-hidden bg-muted border outline-none",
                 "focus-visible:ring-2 focus-visible:ring-ring",
                 isFocused && "ring-2 ring-ring",
                 isCurrentSelected && !isBulkMode && "ring-2 ring-foreground",
                 isSelected && isBulkMode && "ring-2 ring-primary border-primary",
-                isDragging && "opacity-50 cursor-grabbing",
               )}
               style={{ contentVisibility: "auto" }}
               onClick={(e) => onImageClick(image, e)}
@@ -146,23 +124,16 @@ export const GalleryItem = React.memo(function GalleryItem({
               role="button"
               aria-label={`${isBulkMode ? "Select" : "View"} image: ${image.prompt || "Generated image"}`}
             >
-              {/* Image — drag listeners attached here so pointer events don't block child loading */}
-              <div
-                className={cn("relative w-full", !isBulkMode && "cursor-grab active:cursor-grabbing")}
-                {...listeners}
-                {...attributes}
-              >
-                <Image
-                  src={image.url}
-                  alt={image.prompt || "Generated"}
-                  width={512}
-                  height={512}
-                  className="w-full h-auto object-cover pointer-events-none"
-                  loading="lazy"
-                  sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
-                  quality={75}
-                />
-              </div>
+              <Image
+                src={image.url}
+                alt={image.prompt || "Generated"}
+                width={512}
+                height={512}
+                className="w-full h-auto object-cover"
+                loading="lazy"
+                sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+                quality={75}
+              />
 
               {/* Copy prompt & paste to composer buttons (top-left) */}
               {!isBulkMode && image.prompt && (

@@ -12,7 +12,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useDroppable } from "@dnd-kit/core";
 import { toast } from "sonner";
 import { useCreate } from "./create-context";
 import type { Collection } from "@/types/generation";
@@ -26,35 +25,61 @@ import { saveAs } from "file-saver";
 function DroppableCollectionItem({
   collection,
   isActive,
-  isDragTarget,
   isExporting,
   exportProgress,
   onClick,
   onExport,
+  onDrop,
 }: {
   collection: Collection;
   isActive: boolean;
-  isDragTarget: boolean;
   isExporting: boolean;
   exportProgress: number;
   onClick: () => void;
   onExport: () => void;
+  onDrop: (imageIds: string[]) => void;
 }) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: `collection-${collection.id}`,
-  });
-
-  const highlighted = isDragTarget || isOver;
+  const [isOver, setIsOver] = React.useState(false);
+  const dragCounter = React.useRef(0);
 
   return (
-    <div ref={setNodeRef} className="group relative">
+    <div
+      className="group relative"
+      onDragEnter={(e) => {
+        e.preventDefault();
+        dragCounter.current++;
+        setIsOver(true);
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
+      }}
+      onDragLeave={() => {
+        dragCounter.current--;
+        if (dragCounter.current === 0) setIsOver(false);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        dragCounter.current = 0;
+        setIsOver(false);
+        const data = e.dataTransfer.getData("application/x-image-ids");
+        if (data) {
+          try {
+            const ids = JSON.parse(data) as string[];
+            onDrop(ids);
+          } catch {
+            /* ignore malformed data */
+          }
+        }
+      }}
+    >
       <button
         type="button"
         className={cn(
           "w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-xs font-mono transition-all",
           "hover:bg-muted focus-visible:ring-1 focus-visible:ring-ring",
           isActive && "bg-muted font-medium",
-          highlighted && "bg-primary/20 ring-2 ring-primary scale-[1.02]",
+          isOver && "bg-primary/20 ring-2 ring-primary scale-[1.02]",
         )}
         onClick={onClick}
       >
@@ -121,10 +146,9 @@ function DroppableCollectionItem({
 interface CollectionSidebarProps {
   open: boolean;
   onClose: () => void;
-  isDraggingOver?: string | null;
 }
 
-export function CollectionSidebar({ open, onClose, isDraggingOver }: CollectionSidebarProps) {
+export function CollectionSidebar({ open, onClose }: CollectionSidebarProps) {
   const {
     collections,
     createCollection,
@@ -132,6 +156,8 @@ export function CollectionSidebar({ open, onClose, isDraggingOver }: CollectionS
     setGalleryFilters,
     history,
     imageOrganization,
+    addToCollection,
+    bulkAddToCollection,
   } = useCreate();
 
   const [isCreating, setIsCreating] = React.useState(false);
@@ -158,6 +184,20 @@ export function CollectionSidebar({ open, onClose, isDraggingOver }: CollectionS
 
   const handleSelect = (id: string | null) => {
     setGalleryFilters({ collectionId: id === activeCollectionId ? null : id });
+  };
+
+  const handleDropToCollection = async (collectionId: string, imageIds: string[]) => {
+    try {
+      if (imageIds.length === 1) {
+        await addToCollection(imageIds[0], collectionId);
+        toast.success("Added to collection");
+      } else {
+        await bulkAddToCollection(imageIds, collectionId);
+        toast.success(`Added ${imageIds.length} images to collection`);
+      }
+    } catch {
+      toast.error("Failed to add to collection");
+    }
   };
 
   const handleExportCollection = async (collection: Collection) => {
@@ -287,11 +327,11 @@ export function CollectionSidebar({ open, onClose, isDraggingOver }: CollectionS
               key={collection.id}
               collection={collection}
               isActive={activeCollectionId === collection.id}
-              isDragTarget={isDraggingOver === `collection-${collection.id}`}
               isExporting={exportingId === collection.id}
               exportProgress={exportProgress}
               onClick={() => handleSelect(collection.id)}
               onExport={() => handleExportCollection(collection)}
+              onDrop={(ids) => handleDropToCollection(collection.id, ids)}
             />
           ))}
 
