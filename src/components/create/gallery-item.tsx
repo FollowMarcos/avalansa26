@@ -92,7 +92,6 @@ export const GalleryItem = React.memo(function GalleryItem({
     attributes,
     listeners,
     setNodeRef: setDragNodeRef,
-    transform,
     isDragging,
   } = useDraggable({
     id: image.id,
@@ -111,13 +110,6 @@ export const GalleryItem = React.memo(function GalleryItem({
     [setDragNodeRef, itemRef],
   );
 
-  const dragStyle: React.CSSProperties | undefined = transform
-    ? {
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-        contentVisibility: "auto" as const,
-      }
-    : { contentVisibility: "auto" as const };
-
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
@@ -125,8 +117,6 @@ export const GalleryItem = React.memo(function GalleryItem({
           <TooltipTrigger asChild>
             <article
               ref={mergedRef}
-              {...attributes}
-              {...listeners}
               tabIndex={0}
               className={cn(
                 "relative group rounded-lg overflow-hidden bg-muted border outline-none",
@@ -135,9 +125,8 @@ export const GalleryItem = React.memo(function GalleryItem({
                 isCurrentSelected && !isBulkMode && "ring-2 ring-foreground",
                 isSelected && isBulkMode && "ring-2 ring-primary border-primary",
                 isDragging && "opacity-50 cursor-grabbing",
-                !isBulkMode && !isDragging && "cursor-grab active:cursor-grabbing",
               )}
-              style={dragStyle}
+              style={{ contentVisibility: "auto" }}
               onClick={(e) => onImageClick(image, e)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
@@ -157,14 +146,18 @@ export const GalleryItem = React.memo(function GalleryItem({
               role="button"
               aria-label={`${isBulkMode ? "Select" : "View"} image: ${image.prompt || "Generated image"}`}
             >
-              {/* Image */}
-              <div className="relative w-full">
+              {/* Image — drag listeners attached here so pointer events don't block child loading */}
+              <div
+                className={cn("relative w-full", !isBulkMode && "cursor-grab active:cursor-grabbing")}
+                {...listeners}
+                {...attributes}
+              >
                 <Image
                   src={image.url}
                   alt={image.prompt || "Generated"}
                   width={512}
                   height={512}
-                  className="w-full h-auto object-cover"
+                  className="w-full h-auto object-cover pointer-events-none"
                   loading="lazy"
                   sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
                   quality={75}
