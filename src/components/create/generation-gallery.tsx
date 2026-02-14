@@ -5,7 +5,7 @@ import { useCreate, type GeneratedImage } from "./create-context";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Loader } from "@/components/ui/loader";
-import { Sparkles, ImageIcon, ArrowUp, ChevronDown } from "lucide-react";
+import { Sparkles, ImageIcon, ArrowUp } from "lucide-react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BulkActionBar } from "./bulk-action-bar";
 import { ImageDetailModal } from "./image-detail-modal";
@@ -60,27 +60,6 @@ function groupByDate(
 }
 
 // ---------------------------------------------------------------------------
-// Prompt grouping helpers
-// ---------------------------------------------------------------------------
-
-function groupByPrompt(
-  images: GeneratedImage[],
-): Array<[string, GeneratedImage[]]> {
-  const groups = new Map<string, GeneratedImage[]>();
-  for (const image of images) {
-    const key = (image.prompt || "").trim().toLowerCase() || "(no prompt)";
-    const list = groups.get(key) ?? [];
-    list.push(image);
-    groups.set(key, list);
-  }
-  // Sort: most images first, then by newest first image
-  return Array.from(groups.entries()).sort((a, b) => {
-    if (a[1].length !== b[1].length) return b[1].length - a[1].length;
-    return b[1][0].timestamp - a[1][0].timestamp;
-  });
-}
-
-// ---------------------------------------------------------------------------
 // Format helper
 // ---------------------------------------------------------------------------
 
@@ -124,36 +103,7 @@ export function GenerationGallery() {
     gallerySidebarOpen: sidebarOpen,
     setGallerySidebarOpen,
     dockCollapsed,
-    addToCollection,
-    bulkAddToCollection,
   } = useCreate();
-
-  // Native drag — set dataTransfer with image IDs for collection drops
-  const handleNativeDragStart = React.useCallback(
-    (e: React.DragEvent) => {
-      const target = (e.target as HTMLElement).closest("[data-image-id]");
-      if (!target) return;
-      const imageId = target.getAttribute("data-image-id")!;
-
-      // Build IDs: if bulk selection active and dragged image is selected, include all
-      let ids: string[];
-      if (
-        galleryFilterState.bulkSelection.enabled &&
-        galleryFilterState.bulkSelection.selectedIds.has(imageId) &&
-        galleryFilterState.bulkSelection.selectedIds.size > 1
-      ) {
-        ids = Array.from(galleryFilterState.bulkSelection.selectedIds);
-      } else {
-        ids = [imageId];
-      }
-
-      e.dataTransfer.setData("application/x-image-ids", JSON.stringify(ids));
-      e.dataTransfer.effectAllowed = "copy";
-
-      if (!sidebarOpen) setGallerySidebarOpen(true);
-    },
-    [galleryFilterState.bulkSelection, sidebarOpen, setGallerySidebarOpen],
-  );
 
   // Local UI state
   const [detailImage, setDetailImage] = React.useState<GeneratedImage | null>(null);
@@ -455,24 +405,6 @@ export function GenerationGallery() {
     return groupByDate(filteredHistory);
   }, [filteredHistory, shouldGroupByDate]);
 
-  // Prompt-grouped images
-  const shouldGroupByPrompt = galleryFilterState.sortBy === "prompt-group";
-
-  const promptGroups = React.useMemo(() => {
-    if (!shouldGroupByPrompt) return null;
-    return groupByPrompt(filteredHistory);
-  }, [filteredHistory, shouldGroupByPrompt]);
-
-  const [collapsedGroups, setCollapsedGroups] = React.useState<Set<string>>(new Set());
-  const toggleGroup = (key: string) => {
-    setCollapsedGroups(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  };
-
   // Track item refs for keyboard nav
   let globalIndex = 0;
   const setItemRef = (idx: number) => (el: HTMLElement | null) => {
@@ -501,7 +433,7 @@ export function GenerationGallery() {
           />
 
           {/* Gallery grid — top padding accounts for floating toolbar */}
-          <div ref={scrollContainerRef} className="flex-1 overflow-auto px-6 pt-16 pb-4" onDragStart={handleNativeDragStart}>
+          <div ref={scrollContainerRef} className="flex-1 overflow-auto px-6 pt-16 pb-4">
             {filteredHistory.length === 0 && pendingCount === 0 ? (
               /* Empty state */
               <div className="flex flex-col items-center justify-center h-full text-center p-8 max-w-sm mx-auto">
@@ -515,27 +447,21 @@ export function GenerationGallery() {
                 <p className="text-muted-foreground font-mono text-balance">
                   {galleryFilterState.searchQuery ||
                   galleryFilterState.filters.aspectRatio.length > 0 ||
-                  galleryFilterState.filters.imageSize.length > 0 ||
-                  galleryFilterState.filters.modelIds.length > 0 ||
-                  galleryFilterState.filters.dateRange.preset
+                  galleryFilterState.filters.imageSize.length > 0
                     ? "No images match your filters"
                     : "No generations yet"}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1 text-pretty">
                   {galleryFilterState.searchQuery ||
                   galleryFilterState.filters.aspectRatio.length > 0 ||
-                  galleryFilterState.filters.imageSize.length > 0 ||
-                  galleryFilterState.filters.modelIds.length > 0 ||
-                  galleryFilterState.filters.dateRange.preset
+                  galleryFilterState.filters.imageSize.length > 0
                     ? "Try adjusting your search or filters"
                     : "Enter a prompt below to start creating"}
                 </p>
                 {!(
                   galleryFilterState.searchQuery ||
                   galleryFilterState.filters.aspectRatio.length > 0 ||
-                  galleryFilterState.filters.imageSize.length > 0 ||
-                  galleryFilterState.filters.modelIds.length > 0 ||
-                  galleryFilterState.filters.dateRange.preset
+                  galleryFilterState.filters.imageSize.length > 0
                 ) && (
                   <button
                     type="button"
@@ -552,77 +478,6 @@ export function GenerationGallery() {
                     Start Creating
                   </button>
                 )}
-              </div>
-            ) : promptGroups ? (
-              /* Prompt-grouped layout */
-              <div className="space-y-4">
-                {promptGroups.map(([promptKey, images]) => {
-                  const isCollapsed = collapsedGroups.has(promptKey);
-                  const displayPrompt = images[0]?.prompt || "(No prompt)";
-                  return (
-                    <section key={promptKey} className="border border-border rounded-lg overflow-hidden">
-                      <button
-                        type="button"
-                        className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted/50 transition-colors text-left"
-                        onClick={() => toggleGroup(promptKey)}
-                        aria-expanded={!isCollapsed}
-                      >
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-mono truncate">{displayPrompt}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            {images.length} {images.length === 1 ? "image" : "images"}
-                          </p>
-                        </div>
-                        <ChevronDown
-                          className={cn(
-                            "size-4 text-muted-foreground transition-transform ml-2 shrink-0",
-                            isCollapsed && "-rotate-90",
-                          )}
-                          aria-hidden="true"
-                        />
-                      </button>
-
-                      {!isCollapsed && (
-                        <div className="p-3">
-                          <div className="grid gap-3" style={gridStyle}>
-                            {images.map((image) => {
-                              const idx = globalIndex++;
-                              return image.status === "pending" ? (
-                                <PendingCard key={image.id} image={image} />
-                              ) : image.status === "failed" ? (
-                                <FailedCard key={image.id} image={image} onRetry={retryFailedImage} onDelete={dismissFailedImage} />
-                              ) : (
-                                <GalleryItem
-                                  key={image.id}
-                                  image={image}
-                                  isSelected={isSelected(image.id)}
-                                  isBulkMode={galleryFilterState.bulkSelection.enabled}
-                                  isCurrentSelected={selectedImage?.id === image.id}
-                                  isFocused={focusedIndex === idx}
-                                  onImageClick={handleImageClick}
-                                  onDownload={handleDownload}
-                                  onCopyPrompt={handleCopyPrompt}
-                                  onCopyUrl={handleCopyUrl}
-                                  onUseAsReference={handleUseAsReference}
-                                  onReuseSetup={handleReuseSetup}
-                                  onSplitDownload={handleSplitDownload}
-                                  onToggleSelection={toggleImageSelection}
-                                  onToggleFavorite={handleToggleFavorite}
-                                  onDelete={handleDelete}
-                                  onPasteToComposer={handlePasteToComposer}
-                                  onCompare={handleCompare}
-                                  onViewDetails={setDetailImage}
-                                  formatTime={formatTime}
-                                  itemRef={setItemRef(idx)}
-                                />
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
-                    </section>
-                  );
-                })}
               </div>
             ) : dateGroups ? (
               /* Date-grouped layout */

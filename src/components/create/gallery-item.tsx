@@ -93,10 +93,8 @@ export const GalleryItem = React.memo(function GalleryItem({
         <Tooltip>
           <TooltipTrigger asChild>
             <article
-              ref={itemRef}
+              ref={itemRef as React.Ref<HTMLDivElement>}
               tabIndex={0}
-              draggable
-              data-image-id={image.id}
               className={cn(
                 "relative group rounded-lg overflow-hidden bg-muted border outline-none",
                 "focus-visible:ring-2 focus-visible:ring-ring",
@@ -124,16 +122,19 @@ export const GalleryItem = React.memo(function GalleryItem({
               role="button"
               aria-label={`${isBulkMode ? "Select" : "View"} image: ${image.prompt || "Generated image"}`}
             >
-              <Image
-                src={image.url}
-                alt={image.prompt || "Generated"}
-                width={512}
-                height={512}
-                className="w-full h-auto object-cover"
-                loading="lazy"
-                sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
-                quality={75}
-              />
+              {/* Image */}
+              <div className="relative w-full">
+                <Image
+                  src={image.url}
+                  alt={image.prompt || "Generated"}
+                  width={512}
+                  height={512}
+                  className="w-full h-auto object-cover"
+                  loading="lazy"
+                  sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+                  quality={75}
+                />
+              </div>
 
               {/* Copy prompt & paste to composer buttons (top-left) */}
               {!isBulkMode && image.prompt && (

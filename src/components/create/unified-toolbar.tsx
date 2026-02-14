@@ -19,8 +19,6 @@ import {
   ZoomIn,
   ZoomOut,
   Maximize2,
-  Calendar,
-  Cpu,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -58,7 +56,6 @@ const sortOptions: { value: GallerySortOption; label: string }[] = [
   { value: "oldest", label: "Oldest first" },
   { value: "prompt-asc", label: "Prompt A\u2013Z" },
   { value: "prompt-desc", label: "Prompt Z\u2013A" },
-  { value: "prompt-group", label: "Group by prompt" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -137,9 +134,7 @@ export function UnifiedToolbar({
   const activeFilterCount =
     galleryFilterState.filters.aspectRatio.length +
     galleryFilterState.filters.imageSize.length +
-    galleryFilterState.filters.modelIds.length +
     galleryFilterState.filters.tagIds.length +
-    (galleryFilterState.filters.dateRange.preset ? 1 : 0) +
     (galleryFilterState.filters.collectionId ? 1 : 0);
 
   const showFavoritesOnly = galleryFilterState.filters.showFavoritesOnly;
@@ -821,52 +816,6 @@ function ActiveFiltersRow({
           </button>
         </Badge>
       ))}
-
-      {galleryFilterState.filters.modelIds.map((model) => (
-        <Badge
-          key={model}
-          variant="outline"
-          className="gap-1 text-[10px] h-5 px-1.5 dark:border-zinc-700/50 dark:text-zinc-400"
-        >
-          <Cpu className="size-2.5" aria-hidden="true" />
-          <span className="max-w-[100px] truncate" title={model}>{model}</span>
-          <button
-            type="button"
-            onClick={() => {
-              const newModels = galleryFilterState.filters.modelIds.filter(
-                (m) => m !== model,
-              );
-              setGalleryFilters({ modelIds: newModels });
-            }}
-            className="ml-0.5 hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
-            aria-label={`Remove ${model} filter`}
-          >
-            <X className="size-2.5" aria-hidden="true" />
-          </button>
-        </Badge>
-      ))}
-
-      {galleryFilterState.filters.dateRange.preset && (
-        <Badge
-          variant="outline"
-          className="gap-1 text-[10px] h-5 px-1.5 dark:border-zinc-700/50 dark:text-zinc-400"
-        >
-          <Calendar className="size-2.5" aria-hidden="true" />
-          {galleryFilterState.filters.dateRange.preset === "custom"
-            ? "Custom date"
-            : galleryFilterState.filters.dateRange.preset.replace("last-", "").replace("-", " ")}
-          <button
-            type="button"
-            onClick={() => {
-              setGalleryFilters({ dateRange: { preset: null, from: null, to: null } });
-            }}
-            className="ml-0.5 hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
-            aria-label="Clear date range filter"
-          >
-            <X className="size-2.5" aria-hidden="true" />
-          </button>
-        </Badge>
-      )}
 
       {(activeFilterCount > 0 || showFavoritesOnly) && (
         <Button
