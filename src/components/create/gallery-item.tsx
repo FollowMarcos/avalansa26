@@ -95,6 +95,12 @@ export const GalleryItem = React.memo(function GalleryItem({
             <article
               ref={itemRef as React.Ref<HTMLDivElement>}
               tabIndex={0}
+              draggable={!isBulkMode}
+              data-image-id={image.id}
+              onDragStart={(e) => {
+                e.dataTransfer.setData("text/plain", image.id);
+                e.dataTransfer.effectAllowed = "copy";
+              }}
               className={cn(
                 "relative group rounded-lg overflow-hidden bg-muted border outline-none",
                 "focus-visible:ring-2 focus-visible:ring-ring",

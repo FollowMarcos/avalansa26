@@ -56,6 +56,7 @@ const sortOptions: { value: GallerySortOption; label: string }[] = [
   { value: "oldest", label: "Oldest first" },
   { value: "prompt-asc", label: "Prompt A\u2013Z" },
   { value: "prompt-desc", label: "Prompt Z\u2013A" },
+  { value: "prompt-group", label: "Group by prompt" },
 ];
 
 // ---------------------------------------------------------------------------
@@ -135,7 +136,9 @@ export function UnifiedToolbar({
     galleryFilterState.filters.aspectRatio.length +
     galleryFilterState.filters.imageSize.length +
     galleryFilterState.filters.tagIds.length +
-    (galleryFilterState.filters.collectionId ? 1 : 0);
+    galleryFilterState.filters.modelIds.length +
+    (galleryFilterState.filters.collectionId ? 1 : 0) +
+    (galleryFilterState.filters.dateRange.preset ? 1 : 0);
 
   const showFavoritesOnly = galleryFilterState.filters.showFavoritesOnly;
   const filteredCount = getFilteredHistory().length;
@@ -816,6 +819,51 @@ function ActiveFiltersRow({
           </button>
         </Badge>
       ))}
+
+      {galleryFilterState.filters.modelIds.map((model) => (
+        <Badge
+          key={model}
+          variant="outline"
+          className="gap-1 text-[10px] h-5 px-1.5 max-w-[120px] dark:border-zinc-700/50 dark:text-zinc-400"
+        >
+          <span className="truncate">{model}</span>
+          <button
+            type="button"
+            onClick={() => {
+              const newModels = galleryFilterState.filters.modelIds.filter(
+                (m) => m !== model,
+              );
+              setGalleryFilters({ modelIds: newModels });
+            }}
+            className="ml-0.5 hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring rounded-sm shrink-0"
+            aria-label={`Remove ${model} filter`}
+          >
+            <X className="size-2.5" aria-hidden="true" />
+          </button>
+        </Badge>
+      ))}
+
+      {galleryFilterState.filters.dateRange.preset && (
+        <Badge variant="outline" className="gap-1 text-[10px] h-5 px-1.5 dark:border-zinc-700/50 dark:text-zinc-400">
+          {galleryFilterState.filters.dateRange.preset === "custom"
+            ? "Custom date"
+            : galleryFilterState.filters.dateRange.preset === "last-7-days"
+              ? "Last 7 days"
+              : galleryFilterState.filters.dateRange.preset === "last-30-days"
+                ? "Last 30 days"
+                : "Last 90 days"}
+          <button
+            type="button"
+            onClick={() =>
+              setGalleryFilters({ dateRange: { preset: null, from: null, to: null } })
+            }
+            className="ml-0.5 hover:text-foreground focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
+            aria-label="Clear date range filter"
+          >
+            <X className="size-2.5" aria-hidden="true" />
+          </button>
+        </Badge>
+      )}
 
       {(activeFilterCount > 0 || showFavoritesOnly) && (
         <Button

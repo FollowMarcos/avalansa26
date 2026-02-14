@@ -30,7 +30,15 @@ export type ModelId = string;
 export type InteractionMode = "select" | "hand";
 
 // Gallery filter types
-export type GallerySortOption = "newest" | "oldest" | "prompt-asc" | "prompt-desc";
+export type GallerySortOption = "newest" | "oldest" | "prompt-asc" | "prompt-desc" | "prompt-group";
+
+export type DateRangePreset = "last-7-days" | "last-30-days" | "last-90-days" | "custom";
+
+export interface DateRangeFilter {
+  preset: DateRangePreset | null;
+  from: number | null;
+  to: number | null;
+}
 
 export interface GalleryFilters {
   aspectRatio: AspectRatio[];
@@ -38,6 +46,8 @@ export interface GalleryFilters {
   showFavoritesOnly: boolean;
   tagIds: string[];
   collectionId: string | null;
+  modelIds: string[];
+  dateRange: DateRangeFilter;
 }
 
 export interface GalleryFilterState {
@@ -189,6 +199,10 @@ interface CreateContextType {
   deselectAllImages: () => void;
   getFilteredHistory: () => GeneratedImage[];
   bulkDeleteImages: (ids: string[]) => Promise<void>;
+
+  // Bulk organization
+  bulkAddToCollection: (imageIds: string[], collectionId: string) => Promise<void>;
+  bulkAddTag: (imageIds: string[], tagId: string) => Promise<void>;
 
   // Favorites
   toggleFavorite: (imageId: string) => Promise<void>;
@@ -416,6 +430,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       showFavoritesOnly: false,
       tagIds: [],
       collectionId: null,
+      modelIds: [],
+      dateRange: { preset: null, from: null, to: null },
     },
     bulkSelection: {
       enabled: false,
@@ -1460,6 +1476,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         showFavoritesOnly: false,
         tagIds: [],
         collectionId: null,
+        modelIds: [],
+        dateRange: { preset: null, from: null, to: null },
       },
     }));
   }, []);
@@ -1539,6 +1557,22 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       );
     }
 
+    // Model filter
+    if (galleryFilterState.filters.modelIds.length > 0) {
+      result = result.filter(img =>
+        galleryFilterState.filters.modelIds.includes(img.settings.model)
+      );
+    }
+
+    // Date range filter
+    const { from, to } = galleryFilterState.filters.dateRange;
+    if (from !== null) {
+      result = result.filter(img => img.timestamp >= from);
+    }
+    if (to !== null) {
+      result = result.filter(img => img.timestamp <= to);
+    }
+
     // Favorites filter
     if (galleryFilterState.filters.showFavoritesOnly) {
       result = result.filter(img => img.isFavorite);
@@ -1573,6 +1607,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
           return (a.prompt || "").localeCompare(b.prompt || "");
         case "prompt-desc":
           return (b.prompt || "").localeCompare(a.prompt || "");
+        case "prompt-group":
+          return b.timestamp - a.timestamp; // newest first within groups
         default:
           return 0;
       }
@@ -1799,6 +1835,46 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     if (!org) return [];
     return collections.filter(c => org.collectionIds.includes(c.id));
   }, [imageOrganization, collections]);
+
+  // Bulk add to collection
+  const bulkAddToCollectionFn = React.useCallback(async (imageIds: string[], collectionId: string) => {
+    const { addToCollection } = await import("@/utils/supabase/generations.server");
+    const results = await Promise.allSettled(
+      imageIds.filter(isDbId).map(id => addToCollection(id, collectionId))
+    );
+    setImageOrganization(prev => {
+      const next = new Map(prev);
+      imageIds.forEach((id, i) => {
+        if (results[i]?.status === "fulfilled") {
+          const existing = next.get(id) || { tagIds: [], collectionIds: [] };
+          if (!existing.collectionIds.includes(collectionId)) {
+            next.set(id, { ...existing, collectionIds: [...existing.collectionIds, collectionId] });
+          }
+        }
+      });
+      return next;
+    });
+  }, []);
+
+  // Bulk add tag
+  const bulkAddTagFn = React.useCallback(async (imageIds: string[], tagId: string) => {
+    const { addTagToGeneration } = await import("@/utils/supabase/generations.server");
+    const results = await Promise.allSettled(
+      imageIds.filter(isDbId).map(id => addTagToGeneration(id, tagId))
+    );
+    setImageOrganization(prev => {
+      const next = new Map(prev);
+      imageIds.forEach((id, i) => {
+        if (results[i]?.status === "fulfilled") {
+          const existing = next.get(id) || { tagIds: [], collectionIds: [] };
+          if (!existing.tagIds.includes(tagId)) {
+            next.set(id, { ...existing, tagIds: [...existing.tagIds, tagId] });
+          }
+        }
+      });
+      return next;
+    });
+  }, []);
 
   // ============================================
   // TAGS
@@ -2067,6 +2143,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     deselectAllImages,
     getFilteredHistory,
     bulkDeleteImages,
+    // Bulk organization
+    bulkAddToCollection: bulkAddToCollectionFn,
+    bulkAddTag: bulkAddTagFn,
     // Favorites
     toggleFavorite,
     // Collections
@@ -2108,6 +2187,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     hasAvailableSlots, activeGenerations, retryFailedImage, dismissFailedImage, buildFinalPrompt,
     galleryFilterState, setSearchQuery, setSortBy, setGalleryFilters, clearGalleryFilters,
     toggleBulkSelection, toggleImageSelection, selectAllImages, deselectAllImages, getFilteredHistory, bulkDeleteImages,
+    bulkAddToCollectionFn, bulkAddTagFn,
     toggleFavorite, collections, createCollectionFn, updateCollectionFn, deleteCollectionFn, addToCollectionFn, removeFromCollectionFn, getImageCollections,
     tags, createTagFn, deleteTagFn, addTagToImageFn, removeTagFromImageFn, createAndAddTagFn, getImageTags,
     imageOrganization, loadImageOrganization,

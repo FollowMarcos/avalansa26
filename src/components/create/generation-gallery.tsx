@@ -5,7 +5,7 @@ import { useCreate, type GeneratedImage } from "./create-context";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { Loader } from "@/components/ui/loader";
-import { Sparkles, ImageIcon, ArrowUp } from "lucide-react";
+import { Sparkles, ImageIcon, ArrowUp, ChevronDown } from "lucide-react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BulkActionBar } from "./bulk-action-bar";
 import { ImageDetailModal } from "./image-detail-modal";
@@ -52,6 +52,27 @@ function groupByDate(
   const groups = new Map<string, GeneratedImage[]>();
   for (const image of images) {
     const key = getDateGroupKey(image.timestamp);
+    const list = groups.get(key) ?? [];
+    list.push(image);
+    groups.set(key, list);
+  }
+  return Array.from(groups.entries());
+}
+
+// ---------------------------------------------------------------------------
+// Prompt grouping helpers
+// ---------------------------------------------------------------------------
+
+function normalizePrompt(prompt: string): string {
+  return prompt.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function groupByPrompt(
+  images: GeneratedImage[],
+): Array<[string, GeneratedImage[]]> {
+  const groups = new Map<string, GeneratedImage[]>();
+  for (const image of images) {
+    const key = normalizePrompt(image.prompt || "No prompt");
     const list = groups.get(key) ?? [];
     list.push(image);
     groups.set(key, list);
@@ -400,10 +421,28 @@ export function GenerationGallery() {
     galleryFilterState.sortBy === "newest" ||
     galleryFilterState.sortBy === "oldest";
 
+  const shouldGroupByPrompt = galleryFilterState.sortBy === "prompt-group";
+
   const dateGroups = React.useMemo(() => {
     if (!shouldGroupByDate) return null;
     return groupByDate(filteredHistory);
   }, [filteredHistory, shouldGroupByDate]);
+
+  const promptGroups = React.useMemo(() => {
+    if (!shouldGroupByPrompt) return null;
+    return groupByPrompt(filteredHistory);
+  }, [filteredHistory, shouldGroupByPrompt]);
+
+  const [collapsedPromptGroups, setCollapsedPromptGroups] = React.useState<Set<string>>(new Set());
+
+  const togglePromptGroup = React.useCallback((key: string) => {
+    setCollapsedPromptGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
 
   // Track item refs for keyboard nav
   let globalIndex = 0;
@@ -447,21 +486,27 @@ export function GenerationGallery() {
                 <p className="text-muted-foreground font-mono text-balance">
                   {galleryFilterState.searchQuery ||
                   galleryFilterState.filters.aspectRatio.length > 0 ||
-                  galleryFilterState.filters.imageSize.length > 0
+                  galleryFilterState.filters.imageSize.length > 0 ||
+                  galleryFilterState.filters.modelIds.length > 0 ||
+                  galleryFilterState.filters.dateRange.preset
                     ? "No images match your filters"
                     : "No generations yet"}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1 text-pretty">
                   {galleryFilterState.searchQuery ||
                   galleryFilterState.filters.aspectRatio.length > 0 ||
-                  galleryFilterState.filters.imageSize.length > 0
+                  galleryFilterState.filters.imageSize.length > 0 ||
+                  galleryFilterState.filters.modelIds.length > 0 ||
+                  galleryFilterState.filters.dateRange.preset
                     ? "Try adjusting your search or filters"
                     : "Enter a prompt below to start creating"}
                 </p>
                 {!(
                   galleryFilterState.searchQuery ||
                   galleryFilterState.filters.aspectRatio.length > 0 ||
-                  galleryFilterState.filters.imageSize.length > 0
+                  galleryFilterState.filters.imageSize.length > 0 ||
+                  galleryFilterState.filters.modelIds.length > 0 ||
+                  galleryFilterState.filters.dateRange.preset
                 ) && (
                   <button
                     type="button"
@@ -530,6 +575,72 @@ export function GenerationGallery() {
                           );
                         })}
                       </div>
+                    </section>
+                  );
+                })}
+              </div>
+            ) : promptGroups ? (
+              /* Prompt-grouped layout */
+              <div className="space-y-6">
+                {promptGroups.map(([promptKey, images]) => {
+                  const isCollapsed = collapsedPromptGroups.has(promptKey);
+                  const displayPrompt = images[0]?.prompt || "No prompt";
+                  return (
+                    <section key={promptKey} aria-label={`Prompt: ${displayPrompt}`}>
+                      <button
+                        type="button"
+                        className="sticky top-0 z-10 w-full flex items-center gap-2 text-left text-xs font-mono font-medium text-muted-foreground py-2 px-1 bg-background/95 backdrop-blur-sm border-b border-border/30 mb-3 hover:text-foreground transition-colors"
+                        onClick={() => togglePromptGroup(promptKey)}
+                        aria-expanded={!isCollapsed}
+                      >
+                        <ChevronDown
+                          className={cn(
+                            "size-3.5 shrink-0 transition-transform",
+                            isCollapsed && "-rotate-90",
+                          )}
+                          aria-hidden="true"
+                        />
+                        <span className="truncate max-w-[500px]">{displayPrompt}</span>
+                        <span className="ml-2 tabular-nums text-muted-foreground/60 shrink-0">
+                          ({images.length})
+                        </span>
+                      </button>
+                      {!isCollapsed && (
+                        <div className="grid gap-3" style={gridStyle}>
+                          {images.map((image) => {
+                            const idx = globalIndex++;
+                            return image.status === "pending" ? (
+                              <PendingCard key={image.id} image={image} />
+                            ) : image.status === "failed" ? (
+                              <FailedCard key={image.id} image={image} onRetry={retryFailedImage} onDelete={dismissFailedImage} />
+                            ) : (
+                              <GalleryItem
+                                key={image.id}
+                                image={image}
+                                isSelected={isSelected(image.id)}
+                                isBulkMode={galleryFilterState.bulkSelection.enabled}
+                                isCurrentSelected={selectedImage?.id === image.id}
+                                isFocused={focusedIndex === idx}
+                                onImageClick={handleImageClick}
+                                onDownload={handleDownload}
+                                onCopyPrompt={handleCopyPrompt}
+                                onCopyUrl={handleCopyUrl}
+                                onUseAsReference={handleUseAsReference}
+                                onReuseSetup={handleReuseSetup}
+                                onSplitDownload={handleSplitDownload}
+                                onToggleSelection={toggleImageSelection}
+                                onToggleFavorite={handleToggleFavorite}
+                                onDelete={handleDelete}
+                                onPasteToComposer={handlePasteToComposer}
+                                onCompare={handleCompare}
+                                onViewDetails={setDetailImage}
+                                formatTime={formatTime}
+                                itemRef={setItemRef(idx)}
+                              />
+                            );
+                          })}
+                        </div>
+                      )}
                     </section>
                   );
                 })}
