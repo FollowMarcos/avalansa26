@@ -272,6 +272,7 @@ interface PersistedState {
   selectedApiId: string | null;
   viewMode: "gallery" | "workflow";
   historyPanelOpen: boolean;
+  activeReferenceImages?: ReferenceImageInfo[];
   timestamp: number; // For cache invalidation
 }
 
@@ -1266,6 +1267,22 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       if (persisted.selectedApiId) setSelectedApiId(persisted.selectedApiId);
       if (persisted.viewMode) setViewMode(persisted.viewMode);
       if (persisted.historyPanelOpen !== undefined) setHistoryPanelOpen(persisted.historyPanelOpen);
+
+      // Restore active reference images from persisted state
+      if (persisted.activeReferenceImages && persisted.activeReferenceImages.length > 0) {
+        const restored: ImageFile[] = persisted.activeReferenceImages
+          .filter(ref => ref.storagePath)
+          .map(ref => ({
+            id: `ref-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            file: new File([], 'reference'),
+            preview: ref.url,
+            storagePath: ref.storagePath,
+            isUploading: false,
+          }));
+        if (restored.length > 0) {
+          setReferenceImages(restored);
+        }
+      }
     }
 
     // Check for "Use in Create" from prompt library — overrides persisted prompt
@@ -1310,12 +1327,16 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     }
 
     persistTimeoutRef.current = setTimeout(() => {
+      const activeRefs: ReferenceImageInfo[] = referenceImages
+        .filter(img => img.storagePath && !img.isUploading)
+        .map(img => ({ url: img.preview, storagePath: img.storagePath }));
       const stateToSave: PersistedState = {
         prompt,
         settings,
         selectedApiId,
         viewMode,
         historyPanelOpen,
+        activeReferenceImages: activeRefs.length > 0 ? activeRefs : undefined,
         timestamp: Date.now(),
       };
       savePersistedState(stateToSave, currentUserId);
@@ -1326,18 +1347,22 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         clearTimeout(persistTimeoutRef.current);
       }
     };
-  }, [prompt, settings, selectedApiId, viewMode, historyPanelOpen, currentUserId]);
+  }, [prompt, settings, selectedApiId, viewMode, historyPanelOpen, referenceImages, currentUserId]);
 
   // Save state immediately before page unload
   React.useEffect(() => {
     const handleBeforeUnload = () => {
       if (!userIdLoadedRef.current) return;
+      const activeRefs: ReferenceImageInfo[] = referenceImages
+        .filter(img => img.storagePath && !img.isUploading)
+        .map(img => ({ url: img.preview, storagePath: img.storagePath }));
       const stateToSave: PersistedState = {
         prompt,
         settings,
         selectedApiId,
         viewMode,
         historyPanelOpen,
+        activeReferenceImages: activeRefs.length > 0 ? activeRefs : undefined,
         timestamp: Date.now(),
       };
       savePersistedState(stateToSave, currentUserId);
@@ -1345,7 +1370,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [prompt, settings, selectedApiId, viewMode, historyPanelOpen, currentUserId]);
+  }, [prompt, settings, selectedApiId, viewMode, historyPanelOpen, referenceImages, currentUserId]);
 
   // Compute whether there are available slots for new generations
   const hasAvailableSlots = React.useMemo(() => {
