@@ -34,11 +34,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Strict domain allowlist - only Supabase storage and known image CDNs
+    const r2Hostname = process.env.NEXT_PUBLIC_R2_DOMAIN
+      ? new URL(process.env.NEXT_PUBLIC_R2_DOMAIN).hostname
+      : null;
     const allowedDomains = [
       'supabase.co',
       'supabase.in',
       'supabase.com',
       'storage.googleapis.com',
+      ...(r2Hostname ? [r2Hostname] : []),
     ];
 
     /**

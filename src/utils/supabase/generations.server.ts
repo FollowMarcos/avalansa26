@@ -1,6 +1,8 @@
 'use server';
 
 import { createClient } from '@/utils/supabase/server';
+import { isR2Path, stripR2Prefix } from '@/utils/r2/url-helpers';
+import { deleteFromR2 } from '@/utils/r2/client';
 import type {
   Generation,
   GenerationInsert,
@@ -124,13 +126,17 @@ export async function deleteGeneration(id: string): Promise<void> {
 
   // Delete from storage if image_path exists
   if (generation?.image_path) {
-    const { error: storageError } = await supabase.storage
-      .from('generations')
-      .remove([generation.image_path]);
+    if (isR2Path(generation.image_path)) {
+      await deleteFromR2([stripR2Prefix(generation.image_path)]);
+    } else {
+      const { error: storageError } = await supabase.storage
+        .from('generations')
+        .remove([generation.image_path]);
 
-    if (storageError) {
-      console.error('Error deleting image from storage:', storageError.message);
-      // Continue to delete DB record anyway
+      if (storageError) {
+        console.error('Error deleting image from storage:', storageError.message);
+        // Continue to delete DB record anyway
+      }
     }
   }
 
@@ -161,16 +167,23 @@ export async function clearGenerationHistory(): Promise<boolean> {
     .select('image_path')
     .eq('user_id', user.id);
 
-  // Delete from storage in bulk
+  // Delete from storage in bulk (partitioned by backend)
   if (generations && generations.length > 0) {
     const paths = generations
       .map((g) => g.image_path)
       .filter((p): p is string => p !== null);
 
-    if (paths.length > 0) {
+    const r2Paths = paths.filter(isR2Path);
+    const supabasePaths = paths.filter((p) => !isR2Path(p));
+
+    if (r2Paths.length > 0) {
+      await deleteFromR2(r2Paths.map(stripR2Prefix));
+    }
+
+    if (supabasePaths.length > 0) {
       const { error: storageError } = await supabase.storage
         .from('generations')
-        .remove(paths);
+        .remove(supabasePaths);
 
       if (storageError) {
         console.error('Error deleting images from storage:', storageError.message);

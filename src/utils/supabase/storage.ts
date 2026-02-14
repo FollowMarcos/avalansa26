@@ -1,9 +1,9 @@
 'use client';
 
-import { createClient } from '@/utils/supabase/client';
+import { resolveStorageUrl, isR2Path } from '@/utils/r2/url-helpers';
+import { deleteReferenceImagesServer } from '@/utils/supabase/storage.server';
 
-const BUCKET_NAME = 'reference-images';
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB max for Supabase
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB max
 const TARGET_FILE_SIZE = 8 * 1024 * 1024; // Target 8MB to have buffer
 const MAX_DIMENSION = 4096; // Max dimension to prevent memory issues
 
@@ -103,18 +103,22 @@ async function compressImage(file: File, targetSize: number = TARGET_FILE_SIZE):
   });
 }
 
+interface PresignResponse {
+  presignedUrl: string;
+  key: string;
+  publicUrl: string;
+}
+
 /**
- * Upload a reference image to Supabase Storage (client-side)
- * Compresses large images automatically to fit within 10MB limit
- * Returns the storage path and public URL
+ * Upload a reference image via presigned URL to R2.
+ * Compresses large images automatically to fit within 10MB limit.
+ * Returns the storage path (with r2: prefix) and public URL.
  */
 export async function uploadReferenceImage(
   file: File,
   userId: string
 ): Promise<{ path: string; url: string; error?: string }> {
   try {
-    const supabase = createClient();
-
     // Compress if file is larger than target size
     let uploadBlob: Blob = file;
     if (file.size > TARGET_FILE_SIZE) {
@@ -130,30 +134,36 @@ export async function uploadReferenceImage(
       return { path: '', url: '', error: `File too large after compression (${(uploadBlob.size / 1024 / 1024).toFixed(1)}MB). Maximum is 10MB.` };
     }
 
-    // Generate unique filename
-    const timestamp = Date.now();
-    const randomId = Math.random().toString(36).substring(2, 11);
-    const filename = `${userId}/${timestamp}-${randomId}.jpg`;
-
-    // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
-      .from(BUCKET_NAME)
-      .upload(filename, uploadBlob, {
+    // Get presigned URL from our API
+    const presignResponse = await fetch('/api/upload/presign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        bucket: 'reference-images',
         contentType: 'image/jpeg',
-        upsert: false,
-      });
+        fileSize: uploadBlob.size,
+      }),
+    });
 
-    if (error) {
-      console.error('[Storage] Upload error:', error);
-      return { path: '', url: '', error: error.message };
+    if (!presignResponse.ok) {
+      const err = await presignResponse.json();
+      return { path: '', url: '', error: err.error || 'Failed to get upload URL' };
     }
 
-    // Get the public URL
-    const { data: { publicUrl } } = supabase.storage
-      .from(BUCKET_NAME)
-      .getPublicUrl(data.path);
+    const { presignedUrl, key, publicUrl } = (await presignResponse.json()) as PresignResponse;
 
-    return { path: data.path, url: publicUrl };
+    // Upload directly to R2 via presigned URL
+    const uploadResponse = await fetch(presignedUrl, {
+      method: 'PUT',
+      body: uploadBlob,
+      headers: { 'Content-Type': 'image/jpeg' },
+    });
+
+    if (!uploadResponse.ok) {
+      return { path: '', url: '', error: `Upload failed: ${uploadResponse.status}` };
+    }
+
+    return { path: `r2:${key}`, url: publicUrl };
   } catch (error) {
     console.error('[Storage] Upload error:', error);
     return {
@@ -192,38 +202,19 @@ export async function uploadReferenceImages(
 }
 
 /**
- * Delete reference images from storage
+ * Delete reference images from storage.
+ * Delegates to server action which handles both R2 and Supabase paths.
  */
 export async function deleteReferenceImages(paths: string[]): Promise<void> {
   if (paths.length === 0) return;
-
-  const supabase = createClient();
-
-  const { error } = await supabase.storage
-    .from(BUCKET_NAME)
-    .remove(paths);
-
-  if (error) {
-    console.error('Delete error:', error);
-  }
+  await deleteReferenceImagesServer(paths);
 }
 
 /**
- * Get a signed URL for a reference image (for preview)
+ * Get a public URL for a reference image.
+ * Handles both R2 and legacy Supabase paths.
  */
-export async function getReferenceImageUrl(
-  path: string
-): Promise<string | null> {
-  const supabase = createClient();
-
-  const { data, error } = await supabase.storage
-    .from(BUCKET_NAME)
-    .createSignedUrl(path, 3600); // 1 hour expiry
-
-  if (error) {
-    console.error('Signed URL error:', error);
-    return null;
-  }
-
-  return data.signedUrl;
+export function getReferenceImageUrl(path: string): string | null {
+  if (!path) return null;
+  return resolveStorageUrl(path, 'reference-images');
 }

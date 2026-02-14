@@ -7,6 +7,8 @@ import type {
   CreateReferenceImageInput,
   UpdateReferenceImageInput,
 } from '@/types/reference-image';
+import { resolveStorageUrl, isR2Path, stripR2Prefix } from '@/utils/r2/url-helpers';
+import { uploadToR2, deleteFromR2, R2_PREFIX } from '@/utils/r2/client';
 
 const BUCKET_NAME = 'reference-images';
 
@@ -35,25 +37,18 @@ export async function getUserReferenceImages(): Promise<ReferenceImageWithUrl[]>
     return [];
   }
 
-  // Get public URLs for all images
-  const imagesWithUrls: ReferenceImageWithUrl[] = (data || []).map((image) => {
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from(BUCKET_NAME).getPublicUrl(image.storage_path);
-
-    return {
-      ...image,
-      url: publicUrl,
-    };
-  });
+  // Get public URLs for all images (handles both R2 and Supabase paths)
+  const imagesWithUrls: ReferenceImageWithUrl[] = (data || []).map((image) => ({
+    ...image,
+    url: resolveStorageUrl(image.storage_path, 'reference-images'),
+  }));
 
   return imagesWithUrls;
 }
 
 /**
- * Create a reference image database record after client-side upload
- * This is a lightweight server action that only handles the database insert
- * File upload should be done client-side to avoid Server Action size limits
+ * Create a reference image database record after client-side upload.
+ * Supports both R2 (r2: prefixed) and legacy Supabase storage paths.
  */
 export async function createReferenceImageRecord(
   storagePath: string,
@@ -71,9 +66,19 @@ export async function createReferenceImageRecord(
   }
 
   // Verify the path belongs to this user (security check)
-  if (!storagePath.startsWith(`${user.id}/`)) {
-    console.error('Storage path does not belong to user');
-    return null;
+  // For R2 paths: r2:reference-images/{userId}/...
+  // For legacy paths: {userId}/...
+  if (isR2Path(storagePath)) {
+    const key = stripR2Prefix(storagePath);
+    if (!key.includes(`/${user.id}/`)) {
+      console.error('Storage path does not belong to user');
+      return null;
+    }
+  } else {
+    if (!storagePath.startsWith(`${user.id}/`)) {
+      console.error('Storage path does not belong to user');
+      return null;
+    }
   }
 
   // Ensure bucket exists and is public (lazy initialization)
@@ -95,14 +100,9 @@ export async function createReferenceImageRecord(
     return null;
   }
 
-  // Get public URL
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from(BUCKET_NAME).getPublicUrl(storagePath);
-
   return {
     ...data,
-    url: publicUrl,
+    url: resolveStorageUrl(storagePath, 'reference-images'),
   };
 }
 
@@ -182,7 +182,8 @@ export async function uploadReferenceImage(
 }
 
 /**
- * Upload reference image from a URL (e.g., a generated image)
+ * Upload reference image from a URL (e.g., a generated image).
+ * Uploads to R2 and stores path with r2: prefix.
  */
 export async function uploadReferenceImageFromUrl(
   imageUrl: string,
@@ -206,27 +207,18 @@ export async function uploadReferenceImageFromUrl(
       throw new Error(`Failed to fetch image: ${response.statusText}`);
     }
 
-    const blob = await response.blob();
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
     const contentType = response.headers.get('content-type') || 'image/png';
     const ext = contentType.split('/')[1] || 'png';
 
-    // Generate a unique filename
+    // Generate a unique filename and upload to R2
     const fileName = `${crypto.randomUUID()}.${ext}`;
-    const storagePath = `${user.id}/${fileName}`;
+    const key = `${R2_PREFIX.REFERENCE_IMAGES}/${user.id}/${fileName}`;
 
-    // Upload to storage
-    const { error: uploadError } = await supabase.storage
-      .from(BUCKET_NAME)
-      .upload(storagePath, blob, {
-        contentType,
-        cacheControl: '3600',
-        upsert: false,
-      });
+    await uploadToR2(key, buffer, contentType);
 
-    if (uploadError) {
-      console.error('Error uploading file from URL:', uploadError);
-      return null;
-    }
+    const storagePath = `r2:${key}`;
 
     // Create database record
     const { data, error: insertError } = await supabase
@@ -241,17 +233,13 @@ export async function uploadReferenceImageFromUrl(
 
     if (insertError) {
       console.error('Error creating reference image record:', insertError);
-      await supabase.storage.from(BUCKET_NAME).remove([storagePath]);
+      await deleteFromR2([key]);
       return null;
     }
 
-    const {
-      data: { publicUrl },
-    } = supabase.storage.from(BUCKET_NAME).getPublicUrl(storagePath);
-
     return {
       ...data,
-      url: publicUrl,
+      url: resolveStorageUrl(storagePath, 'reference-images'),
     };
   } catch (error) {
     console.error('Error uploading reference image from URL:', error);
@@ -294,7 +282,8 @@ export async function updateReferenceImage(
 }
 
 /**
- * Delete a reference image (removes from storage and database)
+ * Delete a reference image (removes from storage and database).
+ * Handles both R2 and legacy Supabase storage.
  */
 export async function deleteReferenceImage(id: string): Promise<boolean> {
   const supabase = await createClient();
@@ -321,14 +310,18 @@ export async function deleteReferenceImage(id: string): Promise<boolean> {
     return false;
   }
 
-  // Delete from storage
-  const { error: storageError } = await supabase.storage
-    .from(BUCKET_NAME)
-    .remove([image.storage_path]);
+  // Delete from the correct storage backend
+  if (isR2Path(image.storage_path)) {
+    await deleteFromR2([stripR2Prefix(image.storage_path)]);
+  } else {
+    const { error: storageError } = await supabase.storage
+      .from(BUCKET_NAME)
+      .remove([image.storage_path]);
 
-  if (storageError) {
-    console.error('Error deleting file from storage:', storageError);
-    // Continue to delete DB record anyway
+    if (storageError) {
+      console.error('Error deleting file from storage:', storageError);
+      // Continue to delete DB record anyway
+    }
   }
 
   // Delete database record

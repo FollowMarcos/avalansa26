@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { Columns2, GripVertical } from 'lucide-react';
 import { BaseWorkflowNode } from '../base-workflow-node';
-import { createClient } from '@/utils/supabase/client';
+import { resolveStorageUrl } from '@/utils/r2/url-helpers';
 import type { WorkflowNodeData, WorkflowNodeDefinition } from '@/types/workflow';
 import type { NodeExecutor } from '../node-registry';
 import { useNodeConfig } from '../hooks/use-node-config';
@@ -14,10 +14,8 @@ import type { UploadedImage } from '../shared/image-upload-slot';
 function resolveImageUrl(value: string | undefined): string | undefined {
   if (!value) return undefined;
   if (value.startsWith('http') || value.startsWith('blob:') || value.startsWith('data:')) return value;
-  // It's a storage path — resolve to a public URL via Supabase
-  const supabase = createClient();
-  const { data } = supabase.storage.from('reference-images').getPublicUrl(value);
-  return data.publicUrl;
+  // It's a storage path — resolve to a public URL (handles both R2 and Supabase paths)
+  return resolveStorageUrl(value, 'reference-images');
 }
 
 export const beforeAfterDefinition: WorkflowNodeDefinition = {

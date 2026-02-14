@@ -77,20 +77,34 @@ export function AvatarUpload({
         const supabase = createClient();
 
         try {
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${userId}-${Math.random()}.${fileExt}`;
-            const filePath = `${userId}/${fileName}`;
+            // Get presigned URL from our API
+            const presignResponse = await fetch('/api/upload/presign', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    bucket: 'avatars',
+                    contentType: file.type || 'image/jpeg',
+                    fileSize: file.size,
+                }),
+            });
 
-            // Upload to 'avatars' bucket
-            const { error: uploadError } = await supabase.storage
-                .from('avatars')
-                .upload(filePath, file, { upsert: true });
+            if (!presignResponse.ok) {
+                const err = await presignResponse.json();
+                throw new Error(err.error || 'Failed to get upload URL');
+            }
 
-            if (uploadError) throw uploadError;
+            const { presignedUrl, publicUrl } = await presignResponse.json();
 
-            const { data: { publicUrl } } = supabase.storage
-                .from('avatars')
-                .getPublicUrl(filePath);
+            // Upload directly to R2 via presigned URL
+            const uploadResponse = await fetch(presignedUrl, {
+                method: 'PUT',
+                body: file,
+                headers: { 'Content-Type': file.type || 'image/jpeg' },
+            });
+
+            if (!uploadResponse.ok) {
+                throw new Error(`Upload failed: ${uploadResponse.status}`);
+            }
 
             // Update profile
             const { error: updateError } = await supabase

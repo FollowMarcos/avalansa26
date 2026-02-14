@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 import { useConnectedInputValue } from '../hooks/use-connected-input';
 import { ImageUploadSlot } from '../shared/image-upload-slot';
 import type { UploadedImage } from '../shared/image-upload-slot';
-import { createClient } from '@/utils/supabase/client';
+import { resolveStorageUrl } from '@/utils/r2/url-helpers';
 
 // ---------------------------------------------------------------------------
 // Definition
@@ -59,10 +59,8 @@ function resolveToPublicUrl(raw: string | undefined): string | undefined {
   if (!raw) return undefined;
   if (raw.startsWith('http') || raw.startsWith('blob:') || raw.startsWith('data:')) return raw;
 
-  // Storage path — resolve to a public URL via Supabase
-  const supabase = createClient();
-  const { data } = supabase.storage.from('reference-images').getPublicUrl(raw);
-  return data.publicUrl;
+  // Storage path — resolve to a public URL (handles both R2 and Supabase paths)
+  return resolveStorageUrl(raw, 'reference-images');
 }
 
 // ---------------------------------------------------------------------------

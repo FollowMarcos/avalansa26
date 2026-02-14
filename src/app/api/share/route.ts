@@ -7,6 +7,8 @@ import sharp from 'sharp';
 const ALLOWED_IMAGE_DOMAINS = [
   // Supabase storage
   process.env.NEXT_PUBLIC_SUPABASE_URL?.replace('https://', ''),
+  // Cloudflare R2 storage
+  process.env.NEXT_PUBLIC_R2_DOMAIN ? new URL(process.env.NEXT_PUBLIC_R2_DOMAIN).hostname : undefined,
   // Add other trusted CDN domains as needed
   'replicate.delivery',
   'pbxt.replicate.delivery',

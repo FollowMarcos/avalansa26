@@ -47,25 +47,35 @@ export function AvatarForm({ initialAvatarUrl }: AvatarFormProps) {
             // Client-side Resize
             // 300x300px, 0.8 quality JPEG
             const resizedBlob = await resizeImage(file, 300, 300, 0.8);
-            const resizedFile = new File([resizedBlob], "avatar.jpg", { type: 'image/jpeg' });
 
-            // Upload to Supabase
-            const supabase = createClient();
-            const { data: { user } } = await supabase.auth.getUser();
+            // Get presigned URL from our API
+            const presignResponse = await fetch('/api/upload/presign', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    bucket: 'avatars',
+                    contentType: 'image/jpeg',
+                    fileSize: resizedBlob.size,
+                }),
+            });
 
-            if (!user) throw new Error('Not authenticated');
+            if (!presignResponse.ok) {
+                const err = await presignResponse.json();
+                throw new Error(err.error || 'Failed to get upload URL');
+            }
 
-            const filePath = `${user.id}/${Date.now()}.jpg`;
+            const { presignedUrl, publicUrl } = await presignResponse.json();
 
-            const { error: uploadError } = await supabase.storage
-                .from('avatars')
-                .upload(filePath, resizedFile, { upsert: true });
+            // Upload directly to R2 via presigned URL
+            const uploadResponse = await fetch(presignedUrl, {
+                method: 'PUT',
+                body: resizedBlob,
+                headers: { 'Content-Type': 'image/jpeg' },
+            });
 
-            if (uploadError) throw uploadError;
-
-            const { data: { publicUrl } } = supabase.storage
-                .from('avatars')
-                .getPublicUrl(filePath);
+            if (!uploadResponse.ok) {
+                throw new Error(`Upload failed: ${uploadResponse.status}`);
+            }
 
             setAvatarUrl(publicUrl);
             toast.success('Image processed & uploaded');

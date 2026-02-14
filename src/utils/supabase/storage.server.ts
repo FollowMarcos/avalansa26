@@ -2,6 +2,8 @@
 
 import { createClient } from '@/utils/supabase/server';
 import sharp from 'sharp';
+import { uploadToR2, downloadFromR2, deleteFromR2, getR2PublicUrl, R2_PREFIX } from '@/utils/r2/client';
+import { isR2Path, stripR2Prefix, resolveStorageUrl } from '@/utils/r2/url-helpers';
 
 const BUCKET_NAME = 'reference-images';
 const GENERATIONS_BUCKET = 'generations';
@@ -10,10 +12,22 @@ const GENERATIONS_BUCKET = 'generations';
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 
 /**
- * Download a reference image from storage and convert to base64
+ * Download a reference image from storage and convert to base64.
+ * Handles both R2 (r2: prefix) and legacy Supabase paths.
  */
 export async function getImageAsBase64(path: string): Promise<string | null> {
   try {
+    if (isR2Path(path)) {
+      const key = stripR2Prefix(path);
+      const buffer = await downloadFromR2(key);
+      if (!buffer) return null;
+
+      const base64 = buffer.toString('base64');
+      const mimeType = 'image/jpeg';
+      return `data:${mimeType};base64,${base64}`;
+    }
+
+    // Legacy: download from Supabase
     const supabase = await createClient();
 
     const { data, error } = await supabase.storage
@@ -25,10 +39,9 @@ export async function getImageAsBase64(path: string): Promise<string | null> {
       return null;
     }
 
-    // Convert blob to base64
     const arrayBuffer = await data.arrayBuffer();
     const base64 = Buffer.from(arrayBuffer).toString('base64');
-    const mimeType = 'image/jpeg'; // We always compress to JPEG
+    const mimeType = 'image/jpeg';
 
     return `data:${mimeType};base64,${base64}`;
   } catch (error) {
@@ -46,37 +59,44 @@ export async function getImagesAsBase64(paths: string[]): Promise<string[]> {
 }
 
 /**
- * Get public URLs for reference images from storage paths
+ * Get public URLs for reference images from storage paths.
+ * Handles both R2 and legacy Supabase paths.
  */
 export async function getReferenceImageUrls(paths: string[]): Promise<{ url: string; storagePath: string }[]> {
   if (paths.length === 0) return [];
 
-  const supabase = await createClient();
-
-  return paths.map((path) => {
-    const { data: { publicUrl } } = supabase.storage
-      .from(BUCKET_NAME)
-      .getPublicUrl(path);
-
-    return { url: publicUrl, storagePath: path };
-  });
+  return paths.map((path) => ({
+    url: resolveStorageUrl(path, 'reference-images'),
+    storagePath: path,
+  }));
 }
 
 /**
- * Delete reference images (cleanup after generation)
+ * Delete reference images (cleanup after generation).
+ * Handles both R2 and legacy Supabase paths.
  */
 export async function deleteReferenceImagesServer(paths: string[]): Promise<void> {
   if (paths.length === 0) return;
 
   try {
-    const supabase = await createClient();
+    const r2Paths = paths.filter(isR2Path);
+    const supabasePaths = paths.filter((p) => !isR2Path(p));
 
-    const { error } = await supabase.storage
-      .from(BUCKET_NAME)
-      .remove(paths);
+    // Delete from R2
+    if (r2Paths.length > 0) {
+      await deleteFromR2(r2Paths.map(stripR2Prefix));
+    }
 
-    if (error) {
-      console.error('Server delete error:', error);
+    // Delete from legacy Supabase
+    if (supabasePaths.length > 0) {
+      const supabase = await createClient();
+      const { error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .remove(supabasePaths);
+
+      if (error) {
+        console.error('Supabase delete error:', error);
+      }
     }
   } catch (error) {
     console.error('Error deleting images:', error);
@@ -98,10 +118,6 @@ async function optimizeImageBuffer(
 
   // Only compress if absolutely necessary (> 50MB)
   console.log(`Image ${(buffer.length / 1024 / 1024).toFixed(2)}MB exceeds 50MB limit, optimizing...`);
-
-  // Use sharp to compress the image
-  const sharpInstance = sharp(buffer);
-  const metadata = await sharpInstance.metadata();
 
   // Try WebP first with high quality (best compression ratio)
   let optimizedBuffer = await sharp(buffer)
@@ -133,9 +149,8 @@ async function optimizeImageBuffer(
 }
 
 /**
- * Upload a generated image to storage from base64
- * Returns the public URL
- * Automatically compresses large images to fit storage limits
+ * Upload a generated image to R2 from base64.
+ * Returns the public URL and storage path (with r2: prefix).
  */
 export async function uploadGeneratedImage(
   base64Data: string,
@@ -143,8 +158,6 @@ export async function uploadGeneratedImage(
   mimeType: string = 'image/png'
 ): Promise<{ url: string; path?: string; error?: string }> {
   try {
-    const supabase = await createClient();
-
     // Remove data URL prefix if present
     const base64Clean = base64Data.replace(/^data:[^;]+;base64,/, '');
 
@@ -168,27 +181,12 @@ export async function uploadGeneratedImage(
     const extension = finalMimeType === 'image/webp' ? 'webp' :
                       finalMimeType === 'image/jpeg' ? 'jpg' :
                       finalMimeType.split('/')[1] || 'png';
-    const filename = `${userId}/${timestamp}-${randomId}.${extension}`;
+    const key = `${R2_PREFIX.GENERATIONS}/${userId}/${timestamp}-${randomId}.${extension}`;
 
-    // Upload to Supabase Storage
-    const { data, error } = await supabase.storage
-      .from(GENERATIONS_BUCKET)
-      .upload(filename, uploadBuffer, {
-        contentType: finalMimeType,
-        upsert: false,
-      });
+    // Upload to R2
+    const { url } = await uploadToR2(key, uploadBuffer, finalMimeType);
 
-    if (error) {
-      console.error('Upload generated image error:', error);
-      return { url: '', error: error.message };
-    }
-
-    // Get the public URL
-    const { data: urlData } = supabase.storage
-      .from(GENERATIONS_BUCKET)
-      .getPublicUrl(data.path);
-
-    return { url: urlData.publicUrl, path: data.path };
+    return { url, path: `r2:${key}` };
   } catch (error) {
     console.error('Upload generated image error:', error);
     return {
@@ -211,7 +209,7 @@ const ALLOWED_IMAGE_HOSTS = new Set([
 ]);
 
 /**
- * Download an image from an external URL and upload it to Supabase Storage.
+ * Download an image from an external URL and upload it to R2.
  * Used to re-host images from provider CDNs (Fal.ai, OpenAI, etc.) so they
  * are served from our own domain and work with Next.js Image optimization.
  */
@@ -238,32 +236,17 @@ export async function uploadImageFromUrl(
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    const supabase = await createClient();
-
     const timestamp = Date.now();
     const randomId = Math.random().toString(36).substring(2, 11);
     const extension = contentType.includes('jpeg') || contentType.includes('jpg') ? 'jpg'
       : contentType.includes('webp') ? 'webp'
       : 'png';
-    const filename = `${userId}/${timestamp}-${randomId}.${extension}`;
+    const key = `${R2_PREFIX.GENERATIONS}/${userId}/${timestamp}-${randomId}.${extension}`;
 
-    const { data, error } = await supabase.storage
-      .from(GENERATIONS_BUCKET)
-      .upload(filename, buffer, {
-        contentType,
-        upsert: false,
-      });
+    // Upload to R2
+    const { url } = await uploadToR2(key, buffer, contentType);
 
-    if (error) {
-      console.error('Upload from URL error:', error);
-      return { url: externalUrl, error: error.message };
-    }
-
-    const { data: urlData } = supabase.storage
-      .from(GENERATIONS_BUCKET)
-      .getPublicUrl(data.path);
-
-    return { url: urlData.publicUrl, path: data.path };
+    return { url, path: `r2:${key}` };
   } catch (error) {
     console.error('Upload from URL error:', error);
     return {

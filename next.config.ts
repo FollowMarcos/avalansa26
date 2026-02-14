@@ -37,6 +37,12 @@ const nextConfig: NextConfig = {
         hostname: 'fal.media',
         port: '',
       },
+      // Cloudflare R2 storage (r2.dev subdomain)
+      {
+        protocol: 'https',
+        hostname: '**.r2.dev',
+        port: '',
+      },
     ],
   },
   async headers() {
@@ -50,9 +56,9 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-eval' 'unsafe-inline'", // unsafe-inline needed for Next.js
               "style-src 'self' 'unsafe-inline'", // unsafe-inline needed for styled-components
-              "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://storage.googleapis.com https://*.fal.media https://fal.media",
+              "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://storage.googleapis.com https://*.fal.media https://fal.media https://*.r2.dev",
               "font-src 'self' data:",
-              "connect-src 'self' data: blob: https://*.supabase.co https://generativelanguage.googleapis.com wss://*.supabase.co",
+              "connect-src 'self' data: blob: https://*.supabase.co https://generativelanguage.googleapis.com wss://*.supabase.co https://*.r2.dev https://*.r2.cloudflarestorage.com",
               "media-src 'self' blob:",
               "object-src 'none'",
               "base-uri 'self'",
