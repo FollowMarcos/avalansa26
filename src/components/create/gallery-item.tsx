@@ -32,6 +32,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Loader } from "@/components/ui/loader";
+import { useDraggable } from "@dnd-kit/core";
 import type { GeneratedImage } from "./create-context";
 
 // ---------------------------------------------------------------------------
@@ -87,13 +88,45 @@ export const GalleryItem = React.memo(function GalleryItem({
   formatTime,
   itemRef,
 }: GalleryItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef: setDragNodeRef,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: image.id,
+  });
+
+  // Merge the drag ref with the keyboard-nav itemRef
+  const mergedRef = React.useCallback(
+    (node: HTMLElement | null) => {
+      setDragNodeRef(node);
+      if (typeof itemRef === "function") {
+        itemRef(node);
+      } else if (itemRef && "current" in itemRef) {
+        (itemRef as React.MutableRefObject<HTMLElement | null>).current = node;
+      }
+    },
+    [setDragNodeRef, itemRef],
+  );
+
+  const dragStyle: React.CSSProperties | undefined = transform
+    ? {
+        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+        contentVisibility: "auto" as const,
+      }
+    : { contentVisibility: "auto" as const };
+
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <Tooltip>
           <TooltipTrigger asChild>
             <article
-              ref={itemRef as React.Ref<HTMLDivElement>}
+              ref={mergedRef}
+              {...attributes}
+              {...listeners}
               tabIndex={0}
               className={cn(
                 "relative group rounded-lg overflow-hidden bg-muted border outline-none",
@@ -101,8 +134,10 @@ export const GalleryItem = React.memo(function GalleryItem({
                 isFocused && "ring-2 ring-ring",
                 isCurrentSelected && !isBulkMode && "ring-2 ring-foreground",
                 isSelected && isBulkMode && "ring-2 ring-primary border-primary",
+                isDragging && "opacity-50 cursor-grabbing",
+                !isBulkMode && !isDragging && "cursor-grab active:cursor-grabbing",
               )}
-              style={{ contentVisibility: "auto" }}
+              style={dragStyle}
               onClick={(e) => onImageClick(image, e)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
