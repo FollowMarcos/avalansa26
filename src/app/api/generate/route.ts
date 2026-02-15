@@ -26,6 +26,7 @@ export interface GenerateRequest {
 export interface GeneratedImage {
   url: string;
   base64?: string;
+  id?: string;
 }
 
 export interface GenerateResponse {
@@ -351,10 +352,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
         }
       }
 
-      processedImages.push({ url: imageUrl });
-
       // Save to generation history
-      await saveGeneration({
+      const saved = await saveGeneration({
         user_id: user.id,
         api_config_id: apiId,
         prompt: prompt || '',
@@ -371,6 +370,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
           ...(source ? { source } : {}),
         },
       });
+
+      processedImages.push({ url: imageUrl, id: saved?.id });
     }
 
     return NextResponse.json({ success: true, images: processedImages, mode: 'fast' });

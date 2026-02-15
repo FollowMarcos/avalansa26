@@ -1195,9 +1195,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         throw new Error(data.error || 'No images generated');
       }
 
-      // Replace placeholder entries with actual images
-      const newImages: GeneratedImage[] = data.images.map((img: { url: string }, i: number) => ({
-        id: `gen-${Date.now()}-${i}`,
+      // Replace placeholder entries with actual images (use DB ID when available)
+      const newImages: GeneratedImage[] = data.images.map((img: { url: string; id?: string }, i: number) => ({
+        id: img.id || `gen-${Date.now()}-${i}`,
         url: img.url,
         prompt: finalPrompt,
         timestamp: Date.now(),
@@ -1625,22 +1625,29 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
   // Bulk delete images
   const bulkDeleteImages = React.useCallback(async (ids: string[]) => {
-    const { deleteGeneration } = await import("@/utils/supabase/generations.server");
+    // Separate local-only IDs (not in database) from real DB UUIDs
+    const localIds = ids.filter(id => !isDbId(id));
+    const dbIds = ids.filter(isDbId);
 
-    // Delete each generation — use allSettled to handle partial failures
-    const results = await Promise.allSettled(ids.map(id => deleteGeneration(id)));
-
-    // Determine which deletions succeeded
-    const deletedIds: string[] = [];
+    // Local-only images can always be removed from state
+    const deletedIds: string[] = [...localIds];
     const failedIds: string[] = [];
-    results.forEach((result, i) => {
-      if (result.status === "fulfilled") {
-        deletedIds.push(ids[i]);
-      } else {
-        console.error(`Failed to delete ${ids[i]}:`, result.reason);
-        failedIds.push(ids[i]);
-      }
-    });
+
+    // Only call the server for images that exist in the database
+    if (dbIds.length > 0) {
+      const { deleteGeneration } = await import("@/utils/supabase/generations.server");
+
+      const results = await Promise.allSettled(dbIds.map(id => deleteGeneration(id)));
+
+      results.forEach((result, i) => {
+        if (result.status === "fulfilled") {
+          deletedIds.push(dbIds[i]);
+        } else {
+          console.error(`Failed to delete ${dbIds[i]}:`, result.reason);
+          failedIds.push(dbIds[i]);
+        }
+      });
+    }
 
     // Only remove successfully deleted images from local state
     if (deletedIds.length > 0) {
