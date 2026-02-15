@@ -414,24 +414,35 @@ export function PendingCard({ image }: { image: GeneratedImage }) {
 
   return (
     <div
-      className="relative rounded-lg overflow-hidden bg-background border border-border"
+      className="relative rounded-lg overflow-hidden bg-zinc-950 dark:bg-zinc-950 border border-border"
       role="status"
       aria-label="Generating image"
     >
       <div className={cn("relative", aspectClass)}>
-        {/* Animated gradient blobs */}
+        {/* Color-cycling gradient blobs */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -inset-[20%] rounded-full bg-primary/15 blur-3xl animate-[breathe-1_4s_ease-in-out_infinite]" />
-          <div className="absolute -inset-[20%] rounded-full bg-muted-foreground/10 blur-3xl animate-[breathe-2_5s_ease-in-out_infinite_0.5s]" />
-          <div className="absolute -inset-[20%] rounded-full bg-primary/10 blur-3xl animate-[breathe-3_6s_ease-in-out_infinite_1s]" />
+          <div className="absolute top-[-30%] left-[-20%] w-[80%] h-[80%] rounded-full blur-3xl animate-[breathe-1_6s_ease-in-out_infinite]" />
+          <div className="absolute bottom-[-20%] right-[-25%] w-[75%] h-[75%] rounded-full blur-3xl animate-[breathe-2_7s_ease-in-out_infinite]" />
+          <div className="absolute top-[10%] right-[-10%] w-[70%] h-[70%] rounded-full blur-3xl animate-[breathe-3_8s_ease-in-out_infinite]" />
+        </div>
+
+        {/* Wave ripples emanating from center */}
+        <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+          {[0, 1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="absolute w-[60%] h-[60%] rounded-full border border-white/[0.08] animate-[ripple_3.5s_ease-out_infinite]"
+              style={{ animationDelay: `${i * 0.8}s` }}
+            />
+          ))}
         </div>
 
         {/* Frosted glass overlay */}
-        <div className="absolute inset-0 backdrop-blur-2xl bg-muted/30" />
+        <div className="absolute inset-0 backdrop-blur-xl bg-black/10 dark:bg-black/20" />
 
         {/* Content */}
         <div className="relative flex flex-col items-center justify-end p-4 h-full">
-          <p className="text-xs text-muted-foreground/60 font-mono text-center line-clamp-2 animate-pulse">
+          <p className="text-xs text-white/40 font-mono text-center line-clamp-2 animate-pulse">
             {image.prompt || "Generating\u2026"}
           </p>
         </div>

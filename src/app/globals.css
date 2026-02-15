@@ -100,16 +100,23 @@
 
 /* Breathing blob animations for generating card */
 @keyframes breathe-1 {
-  0%, 100% { transform: scale(1) translate(0, 0); opacity: 0.5; }
-  50% { transform: scale(1.18) translate(3%, 5%); opacity: 0.7; }
+  0%, 100% { transform: scale(1) translate(0, 0); opacity: 0.6; background-color: #6366f1; }
+  33% { transform: scale(1.2) translate(5%, 8%); opacity: 0.75; background-color: #a855f7; }
+  66% { transform: scale(0.95) translate(-3%, 4%); opacity: 0.55; background-color: #3b82f6; }
 }
 @keyframes breathe-2 {
-  0%, 100% { transform: scale(1.05) translate(0, 0); opacity: 0.4; }
-  50% { transform: scale(0.9) translate(-4%, 3%); opacity: 0.65; }
+  0%, 100% { transform: scale(1.05) translate(0, 0); opacity: 0.5; background-color: #ec4899; }
+  33% { transform: scale(0.85) translate(-6%, 3%); opacity: 0.7; background-color: #8b5cf6; }
+  66% { transform: scale(1.15) translate(4%, -5%); opacity: 0.55; background-color: #06b6d4; }
 }
 @keyframes breathe-3 {
-  0%, 100% { transform: scale(0.95) translate(0, 0); opacity: 0.45; }
-  50% { transform: scale(1.12) translate(2%, -4%); opacity: 0.6; }
+  0%, 100% { transform: scale(0.9) translate(0, 0); opacity: 0.45; background-color: #14b8a6; }
+  33% { transform: scale(1.1) translate(3%, -6%); opacity: 0.65; background-color: #f43f5e; }
+  66% { transform: scale(1.0) translate(-4%, 2%); opacity: 0.5; background-color: #a855f7; }
+}
+@keyframes ripple {
+  0% { transform: scale(0.3); opacity: 0.4; }
+  100% { transform: scale(1.8); opacity: 0; }
 }
 
 .bg-noise {
