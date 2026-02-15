@@ -31,7 +31,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Loader } from "@/components/ui/loader";
 import type { GeneratedImage } from "./create-context";
 
 // ---------------------------------------------------------------------------
@@ -415,22 +414,27 @@ export function PendingCard({ image }: { image: GeneratedImage }) {
 
   return (
     <div
-      className="relative rounded-lg overflow-hidden bg-muted border border-border"
+      className="relative rounded-lg overflow-hidden bg-background border border-border"
       role="status"
       aria-label="Generating image"
     >
-      <div
-        className={cn(
-          "flex flex-col items-center justify-center gap-3 p-4",
-          aspectClass,
-        )}
-      >
-        {/* Skeleton shimmer */}
-        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-muted-foreground/5 to-transparent animate-pulse" />
-        <Loader size="sm" />
-        <p className="text-xs text-muted-foreground font-mono text-center line-clamp-2 relative">
-          {image.prompt || "Generating…"}
-        </p>
+      <div className={cn("relative", aspectClass)}>
+        {/* Animated gradient blobs */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -inset-[20%] rounded-full bg-primary/15 blur-3xl animate-[breathe-1_4s_ease-in-out_infinite]" />
+          <div className="absolute -inset-[20%] rounded-full bg-muted-foreground/10 blur-3xl animate-[breathe-2_5s_ease-in-out_infinite_0.5s]" />
+          <div className="absolute -inset-[20%] rounded-full bg-primary/10 blur-3xl animate-[breathe-3_6s_ease-in-out_infinite_1s]" />
+        </div>
+
+        {/* Frosted glass overlay */}
+        <div className="absolute inset-0 backdrop-blur-2xl bg-muted/30" />
+
+        {/* Content */}
+        <div className="relative flex flex-col items-center justify-end p-4 h-full">
+          <p className="text-xs text-muted-foreground/60 font-mono text-center line-clamp-2 animate-pulse">
+            {image.prompt || "Generating\u2026"}
+          </p>
+        </div>
       </div>
     </div>
   );
