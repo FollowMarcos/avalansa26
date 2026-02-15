@@ -50,23 +50,10 @@ const nextConfig: NextConfig = {
       {
         source: '/:path*',
         headers: [
-          {
-            key: 'Content-Security-Policy',
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-eval' 'unsafe-inline'", // unsafe-inline needed for Next.js
-              "style-src 'self' 'unsafe-inline'", // unsafe-inline needed for styled-components
-              "img-src 'self' data: blob: https://*.supabase.co https://*.googleusercontent.com https://storage.googleapis.com https://*.fal.media https://fal.media https://*.r2.dev",
-              "font-src 'self' data:",
-              "connect-src 'self' data: blob: https://*.supabase.co https://generativelanguage.googleapis.com wss://*.supabase.co https://*.r2.dev https://*.r2.cloudflarestorage.com",
-              "media-src 'self' blob:",
-              "object-src 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-              "frame-ancestors 'none'",
-              "upgrade-insecure-requests",
-            ].join('; '),
-          },
+          // CSP is set by proxy.ts for all page requests.
+          // Do NOT add a second CSP header here — duplicate CSP headers
+          // cause the browser to enforce the intersection (most restrictive),
+          // which can block R2/external images in components using unoptimized next/image.
           {
             key: 'X-Frame-Options',
             value: 'DENY',
