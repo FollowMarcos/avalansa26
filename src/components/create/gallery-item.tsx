@@ -319,7 +319,10 @@ export const GalleryItem = React.memo(function GalleryItem({
                     {image.settings.model}
                   </span>
                 </div>
-                <span className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono tabular-nums text-muted-foreground">
+                <span
+                  className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono tabular-nums text-muted-foreground"
+                  suppressHydrationWarning
+                >
                   {formatTime(image.timestamp)}
                 </span>
               </div>
