@@ -520,7 +520,7 @@ export function UnifiedToolbar({
                     </TooltipTrigger>
                     <TooltipContent>More Columns</TooltipContent>
                   </Tooltip>
-                  <span className="text-[10px] text-muted-foreground tabular-nums w-3 text-center">
+                  <span className="text-[10px] text-muted-foreground tabular-nums w-3 text-center" suppressHydrationWarning>
                     {galleryColumnCount}
                   </span>
                 </div>

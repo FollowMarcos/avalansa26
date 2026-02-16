@@ -383,32 +383,36 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [interactionMode, setInteractionMode] = React.useState<InteractionMode>("select");
 
   // Gallery layout state (with localStorage persistence)
-  const [galleryColumnCount, setGalleryColumnCount] = React.useState(() => {
-    if (typeof window === "undefined") return 4;
-    const saved = localStorage.getItem("gallery-column-count");
-    return saved ? Math.max(2, Math.min(8, parseInt(saved, 10) || 4)) : 4;
-  });
-  const [gallerySidebarOpen, setGallerySidebarOpen] = React.useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("gallery-sidebar-open") === "true";
-  });
+  // Initialize with defaults to avoid hydration mismatch; restore from
+  // localStorage in an effect after mount.
+  const [galleryColumnCount, setGalleryColumnCount] = React.useState(4);
+  const [gallerySidebarOpen, setGallerySidebarOpen] = React.useState(false);
 
   // Dock collapsed state (with localStorage persistence)
-  const [dockCollapsed, setDockCollapsed] = React.useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("dock-collapsed") === "true";
-  });
+  const [dockCollapsed, setDockCollapsed] = React.useState(false);
 
-  // Persist gallery layout to localStorage
+  // Restore layout state from localStorage after mount (hydration-safe)
   React.useEffect(() => {
+    try {
+      const savedCols = localStorage.getItem("gallery-column-count");
+      if (savedCols) setGalleryColumnCount(Math.max(2, Math.min(8, parseInt(savedCols, 10) || 4)));
+      if (localStorage.getItem("gallery-sidebar-open") === "true") setGallerySidebarOpen(true);
+      if (localStorage.getItem("dock-collapsed") === "true") setDockCollapsed(true);
+    } catch { /* localStorage unavailable */ }
+  }, []);
+
+  // Persist gallery layout to localStorage (skip the initial render to avoid
+  // overwriting saved values with defaults before the restore effect applies)
+  const layoutInitialRenderRef = React.useRef(true);
+  React.useEffect(() => {
+    if (layoutInitialRenderRef.current) {
+      layoutInitialRenderRef.current = false;
+      return;
+    }
     localStorage.setItem("gallery-column-count", String(galleryColumnCount));
-  }, [galleryColumnCount]);
-  React.useEffect(() => {
     localStorage.setItem("gallery-sidebar-open", String(gallerySidebarOpen));
-  }, [gallerySidebarOpen]);
-  React.useEffect(() => {
     localStorage.setItem("dock-collapsed", String(dockCollapsed));
-  }, [dockCollapsed]);
+  }, [galleryColumnCount, gallerySidebarOpen, dockCollapsed]);
   const [historyPanelOpen, setHistoryPanelOpen] = React.useState(true);
   const [isInputVisible, setIsInputVisible] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState("create");
