@@ -569,8 +569,9 @@ async function generateWithGemini(params: ProviderParams): Promise<GeneratedImag
   // Use the configured endpoint or default to Gemini API
   const apiEndpoint = endpoint || `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
-  // Timeout for individual Gemini API requests (90 seconds)
-  const REQUEST_TIMEOUT = 90000;
+  // Timeout for individual Gemini API requests (180 seconds)
+  // Reference images + high resolution (2K/4K) can take 2-3 minutes
+  const REQUEST_TIMEOUT = 180000;
 
   // Helper function to make a single API call and extract image
   const makeSingleRequest = async (requestIndex: number): Promise<GeneratedImage | null> => {
