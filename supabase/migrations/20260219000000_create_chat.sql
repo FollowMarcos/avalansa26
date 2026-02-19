@@ -227,12 +227,12 @@ grant execute on function public.is_dm_participant(uuid, uuid) to authenticated;
 -- Auto-update updated_at on chat_channels
 create trigger handle_chat_channels_updated_at
   before update on public.chat_channels
-  for each row execute procedure moddatetime(updated_at);
+  for each row execute procedure extensions.moddatetime(updated_at);
 
 -- Auto-update updated_at on chat_dm_threads
 create trigger handle_chat_dm_threads_updated_at
   before update on public.chat_dm_threads
-  for each row execute procedure moddatetime(updated_at);
+  for each row execute procedure extensions.moddatetime(updated_at);
 
 -- ============================================================================
 -- 6. ROW LEVEL SECURITY
