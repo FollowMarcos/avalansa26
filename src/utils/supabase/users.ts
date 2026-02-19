@@ -1,7 +1,14 @@
 import { createClient } from '@/utils/supabase/client';
-import type { Profile } from '@/types/database';
 
-export async function searchUsers(query: string): Promise<Profile[]> {
+/** Public-safe subset of profile data returned by user search. */
+export interface UserSearchResult {
+    id: string;
+    username: string | null;
+    avatar_url: string | null;
+    name: string | null;
+}
+
+export async function searchUsers(query: string): Promise<UserSearchResult[]> {
     if (!query || query.length < 2) return [];
 
     // Sanitize input - escape special SQL ILIKE characters to prevent injection
@@ -11,7 +18,7 @@ export async function searchUsers(query: string): Promise<Profile[]> {
     const supabase = createClient();
     const { data } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, username, avatar_url, name')
         .or(`username.ilike.%${sanitizedQuery}%,name.ilike.%${sanitizedQuery}%`)
         .limit(10);
 

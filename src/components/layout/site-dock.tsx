@@ -36,6 +36,7 @@ const DEFAULT_ITEMS: DockItem[] = [
     { id: 'labs', label: 'Labs', icon: 'FlaskConical', href: '/labs', order: 2, is_visible: true, created_at: '', updated_at: '', bg_color: 'bg-gradient-to-br from-orange-400 to-orange-600', text_color: 'text-white' },
     { id: 'tools', label: 'Tools', icon: 'Hammer', href: '/tools', dropdown_items: [{ label: 'X Multi-Image', href: '/tools/x-multi-image-preview-and-split', icon: 'Sparkles' }], order: 3, is_visible: true, created_at: '', updated_at: '', bg_color: 'bg-zinc-100 dark:bg-zinc-800', text_color: 'text-zinc-900 dark:text-zinc-100' },
     { id: 'assets', label: 'Assets', icon: 'Images', href: '/assets', order: 4, is_visible: true, created_at: '', updated_at: '', bg_color: 'bg-gradient-to-br from-emerald-400 to-emerald-600', text_color: 'text-white' },
+    { id: 'chat', label: 'Chat', icon: 'MessageCircle', href: '/chat', order: 5, is_visible: true, created_at: '', updated_at: '', bg_color: 'bg-gradient-to-br from-indigo-400 to-indigo-600', text_color: 'text-white' },
 ];
 
 interface UserProfile {

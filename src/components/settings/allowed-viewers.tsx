@@ -6,8 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { searchUsers } from "@/utils/supabase/users";
-import type { Profile } from "@/types/database";
+import { searchUsers, type UserSearchResult } from "@/utils/supabase/users";
 
 interface AllowedViewersProps {
     currentAllowedIds: string[];
@@ -16,25 +15,25 @@ interface AllowedViewersProps {
 
 export function AllowedViewers({ currentAllowedIds, onChange }: AllowedViewersProps) {
     const [searchQuery, setSearchQuery] = useState("");
-    const [searchResults, setSearchResults] = useState<Profile[]>([]);
+    const [searchResults, setSearchResults] = useState<UserSearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
-    const [allowedProfiles, setAllowedProfiles] = useState<Profile[]>([]);
-    const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
+    const [allowedUserSearchResults, setAllowedUserSearchResults] = useState<UserSearchResult[]>([]);
+    const [isLoadingUserSearchResults, setIsLoadingUserSearchResults] = useState(false);
 
     // Load profile details for existing IDs
     useEffect(() => {
-        async function loadAllowedProfiles() {
+        async function loadAllowedUserSearchResults() {
             if (currentAllowedIds.length === 0) {
-                setAllowedProfiles([]);
+                setAllowedUserSearchResults([]);
                 return;
             }
 
-            setIsLoadingProfiles(true);
-            // We'll reuse searchUsers but we really should have a "getProfilesByIds"
+            setIsLoadingUserSearchResults(true);
+            // We'll reuse searchUsers but we really should have a "getUserSearchResultsByIds"
             // For now, let's just assume we might need to fetch them. 
             // Actually, let's just fetch them one by one or filter from search is inefficient.
             // Let's rely on the parent component or fetch them here properly.
-            // Since I didn't create a 'getProfilesByIds' function, I'll simulate or add it.
+            // Since I didn't create a 'getUserSearchResultsByIds' function, I'll simulate or add it.
             // For this step, I will just list IDs if I can't fetch names easily, 
             // BUT a better UX is to fetch the names.
             // Let's try to fetch them via specific query.
@@ -44,20 +43,20 @@ export function AllowedViewers({ currentAllowedIds, onChange }: AllowedViewersPr
                 const supabase = createClient();
                 const { data } = await supabase
                     .from('profiles')
-                    .select('*')
+                    .select('id, username, avatar_url, name')
                     .in('id', currentAllowedIds);
 
-                if (data) setAllowedProfiles(data);
+                if (data) setAllowedUserSearchResults(data);
             } catch (e) {
                 console.error("Failed to load allowed profiles", e);
             } finally {
-                setIsLoadingProfiles(false);
+                setIsLoadingUserSearchResults(false);
             }
         }
 
-        // Only load if allowedProfiles doesn't match currentAllowedIds length roughly
-        if (currentAllowedIds.length !== allowedProfiles.length) {
-            loadAllowedProfiles();
+        // Only load if allowedUserSearchResults doesn't match currentAllowedIds length roughly
+        if (currentAllowedIds.length !== allowedUserSearchResults.length) {
+            loadAllowedUserSearchResults();
         }
     }, [currentAllowedIds]); // simplified dependency
 
@@ -84,10 +83,10 @@ export function AllowedViewers({ currentAllowedIds, onChange }: AllowedViewersPr
         return () => clearTimeout(timer);
     }, [searchQuery, currentAllowedIds]);
 
-    const addUser = (user: Profile) => {
+    const addUser = (user: UserSearchResult) => {
         const newIds = [...currentAllowedIds, user.id];
         onChange(newIds);
-        setAllowedProfiles([...allowedProfiles, user]);
+        setAllowedUserSearchResults([...allowedUserSearchResults, user]);
         setSearchQuery(""); // clear search
         setSearchResults([]);
     };
@@ -95,7 +94,7 @@ export function AllowedViewers({ currentAllowedIds, onChange }: AllowedViewersPr
     const removeUser = (userId: string) => {
         const newIds = currentAllowedIds.filter(id => id !== userId);
         onChange(newIds);
-        setAllowedProfiles(allowedProfiles.filter(p => p.id !== userId));
+        setAllowedUserSearchResults(allowedUserSearchResults.filter(p => p.id !== userId));
     };
 
     return (
@@ -141,18 +140,18 @@ export function AllowedViewers({ currentAllowedIds, onChange }: AllowedViewersPr
             {/* Selected Users List */}
             <div className="space-y-2">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                    Allowed Viewers ({allowedProfiles.length})
+                    Allowed Viewers ({allowedUserSearchResults.length})
                 </p>
 
-                {isLoadingProfiles ? (
+                {isLoadingUserSearchResults ? (
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <Loader2 className="h-3 w-3 animate-spin" /> Loading access list...
                     </div>
-                ) : allowedProfiles.length === 0 ? (
+                ) : allowedUserSearchResults.length === 0 ? (
                     <p className="text-sm text-muted-foreground italic">No users allowed yet.</p>
                 ) : (
                     <div className="flex flex-wrap gap-2">
-                        {allowedProfiles.map(user => (
+                        {allowedUserSearchResults.map(user => (
                             <Badge key={user.id} variant="secondary" className="pl-1 pr-2 py-1 h-8 rounded-full flex items-center gap-2">
                                 <Avatar className="h-6 w-6">
                                     <AvatarImage src={user.avatar_url || undefined} />
