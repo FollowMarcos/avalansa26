@@ -11,6 +11,7 @@ import { MessageArea } from './message-area';
 import { MemberSidebar } from './member-sidebar';
 import { CreateProvider } from '@/components/create/create-context';
 import { SiteDock } from '@/components/layout/site-dock';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 export function ChatLayout() {
@@ -53,33 +54,35 @@ export function ChatLayout() {
 
   return (
     <CreateProvider>
-      <div className="relative flex h-dvh bg-background text-foreground overflow-hidden">
-        {/* Dock — vertical left position */}
-        <div className="fixed top-0 left-0 bottom-0 z-[60] p-3 flex items-center pointer-events-none">
-          <SiteDock vertical />
-        </div>
-
-        {/* Main chat area — offset for dock */}
-        <div className="flex flex-1 pl-20">
-          {/* Channel sidebar */}
-          <ChannelSidebar />
-
-          {/* Message area */}
-          <div className="flex-1 flex flex-col min-w-0">
-            <MessageArea />
+      <TooltipProvider delayDuration={300}>
+        <div className="relative flex h-dvh bg-background text-foreground overflow-hidden">
+          {/* Dock — vertical left position */}
+          <div className="fixed top-0 left-0 bottom-0 z-[60] p-3 flex items-center pointer-events-none">
+            <SiteDock vertical />
           </div>
 
-          {/* Member sidebar (collapsible) */}
-          <div
-            className={cn(
-              'transition-all duration-200 ease-in-out overflow-hidden',
-              memberSidebarOpen ? 'w-60' : 'w-0'
-            )}
-          >
-            {memberSidebarOpen && <MemberSidebar />}
+          {/* Main chat area — offset for dock */}
+          <div className="flex flex-1 pl-20">
+            {/* Channel sidebar */}
+            <ChannelSidebar />
+
+            {/* Message area */}
+            <div className="flex-1 flex flex-col min-w-0">
+              <MessageArea />
+            </div>
+
+            {/* Member sidebar (collapsible) */}
+            <div
+              className={cn(
+                'transition-all duration-200 ease-in-out overflow-hidden',
+                memberSidebarOpen ? 'w-60' : 'w-0'
+              )}
+            >
+              {memberSidebarOpen && <MemberSidebar />}
+            </div>
           </div>
         </div>
-      </div>
+      </TooltipProvider>
     </CreateProvider>
   );
 }
