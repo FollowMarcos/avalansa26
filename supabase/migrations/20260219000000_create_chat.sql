@@ -3,6 +3,9 @@
 -- Admin-controlled channels with access levels (mirrors api_configs pattern)
 -- ============================================================================
 
+-- Ensure moddatetime extension is available (idempotent)
+create extension if not exists moddatetime schema extensions;
+
 -- ============================================================================
 -- 1. ENUMS
 -- ============================================================================
