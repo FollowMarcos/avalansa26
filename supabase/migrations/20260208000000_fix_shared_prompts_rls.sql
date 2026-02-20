@@ -15,7 +15,7 @@ create policy "Recipients can view shared prompts"
   using (
     exists (
       select 1 from public.prompt_shares ps
-      where ps.prompt_id = id
+      where ps.prompt_id = prompts.id
         and ps.shared_with = auth.uid()
     )
   );
