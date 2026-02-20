@@ -17,7 +17,6 @@ import {
   Menu,
   Server,
   Palette,
-  MessageCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -32,7 +31,6 @@ const NAV_ITEMS: NavItem[] = [
   { icon: Users, label: 'Users', href: '/dashboard/users' },
   { icon: Dock, label: 'Site Dock', href: '/dashboard/dock' },
   { icon: Server, label: 'APIs', href: '/dashboard/apis' },
-  { icon: MessageCircle, label: 'Chat', href: '/dashboard/chat' },
   { icon: Palette, label: 'Create', href: '/dashboard/create' },
   { icon: Settings, label: 'Settings', href: '/dashboard/settings' },
   { icon: BarChart3, label: 'Analytics', href: '/dashboard/analytics' },

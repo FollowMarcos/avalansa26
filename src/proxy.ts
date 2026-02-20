@@ -73,8 +73,6 @@ class EdgeRateLimiter {
 const apiLimiter = new EdgeRateLimiter(60, 60000); // 60 req/min for general API
 const generateLimiter = new EdgeRateLimiter(10, 60000); // 10 req/min for generation
 const authLimiter = new EdgeRateLimiter(5, 300000); // 5 req/5min for auth
-const chatLimiter = new EdgeRateLimiter(30, 60000); // 30 req/min for chat operations
-
 // Get client identifier with proper IP handling
 function getClientIdentifier(request: NextRequest): string {
   // Next.js 16+ provides IP through headers (no request.ip)
@@ -105,9 +103,6 @@ export async function proxy(request: NextRequest) {
     } else if (pathname.includes('/auth/')) {
       result = authLimiter.check(identifier);
       limitType = 'authentication';
-    } else if (pathname.startsWith('/api/chat')) {
-      result = chatLimiter.check(identifier);
-      limitType = 'chat';
     } else {
       result = apiLimiter.check(identifier);
       limitType = 'api';
@@ -216,27 +211,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/', request.url));
   }
 
-  // Check admin routes - only allow admin users (with exception for /dashboard/chat)
+  // Check admin routes - only allow admin users
   const isAdminRoute = ADMIN_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(route + '/')
   );
 
   if (isAdminRoute && userRole !== 'admin') {
-    // Allow users with manage_channels permission to access /dashboard/chat
-    if (pathname === '/dashboard/chat' || pathname.startsWith('/dashboard/chat/')) {
-      const { data: perm } = await supabase
-        .from('chat_permissions')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('permission', 'manage_channels')
-        .maybeSingle();
-
-      if (!perm) {
-        return NextResponse.redirect(new URL('/', request.url));
-      }
-    } else {
-      return NextResponse.redirect(new URL('/', request.url));
-    }
+    return NextResponse.redirect(new URL('/', request.url));
   }
 
   // ============================================================================
@@ -250,7 +231,7 @@ export async function proxy(request: NextRequest) {
   response.headers.set('Permissions-Policy', 'geolocation=(), microphone=(), camera=(), payment=()');
   response.headers.set(
     'Content-Security-Policy',
-    "default-src 'self' blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in https://*.googleusercontent.com https://*.fal.media https://fal.media https://*.r2.dev https://*.r2.cloudflarestorage.com; font-src 'self' data:; connect-src 'self' data: blob: https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://generativelanguage.googleapis.com https://*.r2.dev https://*.r2.cloudflarestorage.com; media-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
+    "default-src 'self' blob:; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src * data: blob:; font-src 'self' data:; connect-src 'self' data: blob: https://*.supabase.co https://*.supabase.in wss://*.supabase.co https://generativelanguage.googleapis.com https://*.r2.dev https://*.r2.cloudflarestorage.com; media-src 'self' blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none';"
   );
 
   // Add rate limit headers if this was an API request
