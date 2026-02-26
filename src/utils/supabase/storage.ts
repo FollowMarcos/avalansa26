@@ -103,14 +103,13 @@ async function compressImage(file: File, targetSize: number = TARGET_FILE_SIZE):
   });
 }
 
-interface PresignResponse {
-  presignedUrl: string;
+interface DirectUploadResponse {
   key: string;
   publicUrl: string;
 }
 
 /**
- * Upload a reference image via presigned URL to R2.
+ * Upload a reference image to R2 via server proxy.
  * Compresses large images automatically to fit within 10MB limit.
  * Returns the storage path (with r2: prefix) and public URL.
  */
@@ -134,35 +133,22 @@ export async function uploadReferenceImage(
       return { path: '', url: '', error: `File too large after compression (${(uploadBlob.size / 1024 / 1024).toFixed(1)}MB). Maximum is 10MB.` };
     }
 
-    // Get presigned URL from our API
-    const presignResponse = await fetch('/api/upload/presign', {
+    // Upload via server proxy (avoids CORS issues with direct-to-R2 presigned URLs)
+    const formData = new FormData();
+    formData.append('file', uploadBlob, 'image.jpg');
+    formData.append('bucket', 'reference-images');
+
+    const response = await fetch('/api/upload/direct', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        bucket: 'reference-images',
-        contentType: 'image/jpeg',
-        fileSize: uploadBlob.size,
-      }),
+      body: formData,
     });
 
-    if (!presignResponse.ok) {
-      const err = await presignResponse.json();
-      return { path: '', url: '', error: err.error || 'Failed to get upload URL' };
+    if (!response.ok) {
+      const err = await response.json();
+      return { path: '', url: '', error: err.error || 'Upload failed' };
     }
 
-    const { presignedUrl, key, publicUrl } = (await presignResponse.json()) as PresignResponse;
-
-    // Upload directly to R2 via presigned URL
-    const uploadResponse = await fetch(presignedUrl, {
-      method: 'PUT',
-      body: uploadBlob,
-      headers: { 'Content-Type': 'image/jpeg' },
-    });
-
-    if (!uploadResponse.ok) {
-      return { path: '', url: '', error: `Upload failed: ${uploadResponse.status}` };
-    }
-
+    const { key, publicUrl } = (await response.json()) as DirectUploadResponse;
     return { path: `r2:${key}`, url: publicUrl };
   } catch (error) {
     console.error('[Storage] Upload error:', error);

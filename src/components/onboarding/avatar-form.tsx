@@ -48,35 +48,22 @@ export function AvatarForm({ initialAvatarUrl }: AvatarFormProps) {
             // 300x300px, 0.8 quality JPEG
             const resizedBlob = await resizeImage(file, 300, 300, 0.8);
 
-            // Get presigned URL from our API
-            const presignResponse = await fetch('/api/upload/presign', {
+            // Upload via server proxy
+            const formData = new FormData();
+            formData.append('file', resizedBlob, 'avatar.jpg');
+            formData.append('bucket', 'avatars');
+
+            const uploadResponse = await fetch('/api/upload/direct', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    bucket: 'avatars',
-                    contentType: 'image/jpeg',
-                    fileSize: resizedBlob.size,
-                }),
-            });
-
-            if (!presignResponse.ok) {
-                const err = await presignResponse.json();
-                throw new Error(err.error || 'Failed to get upload URL');
-            }
-
-            const { presignedUrl, publicUrl } = await presignResponse.json();
-
-            // Upload directly to R2 via presigned URL
-            const uploadResponse = await fetch(presignedUrl, {
-                method: 'PUT',
-                body: resizedBlob,
-                headers: { 'Content-Type': 'image/jpeg' },
+                body: formData,
             });
 
             if (!uploadResponse.ok) {
-                throw new Error(`Upload failed: ${uploadResponse.status}`);
+                const err = await uploadResponse.json();
+                throw new Error(err.error || 'Upload failed');
             }
 
+            const { publicUrl } = await uploadResponse.json();
             setAvatarUrl(publicUrl);
             toast.success('Image processed & uploaded');
         } catch (error) {
