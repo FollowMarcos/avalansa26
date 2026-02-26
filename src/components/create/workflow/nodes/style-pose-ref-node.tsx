@@ -39,17 +39,16 @@ export const stylePoseRefExecutor: NodeExecutor = async (inputs, config) => {
   const poseImages = (config.poseImages as UploadedImage[]) ?? [];
 
   const stylePath = styleImages[0]?.storagePath;
-  if (!stylePath) throw new Error('No art style reference image provided');
+  const posePath = connectedPose || poseImages[0]?.storagePath;
 
-  let posePath: string | undefined;
-  if (connectedPose) {
-    posePath = connectedPose;
-  } else {
-    posePath = poseImages[0]?.storagePath;
+  if (!stylePath && !posePath) {
+    throw new Error('Provide at least one reference image (style or pose)');
   }
-  if (!posePath) throw new Error('No pose reference image provided');
 
-  return { style: stylePath, pose: posePath };
+  const outputs: Record<string, unknown> = {};
+  if (stylePath) outputs.style = stylePath;
+  if (posePath) outputs.pose = posePath;
+  return outputs;
 };
 
 // ---------------------------------------------------------------------------
