@@ -22,6 +22,8 @@ import {
   Search,
   Star,
   Loader2,
+  Palette,
+  PersonStanding,
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import {
@@ -43,7 +45,7 @@ import {
 import { searchPrompts } from "@/utils/supabase/prompts.server";
 import type { Prompt } from "@/types/prompt";
 
-const aspectRatioOptions: { value: AspectRatio; label: string }[] = [
+const baseAspectRatioOptions: { value: AspectRatio; label: string }[] = [
   { value: "1:1", label: "Square" },
   { value: "4:3", label: "Standard" },
   { value: "3:4", label: "Portrait" },
@@ -55,11 +57,29 @@ const aspectRatioOptions: { value: AspectRatio; label: string }[] = [
   { value: "21:9", label: "Ultra" },
 ];
 
-const imageSizeOptions: { value: ImageSize; label: string; desc: string }[] = [
+/** Extra ratios exclusive to gemini-3.1-flash-image-preview */
+const flash31AspectRatioOptions: { value: AspectRatio; label: string }[] = [
+  { value: "4:1", label: "Banner" },
+  { value: "1:4", label: "Pillar" },
+  { value: "8:1", label: "Strip" },
+  { value: "1:8", label: "Column" },
+];
+
+const baseImageSizeOptions: { value: ImageSize; label: string; desc: string }[] = [
   { value: "1K", label: "1K", desc: "Fast" },
   { value: "2K", label: "2K", desc: "Balanced" },
   { value: "4K", label: "4K", desc: "Detailed" },
 ];
+
+/** Extra sizes exclusive to gemini-3.1-flash-image-preview */
+const flash31ImageSizeOptions: { value: ImageSize; label: string; desc: string }[] = [
+  { value: "0.5K", label: "0.5K", desc: "Tiny" },
+];
+
+/** Check if the selected API uses gemini-3.1-flash-image-preview */
+function isFlash31Model(modelId: string | null | undefined): boolean {
+  return modelId === 'gemini-3.1-flash-image-preview';
+}
 
 // Visual aspect ratio shape with proper scaling
 function AspectRatioShape({ ratio, size = "sm", className }: { ratio: AspectRatio; size?: "sm" | "md" | "lg"; className?: string }) {
@@ -112,20 +132,52 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
     isLoadingApis,
     activeGenerations,
     viewMode,
+    history,
     // Admin settings
     allowedImageSizes,
     allowedAspectRatios,
     maxOutputCount,
   } = useCreate();
 
-  // Filter options based on admin settings
+  const hasStyleRef = !!settings.styleRef?.url;
+  const hasPoseRef = !!settings.poseRef?.url;
+
+  // Completed generations for the picker grid
+  const completedGens = React.useMemo(
+    () => history.filter((g) => g.status === "completed" && g.url).slice(0, 40),
+    [history],
+  );
+
+  // Detect if selected API is gemini-3.1-flash-image-preview
+  const selectedModelId = React.useMemo(() => {
+    if (!selectedApiId) return null;
+    return availableApis.find((a) => a.id === selectedApiId)?.model_id ?? null;
+  }, [selectedApiId, availableApis]);
+  const isFlash31 = isFlash31Model(selectedModelId);
+
+  // Filter options based on admin settings + model-specific extras
   const filteredAspectRatios = React.useMemo(() => {
-    return aspectRatioOptions.filter((opt) => allowedAspectRatios.includes(opt.value));
-  }, [allowedAspectRatios]);
+    const base = baseAspectRatioOptions.filter((opt) => allowedAspectRatios.includes(opt.value));
+    if (isFlash31) return [...base, ...flash31AspectRatioOptions];
+    return base;
+  }, [allowedAspectRatios, isFlash31]);
 
   const filteredImageSizes = React.useMemo(() => {
-    return imageSizeOptions.filter((opt) => allowedImageSizes.includes(opt.value));
-  }, [allowedImageSizes]);
+    const base = baseImageSizeOptions.filter((opt) => allowedImageSizes.includes(opt.value));
+    if (isFlash31) return [...flash31ImageSizeOptions, ...base];
+    return base;
+  }, [allowedImageSizes, isFlash31]);
+
+  // Reset model-exclusive settings when switching away from Flash 3.1
+  React.useEffect(() => {
+    if (isFlash31) return;
+    const flash31Ratios = new Set(flash31AspectRatioOptions.map((o) => o.value));
+    const flash31Sizes = new Set(flash31ImageSizeOptions.map((o) => o.value));
+    const updates: Partial<typeof settings> = {};
+    if (flash31Ratios.has(settings.aspectRatio)) updates.aspectRatio = "1:1";
+    if (flash31Sizes.has(settings.imageSize)) updates.imageSize = "1K";
+    if (Object.keys(updates).length > 0) updateSettings(updates);
+  }, [isFlash31]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const prefersReducedMotion = useReducedMotion();
@@ -668,6 +720,188 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                       />
                     </div>
                   </div>
+
+                  <div className="w-px h-5 bg-border dark:bg-zinc-700/50 shrink-0 mx-1" />
+
+                  {/* Style Reference */}
+                  <Popover>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <PopoverTrigger asChild>
+                          <button
+                            aria-label="Art style reference"
+                            className={cn(
+                              "relative flex items-center gap-1.5 h-8 px-2.5 rounded-lg transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-ring",
+                              hasStyleRef
+                                ? "bg-violet-500/15 text-violet-500 ring-1 ring-violet-500/30"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-zinc-800"
+                            )}
+                          >
+                            <Palette className="size-3.5" aria-hidden="true" />
+                            <span className="text-xs font-medium">Style</span>
+                            {hasStyleRef && (
+                              <div className="size-4 rounded overflow-hidden border border-violet-500/30">
+                                <img src={settings.styleRef?.url} alt="" className="w-full h-full object-cover" draggable={false} />
+                              </div>
+                            )}
+                          </button>
+                        </PopoverTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">Art style reference</TooltipContent>
+                    </Tooltip>
+                    <PopoverContent align="end" side="top" className="w-72 p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium">Art Style Reference</span>
+                        {hasStyleRef && (
+                          <button type="button" onClick={() => updateSettings({ styleRef: undefined })} className="text-[10px] text-destructive hover:underline" aria-label="Remove style reference">Remove</button>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">Pick an image to use only its art style (color palette, brushwork, technique).</p>
+                      {hasStyleRef && (
+                        <div className="relative rounded-lg overflow-hidden border border-border">
+                          <img src={settings.styleRef?.url} alt="Style reference" className="w-full h-24 object-contain" draggable={false} />
+                        </div>
+                      )}
+                      {/* Upload */}
+                      <FileUpload
+                        onFilesAdded={async (files: File[]) => {
+                          if (!files[0]) return;
+                          try {
+                            const { uploadReferenceImage } = await import("@/utils/supabase/storage");
+                            const { createClient } = await import("@/utils/supabase/client");
+                            const supabase = createClient();
+                            const { data: userData } = await supabase.auth.getUser();
+                            if (!userData.user) return;
+                            const result = await uploadReferenceImage(files[0], userData.user.id);
+                            if (result.path) updateSettings({ styleRef: { url: result.url, storagePath: result.path } });
+                          } catch { /* ignore */ }
+                        }}
+                        accept="image/*"
+                      >
+                        <FileUploadTrigger asChild>
+                          <button className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-muted/50 hover:bg-muted text-xs transition-colors border border-dashed border-border">
+                            <ImagePlus className="size-3.5" aria-hidden="true" />Upload
+                          </button>
+                        </FileUploadTrigger>
+                      </FileUpload>
+                      {/* Pick from generations */}
+                      {completedGens.length > 0 && (
+                        <>
+                          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Generated Images</div>
+                          <div className="grid grid-cols-5 gap-1 max-h-28 overflow-y-auto">
+                            {completedGens.map((gen) => (
+                              <button key={gen.id} type="button" onClick={() => updateSettings({ styleRef: { url: gen.url } })} className={cn("aspect-square rounded-md overflow-hidden border transition-all focus-visible:ring-2 focus-visible:ring-ring", settings.styleRef?.url === gen.url ? "ring-1 ring-violet-500" : "border-border hover:ring-1 hover:ring-violet-500/50")} title={gen.prompt?.slice(0, 40)}>
+                                <img src={gen.url} alt="" className="w-full h-full object-cover" loading="lazy" draggable={false} />
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                      {/* Pick from saved references */}
+                      {savedReferences.length > 0 && (
+                        <>
+                          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Your Library</div>
+                          <div className="grid grid-cols-5 gap-1 max-h-28 overflow-y-auto">
+                            {savedReferences.map((ref) => (
+                              <button key={ref.id} type="button" onClick={() => updateSettings({ styleRef: { url: ref.url, storagePath: ref.storage_path } })} className={cn("aspect-square rounded-md overflow-hidden border transition-all focus-visible:ring-2 focus-visible:ring-ring", settings.styleRef?.storagePath === ref.storage_path ? "ring-1 ring-violet-500" : "border-border hover:ring-1 hover:ring-violet-500/50")} title={ref.name || "Reference"}>
+                                <Image src={ref.url} alt="" width={48} height={48} className="w-full h-full object-cover" unoptimized />
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* Pose Reference */}
+                  <Popover>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <PopoverTrigger asChild>
+                          <button
+                            aria-label="Pose reference"
+                            className={cn(
+                              "relative flex items-center gap-1.5 h-8 px-2.5 rounded-lg transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-ring",
+                              hasPoseRef
+                                ? "bg-blue-500/15 text-blue-500 ring-1 ring-blue-500/30"
+                                : "text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-zinc-800"
+                            )}
+                          >
+                            <PersonStanding className="size-3.5" aria-hidden="true" />
+                            <span className="text-xs font-medium">Pose</span>
+                            {hasPoseRef && (
+                              <div className="size-4 rounded overflow-hidden border border-blue-500/30">
+                                <img src={settings.poseRef?.url} alt="" className="w-full h-full object-cover" draggable={false} />
+                              </div>
+                            )}
+                          </button>
+                        </PopoverTrigger>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">Pose reference</TooltipContent>
+                    </Tooltip>
+                    <PopoverContent align="end" side="top" className="w-72 p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-medium">Pose Reference</span>
+                        {hasPoseRef && (
+                          <button type="button" onClick={() => updateSettings({ poseRef: undefined })} className="text-[10px] text-destructive hover:underline" aria-label="Remove pose reference">Remove</button>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">Pick an image to match only the body pose and position.</p>
+                      {hasPoseRef && (
+                        <div className="relative rounded-lg overflow-hidden border border-border">
+                          <img src={settings.poseRef?.url} alt="Pose reference" className="w-full h-24 object-contain" draggable={false} />
+                        </div>
+                      )}
+                      {/* Upload */}
+                      <FileUpload
+                        onFilesAdded={async (files: File[]) => {
+                          if (!files[0]) return;
+                          try {
+                            const { uploadReferenceImage } = await import("@/utils/supabase/storage");
+                            const { createClient } = await import("@/utils/supabase/client");
+                            const supabase = createClient();
+                            const { data: userData } = await supabase.auth.getUser();
+                            if (!userData.user) return;
+                            const result = await uploadReferenceImage(files[0], userData.user.id);
+                            if (result.path) updateSettings({ poseRef: { url: result.url, storagePath: result.path } });
+                          } catch { /* ignore */ }
+                        }}
+                        accept="image/*"
+                      >
+                        <FileUploadTrigger asChild>
+                          <button className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-muted/50 hover:bg-muted text-xs transition-colors border border-dashed border-border">
+                            <ImagePlus className="size-3.5" aria-hidden="true" />Upload
+                          </button>
+                        </FileUploadTrigger>
+                      </FileUpload>
+                      {/* Pick from generations */}
+                      {completedGens.length > 0 && (
+                        <>
+                          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Generated Images</div>
+                          <div className="grid grid-cols-5 gap-1 max-h-28 overflow-y-auto">
+                            {completedGens.map((gen) => (
+                              <button key={gen.id} type="button" onClick={() => updateSettings({ poseRef: { url: gen.url } })} className={cn("aspect-square rounded-md overflow-hidden border transition-all focus-visible:ring-2 focus-visible:ring-ring", settings.poseRef?.url === gen.url ? "ring-1 ring-blue-500" : "border-border hover:ring-1 hover:ring-blue-500/50")} title={gen.prompt?.slice(0, 40)}>
+                                <img src={gen.url} alt="" className="w-full h-full object-cover" loading="lazy" draggable={false} />
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                      {/* Pick from saved references */}
+                      {savedReferences.length > 0 && (
+                        <>
+                          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Your Library</div>
+                          <div className="grid grid-cols-5 gap-1 max-h-28 overflow-y-auto">
+                            {savedReferences.map((ref) => (
+                              <button key={ref.id} type="button" onClick={() => updateSettings({ poseRef: { url: ref.url, storagePath: ref.storage_path } })} className={cn("aspect-square rounded-md overflow-hidden border transition-all focus-visible:ring-2 focus-visible:ring-ring", settings.poseRef?.storagePath === ref.storage_path ? "ring-1 ring-blue-500" : "border-border hover:ring-1 hover:ring-blue-500/50")} title={ref.name || "Reference"}>
+                                <Image src={ref.url} alt="" width={48} height={48} className="w-full h-full object-cover" unoptimized />
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </PopoverContent>
+                  </Popover>
 
                   {/* Status - Show active generation count */}
                   {activeGenerations > 0 && (

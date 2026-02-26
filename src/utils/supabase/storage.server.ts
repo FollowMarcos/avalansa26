@@ -17,6 +17,16 @@ const MAX_FILE_SIZE = 50 * 1024 * 1024;
  */
 export async function getImageAsBase64(path: string): Promise<string | null> {
   try {
+    // Handle full URLs (e.g. from generated images)
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      const resp = await fetch(path);
+      if (!resp.ok) return null;
+      const buffer = Buffer.from(await resp.arrayBuffer());
+      const contentType = resp.headers.get('content-type') || 'image/jpeg';
+      const mimeType = contentType.split(';')[0].trim();
+      return `data:${mimeType};base64,${buffer.toString('base64')}`;
+    }
+
     if (isR2Path(path)) {
       const key = stripR2Prefix(path);
       const buffer = await downloadFromR2(key);
@@ -66,7 +76,7 @@ export async function getReferenceImageUrls(paths: string[]): Promise<{ url: str
   if (paths.length === 0) return [];
 
   return paths.map((path) => ({
-    url: resolveStorageUrl(path, 'reference-images'),
+    url: path.startsWith('http://') || path.startsWith('https://') ? path : resolveStorageUrl(path, 'reference-images'),
     storagePath: path,
   }));
 }

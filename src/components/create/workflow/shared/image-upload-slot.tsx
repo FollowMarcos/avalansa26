@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Upload, X, Loader2, ImageIcon, FolderOpen } from 'lucide-react';
+import { Upload, X, Loader2, ImageIcon, FolderOpen, ImagePlay } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useCreate } from '../../create-context';
@@ -18,6 +18,8 @@ interface ImageUploadSlotProps {
   onChange: (images: UploadedImage[]) => void;
   maxImages?: number;
   showLibraryPicker?: boolean;
+  /** Show a picker for previously generated images. */
+  showGenerationsPicker?: boolean;
   emptyLabel?: string;
   previewHeight?: string;
   /** How the image fills its container. 'cover' crops to fill, 'contain' shows the full image. */
@@ -26,6 +28,7 @@ interface ImageUploadSlotProps {
 
 export function ImageUploadSlot({
   images, onChange, maxImages = 1, showLibraryPicker = true,
+  showGenerationsPicker = true,
   emptyLabel = 'Drop or click to upload', previewHeight = 'h-16',
   objectFit = 'cover',
 }: ImageUploadSlotProps): React.ReactElement {
@@ -33,7 +36,8 @@ export function ImageUploadSlot({
   const [uploadingUrls, setUploadingUrls] = React.useState<Set<string>>(new Set());
   const [isDragOver, setIsDragOver] = React.useState(false);
   const [showLibrary, setShowLibrary] = React.useState(false);
-  const { savedReferences, loadSavedReferences } = useCreate();
+  const [showGenerations, setShowGenerations] = React.useState(false);
+  const { savedReferences, loadSavedReferences, history } = useCreate();
   const canAddMore = images.length < maxImages;
 
   React.useEffect(() => {
@@ -88,6 +92,14 @@ export function ImageUploadSlot({
     onChange([...images, { url: saved.url, storagePath: saved.storage_path }]);
   };
 
+  const handlePickGeneration = (gen: { url: string; storagePath?: string }) => {
+    if (!canAddMore) { toast.error(`Maximum ${maxImages} image${maxImages === 1 ? '' : 's'}`); return; }
+    const path = gen.storagePath || '';
+    if (path && images.some((i) => i.storagePath === path)) { toast.info('Image already added'); return; }
+    onChange([...images, { url: gen.url, storagePath: path }]);
+    setShowGenerations(false);
+  };
+
   const triggerInput = () => inputRef.current?.click();
   const onKeyActivate = (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); triggerInput(); } };
 
@@ -120,6 +132,42 @@ export function ImageUploadSlot({
     </div>
   );
 
+  // Completed generations that have a URL
+  const completedGenerations = React.useMemo(
+    () => history.filter((g) => g.status === 'completed' && g.url),
+    [history],
+  );
+
+  const generationsPanel = (
+    <div className="rounded-md border border-border overflow-hidden">
+      <div className="flex items-center justify-between px-2 py-1.5 bg-muted/30 border-b border-border">
+        <span className="text-[10px] font-medium">Generated Images</span>
+        <button type="button" onClick={() => setShowGenerations(false)} className="text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm" aria-label="Close generated images"><X className="size-3" /></button>
+      </div>
+      <ScrollArea className="nodrag nowheel h-36">
+        {completedGenerations.length === 0 ? (
+          <p className="text-[10px] text-muted-foreground text-center py-3">No generated images yet</p>
+        ) : (
+          <div className="grid grid-cols-4 gap-0.5 p-1">
+            {completedGenerations.map((gen) => {
+              const path = (gen as unknown as Record<string, unknown>).storagePath as string | undefined;
+              const added = path ? images.some((i) => i.storagePath === path) : false;
+              return (
+                <button key={gen.id} type="button" onClick={() => handlePickGeneration({ url: gen.url, storagePath: path })} disabled={added || !canAddMore}
+                  className={cn('relative aspect-square rounded-sm overflow-hidden border transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                    added ? 'border-primary/50 opacity-50 cursor-not-allowed' : canAddMore ? 'border-border hover:ring-1 hover:ring-primary' : 'border-border opacity-40 cursor-not-allowed')}
+                  title={added ? 'Already added' : (gen.prompt?.slice(0, 60) || 'Generated image')}>
+                  <img src={gen.url} alt={gen.prompt?.slice(0, 30) || 'Generated'} className="w-full h-full object-cover" loading="lazy" draggable={false} />
+                  {added && <div className="absolute inset-0 flex items-center justify-center bg-black/30"><span className="text-[8px] text-white font-bold">Added</span></div>}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </ScrollArea>
+    </div>
+  );
+
   const fileInput = (
     <input ref={inputRef} type="file" accept="image/*" multiple={maxImages > 1} className="hidden" onChange={handleFileSelect} />
   );
@@ -129,7 +177,7 @@ export function ImageUploadSlot({
     return (
       <div className="space-y-1.5">
         {fileInput}
-        {showLibrary ? libraryPanel : (
+        {showLibrary ? libraryPanel : showGenerations ? generationsPanel : (
           <>
             <div role="button" tabIndex={0} onClick={triggerInput} onKeyDown={onKeyActivate}
               onDrop={handleDrop} onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }} onDragLeave={() => setIsDragOver(false)}
@@ -138,14 +186,22 @@ export function ImageUploadSlot({
               <Upload className="size-4 text-muted-foreground mb-1" />
               <span className="text-[10px] text-muted-foreground">{emptyLabel}</span>
             </div>
-            {showLibraryPicker && (
-              <button type="button" onClick={() => setShowLibrary(true)}
-                className="flex items-center justify-center gap-1.5 w-full py-1.5 rounded-md text-[10px] text-muted-foreground hover:text-foreground border border-border hover:bg-muted/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                aria-label="Pick from library">
-                <FolderOpen className="size-3" />Pick from library
-                {savedReferences.length > 0 && <span className="text-muted-foreground/60">({savedReferences.length})</span>}
-              </button>
-            )}
+            <div className="flex gap-1">
+              {showLibraryPicker && (
+                <button type="button" onClick={() => { setShowLibrary(true); setShowGenerations(false); }}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[10px] text-muted-foreground hover:text-foreground border border-border hover:bg-muted/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label="Pick from library">
+                  <FolderOpen className="size-3" />Library
+                </button>
+              )}
+              {showGenerationsPicker && (
+                <button type="button" onClick={() => { setShowGenerations(true); setShowLibrary(false); }}
+                  className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md text-[10px] text-muted-foreground hover:text-foreground border border-border hover:bg-muted/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  aria-label="Pick from generated images">
+                  <ImagePlay className="size-3" />Generated
+                </button>
+              )}
+            </div>
           </>
         )}
       </div>
@@ -177,7 +233,7 @@ export function ImageUploadSlot({
           </div>
         ))}
       </div>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
         {canAddMore && (
           <button type="button" onClick={triggerInput}
             className="text-[10px] text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
@@ -186,14 +242,22 @@ export function ImageUploadSlot({
           </button>
         )}
         {showLibraryPicker && (
-          <button type="button" onClick={() => setShowLibrary(!showLibrary)}
+          <button type="button" onClick={() => { setShowLibrary(!showLibrary); setShowGenerations(false); }}
             className="text-[10px] text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
             aria-label="Pick from library">
             <FolderOpen className="size-3 inline mr-0.5" />Library
           </button>
         )}
+        {showGenerationsPicker && (
+          <button type="button" onClick={() => { setShowGenerations(!showGenerations); setShowLibrary(false); }}
+            className="text-[10px] text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm"
+            aria-label="Pick from generated images">
+            <ImagePlay className="size-3 inline mr-0.5" />Generated
+          </button>
+        )}
       </div>
       {showLibrary && libraryPanel}
+      {showGenerations && generationsPanel}
     </div>
   );
 }

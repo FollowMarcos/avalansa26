@@ -112,7 +112,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
     }
 
     // Validate aspect ratio (allowlist)
-    const VALID_ASPECT_RATIOS = ['1:1', '4:3', '3:4', '16:9', '9:16', '3:2', '2:3', '5:4', '4:5', '21:9', '9:21'];
+    const VALID_ASPECT_RATIOS = ['1:1', '4:3', '3:4', '16:9', '9:16', '3:2', '2:3', '5:4', '4:5', '21:9', '9:21', '1:4', '4:1', '1:8', '8:1'];
     if (aspectRatio && !VALID_ASPECT_RATIOS.includes(aspectRatio)) {
       return NextResponse.json(
         { success: false, error: 'Invalid aspect ratio' },
@@ -121,10 +121,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
     }
 
     // Validate image size (allowlist)
-    const VALID_IMAGE_SIZES = ['1K', '2K', '4K'];
+    const VALID_IMAGE_SIZES = ['0.5K', '1K', '2K', '4K'];
     if (imageSize && !VALID_IMAGE_SIZES.includes(imageSize)) {
       return NextResponse.json(
-        { success: false, error: 'Invalid image size. Must be 1K, 2K, or 4K' },
+        { success: false, error: 'Invalid image size' },
         { status: 400 }
       );
     }
@@ -601,7 +601,7 @@ async function generateWithGemini(params: ProviderParams): Promise<GeneratedImag
       imageConfig.aspectRatio = aspectRatio;
     }
 
-    // Add imageSize if specified (supports "1K", "2K", "4K")
+    // Add imageSize if specified (supports "0.5K", "1K", "2K", "4K")
     if (imageSize) {
       imageConfig.imageSize = imageSize;
     }

@@ -14,15 +14,17 @@ function isDbId(id: string): boolean {
   return UUID_RE.test(id);
 }
 
-// Gemini 3 Pro Image Preview API types
-export type ImageSize = "1K" | "2K" | "4K";
+// Gemini image generation API types
+export type ImageSize = "0.5K" | "1K" | "2K" | "4K";
 export type AspectRatio =
   | "1:1"
   | "2:3" | "3:2"
   | "3:4" | "4:3"
   | "4:5" | "5:4"
   | "9:16" | "16:9"
-  | "21:9";
+  | "21:9"
+  | "1:4" | "4:1"
+  | "1:8" | "8:1";
 export type GenerationSpeed = "fast" | "relaxed";
 export type ModelId = string;
 
@@ -104,6 +106,10 @@ export interface CreateSettings {
   referenceImages?: ReferenceImageInfo[];
   /** Source identifier for workflow-generated images (e.g. 'characterTurnaround') */
   source?: string;
+  /** Style reference image — art style only, not content */
+  styleRef?: ReferenceImageInfo;
+  /** Pose reference image — body pose only, not appearance */
+  poseRef?: ReferenceImageInfo;
 }
 
 interface CreateContextType {
@@ -1123,7 +1129,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       // Build the final prompt
       const finalPrompt = buildFinalPrompt();
 
-      const requestParams = {
+      const requestParams: Record<string, unknown> = {
         apiId: selectedApiId,
         prompt: finalPrompt,
         negativePrompt: settings.negativePrompt,
@@ -1133,6 +1139,10 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         referenceImagePaths,
         mode: settings.generationSpeed,
       };
+
+      // Add labeled style / pose references if set (prefer storagePath, fall back to URL)
+      if (settings.styleRef) requestParams.styleRefPath = settings.styleRef.storagePath || settings.styleRef.url;
+      if (settings.poseRef) requestParams.poseRefPath = settings.poseRef.storagePath || settings.poseRef.url;
 
       // Call the generation API
       const response = await fetch('/api/generate', {
@@ -2073,7 +2083,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   }, [adminSettings]);
   const allowedAspectRatios = React.useMemo<AspectRatio[]>(() => {
     return (adminSettings?.allowed_aspect_ratios as AspectRatio[]) ?? [
-      "1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"
+      "1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9",
     ];
   }, [adminSettings]);
   const maxOutputCount = adminSettings?.max_output_count ?? 4;
