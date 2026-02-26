@@ -18,6 +18,10 @@ export interface GenerateRequest {
   imageSize?: string;
   outputCount?: number;
   referenceImagePaths?: string[]; // Storage paths (not base64)
+  /** Storage path for a style-only reference image (art style, not content) */
+  styleRefPath?: string;
+  /** Storage path for a pose-only reference image (body position, not appearance) */
+  poseRefPath?: string;
   mode?: 'fast' | 'relaxed'; // Generation mode
   /** Optional source identifier (e.g. 'characterTurnaround') for workflow-generated images */
   source?: string;
@@ -60,7 +64,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
 
     // Parse request body
     const body: GenerateRequest = await request.json();
-    const { apiId, prompt, negativePrompt, aspectRatio, imageSize, outputCount = 1, referenceImagePaths, mode = 'fast', source } = body;
+    const { apiId, prompt, negativePrompt, aspectRatio, imageSize, outputCount = 1, referenceImagePaths, styleRefPath, poseRefPath, mode = 'fast', source } = body;
 
     // ========================================================================
     // INPUT VALIDATION
@@ -146,6 +150,16 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
       }
     }
 
+    // Validate style/pose reference paths
+    for (const refPath of [styleRefPath, poseRefPath]) {
+      if (refPath && (typeof refPath !== 'string' || refPath.includes('..') || refPath.startsWith('/'))) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid reference image path' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Validate mode
     if (mode !== 'fast' && mode !== 'relaxed') {
       return NextResponse.json(
@@ -180,6 +194,30 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
 
       if (referenceImages.length === 0 && referenceImagePaths.length > 0) {
         console.error('[API /generate] Failed to fetch any reference images');
+      }
+    }
+
+    // Fetch labeled style / pose reference images separately
+    let styleRefImage: string | null = null;
+    let poseRefImage: string | null = null;
+
+    if (styleRefPath) {
+      if (apiConfig.provider === 'fal') {
+        const urls = await getReferenceImageUrls([styleRefPath]);
+        styleRefImage = urls[0]?.url ?? null;
+      } else {
+        const imgs = await getImagesAsBase64([styleRefPath]);
+        styleRefImage = imgs[0] ?? null;
+      }
+    }
+
+    if (poseRefPath) {
+      if (apiConfig.provider === 'fal') {
+        const urls = await getReferenceImageUrls([poseRefPath]);
+        poseRefImage = urls[0]?.url ?? null;
+      } else {
+        const imgs = await getImagesAsBase64([poseRefPath]);
+        poseRefImage = imgs[0] ?? null;
       }
     }
 
@@ -258,6 +296,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
           imageSize,
           outputCount,
           referenceImages,
+          styleRefImage,
+          poseRefImage,
         });
         break;
 
@@ -273,6 +313,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
           outputCount,
           referenceImages,
           modelInfo: apiConfig.model_info,
+          styleRefImage,
+          poseRefImage,
         });
         break;
 
@@ -427,6 +469,10 @@ interface ProviderParams {
   imageSize?: string;
   outputCount: number;
   referenceImages?: string[];
+  /** Labeled style reference image (base64 for Gemini, URL for Fal) */
+  styleRefImage?: string | null;
+  /** Labeled pose reference image (base64 for Gemini, URL for Fal) */
+  poseRefImage?: string | null;
   modelInfo?: import('@/types/api-config').ApiModelInfo | null;
 }
 
@@ -468,7 +514,7 @@ async function fetchWithTimeout(
  * so we make parallel API calls when outputCount > 1
  */
 async function generateWithGemini(params: ProviderParams): Promise<GeneratedImage[]> {
-  const { apiKey, endpoint, modelId, prompt, negativePrompt, aspectRatio, imageSize, outputCount, referenceImages } = params;
+  const { apiKey, endpoint, modelId, prompt, negativePrompt, aspectRatio, imageSize, outputCount, referenceImages, styleRefImage, poseRefImage } = params;
 
   // Debug: Log Gemini-specific params
   console.log('[Gemini] Generating with params:', {
@@ -489,10 +535,9 @@ async function generateWithGemini(params: ProviderParams): Promise<GeneratedImag
     { text: fullPrompt }
   ];
 
-  // Add reference images if provided
+  // Add generic reference images if provided
   if (referenceImages && referenceImages.length > 0) {
     for (const base64Image of referenceImages) {
-      // Extract mime type from base64 string if it includes data URL prefix
       const mimeMatch = base64Image.match(/^data:([^;]+);base64,/);
       const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
       const data = mimeMatch ? base64Image.replace(/^data:[^;]+;base64,/, '') : base64Image;
@@ -504,6 +549,36 @@ async function generateWithGemini(params: ProviderParams): Promise<GeneratedImag
         }
       });
     }
+  }
+
+  // Add labeled STYLE reference with explicit instructions
+  if (styleRefImage) {
+    parts.push({
+      text: 'STYLE REFERENCE (the following image): Use this image ONLY as an artistic style reference. Extract and apply the art style, color palette, brushwork, lighting mood, and rendering technique. Do NOT copy the subject matter, clothing, specific objects, composition, or any content from this image — only the visual style.',
+    });
+
+    const mimeMatch = styleRefImage.match(/^data:([^;]+);base64,/);
+    const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const data = mimeMatch ? styleRefImage.replace(/^data:[^;]+;base64,/, '') : styleRefImage;
+
+    parts.push({
+      inlineData: { mimeType, data },
+    });
+  }
+
+  // Add labeled POSE reference with explicit instructions
+  if (poseRefImage) {
+    parts.push({
+      text: 'POSE REFERENCE (the following image): Use this image ONLY as a body pose and position reference. Match the body stance, limb positions, and camera angle shown. Do NOT copy the appearance, clothing, face, art style, or any visual attributes from this image — only the pose.',
+    });
+
+    const mimeMatch = poseRefImage.match(/^data:([^;]+);base64,/);
+    const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const data = mimeMatch ? poseRefImage.replace(/^data:[^;]+;base64,/, '') : poseRefImage;
+
+    parts.push({
+      inlineData: { mimeType, data },
+    });
   }
 
   // Always use gemini-3-pro-image-preview for proper resolution control
@@ -734,13 +809,34 @@ function getAspectRatioHint(aspectRatio: string): string {
  * Supports SeedREAM v4/v4.5, Flux, and other fal.ai models.
  */
 async function generateWithFal(params: ProviderParams): Promise<GeneratedImage[]> {
-  const { apiKey, endpoint, modelId, prompt, negativePrompt, aspectRatio, imageSize, outputCount, referenceImages, modelInfo } = params;
+  const { apiKey, endpoint, modelId, prompt, negativePrompt, aspectRatio, imageSize, outputCount, referenceImages, modelInfo, styleRefImage, poseRefImage } = params;
 
   const dimensions = parseImageSize(imageSize, aspectRatio);
-  const hasReferenceImages = referenceImages && referenceImages.length > 0;
+
+  // Collect all image URLs (generic + labeled)
+  const allImageUrls: string[] = [];
+  if (referenceImages && referenceImages.length > 0) {
+    allImageUrls.push(...referenceImages);
+  }
+  if (styleRefImage) allImageUrls.push(styleRefImage);
+  if (poseRefImage) allImageUrls.push(poseRefImage);
+
+  // Augment prompt with style/pose instructions for Fal
+  // (Fal doesn't support interleaved text+image, so we add instructions to the prompt)
+  let augmentedPrompt = prompt;
+  if (styleRefImage || poseRefImage) {
+    const instructions: string[] = [];
+    if (styleRefImage) {
+      instructions.push('Apply ONLY the artistic style (color palette, brushwork, rendering technique) from the style reference image. Do NOT copy the subject, clothing, or content from it.');
+    }
+    if (poseRefImage) {
+      instructions.push('Match ONLY the body pose and position from the pose reference image. Do NOT copy the appearance, clothing, or art style from it.');
+    }
+    augmentedPrompt = `${prompt}\n\n${instructions.join(' ')}`;
+  }
 
   const requestBody: Record<string, unknown> = {
-    prompt,
+    prompt: augmentedPrompt,
     num_images: outputCount,
     max_images: outputCount,
     image_size: {
@@ -756,8 +852,8 @@ async function generateWithFal(params: ProviderParams): Promise<GeneratedImage[]
   }
 
   // Reference images — use image_urls array (SeedREAM, newer fal models)
-  if (hasReferenceImages) {
-    requestBody.image_urls = referenceImages;
+  if (allImageUrls.length > 0) {
+    requestBody.image_urls = allImageUrls;
   }
 
   // Build endpoint: use custom endpoint if set, otherwise construct from model ID

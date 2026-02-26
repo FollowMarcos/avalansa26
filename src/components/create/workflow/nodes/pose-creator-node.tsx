@@ -82,7 +82,7 @@ export const DEFAULT_JOINTS_3D: Joint3D[] = [
 /** Legacy 2D defaults (kept for backward compat export) */
 export const DEFAULT_JOINTS: Joint[] = DEFAULT_JOINTS_3D.map(({ id, x, y }) => ({ id, x, y }));
 
-const DEFAULT_CAMERA: CameraState = { azimuth: 30, elevation: 20, distance: 4 };
+const DEFAULT_CAMERA: CameraState = { azimuth: 30, elevation: 20, distance: 3 };
 const FIGURE_CENTER = new THREE.Vector3(0, 0.85, 0);
 const JOINT_RADIUS = 0.04;
 const HEAD_RADIUS = 0.08;
@@ -566,62 +566,62 @@ export function PoseCreatorNode({ data, id, selected }: PoseCreatorNodeProps) {
       inputs={poseCreatorDefinition.inputs}
       outputs={poseCreatorDefinition.outputs}
       minWidth={poseCreatorDefinition.minWidth}
+      resizable
+      minHeight={420}
     >
-      <div className="space-y-1.5">
-        {/* 3D Viewport */}
-        <div
-          className="nodrag nowheel rounded-md overflow-hidden border border-border/50"
-          style={{ width: '100%', aspectRatio: '3/4', touchAction: 'manipulation' }}
+      {/* 3D Viewport — flex-1 fills all available node height */}
+      <div
+        className="nodrag nowheel flex-1 min-h-0 rounded-md overflow-hidden border border-border/50"
+        style={{ touchAction: 'manipulation' }}
+      >
+        <Canvas
+          camera={{ position: initialCameraPos, fov: 50, near: 0.1, far: 50 }}
+          style={{ background: '#0a0a0a' }}
+          gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true }}
         >
-          <Canvas
-            camera={{ position: initialCameraPos, fov: 50, near: 0.1, far: 50 }}
-            style={{ background: '#0a0a0a' }}
-            gl={{ antialias: true, alpha: false, preserveDrawingBuffer: true }}
+          <PoseScene
+            joints={joints}
+            onJointsChange={handleJointsChange}
+            onCameraChange={handleCameraChange}
+          />
+        </Canvas>
+      </div>
+
+      {/* Angle readout */}
+      <div className="flex items-center justify-between text-[10px] font-mono tabular-nums text-muted-foreground px-0.5 pt-1.5">
+        <span>Az: {cameraState.azimuth.toFixed(0)}&deg;</span>
+        <span>El: {cameraState.elevation.toFixed(0)}&deg;</span>
+      </div>
+
+      {/* Controls */}
+      <div className="flex items-center justify-between pt-0.5">
+        <span className="text-[10px] text-muted-foreground">
+          Orbit + drag joints
+        </span>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm px-1.5 py-0.5 border border-border hover:bg-muted/40 disabled:opacity-50"
+            aria-label="Save pose to library"
           >
-            <PoseScene
-              joints={joints}
-              onJointsChange={handleJointsChange}
-              onCameraChange={handleCameraChange}
-            />
-          </Canvas>
-        </div>
-
-        {/* Angle readout */}
-        <div className="flex items-center justify-between text-[10px] font-mono tabular-nums text-muted-foreground px-0.5">
-          <span>Az: {cameraState.azimuth.toFixed(0)}&deg;</span>
-          <span>El: {cameraState.elevation.toFixed(0)}&deg;</span>
-        </div>
-
-        {/* Controls */}
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] text-muted-foreground">
-            Orbit + drag joints
-          </span>
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm px-1.5 py-0.5 border border-border hover:bg-muted/40 disabled:opacity-50"
-              aria-label="Save pose to library"
-            >
-              {saving ? (
-                <Loader2 className="size-3 motion-safe:animate-spin" />
-              ) : (
-                <Save className="size-3" />
-              )}
-              Save
-            </button>
-            <button
-              type="button"
-              onClick={handleReset}
-              className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm px-1 py-0.5"
-              aria-label="Reset pose to default"
-            >
-              <RotateCcw className="size-3" />
-              Reset
-            </button>
-          </div>
+            {saving ? (
+              <Loader2 className="size-3 motion-safe:animate-spin" />
+            ) : (
+              <Save className="size-3" />
+            )}
+            Save
+          </button>
+          <button
+            type="button"
+            onClick={handleReset}
+            className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-sm px-1 py-0.5"
+            aria-label="Reset pose to default"
+          >
+            <RotateCcw className="size-3" />
+            Reset
+          </button>
         </div>
       </div>
     </BaseWorkflowNode>

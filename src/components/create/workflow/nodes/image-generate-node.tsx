@@ -94,19 +94,16 @@ export const imageGenerateExecutor: NodeExecutor = async (inputs, config, contex
     allRawRefs.push(rawReference);
   }
 
-  // Style & Pose reference sockets (from Style & Pose Reference node)
-  const rawStyleRef = inputs.styleRef as string | undefined;
-  const rawPoseRef = inputs.poseRef as string | undefined;
-  if (rawStyleRef && !allRawRefs.includes(rawStyleRef)) {
-    allRawRefs.push(rawStyleRef);
-  }
-  if (rawPoseRef && !allRawRefs.includes(rawPoseRef)) {
-    allRawRefs.push(rawPoseRef);
-  }
-
-  // Resolve all refs (download URLs → storage paths if needed)
+  // Resolve generic refs (download URLs → storage paths if needed)
   const resolvedPaths = await Promise.all(allRawRefs.map(resolveRefPath));
   const referenceImagePaths = resolvedPaths.filter((p): p is string => p !== null);
+
+  // Style & Pose reference sockets — resolved separately so the API can
+  // label them with explicit instructions (style-only / pose-only)
+  const rawStyleRef = inputs.styleRef as string | undefined;
+  const rawPoseRef = inputs.poseRef as string | undefined;
+  const styleRefPath = rawStyleRef ? await resolveRefPath(rawStyleRef) : null;
+  const poseRefPath = rawPoseRef ? await resolveRefPath(rawPoseRef) : null;
 
   // Priority: settings wire > inline config > defaults/global
   const apiId = (settings.apiId as string) || (config.apiId as string) || context.apiId;
@@ -126,6 +123,8 @@ export const imageGenerateExecutor: NodeExecutor = async (inputs, config, contex
       imageSize,
       outputCount,
       referenceImagePaths,
+      ...(styleRefPath ? { styleRefPath } : {}),
+      ...(poseRefPath ? { poseRefPath } : {}),
       mode,
     }),
     signal: context.signal,
