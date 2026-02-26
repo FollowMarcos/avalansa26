@@ -3,6 +3,7 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectsCommand,
+  PutBucketCorsCommand,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
@@ -31,6 +32,7 @@ function getS3Client(): S3Client {
         accessKeyId: R2_ACCESS_KEY_ID,
         secretAccessKey: R2_SECRET_ACCESS_KEY,
       },
+      forcePathStyle: true,
       requestChecksumCalculation: 'WHEN_REQUIRED',
       responseChecksumValidation: 'WHEN_REQUIRED',
     });
@@ -137,4 +139,34 @@ export async function getPresignedUploadUrl(
 /** Build the public URL for an R2 object key */
 export function getR2PublicUrl(key: string): string {
   return `${R2_PUBLIC_URL}/${key}`;
+}
+
+/**
+ * Configure CORS on the R2 bucket to allow browser-based presigned URL uploads.
+ * Safe to call multiple times — it overwrites the existing CORS config.
+ */
+export async function configureBucketCors(allowedOrigins: string[]): Promise<void> {
+  const client = getS3Client();
+
+  await client.send(
+    new PutBucketCorsCommand({
+      Bucket: R2_BUCKET_NAME,
+      CORSConfiguration: {
+        CORSRules: [
+          {
+            AllowedOrigins: allowedOrigins,
+            AllowedMethods: ['PUT'],
+            AllowedHeaders: ['Content-Type'],
+            MaxAgeSeconds: 3600,
+          },
+          {
+            AllowedOrigins: ['*'],
+            AllowedMethods: ['GET'],
+            AllowedHeaders: ['*'],
+            MaxAgeSeconds: 86400,
+          },
+        ],
+      },
+    })
+  );
 }
