@@ -6,7 +6,7 @@ export interface SavedPose {
   id: string;
   user_id: string;
   name: string;
-  joints: Array<{ id: string; x: number; y: number }>;
+  joints: Array<{ id: string; x: number; y: number; z?: number }>;
   image_path: string;
   image_url: string;
   created_at: string;
@@ -17,7 +17,7 @@ export interface SavedPose {
  */
 export async function savePose(data: {
   name: string;
-  joints: Array<{ id: string; x: number; y: number }>;
+  joints: Array<{ id: string; x: number; y: number; z?: number }>;
   image_path: string;
   image_url: string;
 }): Promise<SavedPose | null> {

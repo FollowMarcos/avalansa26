@@ -26,6 +26,8 @@ export const imageGenerateDefinition: WorkflowNodeDefinition = {
     { id: 'settings', label: 'Settings', type: 'settings' },
     { id: 'reference', label: 'Reference', type: 'image' },
     { id: 'references', label: 'References', type: 'image' },
+    { id: 'styleRef', label: 'Style Ref', type: 'image' },
+    { id: 'poseRef', label: 'Pose Ref', type: 'image' },
   ],
   outputs: [
     { id: 'image', label: 'Image 1', type: 'image' },
@@ -90,6 +92,16 @@ export const imageGenerateExecutor: NodeExecutor = async (inputs, config, contex
   // "reference" carries a single image (backward compat / other node types)
   if (rawReference && !allRawRefs.includes(rawReference)) {
     allRawRefs.push(rawReference);
+  }
+
+  // Style & Pose reference sockets (from Style & Pose Reference node)
+  const rawStyleRef = inputs.styleRef as string | undefined;
+  const rawPoseRef = inputs.poseRef as string | undefined;
+  if (rawStyleRef && !allRawRefs.includes(rawStyleRef)) {
+    allRawRefs.push(rawStyleRef);
+  }
+  if (rawPoseRef && !allRawRefs.includes(rawPoseRef)) {
+    allRawRefs.push(rawPoseRef);
   }
 
   // Resolve all refs (download URLs → storage paths if needed)
