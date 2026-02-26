@@ -244,7 +244,8 @@ export function StylePoseRefNode({ data, id, selected }: StylePoseRefNodeProps) 
             onChange={handleStyleChange}
             maxImages={1}
             emptyLabel="Drop style reference"
-            previewHeight="h-20"
+            previewHeight="h-auto"
+            objectFit="contain"
           />
         </div>
 
@@ -272,7 +273,8 @@ export function StylePoseRefNode({ data, id, selected }: StylePoseRefNodeProps) 
                 maxImages={1}
                 showLibraryPicker={false}
                 emptyLabel="Drop pose reference"
-                previewHeight="h-20"
+                previewHeight="h-auto"
+                objectFit="contain"
               />
               {/* Saved Poses button */}
               <button

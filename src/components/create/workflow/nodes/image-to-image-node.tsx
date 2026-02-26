@@ -102,7 +102,8 @@ export function ImageToImageNode({ data, id, selected }: ImageToImageNodeProps) 
         onChange={handleImagesChange}
         maxImages={MAX_IMAGES}
         emptyLabel={`Drop or click to upload (up to ${MAX_IMAGES})`}
-        previewHeight="h-20"
+        previewHeight="h-auto"
+        objectFit="contain"
       />
       {hasConnectedInput && (
         <p className="text-[10px] text-muted-foreground mt-1 text-center">

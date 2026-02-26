@@ -20,11 +20,14 @@ interface ImageUploadSlotProps {
   showLibraryPicker?: boolean;
   emptyLabel?: string;
   previewHeight?: string;
+  /** How the image fills its container. 'cover' crops to fill, 'contain' shows the full image. */
+  objectFit?: 'cover' | 'contain';
 }
 
 export function ImageUploadSlot({
   images, onChange, maxImages = 1, showLibraryPicker = true,
   emptyLabel = 'Drop or click to upload', previewHeight = 'h-16',
+  objectFit = 'cover',
 }: ImageUploadSlotProps): React.ReactElement {
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [uploadingUrls, setUploadingUrls] = React.useState<Set<string>>(new Set());
@@ -160,7 +163,7 @@ export function ImageUploadSlot({
         {images.map((img, i) => (
           <div key={`${img.storagePath || img.url}-${i}`}
             className={cn('relative group rounded-md overflow-hidden border border-border', images.length === 1 ? previewHeight : 'aspect-square')}>
-            <img src={img.url} alt={`Image ${i + 1}`} className="w-full h-full object-cover" draggable={false} />
+            <img src={img.url} alt={`Image ${i + 1}`} className={cn('w-full', objectFit === 'contain' ? 'object-contain' : 'h-full object-cover')} draggable={false} />
             {uploadingUrls.has(img.url) && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/50">
                 <Loader2 className="size-4 text-white motion-safe:animate-spin" />

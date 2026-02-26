@@ -230,11 +230,11 @@ export const GroupItem = React.memo(function GroupItem({
           </button>
         )}
 
-        {/* Run group button */}
-        {!isEditing && isTitleHovered && !group.locked && (
+        {/* Run group button — always visible */}
+        {!isEditing && !group.locked && (
           <button
             type="button"
-            className="flex items-center justify-center size-6 rounded hover:bg-black/10"
+            className="ml-auto flex items-center justify-center size-7 rounded-full transition-opacity hover:opacity-80 active:scale-95"
             onClick={(e) => {
               e.stopPropagation();
               window.dispatchEvent(
@@ -242,11 +242,14 @@ export const GroupItem = React.memo(function GroupItem({
               );
             }}
             onMouseDown={(e) => e.stopPropagation()}
-            style={{ transform: `scale(${iconScale})` }}
+            style={{
+              transform: `scale(${iconScale})`,
+              backgroundColor: group.color,
+            }}
             aria-label={`Run group "${group.title}"`}
             title="Run Group"
           >
-            <Play className="size-3" style={{ color: group.color }} />
+            <Play className="size-3.5 fill-white text-white" />
           </button>
         )}
 
