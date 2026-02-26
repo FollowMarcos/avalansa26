@@ -22,6 +22,8 @@ import { MangaPanelNode, mangaPanelDefinition, mangaPanelExecutor } from './mang
 import { BeforeAfterImageNode, beforeAfterDefinition, beforeAfterExecutor } from './before-after-node';
 import { CharacterTurnaroundNode, characterTurnaroundDefinition, characterTurnaroundExecutor } from './character-turnaround-node';
 import { MultiAngleNode, multiAngleDefinition, multiAngleExecutor } from './multi-angle-node';
+import { StylePoseRefNode, stylePoseRefDefinition, stylePoseRefExecutor } from './style-pose-ref-node';
+import { PoseCreatorNode, poseCreatorDefinition, poseCreatorExecutor } from './pose-creator-node';
 
 registerNode({ definition: promptInputDefinition, component: PromptInputNode, executor: promptInputExecutor });
 registerNode({ definition: settingsDefinition, component: SettingsNode, executor: settingsExecutor });
@@ -38,3 +40,5 @@ registerNode({ definition: mangaPanelDefinition, component: MangaPanelNode, exec
 registerNode({ definition: beforeAfterDefinition, component: BeforeAfterImageNode, executor: beforeAfterExecutor });
 registerNode({ definition: characterTurnaroundDefinition, component: CharacterTurnaroundNode, executor: characterTurnaroundExecutor });
 registerNode({ definition: multiAngleDefinition, component: MultiAngleNode, executor: multiAngleExecutor });
+registerNode({ definition: stylePoseRefDefinition, component: StylePoseRefNode, executor: stylePoseRefExecutor });
+registerNode({ definition: poseCreatorDefinition, component: PoseCreatorNode, executor: poseCreatorExecutor });
