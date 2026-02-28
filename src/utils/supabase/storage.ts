@@ -3,8 +3,8 @@
 import { resolveStorageUrl, isR2Path } from '@/utils/r2/url-helpers';
 import { deleteReferenceImagesServer } from '@/utils/supabase/storage.server';
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB max
-const TARGET_FILE_SIZE = 8 * 1024 * 1024; // Target 8MB to have buffer
+const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB max (Vercel serverless body limit is 4.5MB)
+const TARGET_FILE_SIZE = 3.5 * 1024 * 1024; // Target 3.5MB to have buffer for FormData overhead
 const MAX_DIMENSION = 4096; // Max dimension to prevent memory issues
 
 /**

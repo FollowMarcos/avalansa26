@@ -16,6 +16,7 @@ import type {
   PromptShareWithDetails,
   PromptImage,
   PromptImageInsert,
+  PromptWithOrganization,
 } from '@/types/prompt';
 
 // ============================================
@@ -1235,6 +1236,136 @@ export async function getPromptShareSource(promptId: string): Promise<PromptShar
       avatar_url: string | null;
     },
   };
+}
+
+// ============================================
+// ENRICHED DATA (tags, folders, images together)
+// ============================================
+
+/**
+ * Get prompts with their images, tags, and folders for rich display.
+ * Batches all junction table queries to avoid N+1.
+ */
+export async function getPromptsWithOrganization(
+  limit: number = 50,
+  offset: number = 0
+): Promise<PromptWithOrganization[]> {
+  const supabase = await createClient();
+
+  // 1. Fetch prompts
+  const { data: prompts, error } = await supabase
+    .from('prompts')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  if (error) {
+    console.error('Error fetching prompts:', error.message);
+    return [];
+  }
+
+  if (!prompts || prompts.length === 0) {
+    return [];
+  }
+
+  const promptIds = prompts.map((p) => p.id);
+
+  // 2. Batch fetch images, tag items, and folder items in parallel
+  const [imagesResult, tagItemsResult, folderItemsResult] = await Promise.all([
+    supabase
+      .from('prompt_images')
+      .select('*')
+      .in('prompt_id', promptIds)
+      .order('position', { ascending: true }),
+    supabase
+      .from('prompt_tag_items')
+      .select('prompt_id, tag_id, prompt_tags(*)')
+      .in('prompt_id', promptIds),
+    supabase
+      .from('prompt_folder_items')
+      .select('prompt_id, folder_id, prompt_folders(*)')
+      .in('prompt_id', promptIds),
+  ]);
+
+  // Build lookup maps
+  const imagesByPromptId = new Map<string, PromptImage[]>();
+  for (const image of imagesResult.data ?? []) {
+    const existing = imagesByPromptId.get(image.prompt_id) ?? [];
+    existing.push(image);
+    imagesByPromptId.set(image.prompt_id, existing);
+  }
+
+  const tagsByPromptId = new Map<string, PromptTag[]>();
+  for (const item of tagItemsResult.data ?? []) {
+    if (item.prompt_tags) {
+      const existing = tagsByPromptId.get(item.prompt_id) ?? [];
+      existing.push(item.prompt_tags as unknown as PromptTag);
+      tagsByPromptId.set(item.prompt_id, existing);
+    }
+  }
+
+  const foldersByPromptId = new Map<string, PromptFolder[]>();
+  for (const item of folderItemsResult.data ?? []) {
+    if (item.prompt_folders) {
+      const existing = foldersByPromptId.get(item.prompt_id) ?? [];
+      existing.push(item.prompt_folders as unknown as PromptFolder);
+      foldersByPromptId.set(item.prompt_id, existing);
+    }
+  }
+
+  return prompts.map((prompt) => ({
+    ...prompt,
+    images: imagesByPromptId.get(prompt.id) ?? [],
+    tags: tagsByPromptId.get(prompt.id) ?? [],
+    folders: foldersByPromptId.get(prompt.id) ?? [],
+  }));
+}
+
+/**
+ * Get item counts per folder for sidebar display.
+ */
+export async function getPromptFolderItemCounts(): Promise<Record<string, number>> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('prompt_folder_items')
+    .select('folder_id');
+
+  if (error) {
+    console.error('Error fetching folder item counts:', error.message);
+    return {};
+  }
+
+  const counts: Record<string, number> = {};
+  for (const item of data ?? []) {
+    counts[item.folder_id] = (counts[item.folder_id] ?? 0) + 1;
+  }
+  return counts;
+}
+
+/**
+ * Get folder-to-prompt mapping for folder filtering.
+ */
+export async function getPromptFolderMapping(): Promise<Record<string, string[]>> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from('prompt_folder_items')
+    .select('folder_id, prompt_id');
+
+  if (error) {
+    console.error('Error fetching folder mapping:', error.message);
+    return {};
+  }
+
+  const mapping: Record<string, string[]> = {};
+  for (const item of data ?? []) {
+    if (!mapping[item.folder_id]) {
+      mapping[item.folder_id] = [];
+    }
+    mapping[item.folder_id].push(item.prompt_id);
+  }
+  return mapping;
 }
 
 /**

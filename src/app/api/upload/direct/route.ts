@@ -15,8 +15,8 @@ const ALLOWED_CONTENT_TYPES = new Set([
 ]);
 
 const MAX_SIZES: Record<string, number> = {
-  [R2_PREFIX.REFERENCE_IMAGES]: 10 * 1024 * 1024, // 10MB
-  [R2_PREFIX.AVATARS]: 5 * 1024 * 1024, // 5MB
+  [R2_PREFIX.REFERENCE_IMAGES]: 4 * 1024 * 1024, // 4MB (Vercel body limit is 4.5MB)
+  [R2_PREFIX.AVATARS]: 4 * 1024 * 1024, // 4MB
 };
 
 /**

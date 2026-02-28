@@ -4,11 +4,13 @@ import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import type { Prompt, PromptFolder, PromptTag, PromptShareWithDetails, PromptImage } from "@/types/prompt";
+import type { Prompt, PromptWithOrganization, PromptFolder, PromptTag, PromptShareWithDetails, PromptImage } from "@/types/prompt";
 import {
-  getPromptsWithImages,
+  getPromptsWithOrganization,
   getPromptFolders,
   getPromptTags,
+  getPromptFolderItemCounts,
+  getPromptFolderMapping,
   deletePrompt,
   togglePromptFavorite,
   createPromptFolder,
@@ -34,16 +36,13 @@ import {
   Clock,
   Sparkles,
   ArrowLeft,
+  ArrowUpDown,
   Users,
   Plus,
   Loader2,
   LayoutGrid,
   List,
-  Trash2,
   Share2,
-  Copy,
-  MoreHorizontal,
-  ExternalLink,
   ImagePlus,
   Pencil,
 } from "lucide-react";
@@ -61,13 +60,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+// DropdownMenu no longer needed — handled by unified PromptCard
 import {
   Dialog,
   DialogContent,
@@ -78,20 +71,32 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { safeColor } from "@/lib/validations/color";
+import { PromptCard } from "@/components/create/prompt-card";
 import Image from "next/image";
 
 type ViewMode = "grid" | "list";
 type ActiveTab = "my-prompts" | "shared";
 type FilterSection = "all" | "favorites" | "recent" | string;
+type SortOption = "newest" | "oldest" | "name-asc" | "name-desc" | "most-used" | "least-used";
 
 export function PromptLibraryPage() {
   const router = useRouter();
   const prefersReducedMotion = useReducedMotion();
 
   // Data state
-  const [prompts, setPrompts] = React.useState<Prompt[]>([]);
+  const [prompts, setPrompts] = React.useState<PromptWithOrganization[]>([]);
   const [folders, setFolders] = React.useState<PromptFolder[]>([]);
   const [tags, setTags] = React.useState<PromptTag[]>([]);
+  const [folderItemCounts, setFolderItemCounts] = React.useState<Record<string, number>>({});
+  const [folderMapping, setFolderMapping] = React.useState<Record<string, string[]>>({});
   const [sharedPrompts, setSharedPrompts] = React.useState<PromptShareWithDetails[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
 
@@ -100,6 +105,8 @@ export function PromptLibraryPage() {
   const [activeSection, setActiveSection] = React.useState<FilterSection>("all");
   const [searchQuery, setSearchQuery] = React.useState("");
   const [viewMode, setViewMode] = React.useState<ViewMode>("grid");
+  const [sortBy, setSortBy] = React.useState<SortOption>("newest");
+  const [focusedPromptId, setFocusedPromptId] = React.useState<string | null>(null);
   const [newFolderDialogOpen, setNewFolderDialogOpen] = React.useState(false);
   const [newFolderName, setNewFolderName] = React.useState("");
   const [isCreatingFolder, setIsCreatingFolder] = React.useState(false);
@@ -146,15 +153,19 @@ export function PromptLibraryPage() {
   const loadData = async () => {
     setIsLoading(true);
     try {
-      const [promptsData, foldersData, tagsData, sharesData] = await Promise.all([
-        getPromptsWithImages(200, 0),
+      const [promptsData, foldersData, tagsData, countsData, mappingData, sharesData] = await Promise.all([
+        getPromptsWithOrganization(200, 0),
         getPromptFolders(),
         getPromptTags(),
+        getPromptFolderItemCounts(),
+        getPromptFolderMapping(),
         getReceivedPromptShares(),
       ]);
       setPrompts(promptsData);
       setFolders(foldersData);
       setTags(tagsData);
+      setFolderItemCounts(countsData);
+      setFolderMapping(mappingData);
       setSharedPrompts(sharesData);
     } catch (error) {
       console.error("Failed to load library:", error);
@@ -164,7 +175,7 @@ export function PromptLibraryPage() {
     }
   };
 
-  // Filter prompts based on search and section
+  // Filter prompts based on search, section, and sort
   const filteredPrompts = React.useMemo(() => {
     let filtered = prompts;
 
@@ -189,11 +200,39 @@ export function PromptLibraryPage() {
         )
         .slice(0, 20);
     } else if (activeSection !== "all") {
-      // Filter by folder ID - would need folder items data
+      // Filter by folder ID
+      const folderPromptIds = folderMapping[activeSection] ?? [];
+      if (folderPromptIds.length > 0) {
+        const idSet = new Set(folderPromptIds);
+        filtered = filtered.filter((p) => idSet.has(p.id));
+      } else {
+        filtered = [];
+      }
+    }
+
+    // Apply sort (skip for "recent" section which has its own sorting)
+    if (activeSection !== "recent") {
+      filtered = [...filtered].sort((a, b) => {
+        switch (sortBy) {
+          case "oldest":
+            return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+          case "name-asc":
+            return a.name.localeCompare(b.name);
+          case "name-desc":
+            return b.name.localeCompare(a.name);
+          case "most-used":
+            return b.use_count - a.use_count;
+          case "least-used":
+            return a.use_count - b.use_count;
+          case "newest":
+          default:
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        }
+      });
     }
 
     return filtered;
-  }, [prompts, searchQuery, activeSection]);
+  }, [prompts, searchQuery, activeSection, sortBy, folderMapping]);
 
   // Filter shared prompts
   const filteredSharedPrompts = React.useMemo(() => {
@@ -607,6 +646,22 @@ export function PromptLibraryPage() {
               </div>
 
               <div className="flex items-center gap-2">
+                {/* Sort dropdown */}
+                <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+                  <SelectTrigger className="h-8 w-[140px] text-xs">
+                    <ArrowUpDown className="size-3 mr-1.5 text-muted-foreground" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest" className="text-xs">Newest first</SelectItem>
+                    <SelectItem value="oldest" className="text-xs">Oldest first</SelectItem>
+                    <SelectItem value="name-asc" className="text-xs">Name A-Z</SelectItem>
+                    <SelectItem value="name-desc" className="text-xs">Name Z-A</SelectItem>
+                    <SelectItem value="most-used" className="text-xs">Most used</SelectItem>
+                    <SelectItem value="least-used" className="text-xs">Least used</SelectItem>
+                  </SelectContent>
+                </Select>
+
                 {/* View toggle */}
                 <div className="flex items-center border rounded-lg p-0.5">
                   <Button
@@ -767,24 +822,44 @@ export function PromptLibraryPage() {
                           No folders yet
                         </p>
                       ) : (
-                        folders.map((folder) => (
-                          <button
-                            key={folder.id}
-                            onClick={() => setActiveSection(folder.id)}
-                            className={cn(
-                              "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors",
-                              activeSection === folder.id
-                                ? "bg-accent text-accent-foreground"
-                                : "hover:bg-muted"
-                            )}
-                          >
-                            <Folder
-                              className="size-4"
-                              style={{ color: folder.color || undefined }}
-                            />
-                            <span className="truncate">{folder.name}</span>
-                          </button>
-                        ))
+                        folders.map((folder) => {
+                          const fColor = safeColor(folder.color);
+                          const count = folderItemCounts[folder.id] ?? 0;
+                          return (
+                            <button
+                              key={folder.id}
+                              onClick={() => setActiveSection(folder.id)}
+                              className={cn(
+                                "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors",
+                                activeSection === folder.id
+                                  ? "bg-accent text-accent-foreground"
+                                  : "hover:bg-muted"
+                              )}
+                              style={{
+                                borderLeft: activeSection === folder.id && fColor
+                                  ? `2px solid ${fColor}`
+                                  : undefined,
+                              }}
+                            >
+                              {fColor && (
+                                <div
+                                  className="size-2.5 rounded-full shrink-0"
+                                  style={{ backgroundColor: fColor }}
+                                />
+                              )}
+                              <Folder
+                                className="size-4"
+                                style={{ color: fColor }}
+                              />
+                              <span className="truncate">{folder.name}</span>
+                              {count > 0 && (
+                                <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+                                  {count}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })
                       )}
                     </div>
                   </nav>
@@ -1311,10 +1386,12 @@ export function PromptLibraryPage() {
 // ============================================
 
 // Smooth easing for card animations
-const EASE_OUT: [number, number, number, number] = [0, 0, 0.2, 1];
+// ============================================
+// My Prompts View
+// ============================================
 
 interface MyPromptsViewProps {
-  prompts: Prompt[];
+  prompts: PromptWithOrganization[];
   viewMode: ViewMode;
   onDelete: (id: string) => void;
   onToggleFavorite: (id: string, isFavorite: boolean) => void;
@@ -1334,22 +1411,30 @@ function MyPromptsView({
   onUseInCreate,
   onEdit,
   onShare,
-  prefersReducedMotion,
 }: MyPromptsViewProps) {
   if (prompts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <BookMarked className="size-12 text-muted-foreground/30 mb-4" />
-        <h3 className="text-lg font-medium mb-2">No prompts yet</h3>
+        {/* Stacked card illustration */}
+        <div className="relative mb-6 size-20">
+          <div className="absolute inset-0 rounded-xl border-2 border-dashed border-primary/20 bg-primary/5 rotate-6" />
+          <div className="absolute inset-0 rounded-xl border-2 border-dashed border-primary/15 bg-primary/3 -rotate-3 translate-y-1" />
+          <div className="absolute inset-0 rounded-xl border-2 border-primary/10 bg-card flex items-center justify-center shadow-sm">
+            <BookMarked className="size-8 text-muted-foreground/40" />
+          </div>
+        </div>
+        <h3 className="text-lg font-medium mb-2">Your prompt library is empty</h3>
         <p className="text-sm text-muted-foreground mb-4 max-w-sm">
-          Save prompts from the Create studio using the bookmark button to see them here.
+          Start building your collection — save prompts from the Create studio or add them directly here.
         </p>
-        <Button asChild>
-          <Link href="/create">
-            <Sparkles className="size-4 mr-2" />
-            Go to Create
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild>
+            <Link href="/create">
+              <Sparkles className="size-4 mr-2" />
+              Go to Create
+            </Link>
+          </Button>
+        </div>
       </div>
     );
   }
@@ -1364,20 +1449,22 @@ function MyPromptsView({
     >
       <AnimatePresence mode="popLayout">
         {prompts.map((prompt, index) => (
-          <PromptLibraryCard
+          <PromptCard
             key={prompt.id}
             prompt={prompt}
-            index={index}
+            tags={prompt.tags}
+            primaryFolder={prompt.folders?.[0]}
+            variant="full"
             viewMode={viewMode}
-            onDelete={() => onDelete(prompt.id)}
-            onToggleFavorite={() =>
-              onToggleFavorite(prompt.id, !prompt.is_favorite)
-            }
+            onSelect={() => onUseInCreate(prompt)}
+            onToggleFavorite={(id, fav) => onToggleFavorite(id, fav)}
             onCopy={() => onCopy(prompt.prompt_text)}
-            onUseInCreate={() => onUseInCreate(prompt)}
+            onUse={() => onUseInCreate(prompt)}
             onEdit={() => onEdit(prompt)}
             onShare={() => onShare(prompt)}
-            prefersReducedMotion={prefersReducedMotion}
+            onDelete={() => onDelete(prompt.id)}
+            showActions
+            index={index}
           />
         ))}
       </AnimatePresence>
@@ -1404,15 +1491,14 @@ function SharedPromptsView({
   onMarkSeen,
   onCopy,
   onUseInCreate,
-  prefersReducedMotion,
 }: SharedPromptsViewProps) {
   if (shares.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <Users className="size-12 text-muted-foreground/30 mb-4" />
-        <h3 className="text-lg font-medium mb-2">No shared prompts</h3>
+        <h3 className="text-lg font-medium mb-2">No shared prompts yet</h3>
         <p className="text-sm text-muted-foreground max-w-sm">
-          When someone shares a prompt with you, it will appear here.
+          When collaborators share their prompts with you, they will appear here automatically.
         </p>
       </div>
     );
@@ -1428,7 +1514,7 @@ function SharedPromptsView({
     >
       <AnimatePresence mode="popLayout">
         {shares.map((share, index) => (
-          <SharedPromptCard
+          <SharedPromptCardWrapper
             key={share.id}
             share={share}
             index={index}
@@ -1436,7 +1522,6 @@ function SharedPromptsView({
             onMarkSeen={() => onMarkSeen(share.id)}
             onCopy={() => onCopy(share.prompt.prompt_text)}
             onUseInCreate={() => onUseInCreate(share.prompt)}
-            prefersReducedMotion={prefersReducedMotion}
           />
         ))}
       </AnimatePresence>
@@ -1444,393 +1529,39 @@ function SharedPromptsView({
   );
 }
 
-// ============================================
-// Prompt Library Card
-// ============================================
-
-interface PromptLibraryCardProps {
-  prompt: Prompt;
-  index: number;
-  viewMode: ViewMode;
-  onDelete: () => void;
-  onToggleFavorite: () => void;
-  onCopy: () => void;
-  onUseInCreate: () => void;
-  onEdit: () => void;
-  onShare: () => void;
-  prefersReducedMotion: boolean | null;
-}
-
-function PromptLibraryCard({
-  prompt,
-  index,
-  viewMode,
-  onDelete,
-  onToggleFavorite,
-  onCopy,
-  onUseInCreate,
-  onEdit,
-  onShare,
-  prefersReducedMotion,
-}: PromptLibraryCardProps) {
-  // Check if prompt has images
-  const hasImages = prompt.images && prompt.images.length > 0;
-
-  return (
-    <Link href={`/library/${prompt.id}`} className="block">
-      <motion.div
-        layout
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -10 }}
-        transition={{
-          duration: prefersReducedMotion ? 0 : 0.2,
-          delay: prefersReducedMotion ? 0 : index * 0.03,
-          ease: EASE_OUT,
-        }}
-        whileHover={prefersReducedMotion ? undefined : { scale: 1.02, y: -2 }}
-        className={cn(
-          "group relative rounded-2xl border bg-card overflow-hidden",
-          "transition-shadow duration-200",
-          viewMode === "list"
-            ? "flex items-center gap-4 p-3 hover:bg-accent/50"
-            : "flex flex-col hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 hover:z-10"
-        )}
-      >
-      {/* Image thumbnails (grid view only) */}
-      {viewMode === "grid" && hasImages && (
-        <div className="relative aspect-[16/9] bg-muted overflow-hidden">
-          {prompt.images!.length === 1 ? (
-            <Image
-              src={prompt.images![0].url}
-              alt=""
-              fill
-              className="object-cover"
-            />
-          ) : prompt.images!.length === 2 ? (
-            <div className="absolute inset-0 grid grid-cols-2 gap-0.5">
-              {prompt.images!.slice(0, 2).map((img, i) => (
-                <div key={img.id} className="relative">
-                  <Image src={img.url} alt="" fill className="object-cover" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="absolute inset-0 grid grid-cols-3 gap-0.5">
-              {prompt.images!.slice(0, 3).map((img, i) => (
-                <div key={img.id} className="relative">
-                  <Image src={img.url} alt="" fill className="object-cover" />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Content */}
-      <div className={cn(
-        "flex-1 min-w-0",
-        viewMode === "list" ? "flex items-center gap-4" : "p-4"
-      )}>
-        <div className={cn("flex-1 min-w-0", viewMode === "list" && "flex items-center gap-4")}>
-          {/* Header */}
-          <div className={cn(viewMode === "list" ? "flex items-center gap-2 min-w-0" : "mb-1.5")}>
-            <h3 className="font-semibold tracking-tight truncate">{prompt.name}</h3>
-            {prompt.is_favorite && (
-              <Heart className="size-3.5 text-red-500 fill-red-500 shrink-0" />
-            )}
-          </div>
-
-          {/* Description */}
-          {prompt.description && viewMode === "grid" && (
-            <p className="text-sm text-muted-foreground truncate mb-2 leading-tight">
-              {prompt.description}
-            </p>
-          )}
-
-          {/* Prompt preview */}
-          <p
-            className={cn(
-              "text-xs text-muted-foreground font-mono bg-muted/50 rounded-lg px-2.5 py-2 leading-relaxed",
-              viewMode === "grid" ? "line-clamp-2" : "line-clamp-1 flex-1"
-            )}
-          >
-            {prompt.prompt_text}
-          </p>
-
-          {/* Meta */}
-          {viewMode === "grid" && (
-            <div className="flex items-center gap-2 mt-3">
-              {prompt.use_count > 0 && (
-                <Badge variant="outline" className="text-[10px] font-medium">
-                  <Sparkles className="size-2.5 mr-1" />
-                  Used {prompt.use_count}x
-                </Badge>
-              )}
-              {prompt.original_author_id && (
-                <Badge variant="secondary" className="text-[10px] font-medium">
-                  Shared
-                </Badge>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
-        {/* Actions */}
-        <div
-          className={cn(
-            "flex items-center gap-1",
-            viewMode === "grid"
-              ? "absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-              : ""
-          )}
-          onClick={(e) => e.preventDefault()}
-        >
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="h-7 px-2"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onUseInCreate();
-                }}
-              >
-                <ExternalLink className="size-3.5 mr-1" />
-                Use
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Use in Create</TooltipContent>
-          </Tooltip>
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7"
-                onClick={(e) => e.preventDefault()}
-                aria-label="More options"
-              >
-                <MoreHorizontal className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onEdit}>
-                <Pencil className="size-3.5 mr-2" />
-                Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onCopy}>
-                <Copy className="size-3.5 mr-2" />
-                Copy prompt
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onToggleFavorite}>
-                <Heart
-                  className={cn(
-                    "size-3.5 mr-2",
-                    prompt.is_favorite && "fill-current"
-                  )}
-                />
-                {prompt.is_favorite ? "Unfavorite" : "Favorite"}
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={onShare}>
-                <Share2 className="size-3.5 mr-2" />
-                Share
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={onDelete}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="size-3.5 mr-2" />
-                Delete
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </motion.div>
-    </Link>
-  );
-}
-
-// ============================================
-// Shared Prompt Card
-// ============================================
-
-interface SharedPromptCardProps {
-  share: PromptShareWithDetails;
-  index: number;
-  viewMode: ViewMode;
-  onMarkSeen: () => void;
-  onCopy: () => void;
-  onUseInCreate: () => void;
-  prefersReducedMotion: boolean | null;
-}
-
-function SharedPromptCard({
+// Wrapper for shared prompts to auto-mark as seen
+function SharedPromptCardWrapper({
   share,
   index,
   viewMode,
   onMarkSeen,
   onCopy,
   onUseInCreate,
-  prefersReducedMotion,
-}: SharedPromptCardProps) {
-  const { prompt, sharer, is_seen, message } = share;
-
-  // Check if prompt has images
-  const hasImages = prompt.images && prompt.images.length > 0;
-
-  // Mark as seen when card is rendered and not yet seen
+}: {
+  share: PromptShareWithDetails;
+  index: number;
+  viewMode: ViewMode;
+  onMarkSeen: () => void;
+  onCopy: () => void;
+  onUseInCreate: () => void;
+}) {
   React.useEffect(() => {
-    if (!is_seen) {
+    if (!share.is_seen) {
       onMarkSeen();
     }
-  }, [is_seen, onMarkSeen]);
+  }, [share.is_seen, onMarkSeen]);
 
   return (
-    <Link href={`/library/${prompt.id}`} className="block">
-      <motion.div
-        layout
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -10 }}
-        transition={{
-          duration: prefersReducedMotion ? 0 : 0.2,
-          delay: prefersReducedMotion ? 0 : index * 0.03,
-          ease: EASE_OUT,
-        }}
-        whileHover={prefersReducedMotion ? undefined : { scale: 1.02, y: -2 }}
-        className={cn(
-          "group relative rounded-2xl border bg-card overflow-hidden",
-          "transition-shadow duration-200",
-          viewMode === "list"
-            ? "flex items-center gap-4 p-3 hover:bg-accent/50"
-            : "flex flex-col hover:shadow-xl hover:shadow-primary/5 hover:border-primary/20 hover:z-10",
-          !is_seen && "ring-2 ring-primary/50"
-        )}
-      >
-      {/* New badge */}
-      {!is_seen && (
-        <Badge className="absolute top-3 right-3 z-10 text-[10px]">New</Badge>
-      )}
-
-      {/* Image thumbnails (grid view only) */}
-      {viewMode === "grid" && hasImages && (
-        <div className="relative aspect-[16/9] bg-muted overflow-hidden">
-          {prompt.images!.length === 1 ? (
-            <Image
-              src={prompt.images![0].url}
-              alt=""
-              fill
-              className="object-cover"
-            />
-          ) : prompt.images!.length === 2 ? (
-            <div className="absolute inset-0 grid grid-cols-2 gap-0.5">
-              {prompt.images!.slice(0, 2).map((img) => (
-                <div key={img.id} className="relative">
-                  <Image src={img.url} alt="" fill className="object-cover" />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="absolute inset-0 grid grid-cols-3 gap-0.5">
-              {prompt.images!.slice(0, 3).map((img) => (
-                <div key={img.id} className="relative">
-                  <Image src={img.url} alt="" fill className="object-cover" />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Content */}
-      <div className={cn(
-        "flex-1 min-w-0",
-        viewMode === "list" ? "flex items-center gap-4" : "p-4"
-      )}>
-        <div className={cn("flex-1 min-w-0", viewMode === "list" && "flex items-center gap-4")}>
-          {/* Header */}
-          <div className={cn(viewMode === "list" ? "flex items-center gap-2 min-w-0" : "mb-1.5")}>
-            <h3 className="font-semibold tracking-tight truncate">{prompt.name}</h3>
-          </div>
-
-          {/* Sharer info */}
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
-            <Users className="size-3" />
-            <span>From {sharer.username || "Unknown"}</span>
-          </div>
-
-          {/* Message */}
-          {message && viewMode === "grid" && (
-            <p className="text-sm text-muted-foreground italic mb-2 line-clamp-2 leading-tight">
-              "{message}"
-            </p>
-          )}
-
-          {/* Prompt preview */}
-          <p
-            className={cn(
-              "text-xs text-muted-foreground font-mono bg-muted/50 rounded-lg px-2.5 py-2 leading-relaxed",
-              viewMode === "grid" ? "line-clamp-2" : "line-clamp-1 flex-1"
-            )}
-          >
-            {prompt.prompt_text}
-          </p>
-        </div>
-      </div>
-
-        {/* Actions */}
-        <div
-          className={cn(
-            "flex items-center gap-1",
-            viewMode === "grid"
-              ? "absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
-              : "",
-            !is_seen && viewMode === "grid" && "right-16"
-          )}
-          onClick={(e) => e.preventDefault()}
-        >
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="h-7 px-2"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onUseInCreate();
-                }}
-              >
-                <ExternalLink className="size-3.5 mr-1" />
-                Use
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Use in Create</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="size-7"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onCopy();
-                }}
-                aria-label="Copy prompt"
-              >
-                <Copy className="size-3.5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Copy prompt</TooltipContent>
-          </Tooltip>
-        </div>
-      </motion.div>
-    </Link>
+    <PromptCard
+      prompt={share.prompt}
+      variant="full"
+      viewMode={viewMode}
+      onSelect={() => onUseInCreate()}
+      onUse={() => onUseInCreate()}
+      onCopy={() => onCopy()}
+      isSelected={!share.is_seen}
+      showActions
+      index={index}
+    />
   );
 }

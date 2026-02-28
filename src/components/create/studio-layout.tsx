@@ -159,6 +159,8 @@ export function StudioLayout() {
               prompts={promptVault.prompts}
               folders={promptVault.folders}
               tags={promptVault.tags}
+              folderItemCounts={promptVault.folderItemCounts}
+              folderMapping={promptVault.folderMapping}
               onSelectPrompt={promptVault.usePrompt}
               onToggleFavorite={promptVault.toggleFavorite}
               onSharePrompt={promptVault.openShareDialog}

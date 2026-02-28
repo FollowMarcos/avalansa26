@@ -3,7 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { safeColor } from "@/lib/validations/color";
-import type { Prompt, PromptFolder, PromptTag } from "@/types/prompt";
+import type { PromptWithOrganization, PromptFolder, PromptTag } from "@/types/prompt";
 import type { Ava, AvaFolder } from "@/types/ava";
 import {
   BookMarked,
@@ -15,11 +15,19 @@ import {
   Sparkles,
   Bot,
   Plus,
+  ArrowUpDown,
 } from "lucide-react";
 import { motion, AnimatePresence, useReducedMotion } from "motion/react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
@@ -30,18 +38,20 @@ import { PromptCard } from "./prompt-card";
 import { AvaCard } from "./ava-card";
 
 type VaultSection = "all" | "favorites" | "recent" | "avas" | string; // string for folder IDs
+type VaultSort = "recent" | "name" | "usage";
 
 interface PromptVaultIslandProps {
   open: boolean;
   onToggle: () => void;
-  /** When false, the floating toggle button is hidden (e.g. when embedded in toolbar). */
   showToggle?: boolean;
-  prompts: Prompt[];
+  prompts: PromptWithOrganization[];
   folders: PromptFolder[];
   tags: PromptTag[];
-  onSelectPrompt: (prompt: Prompt) => void;
+  folderItemCounts?: Record<string, number>;
+  folderMapping?: Record<string, string[]>;
+  onSelectPrompt: (prompt: PromptWithOrganization) => void;
   onToggleFavorite: (promptId: string, isFavorite: boolean) => void;
-  onSharePrompt: (prompt: Prompt) => void;
+  onSharePrompt: (prompt: PromptWithOrganization) => void;
   onDeletePrompt: (promptId: string) => void;
   // Ava props
   avas?: Ava[];
@@ -60,6 +70,8 @@ export function PromptVaultIsland({
   prompts,
   folders,
   tags,
+  folderItemCounts = {},
+  folderMapping = {},
   onSelectPrompt,
   onToggleFavorite,
   onSharePrompt,
@@ -77,8 +89,12 @@ export function PromptVaultIsland({
   const prefersReducedMotion = useReducedMotion();
   const [activeSection, setActiveSection] = React.useState<VaultSection>("all");
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [sortBy, setSortBy] = React.useState<VaultSort>("recent");
+  const [focusedIndex, setFocusedIndex] = React.useState(-1);
+  const searchInputRef = React.useRef<HTMLInputElement>(null);
+  const panelRef = React.useRef<HTMLDivElement>(null);
 
-  // Filter prompts based on search and section
+  // Filter and sort prompts
   const filteredPrompts = React.useMemo(() => {
     let filtered = prompts;
 
@@ -97,7 +113,6 @@ export function PromptVaultIsland({
     if (activeSection === "favorites") {
       filtered = filtered.filter((p) => p.is_favorite);
     } else if (activeSection === "recent") {
-      // Sort by use_count and updated_at
       filtered = [...filtered]
         .filter((p) => p.use_count > 0)
         .sort(
@@ -105,14 +120,34 @@ export function PromptVaultIsland({
             new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
         )
         .slice(0, 10);
-    } else if (activeSection !== "all") {
-      // Filter by folder (activeSection is folder ID)
-      // This would require folder item data from context
-      // For now, show all in folder view
+    } else if (activeSection !== "all" && activeSection !== "avas") {
+      // Filter by folder ID
+      const folderPromptIds = folderMapping[activeSection] ?? [];
+      if (folderPromptIds.length > 0) {
+        const idSet = new Set(folderPromptIds);
+        filtered = filtered.filter((p) => idSet.has(p.id));
+      } else {
+        filtered = [];
+      }
+    }
+
+    // Apply sort (skip for "recent" section which has its own sorting)
+    if (activeSection !== "recent") {
+      filtered = [...filtered].sort((a, b) => {
+        switch (sortBy) {
+          case "name":
+            return a.name.localeCompare(b.name);
+          case "usage":
+            return b.use_count - a.use_count;
+          case "recent":
+          default:
+            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        }
+      });
     }
 
     return filtered;
-  }, [prompts, searchQuery, activeSection]);
+  }, [prompts, searchQuery, activeSection, sortBy, folderMapping]);
 
   // Filter avas based on search
   const filteredAvas = React.useMemo(() => {
@@ -128,6 +163,70 @@ export function PromptVaultIsland({
 
   const favoriteCount = prompts.filter((p) => p.is_favorite).length;
 
+  // Reset focus when filters change
+  React.useEffect(() => {
+    setFocusedIndex(-1);
+  }, [searchQuery, activeSection, sortBy]);
+
+  // Keyboard navigation
+  React.useEffect(() => {
+    if (!open) return;
+
+    const handler = (e: KeyboardEvent) => {
+      if (activeSection === "avas") return; // Skip keyboard nav for avas
+
+      const items = filteredPrompts;
+      if (items.length === 0) return;
+
+      switch (e.key) {
+        case "ArrowDown": {
+          e.preventDefault();
+          setFocusedIndex((prev) => (prev + 1) % items.length);
+          break;
+        }
+        case "ArrowUp": {
+          e.preventDefault();
+          setFocusedIndex((prev) => (prev <= 0 ? items.length - 1 : prev - 1));
+          break;
+        }
+        case "Enter": {
+          if (focusedIndex >= 0 && focusedIndex < items.length) {
+            e.preventDefault();
+            onSelectPrompt(items[focusedIndex]);
+          }
+          break;
+        }
+        case "Escape": {
+          e.preventDefault();
+          onToggle();
+          break;
+        }
+        case "/": {
+          if (document.activeElement !== searchInputRef.current) {
+            e.preventDefault();
+            searchInputRef.current?.focus();
+          }
+          break;
+        }
+      }
+    };
+
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [open, activeSection, filteredPrompts, focusedIndex, onSelectPrompt, onToggle]);
+
+  // Global keyboard shortcut to toggle vault
+  React.useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === "p") {
+        e.preventDefault();
+        onToggle();
+      }
+    };
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [onToggle]);
+
   return (
     <TooltipProvider delayDuration={300}>
       <div className="absolute top-[4.25rem] left-[5.25rem] z-20">
@@ -135,6 +234,7 @@ export function PromptVaultIsland({
           {open ? (
             <motion.div
               key="panel"
+              ref={panelRef}
               initial={
                 prefersReducedMotion
                   ? { opacity: 0 }
@@ -151,7 +251,7 @@ export function PromptVaultIsland({
                   : { opacity: 0, scale: 0.95, x: -20 }
               }
               transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
-              className="w-[480px] bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-lg overflow-hidden"
+              className="w-[640px] bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-lg overflow-hidden"
             >
               {/* Header */}
               <div className="flex items-center justify-between px-3 py-2 border-b border-border">
@@ -169,15 +269,38 @@ export function PromptVaultIsland({
                     </span>
                   )}
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={onToggle}
-                  aria-label="Close prompt vault"
-                  className="size-7 rounded-lg"
-                >
-                  <X className="size-3.5" aria-hidden="true" />
-                </Button>
+
+                <div className="flex items-center gap-1.5">
+                  {/* Sort dropdown */}
+                  {activeSection !== "avas" && (
+                    <Select value={sortBy} onValueChange={(v) => setSortBy(v as VaultSort)}>
+                      <SelectTrigger className="h-6 w-[100px] text-[10px] border-none bg-transparent">
+                        <ArrowUpDown className="size-3 mr-1 text-muted-foreground" />
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="recent" className="text-xs">Recent</SelectItem>
+                        <SelectItem value="name" className="text-xs">Name</SelectItem>
+                        <SelectItem value="usage" className="text-xs">Most Used</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+
+                  {/* Keyboard hint */}
+                  <span className="text-[9px] text-muted-foreground/50 font-mono hidden sm:inline">
+                    Ctrl+Shift+P
+                  </span>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={onToggle}
+                    aria-label="Close prompt vault"
+                    className="size-7 rounded-lg"
+                  >
+                    <X className="size-3.5" aria-hidden="true" />
+                  </Button>
+                </div>
               </div>
 
               {/* Search */}
@@ -185,9 +308,10 @@ export function PromptVaultIsland({
                 <div className="relative">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" aria-hidden="true" />
                   <Input
+                    ref={searchInputRef}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder={activeSection === "avas" ? "Search your Avas…" : "Search your prompts…"}
+                    placeholder={activeSection === "avas" ? "Search Avas\u2026" : "Search prompts\u2026  (press / to focus)"}
                     aria-label={activeSection === "avas" ? "Search Avas" : "Search prompts"}
                     className="h-8 pl-8 text-sm"
                   />
@@ -208,25 +332,25 @@ export function PromptVaultIsland({
               {/* Content */}
               <div className="flex">
                 {/* Sidebar */}
-                <div className="w-24 border-r border-border">
-                  <ScrollArea className="h-[320px]">
-                    <div className="p-1 space-y-0.5">
+                <div className="w-36 border-r border-border">
+                  <ScrollArea className="h-[400px]">
+                    <div className="p-1.5 space-y-0.5">
                       {/* All */}
                       <button
                         onClick={() => setActiveSection("all")}
                         aria-current={activeSection === "all" ? "true" : undefined}
                         className={cn(
-                          "w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors",
+                          "w-full text-left px-2.5 py-2 rounded-lg text-xs transition-colors flex items-center gap-2",
                           "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                           activeSection === "all"
                             ? "bg-accent text-accent-foreground"
                             : "hover:bg-muted"
                         )}
                       >
-                        <Sparkles className="size-3 inline mr-1.5" aria-hidden="true" />
-                        All
-                        <span className="text-muted-foreground ml-1">
-                          ({prompts.length})
+                        <Sparkles className="size-3.5 shrink-0" aria-hidden="true" />
+                        <span className="truncate">All</span>
+                        <span className="text-muted-foreground ml-auto text-[10px] tabular-nums">
+                          {prompts.length}
                         </span>
                       </button>
 
@@ -235,18 +359,18 @@ export function PromptVaultIsland({
                         onClick={() => setActiveSection("favorites")}
                         aria-current={activeSection === "favorites" ? "true" : undefined}
                         className={cn(
-                          "w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors",
+                          "w-full text-left px-2.5 py-2 rounded-lg text-xs transition-colors flex items-center gap-2",
                           "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                           activeSection === "favorites"
                             ? "bg-accent text-accent-foreground"
                             : "hover:bg-muted"
                         )}
                       >
-                        <Heart className="size-3 inline mr-1.5" aria-hidden="true" />
-                        Favorites
+                        <Heart className="size-3.5 shrink-0" aria-hidden="true" />
+                        <span className="truncate">Favorites</span>
                         {favoriteCount > 0 && (
-                          <span className="text-muted-foreground ml-1">
-                            ({favoriteCount})
+                          <span className="text-muted-foreground ml-auto text-[10px] tabular-nums">
+                            {favoriteCount}
                           </span>
                         )}
                       </button>
@@ -256,15 +380,15 @@ export function PromptVaultIsland({
                         onClick={() => setActiveSection("recent")}
                         aria-current={activeSection === "recent" ? "true" : undefined}
                         className={cn(
-                          "w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors",
+                          "w-full text-left px-2.5 py-2 rounded-lg text-xs transition-colors flex items-center gap-2",
                           "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                           activeSection === "recent"
                             ? "bg-accent text-accent-foreground"
                             : "hover:bg-muted"
                         )}
                       >
-                        <Clock className="size-3 inline mr-1.5" aria-hidden="true" />
-                        Recent
+                        <Clock className="size-3.5 shrink-0" aria-hidden="true" />
+                        <span className="truncate">Recent</span>
                       </button>
 
                       {/* Avas */}
@@ -272,18 +396,18 @@ export function PromptVaultIsland({
                         onClick={() => setActiveSection("avas")}
                         aria-current={activeSection === "avas" ? "true" : undefined}
                         className={cn(
-                          "w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors",
+                          "w-full text-left px-2.5 py-2 rounded-lg text-xs transition-colors flex items-center gap-2",
                           "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
                           activeSection === "avas"
                             ? "bg-accent text-accent-foreground"
                             : "hover:bg-muted"
                         )}
                       >
-                        <Bot className="size-3 inline mr-1.5" aria-hidden="true" />
-                        Avas
+                        <Bot className="size-3.5 shrink-0" aria-hidden="true" />
+                        <span className="truncate">Avas</span>
                         {avas.length > 0 && (
-                          <span className="text-muted-foreground ml-1">
-                            ({avas.length})
+                          <span className="text-muted-foreground ml-auto text-[10px] tabular-nums">
+                            {avas.length}
                           </span>
                         )}
                       </button>
@@ -291,28 +415,49 @@ export function PromptVaultIsland({
                       {/* Folders */}
                       {folders.length > 0 && (
                         <div className="pt-2 mt-2 border-t border-border">
-                          <span className="px-2 text-[10px] font-medium text-muted-foreground uppercase">
+                          <span className="px-2.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
                             Folders
                           </span>
-                          <div className="mt-1 space-y-0.5">
-                            {folders.map((folder) => (
-                              <button
-                                key={folder.id}
-                                onClick={() => setActiveSection(folder.id)}
-                                className={cn(
-                                  "w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors truncate",
-                                  activeSection === folder.id
-                                    ? "bg-accent text-accent-foreground"
-                                    : "hover:bg-muted"
-                                )}
-                              >
-                                <Folder
-                                  className="size-3 inline mr-1.5"
-                                  style={{ color: safeColor(folder.color) }}
-                                />
-                                {folder.name}
-                              </button>
-                            ))}
+                          <div className="mt-1.5 space-y-0.5">
+                            {folders.map((folder) => {
+                              const fColor = safeColor(folder.color);
+                              const count = folderItemCounts[folder.id] ?? 0;
+                              return (
+                                <button
+                                  key={folder.id}
+                                  onClick={() => setActiveSection(folder.id)}
+                                  className={cn(
+                                    "w-full text-left px-2.5 py-2 rounded-lg text-xs transition-colors flex items-center gap-2",
+                                    activeSection === folder.id
+                                      ? "bg-accent text-accent-foreground"
+                                      : "hover:bg-muted"
+                                  )}
+                                  style={{
+                                    borderLeft: activeSection === folder.id && fColor
+                                      ? `2px solid ${fColor}`
+                                      : undefined,
+                                  }}
+                                >
+                                  {fColor && (
+                                    <div
+                                      className="size-2.5 rounded-full shrink-0"
+                                      style={{ backgroundColor: fColor }}
+                                    />
+                                  )}
+                                  <Folder
+                                    className="size-3.5 shrink-0"
+                                    style={{ color: fColor }}
+                                    aria-hidden="true"
+                                  />
+                                  <span className="truncate">{folder.name}</span>
+                                  {count > 0 && (
+                                    <span className="text-muted-foreground ml-auto text-[10px] tabular-nums">
+                                      {count}
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
@@ -321,11 +466,10 @@ export function PromptVaultIsland({
                 </div>
 
                 {/* Content List */}
-                <ScrollArea className="flex-1 h-[320px]">
+                <ScrollArea className="flex-1 h-[400px]">
                   {activeSection === "avas" ? (
                     /* Avas content */
                     <>
-                      {/* Create Ava button */}
                       {onCreateAva && (
                         <div className="p-2 pb-0">
                           <Button
@@ -398,15 +542,20 @@ export function PromptVaultIsland({
                         </div>
                       ) : (
                         <div className="p-2 space-y-2">
-                          {filteredPrompts.map((prompt) => (
+                          {filteredPrompts.map((prompt, i) => (
                             <PromptCard
                               key={prompt.id}
                               prompt={prompt}
+                              tags={prompt.tags}
+                              primaryFolder={prompt.folders?.[0]}
+                              variant="compact"
                               onSelect={onSelectPrompt}
                               onToggleFavorite={onToggleFavorite}
                               onShare={onSharePrompt}
                               onDelete={onDeletePrompt}
+                              isFocused={focusedIndex === i}
                               showActions
+                              index={i}
                             />
                           ))}
                         </div>
@@ -454,6 +603,7 @@ export function PromptVaultIsland({
                       {prompts.length} saved prompt{prompts.length !== 1 ? "s" : ""}
                     </p>
                   )}
+                  <p className="text-muted-foreground text-[10px] mt-0.5">Ctrl+Shift+P</p>
                 </TooltipContent>
               </Tooltip>
             </motion.div>

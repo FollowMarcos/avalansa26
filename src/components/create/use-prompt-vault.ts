@@ -2,14 +2,13 @@
 
 import * as React from "react";
 import type {
-  Prompt,
+  PromptWithOrganization,
   PromptFolder,
   PromptTag,
 } from "@/types/prompt";
 import type { GenerationSettings } from "@/types/generation";
 import {
   savePrompt,
-  getPrompts,
   deletePrompt as deletePromptServer,
   togglePromptFavorite,
   getPromptFolders,
@@ -20,30 +19,35 @@ import {
   addTagToPrompt,
   sharePromptWithUser,
   incrementPromptUseCount,
+  getPromptsWithOrganization,
+  getPromptFolderItemCounts,
+  getPromptFolderMapping,
 } from "@/utils/supabase/prompts.server";
 import { createClient } from "@/utils/supabase/client";
 
 interface UsePromptVaultOptions {
-  onPromptSelected?: (prompt: Prompt) => void;
+  onPromptSelected?: (prompt: PromptWithOrganization) => void;
 }
 
 interface UsePromptVaultReturn {
   // State
-  prompts: Prompt[];
+  prompts: PromptWithOrganization[];
   folders: PromptFolder[];
   tags: PromptTag[];
+  folderItemCounts: Record<string, number>;
+  folderMapping: Record<string, string[]>;
   isLoading: boolean;
   vaultOpen: boolean;
   saveDialogOpen: boolean;
   shareDialogOpen: boolean;
-  promptToShare: Prompt | null;
+  promptToShare: PromptWithOrganization | null;
 
   // Actions
   loadVault: () => Promise<void>;
   toggleVault: () => void;
   openSaveDialog: () => void;
   closeSaveDialog: () => void;
-  openShareDialog: (prompt: Prompt) => void;
+  openShareDialog: (prompt: PromptWithOrganization) => void;
   closeShareDialog: () => void;
 
   // Prompt operations
@@ -55,10 +59,10 @@ interface UsePromptVaultReturn {
     settings?: Partial<GenerationSettings>;
     folderIds?: string[];
     tagIds?: string[];
-  }) => Promise<Prompt | null>;
+  }) => Promise<PromptWithOrganization | null>;
   deletePrompt: (promptId: string) => Promise<boolean>;
   toggleFavorite: (promptId: string, isFavorite: boolean) => Promise<void>;
-  usePrompt: (prompt: Prompt) => void;
+  usePrompt: (prompt: PromptWithOrganization) => void;
   shareWithUsers: (promptId: string, userIds: string[], message?: string) => Promise<void>;
 
   // Folder operations
@@ -81,29 +85,35 @@ export function usePromptVault(
   const { onPromptSelected } = options;
 
   // Core state
-  const [prompts, setPrompts] = React.useState<Prompt[]>([]);
+  const [prompts, setPrompts] = React.useState<PromptWithOrganization[]>([]);
   const [folders, setFolders] = React.useState<PromptFolder[]>([]);
   const [tags, setTags] = React.useState<PromptTag[]>([]);
+  const [folderItemCounts, setFolderItemCounts] = React.useState<Record<string, number>>({});
+  const [folderMapping, setFolderMapping] = React.useState<Record<string, string[]>>({});
   const [isLoading, setIsLoading] = React.useState(false);
 
   // UI state
   const [vaultOpen, setVaultOpen] = React.useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = React.useState(false);
   const [shareDialogOpen, setShareDialogOpen] = React.useState(false);
-  const [promptToShare, setPromptToShare] = React.useState<Prompt | null>(null);
+  const [promptToShare, setPromptToShare] = React.useState<PromptWithOrganization | null>(null);
 
-  // Load vault data
+  // Load vault data (enriched with tags/folders)
   const loadVault = React.useCallback(async () => {
     setIsLoading(true);
     try {
-      const [promptsData, foldersData, tagsData] = await Promise.all([
-        getPrompts(100, 0),
+      const [promptsData, foldersData, tagsData, countsData, mappingData] = await Promise.all([
+        getPromptsWithOrganization(100, 0),
         getPromptFolders(),
         getPromptTags(),
+        getPromptFolderItemCounts(),
+        getPromptFolderMapping(),
       ]);
       setPrompts(promptsData);
       setFolders(foldersData);
       setTags(tagsData);
+      setFolderItemCounts(countsData);
+      setFolderMapping(mappingData);
     } catch (error) {
       console.error("Failed to load vault:", error);
     } finally {
@@ -126,7 +136,7 @@ export function usePromptVault(
   // Dialog controls
   const openSaveDialog = React.useCallback(() => setSaveDialogOpen(true), []);
   const closeSaveDialog = React.useCallback(() => setSaveDialogOpen(false), []);
-  const openShareDialog = React.useCallback((prompt: Prompt) => {
+  const openShareDialog = React.useCallback((prompt: PromptWithOrganization) => {
     setPromptToShare(prompt);
     setShareDialogOpen(true);
   }, []);
@@ -171,13 +181,40 @@ export function usePromptVault(
           );
         }
 
+        // Build enriched prompt with tags and folders
+        const enriched: PromptWithOrganization = {
+          ...prompt,
+          tags: tags.filter((t) => data.tagIds?.includes(t.id)),
+          folders: folders.filter((f) => data.folderIds?.includes(f.id)),
+        };
+
         // Update local state
-        setPrompts((prev) => [prompt, ...prev]);
+        setPrompts((prev) => [enriched, ...prev]);
+
+        // Update folder counts
+        if (data.folderIds?.length) {
+          setFolderItemCounts((prev) => {
+            const next = { ...prev };
+            for (const fId of data.folderIds!) {
+              next[fId] = (next[fId] ?? 0) + 1;
+            }
+            return next;
+          });
+          setFolderMapping((prev) => {
+            const next = { ...prev };
+            for (const fId of data.folderIds!) {
+              next[fId] = [...(next[fId] ?? []), prompt.id];
+            }
+            return next;
+          });
+        }
+
+        return enriched;
       }
 
-      return prompt;
+      return null;
     },
-    []
+    [tags, folders]
   );
 
   // Delete prompt
@@ -204,7 +241,7 @@ export function usePromptVault(
 
   // Use prompt (load into composer)
   const usePrompt = React.useCallback(
-    (prompt: Prompt) => {
+    (prompt: PromptWithOrganization) => {
       // Increment use count
       incrementPromptUseCount(prompt.id);
 
@@ -286,6 +323,8 @@ export function usePromptVault(
     prompts,
     folders,
     tags,
+    folderItemCounts,
+    folderMapping,
     isLoading,
     vaultOpen,
     saveDialogOpen,
