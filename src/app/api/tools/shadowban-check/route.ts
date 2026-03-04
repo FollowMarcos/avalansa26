@@ -80,39 +80,118 @@ function buildHeaders(guestToken: string): HeadersInit {
     Authorization: `Bearer ${X_BEARER_TOKEN}`,
     'x-guest-token': guestToken,
     'Content-Type': 'application/json',
-    'User-Agent':
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'User-Agent': BROWSER_UA,
     'x-twitter-active-user': 'yes',
     'x-twitter-client-language': 'en',
   };
 }
 
 // ---------------------------------------------------------------------------
-// Guest token
+// Guest token (multi-method with fallbacks)
 // ---------------------------------------------------------------------------
+function cacheGuestToken(token: string): void {
+  guestTokenCache = { token, expiresAt: Date.now() + 2.5 * 60 * 60 * 1000 };
+}
+
+const BROWSER_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+
 async function getGuestToken(): Promise<string> {
   const now = Date.now();
   if (guestTokenCache && guestTokenCache.expiresAt > now + 5 * 60 * 1000) {
     return guestTokenCache.token;
   }
 
-  const res = await fetch(`${X_API}/1.1/guest/activate.json`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${X_BEARER_TOKEN}`,
-      'Content-Type': 'application/json',
-    },
-  });
-
-  if (!res.ok) {
-    throw new Error(`Guest token request failed: ${res.status}`);
+  // Method 1: activate endpoint (may return 404 but try first — fastest)
+  try {
+    const res = await fetch(`${X_API}/1.1/guest/activate.json`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${X_BEARER_TOKEN}` },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.guest_token) {
+        cacheGuestToken(data.guest_token);
+        return data.guest_token;
+      }
+    }
+  } catch {
+    // fall through
   }
 
-  const data = await res.json();
-  const token: string = data.guest_token;
+  // Method 2: onboarding flow — returns guest token in response header
+  try {
+    const res = await fetch(
+      `${X_API}/1.1/onboarding/task.json?flow_name=welcome`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${X_BEARER_TOKEN}`,
+          'Content-Type': 'application/json',
+          'User-Agent': BROWSER_UA,
+        },
+        body: JSON.stringify({
+          input_flow_data: {
+            flow_context: {
+              debug_overrides: {},
+              start_location: { location: 'splash_screen' },
+            },
+          },
+          subtask_versions: {},
+        }),
+        signal: AbortSignal.timeout(6000),
+      }
+    );
+    const gt = res.headers.get('x-guest-token');
+    if (gt) {
+      cacheGuestToken(gt);
+      return gt;
+    }
+  } catch {
+    // fall through
+  }
 
-  guestTokenCache = { token, expiresAt: now + 2.5 * 60 * 60 * 1000 };
-  return token;
+  // Method 3: scrape x.com homepage for gt cookie or embedded token
+  try {
+    const pageRes = await fetch('https://x.com/', {
+      headers: {
+        'User-Agent': BROWSER_UA,
+        Accept:
+          'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+      },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(8000),
+    });
+
+    // Check Set-Cookie for gt=
+    const setCookieHeader = pageRes.headers.get('set-cookie') ?? '';
+    const cookieMatch = setCookieHeader.match(/\bgt=(\d{15,22})/);
+    if (cookieMatch) {
+      cacheGuestToken(cookieMatch[1]);
+      return cookieMatch[1];
+    }
+
+    // Check response body for embedded guest token
+    const body = await pageRes.text();
+    const bodyPatterns = [
+      /document\.cookie\s*=\s*["'][^"']*gt=(\d{15,22})/,
+      /"gt"\s*:\s*"?(\d{15,22})/,
+      /gt=(\d{15,22})/,
+    ];
+    for (const pattern of bodyPatterns) {
+      const match = body.match(pattern);
+      if (match) {
+        cacheGuestToken(match[1]);
+        return match[1];
+      }
+    }
+  } catch {
+    // fall through
+  }
+
+  throw new Error('All guest token methods failed');
 }
 
 // ---------------------------------------------------------------------------
