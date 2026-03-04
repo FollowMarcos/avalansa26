@@ -84,6 +84,7 @@ export const viewport: Viewport = {
   ],
 };
 
+import { Analytics } from "@vercel/analytics/next";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "sonner";
 
@@ -103,6 +104,7 @@ export default function RootLayout({
         >
           {children}
           <Toaster richColors position="bottom-right" />
+          <Analytics />
         </ThemeProvider>
       </body>
     </html>
