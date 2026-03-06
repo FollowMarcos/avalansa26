@@ -22,6 +22,24 @@ export interface GenerateRequest {
   styleRefPath?: string;
   /** Storage path for a pose-only reference image (body position, not appearance) */
   poseRefPath?: string;
+  /** Facial expression reference image path */
+  expressionRefPath?: string;
+  /** Facial expression descriptive tags */
+  expressionTags?: string[];
+  /** Facial expression custom text */
+  expressionCustomText?: string;
+  /** Clothing reference image path */
+  clothingRefPath?: string;
+  /** Clothing descriptive tags */
+  clothingTags?: string[];
+  /** Clothing custom text */
+  clothingCustomText?: string;
+  /** Location/background reference image path */
+  locationRefPath?: string;
+  /** Location descriptive tags */
+  locationTags?: string[];
+  /** Location custom text */
+  locationCustomText?: string;
   mode?: 'fast' | 'relaxed'; // Generation mode
   /** Optional source identifier (e.g. 'characterTurnaround') for workflow-generated images */
   source?: string;
@@ -64,7 +82,14 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
 
     // Parse request body
     const body: GenerateRequest = await request.json();
-    const { apiId, prompt, negativePrompt, aspectRatio, imageSize, outputCount = 1, referenceImagePaths, styleRefPath, poseRefPath, mode = 'fast', source } = body;
+    const {
+      apiId, prompt, negativePrompt, aspectRatio, imageSize, outputCount = 1,
+      referenceImagePaths, styleRefPath, poseRefPath,
+      expressionRefPath, expressionTags, expressionCustomText,
+      clothingRefPath, clothingTags, clothingCustomText,
+      locationRefPath, locationTags, locationCustomText,
+      mode = 'fast', source,
+    } = body;
 
     // ========================================================================
     // INPUT VALIDATION
@@ -221,6 +246,41 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
       }
     }
 
+    // Fetch new tagged reference images (expression, clothing, location)
+    let expressionRefImage: string | null = null;
+    let clothingRefImage: string | null = null;
+    let locationRefImage: string | null = null;
+
+    if (expressionRefPath) {
+      if (apiConfig.provider === 'fal') {
+        const urls = await getReferenceImageUrls([expressionRefPath]);
+        expressionRefImage = urls[0]?.url ?? null;
+      } else {
+        const imgs = await getImagesAsBase64([expressionRefPath]);
+        expressionRefImage = imgs[0] ?? null;
+      }
+    }
+
+    if (clothingRefPath) {
+      if (apiConfig.provider === 'fal') {
+        const urls = await getReferenceImageUrls([clothingRefPath]);
+        clothingRefImage = urls[0]?.url ?? null;
+      } else {
+        const imgs = await getImagesAsBase64([clothingRefPath]);
+        clothingRefImage = imgs[0] ?? null;
+      }
+    }
+
+    if (locationRefPath) {
+      if (apiConfig.provider === 'fal') {
+        const urls = await getReferenceImageUrls([locationRefPath]);
+        locationRefImage = urls[0]?.url ?? null;
+      } else {
+        const imgs = await getImagesAsBase64([locationRefPath]);
+        locationRefImage = imgs[0] ?? null;
+      }
+    }
+
     // Handle relaxed/batch mode for supported providers
     if (mode === 'relaxed' && apiConfig.provider === 'google') {
       // Create batch job requests (store paths, not base64)
@@ -298,6 +358,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
           referenceImages,
           styleRefImage,
           poseRefImage,
+          expressionRefImage,
+          expressionTags,
+          expressionCustomText,
+          clothingRefImage,
+          clothingTags,
+          clothingCustomText,
+          locationRefImage,
+          locationTags,
+          locationCustomText,
         });
         break;
 
@@ -315,6 +384,15 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
           modelInfo: apiConfig.model_info,
           styleRefImage,
           poseRefImage,
+          expressionRefImage,
+          expressionTags,
+          expressionCustomText,
+          clothingRefImage,
+          clothingTags,
+          clothingCustomText,
+          locationRefImage,
+          locationTags,
+          locationCustomText,
         });
         break;
 
@@ -473,6 +551,24 @@ interface ProviderParams {
   styleRefImage?: string | null;
   /** Labeled pose reference image (base64 for Gemini, URL for Fal) */
   poseRefImage?: string | null;
+  /** Facial expression reference image */
+  expressionRefImage?: string | null;
+  /** Facial expression tags */
+  expressionTags?: string[];
+  /** Expression custom text */
+  expressionCustomText?: string;
+  /** Clothing reference image */
+  clothingRefImage?: string | null;
+  /** Clothing tags */
+  clothingTags?: string[];
+  /** Clothing custom text */
+  clothingCustomText?: string;
+  /** Location reference image */
+  locationRefImage?: string | null;
+  /** Location tags */
+  locationTags?: string[];
+  /** Location custom text */
+  locationCustomText?: string;
   modelInfo?: import('@/types/api-config').ApiModelInfo | null;
 }
 
@@ -514,7 +610,13 @@ async function fetchWithTimeout(
  * so we make parallel API calls when outputCount > 1
  */
 async function generateWithGemini(params: ProviderParams): Promise<GeneratedImage[]> {
-  const { apiKey, endpoint, modelId, prompt, negativePrompt, aspectRatio, imageSize, outputCount, referenceImages, styleRefImage, poseRefImage } = params;
+  const {
+    apiKey, endpoint, modelId, prompt, negativePrompt, aspectRatio, imageSize, outputCount,
+    referenceImages, styleRefImage, poseRefImage,
+    expressionRefImage, expressionTags, expressionCustomText,
+    clothingRefImage, clothingTags, clothingCustomText,
+    locationRefImage, locationTags, locationCustomText,
+  } = params;
 
   // Debug: Log Gemini-specific params
   console.log('[Gemini] Generating with params:', {
@@ -578,6 +680,66 @@ async function generateWithGemini(params: ProviderParams): Promise<GeneratedImag
 
     parts.push({
       inlineData: { mimeType, data },
+    });
+  }
+
+  // Add labeled EXPRESSION reference with explicit instructions
+  if (expressionRefImage) {
+    const tagText = expressionTags?.length ? ` Target expressions: ${expressionTags.join(', ')}.` : '';
+    const customText = expressionCustomText ? ` Additional: ${expressionCustomText}.` : '';
+    parts.push({
+      text: `EXPRESSION REFERENCE (the following image): Use this image ONLY as a facial expression reference. Match the emotion, mood, and facial expression shown. Do NOT copy the identity, clothing, background, or art style from this image — only the expression.${tagText}${customText}`,
+    });
+    const mimeMatch = expressionRefImage.match(/^data:([^;]+);base64,/);
+    const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const data = mimeMatch ? expressionRefImage.replace(/^data:[^;]+;base64,/, '') : expressionRefImage;
+    parts.push({ inlineData: { mimeType, data } });
+  } else if (expressionTags?.length || expressionCustomText) {
+    const tagText = expressionTags?.length ? expressionTags.join(', ') : '';
+    const customText = expressionCustomText || '';
+    const combined = [tagText, customText].filter(Boolean).join('. ');
+    parts.push({
+      text: `EXPRESSION GUIDANCE: The subject should have the following facial expression: ${combined}.`,
+    });
+  }
+
+  // Add labeled CLOTHING reference with explicit instructions
+  if (clothingRefImage) {
+    const tagText = clothingTags?.length ? ` Target clothing style: ${clothingTags.join(', ')}.` : '';
+    const customText = clothingCustomText ? ` Additional: ${clothingCustomText}.` : '';
+    parts.push({
+      text: `CLOTHING REFERENCE (the following image): Use this image ONLY as a clothing reference. Match the outfit, fabric, and clothing style shown. Do NOT copy the person's face, body, pose, background, or art style from this image — only the clothing.${tagText}${customText}`,
+    });
+    const mimeMatch = clothingRefImage.match(/^data:([^;]+);base64,/);
+    const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const data = mimeMatch ? clothingRefImage.replace(/^data:[^;]+;base64,/, '') : clothingRefImage;
+    parts.push({ inlineData: { mimeType, data } });
+  } else if (clothingTags?.length || clothingCustomText) {
+    const tagText = clothingTags?.length ? clothingTags.join(', ') : '';
+    const customText = clothingCustomText || '';
+    const combined = [tagText, customText].filter(Boolean).join('. ');
+    parts.push({
+      text: `CLOTHING GUIDANCE: The subject should be wearing: ${combined}.`,
+    });
+  }
+
+  // Add labeled LOCATION reference with explicit instructions
+  if (locationRefImage) {
+    const tagText = locationTags?.length ? ` Target location: ${locationTags.join(', ')}.` : '';
+    const customText = locationCustomText ? ` Additional: ${locationCustomText}.` : '';
+    parts.push({
+      text: `LOCATION REFERENCE (the following image): Use this image ONLY as a background/location reference. Match the environment, setting, and atmosphere shown. Do NOT copy any people, objects in focus, or art style from this image — only the location and background.${tagText}${customText}`,
+    });
+    const mimeMatch = locationRefImage.match(/^data:([^;]+);base64,/);
+    const mimeType = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const data = mimeMatch ? locationRefImage.replace(/^data:[^;]+;base64,/, '') : locationRefImage;
+    parts.push({ inlineData: { mimeType, data } });
+  } else if (locationTags?.length || locationCustomText) {
+    const tagText = locationTags?.length ? locationTags.join(', ') : '';
+    const customText = locationCustomText || '';
+    const combined = [tagText, customText].filter(Boolean).join('. ');
+    parts.push({
+      text: `LOCATION GUIDANCE: The scene should be set in: ${combined}.`,
     });
   }
 
@@ -845,7 +1007,13 @@ function getAspectRatioHint(aspectRatio: string): string {
  * Supports SeedREAM v4/v4.5, Flux, and other fal.ai models.
  */
 async function generateWithFal(params: ProviderParams): Promise<GeneratedImage[]> {
-  const { apiKey, endpoint, modelId, prompt, negativePrompt, aspectRatio, imageSize, outputCount, referenceImages, modelInfo, styleRefImage, poseRefImage } = params;
+  const {
+    apiKey, endpoint, modelId, prompt, negativePrompt, aspectRatio, imageSize, outputCount,
+    referenceImages, modelInfo, styleRefImage, poseRefImage,
+    expressionRefImage, expressionTags, expressionCustomText,
+    clothingRefImage, clothingTags, clothingCustomText,
+    locationRefImage, locationTags, locationCustomText,
+  } = params;
 
   const dimensions = parseImageSize(imageSize, aspectRatio);
 
@@ -856,19 +1024,43 @@ async function generateWithFal(params: ProviderParams): Promise<GeneratedImage[]
   }
   if (styleRefImage) allImageUrls.push(styleRefImage);
   if (poseRefImage) allImageUrls.push(poseRefImage);
+  if (expressionRefImage) allImageUrls.push(expressionRefImage);
+  if (clothingRefImage) allImageUrls.push(clothingRefImage);
+  if (locationRefImage) allImageUrls.push(locationRefImage);
 
-  // Augment prompt with style/pose instructions for Fal
+  // Augment prompt with reference instructions for Fal
   // (Fal doesn't support interleaved text+image, so we add instructions to the prompt)
   let augmentedPrompt = prompt;
-  if (styleRefImage || poseRefImage) {
-    const instructions: string[] = [];
-    if (styleRefImage) {
-      instructions.push('Apply ONLY the artistic style (color palette, brushwork, rendering technique) from the style reference image. Do NOT copy the subject, clothing, or content from it.');
-    }
-    if (poseRefImage) {
-      instructions.push('Match ONLY the body pose and position from the pose reference image. Do NOT copy the appearance, clothing, or art style from it.');
-    }
-    augmentedPrompt = `${prompt}\n\n${instructions.join(' ')}`;
+  const refInstructions: string[] = [];
+  if (styleRefImage) {
+    refInstructions.push('Apply ONLY the artistic style (color palette, brushwork, rendering technique) from the style reference image. Do NOT copy the subject, clothing, or content from it.');
+  }
+  if (poseRefImage) {
+    refInstructions.push('Match ONLY the body pose and position from the pose reference image. Do NOT copy the appearance, clothing, or art style from it.');
+  }
+  if (expressionRefImage || expressionTags?.length || expressionCustomText) {
+    const parts = [];
+    if (expressionRefImage) parts.push('Match the facial expression from the expression reference image.');
+    if (expressionTags?.length) parts.push(`Expression: ${expressionTags.join(', ')}.`);
+    if (expressionCustomText) parts.push(expressionCustomText);
+    refInstructions.push(parts.join(' '));
+  }
+  if (clothingRefImage || clothingTags?.length || clothingCustomText) {
+    const parts = [];
+    if (clothingRefImage) parts.push('Match the clothing/outfit from the clothing reference image.');
+    if (clothingTags?.length) parts.push(`Clothing: ${clothingTags.join(', ')}.`);
+    if (clothingCustomText) parts.push(clothingCustomText);
+    refInstructions.push(parts.join(' '));
+  }
+  if (locationRefImage || locationTags?.length || locationCustomText) {
+    const parts = [];
+    if (locationRefImage) parts.push('Match the background/location from the location reference image.');
+    if (locationTags?.length) parts.push(`Location: ${locationTags.join(', ')}.`);
+    if (locationCustomText) parts.push(locationCustomText);
+    refInstructions.push(parts.join(' '));
+  }
+  if (refInstructions.length > 0) {
+    augmentedPrompt = `${prompt}\n\n${refInstructions.join(' ')}`;
   }
 
   const requestBody: Record<string, unknown> = {

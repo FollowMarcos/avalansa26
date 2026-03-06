@@ -97,7 +97,7 @@ export async function proxy(request: NextRequest) {
     let limitType: string;
 
     // Select rate limiter based on endpoint sensitivity
-    if (pathname.startsWith('/api/generate') || pathname.startsWith('/api/batch-status')) {
+    if (pathname.startsWith('/api/generate') || pathname.startsWith('/api/batch-status') || pathname.startsWith('/api/inpaint')) {
       result = generateLimiter.check(identifier);
       limitType = 'generation';
     } else if (pathname.includes('/auth/')) {

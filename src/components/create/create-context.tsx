@@ -95,6 +95,13 @@ export interface ReferenceImageInfo {
   storagePath?: string;
 }
 
+/** A reference with optional image and prompt tags (for expression, clothing, location) */
+export interface TaggedReference {
+  image?: ReferenceImageInfo;
+  tags: string[];
+  customText: string;
+}
+
 export interface CreateSettings {
   model: ModelId;
   imageSize: ImageSize;
@@ -110,6 +117,12 @@ export interface CreateSettings {
   styleRef?: ReferenceImageInfo;
   /** Pose reference image — body pose only, not appearance */
   poseRef?: ReferenceImageInfo;
+  /** Facial expression reference — image and/or descriptive tags */
+  expressionRef?: TaggedReference;
+  /** Clothing reference — image and/or descriptive tags */
+  clothingRef?: TaggedReference;
+  /** Location/background reference — image and/or descriptive tags */
+  locationRef?: TaggedReference;
 }
 
 export interface VariationSlot {
@@ -253,6 +266,12 @@ interface CreateContextType {
   // Image organization data (cached per image)
   imageOrganization: Map<string, { tagIds: string[]; collectionIds: string[] }>;
   loadImageOrganization: (imageId: string) => Promise<void>;
+
+  // Inpainting
+  inpaintSourceImage: GeneratedImage | null;
+  setInpaintSourceImage: (image: GeneratedImage | null) => void;
+  isInpainting: boolean;
+  inpaint: (maskDataUrl: string, prompt: string) => Promise<void>;
 
   // Admin settings (for restricting features)
   adminSettings: AdminCreateSettings | null;
@@ -406,6 +425,10 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [isLoadingMoreHistory, setIsLoadingMoreHistory] = React.useState(false);
   const [viewMode, setViewMode] = React.useState<"gallery" | "workflow">("gallery");
   const [interactionMode, setInteractionMode] = React.useState<InteractionMode>("select");
+
+  // Inpainting state
+  const [inpaintSourceImage, setInpaintSourceImage] = React.useState<GeneratedImage | null>(null);
+  const [isInpainting, setIsInpainting] = React.useState(false);
 
   // Variations mode
   const [variationsMode, setVariationsMode] = React.useState(false);
@@ -1176,6 +1199,15 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         };
         if (settings.styleRef) requestParams.styleRefPath = settings.styleRef.storagePath || settings.styleRef.url;
         if (settings.poseRef) requestParams.poseRefPath = settings.poseRef.storagePath || settings.poseRef.url;
+        if (settings.expressionRef?.image) requestParams.expressionRefPath = settings.expressionRef.image.storagePath || settings.expressionRef.image.url;
+        if (settings.expressionRef?.tags?.length) requestParams.expressionTags = settings.expressionRef.tags;
+        if (settings.expressionRef?.customText) requestParams.expressionCustomText = settings.expressionRef.customText;
+        if (settings.clothingRef?.image) requestParams.clothingRefPath = settings.clothingRef.image.storagePath || settings.clothingRef.image.url;
+        if (settings.clothingRef?.tags?.length) requestParams.clothingTags = settings.clothingRef.tags;
+        if (settings.clothingRef?.customText) requestParams.clothingCustomText = settings.clothingRef.customText;
+        if (settings.locationRef?.image) requestParams.locationRefPath = settings.locationRef.image.storagePath || settings.locationRef.image.url;
+        if (settings.locationRef?.tags?.length) requestParams.locationTags = settings.locationRef.tags;
+        if (settings.locationRef?.customText) requestParams.locationCustomText = settings.locationRef.customText;
 
         try {
           const response = await fetch('/api/generate', {
@@ -1328,6 +1360,16 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       // Add labeled style / pose references if set (prefer storagePath, fall back to URL)
       if (settings.styleRef) requestParams.styleRefPath = settings.styleRef.storagePath || settings.styleRef.url;
       if (settings.poseRef) requestParams.poseRefPath = settings.poseRef.storagePath || settings.poseRef.url;
+      // Add new tagged references (expression, clothing, location)
+      if (settings.expressionRef?.image) requestParams.expressionRefPath = settings.expressionRef.image.storagePath || settings.expressionRef.image.url;
+      if (settings.expressionRef?.tags?.length) requestParams.expressionTags = settings.expressionRef.tags;
+      if (settings.expressionRef?.customText) requestParams.expressionCustomText = settings.expressionRef.customText;
+      if (settings.clothingRef?.image) requestParams.clothingRefPath = settings.clothingRef.image.storagePath || settings.clothingRef.image.url;
+      if (settings.clothingRef?.tags?.length) requestParams.clothingTags = settings.clothingRef.tags;
+      if (settings.clothingRef?.customText) requestParams.clothingCustomText = settings.clothingRef.customText;
+      if (settings.locationRef?.image) requestParams.locationRefPath = settings.locationRef.image.storagePath || settings.locationRef.image.url;
+      if (settings.locationRef?.tags?.length) requestParams.locationTags = settings.locationRef.tags;
+      if (settings.locationRef?.customText) requestParams.locationCustomText = settings.locationRef.customText;
 
       // Call the generation API
       const response = await fetch('/api/generate', {
@@ -1441,6 +1483,48 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     setIsGenerating(false);
     setThinkingSteps([]);
   }, []);
+
+  // Inpaint: send source image + mask + prompt to inpainting API
+  const inpaint = React.useCallback(async (maskDataUrl: string, inpaintPrompt: string) => {
+    if (!inpaintSourceImage || !selectedApiId) return;
+    setIsInpainting(true);
+    try {
+      const response = await fetch('/api/inpaint', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          apiId: selectedApiId,
+          sourceImagePath: inpaintSourceImage.url,
+          maskDataUrl,
+          prompt: inpaintPrompt,
+          negativePrompt: settings.negativePrompt,
+          imageSize: settings.imageSize,
+        }),
+      });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || 'Inpainting failed');
+      }
+      const data = await response.json();
+      if (data.url) {
+        const newImage: GeneratedImage = {
+          id: `inpaint-${Date.now()}`,
+          url: data.url,
+          prompt: inpaintPrompt,
+          timestamp: Date.now(),
+          settings: { ...settings, source: 'inpaint' },
+          status: 'completed',
+        };
+        setHistory(prev => [newImage, ...prev]);
+      }
+      setInpaintSourceImage(null);
+    } catch (error) {
+      console.error('[Inpaint] Error:', error);
+      throw error;
+    } finally {
+      setIsInpainting(false);
+    }
+  }, [inpaintSourceImage, selectedApiId, settings]);
 
   // Retry a failed image: restore its prompt + settings then re-generate
   const retryFailedImage = React.useCallback((image: GeneratedImage) => {
@@ -2485,6 +2569,11 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     // Image organization
     imageOrganization,
     loadImageOrganization,
+    // Inpainting
+    inpaintSourceImage,
+    setInpaintSourceImage,
+    isInpainting,
+    inpaint,
     // Admin settings
     adminSettings,
     isMaintenanceMode,
@@ -2496,6 +2585,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   }), [
     availableApis, selectedApiId, isLoadingApis, pendingBatchJobs,
     prompt, isPromptExpanded, settings, referenceImages, history, selectedImage,
+    inpaintSourceImage, isInpainting, inpaint,
     viewMode, historyPanelOpen, isInputVisible, activeTab, interactionMode, galleryColumnCount, gallerySidebarOpen, dockCollapsed,
     isGenerating, thinkingSteps,
     updateSettings, addReferenceImages, addReferenceImageFromUrl, removeReferenceImage, clearReferenceImages,
