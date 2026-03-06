@@ -112,6 +112,13 @@ export interface CreateSettings {
   poseRef?: ReferenceImageInfo;
 }
 
+export interface VariationSlot {
+  id: string;
+  secondaryPrompt: string;
+  aspectRatio: AspectRatio;
+  imageSize: ImageSize;
+}
+
 interface CreateContextType {
   // API selection
   availableApis: ApiConfig[];
@@ -192,6 +199,14 @@ interface CreateContextType {
 
   // Helper to build final prompt with negative injection
   buildFinalPrompt: () => string;
+
+  // Variations mode
+  variationsMode: boolean;
+  setVariationsMode: (enabled: boolean) => void;
+  variationSlots: VariationSlot[];
+  addVariationSlot: () => void;
+  removeVariationSlot: (id: string) => void;
+  updateVariationSlot: (id: string, updates: Partial<VariationSlot>) => void;
 
   // Gallery filters
   galleryFilterState: GalleryFilterState;
@@ -387,6 +402,12 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   const [isLoadingMoreHistory, setIsLoadingMoreHistory] = React.useState(false);
   const [viewMode, setViewMode] = React.useState<"gallery" | "workflow">("gallery");
   const [interactionMode, setInteractionMode] = React.useState<InteractionMode>("select");
+
+  // Variations mode
+  const [variationsMode, setVariationsMode] = React.useState(false);
+  const [variationSlots, setVariationSlots] = React.useState<VariationSlot[]>([
+    { id: "var-1", secondaryPrompt: "", aspectRatio: "1:1", imageSize: "2K" },
+  ]);
 
   // Gallery layout state (with localStorage persistence)
   // Initialize with defaults to avoid hydration mismatch; restore from
@@ -1058,6 +1079,144 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    // ---- VARIATIONS MODE ----
+    if (variationsMode) {
+      const activeSlots = variationSlots.filter(s => s.secondaryPrompt.trim());
+      if (activeSlots.length === 0) return;
+
+      setIsGenerating(true);
+      abortControllerRef.current = new AbortController();
+
+      const selectedApi = availableApis.find(api => api.id === selectedApiId);
+      const resolvedModelName = selectedApi?.name || settings.model;
+
+      const currentRefImages: ReferenceImageInfo[] = referenceImages
+        .filter(img => img.storagePath && !img.isUploading)
+        .map(img => ({ url: img.preview || '', storagePath: img.storagePath }));
+
+      const referenceImagePaths = referenceImages
+        .filter(img => img.storagePath && !img.isUploading)
+        .map(img => img.storagePath!);
+
+      // Wait for any uploading images
+      if (referenceImages.some(img => img.isUploading)) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      // Create one placeholder per variation
+      const placeholderMap: { slotId: string; placeholderId: string }[] = [];
+      const placeholders: GeneratedImage[] = [];
+
+      for (const slot of activeSlots) {
+        const placeholderId = `gen-pending-${Date.now()}-${slot.id}`;
+        placeholderMap.push({ slotId: slot.id, placeholderId });
+        placeholders.push({
+          id: placeholderId,
+          url: '',
+          prompt: `${prompt.trim()}. ${slot.secondaryPrompt.trim()}`,
+          timestamp: Date.now(),
+          settings: {
+            ...settings,
+            model: resolvedModelName,
+            aspectRatio: slot.aspectRatio,
+            imageSize: slot.imageSize,
+            outputCount: 1,
+            referenceImages: currentRefImages,
+          },
+          status: 'pending',
+        });
+      }
+
+      setHistory(prev => [...placeholders, ...prev]);
+
+      // Fire all API calls in parallel
+      const promises = activeSlots.map(async (slot) => {
+        const entry = placeholderMap.find(e => e.slotId === slot.id)!;
+        const combinedPrompt = `${prompt.trim()}. ${slot.secondaryPrompt.trim()}`;
+        let finalPrompt = combinedPrompt;
+        if (settings.negativePrompt.trim()) {
+          finalPrompt += `\n\nNegative: ${settings.negativePrompt.trim()}`;
+        }
+
+        const requestParams: Record<string, unknown> = {
+          apiId: selectedApiId,
+          prompt: finalPrompt,
+          negativePrompt: settings.negativePrompt,
+          aspectRatio: slot.aspectRatio,
+          imageSize: slot.imageSize,
+          outputCount: 1,
+          referenceImagePaths,
+          mode: 'fast',
+        };
+        if (settings.styleRef) requestParams.styleRefPath = settings.styleRef.storagePath || settings.styleRef.url;
+        if (settings.poseRef) requestParams.poseRefPath = settings.poseRef.storagePath || settings.poseRef.url;
+
+        try {
+          const response = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestParams),
+            signal: abortControllerRef.current!.signal,
+          });
+
+          if (!response.ok) {
+            let errorMessage = `Request failed with status ${response.status}`;
+            try {
+              const d = await response.json();
+              errorMessage = d.error || errorMessage;
+            } catch {
+              if (response.status === 413) {
+                errorMessage = 'Images are too large. Try using fewer or smaller reference images.';
+              }
+            }
+            throw new Error(errorMessage);
+          }
+
+          const data = await response.json();
+          if (!data.success || !data.images?.length) {
+            throw new Error(data.error || 'No images generated');
+          }
+
+          const img = data.images[0];
+          const newImage: GeneratedImage = {
+            id: img.id || `gen-${Date.now()}-${slot.id}`,
+            url: img.url,
+            prompt: combinedPrompt,
+            timestamp: Date.now(),
+            settings: {
+              ...settings,
+              model: resolvedModelName,
+              aspectRatio: slot.aspectRatio,
+              imageSize: slot.imageSize,
+              outputCount: 1,
+            },
+            status: 'completed',
+          };
+
+          setHistory(prev =>
+            prev.map(h => h.id === entry.placeholderId ? newImage : h)
+          );
+        } catch (error) {
+          if (error instanceof Error && error.name === 'AbortError') return;
+          const errorMessage = error instanceof Error ? error.message : 'Generation failed';
+          setHistory(prev =>
+            prev.map(h =>
+              h.id === entry.placeholderId
+                ? { ...h, status: 'failed' as const, error: errorMessage }
+                : h
+            )
+          );
+        }
+      });
+
+      await Promise.allSettled(promises);
+
+      setIsGenerating(false);
+      setThinkingSteps([]);
+      return;
+    }
+
+    // ---- NORMAL MODE ----
     // Determine how many images to generate (max 4 per API call)
     const outputCount = Math.min(settings.outputCount, 4);
 
@@ -1249,7 +1408,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       setIsGenerating(false);
       setThinkingSteps([]);
     }
-  }, [prompt, referenceImages, settings, selectedApiId, availableApis, getThinkingSteps, buildFinalPrompt, pollBatchJob]);
+  }, [prompt, referenceImages, settings, selectedApiId, availableApis, getThinkingSteps, buildFinalPrompt, pollBatchJob, variationsMode, variationSlots]);
 
   const cancelGeneration = React.useCallback(() => {
     abortControllerRef.current?.abort();
@@ -1281,7 +1440,33 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     setHistory(prev => prev.filter(img => img.id !== id));
   }, []);
 
+  // Variations mode callbacks
+  const addVariationSlot = React.useCallback(() => {
+    setVariationSlots(prev => {
+      if (prev.length >= 4) return prev;
+      return [...prev, {
+        id: `var-${Date.now()}`,
+        secondaryPrompt: "",
+        aspectRatio: settings.aspectRatio,
+        imageSize: settings.imageSize,
+      }];
+    });
+  }, [settings.aspectRatio, settings.imageSize]);
 
+  const removeVariationSlot = React.useCallback((id: string) => {
+    setVariationSlots(prev => {
+      const filtered = prev.filter(s => s.id !== id);
+      return filtered.length === 0
+        ? [{ id: "var-1", secondaryPrompt: "", aspectRatio: settings.aspectRatio, imageSize: settings.imageSize }]
+        : filtered;
+    });
+  }, [settings.aspectRatio, settings.imageSize]);
+
+  const updateVariationSlot = React.useCallback((id: string, updates: Partial<VariationSlot>) => {
+    setVariationSlots(prev =>
+      prev.map(s => s.id === id ? { ...s, ...updates } : s)
+    );
+  }, []);
 
   // Load persisted state from localStorage on mount (after userId is known)
   React.useEffect(() => {
@@ -2152,6 +2337,13 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     retryFailedImage,
     dismissFailedImage,
     buildFinalPrompt,
+    // Variations mode
+    variationsMode,
+    setVariationsMode,
+    variationSlots,
+    addVariationSlot,
+    removeVariationSlot,
+    updateVariationSlot,
     // Gallery filters
     galleryFilterState,
     setSearchQuery,
@@ -2206,6 +2398,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     selectImage, clearHistory, loadMoreHistory, hasMoreHistory, isLoadingMoreHistory,
     toggleHistoryPanel, toggleInputVisibility, generate, cancelGeneration,
     hasAvailableSlots, activeGenerations, retryFailedImage, dismissFailedImage, buildFinalPrompt,
+    variationsMode, variationSlots, addVariationSlot, removeVariationSlot, updateVariationSlot,
     galleryFilterState, setSearchQuery, setSortBy, setGalleryFilters, clearGalleryFilters,
     toggleBulkSelection, toggleImageSelection, selectAllImages, deselectAllImages, getFilteredHistory, bulkDeleteImages,
     bulkAddToCollectionFn, bulkAddTagFn,

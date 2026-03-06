@@ -24,6 +24,7 @@ import {
   Loader2,
   Palette,
   PersonStanding,
+  Layers,
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import {
@@ -43,6 +44,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { searchPrompts } from "@/utils/supabase/prompts.server";
+import { VariationsPanel } from "./variations-panel";
 import type { Prompt } from "@/types/prompt";
 
 const baseAspectRatioOptions: { value: AspectRatio; label: string }[] = [
@@ -137,6 +139,9 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
     allowedImageSizes,
     allowedAspectRatios,
     maxOutputCount,
+    // Variations mode
+    variationsMode,
+    setVariationsMode,
   } = useCreate();
 
   const hasStyleRef = !!settings.styleRef?.url;
@@ -505,6 +510,13 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                   </div>
                 </div>
 
+                {/* Variations Panel */}
+                {variationsMode && (
+                  <div className="border-t border-border/30 dark:border-zinc-700/30">
+                    <VariationsPanel />
+                  </div>
+                )}
+
                 {/* Settings Row - Redesigned */}
                 <div className="flex items-center gap-1.5 px-4 pb-3 pt-1 overflow-x-auto">
                   <div className="w-11 shrink-0" />
@@ -516,6 +528,30 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                     onSelect={setSelectedApiId}
                     disabled={!hasAvailableSlots || isLoadingApis}
                   />
+
+                  <div className="w-px h-5 bg-border dark:bg-zinc-700/50 shrink-0 mx-1" />
+
+                  {/* Variations Mode Toggle */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setVariationsMode(!variationsMode)}
+                        disabled={isGenerating && !hasAvailableSlots}
+                        aria-pressed={variationsMode}
+                        className={cn(
+                          "flex items-center gap-1.5 h-8 px-2.5 rounded-lg transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-ring",
+                          variationsMode
+                            ? "bg-primary/10 dark:bg-primary/20 text-primary ring-1 ring-primary/30"
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-zinc-800",
+                          "disabled:opacity-50 disabled:cursor-not-allowed"
+                        )}
+                      >
+                        <Layers className="size-3.5" />
+                        <span className="text-xs font-medium">Variations</span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">Generate multiple scene variations</TooltipContent>
+                  </Tooltip>
 
                   <div className="w-px h-5 bg-border dark:bg-zinc-700/50 shrink-0 mx-1" />
 
@@ -592,47 +628,49 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                     ))}
                   </div>
 
-                  {/* Quantity - Stepper */}
-                  <div
-                    role="spinbutton"
-                    aria-label="Number of images to generate"
-                    aria-valuenow={Math.min(settings.outputCount, maxOutputCount)}
-                    aria-valuemin={1}
-                    aria-valuemax={maxOutputCount}
-                    tabIndex={0}
-                    onKeyDown={(e) => {
-                      if (e.key === "ArrowUp") {
-                        e.preventDefault();
-                        updateSettings({ outputCount: Math.min(maxOutputCount, settings.outputCount + 1) });
-                      } else if (e.key === "ArrowDown") {
-                        e.preventDefault();
-                        updateSettings({ outputCount: Math.max(1, settings.outputCount - 1) });
-                      }
-                    }}
-                    className="flex items-center h-11 rounded-lg bg-muted/50 dark:bg-zinc-800/50 shrink-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-lg"
-                  >
-                    <button
-                      onClick={() => updateSettings({ outputCount: Math.max(1, settings.outputCount - 1) })}
-                      disabled={settings.outputCount <= 1}
-                      className="size-11 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors touch-manipulation"
-                      aria-label="Decrease count"
-                      tabIndex={-1}
+                  {/* Quantity - Stepper (hidden in variations mode) */}
+                  {!variationsMode && (
+                    <div
+                      role="spinbutton"
+                      aria-label="Number of images to generate"
+                      aria-valuenow={Math.min(settings.outputCount, maxOutputCount)}
+                      aria-valuemin={1}
+                      aria-valuemax={maxOutputCount}
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "ArrowUp") {
+                          e.preventDefault();
+                          updateSettings({ outputCount: Math.min(maxOutputCount, settings.outputCount + 1) });
+                        } else if (e.key === "ArrowDown") {
+                          e.preventDefault();
+                          updateSettings({ outputCount: Math.max(1, settings.outputCount - 1) });
+                        }
+                      }}
+                      className="flex items-center h-11 rounded-lg bg-muted/50 dark:bg-zinc-800/50 shrink-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-lg"
                     >
-                      <Minus className="size-4" aria-hidden="true" />
-                    </button>
-                    <span className="w-6 text-center text-sm font-medium text-foreground dark:text-zinc-200 tabular-nums">
-                      {Math.min(settings.outputCount, maxOutputCount)}
-                    </span>
-                    <button
-                      onClick={() => updateSettings({ outputCount: Math.min(maxOutputCount, settings.outputCount + 1) })}
-                      disabled={settings.outputCount >= maxOutputCount}
-                      className="size-11 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors touch-manipulation"
-                      aria-label="Increase count"
-                      tabIndex={-1}
-                    >
-                      <Plus className="size-4" aria-hidden="true" />
-                    </button>
-                  </div>
+                      <button
+                        onClick={() => updateSettings({ outputCount: Math.max(1, settings.outputCount - 1) })}
+                        disabled={settings.outputCount <= 1}
+                        className="size-11 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors touch-manipulation"
+                        aria-label="Decrease count"
+                        tabIndex={-1}
+                      >
+                        <Minus className="size-4" aria-hidden="true" />
+                      </button>
+                      <span className="w-6 text-center text-sm font-medium text-foreground dark:text-zinc-200 tabular-nums">
+                        {Math.min(settings.outputCount, maxOutputCount)}
+                      </span>
+                      <button
+                        onClick={() => updateSettings({ outputCount: Math.min(maxOutputCount, settings.outputCount + 1) })}
+                        disabled={settings.outputCount >= maxOutputCount}
+                        className="size-11 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors touch-manipulation"
+                        aria-label="Increase count"
+                        tabIndex={-1}
+                      >
+                        <Plus className="size-4" aria-hidden="true" />
+                      </button>
+                    </div>
+                  )}
 
                   {/* Prompt Search */}
                   <Popover open={promptSearchOpen} onOpenChange={setPromptSearchOpen}>
