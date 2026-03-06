@@ -88,7 +88,6 @@ export function VariationsPanel() {
     allowedImageSizes,
     availableApis,
     selectedApiId,
-    isGenerating,
   } = useCreate();
 
   // Per-slot file input refs
@@ -129,7 +128,6 @@ export function VariationsPanel() {
         {variationSlots.length < 4 && (
           <button
             onClick={addVariationSlot}
-            disabled={isGenerating}
             className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
             <Plus className="size-3" />
@@ -166,7 +164,6 @@ export function VariationsPanel() {
                   }
                 }}
                 placeholder={`Scene/context for variation ${index + 1}...`}
-                disabled={isGenerating}
                 className="flex-1 min-w-0 h-8 px-2.5 rounded-lg bg-muted/30 dark:bg-zinc-800/30 border border-transparent focus:border-border dark:focus:border-zinc-600 text-xs text-foreground placeholder:text-muted-foreground/50 focus:outline-none transition-colors disabled:opacity-50"
               />
 
@@ -175,7 +172,7 @@ export function VariationsPanel() {
                 <TooltipTrigger asChild>
                   <button
                     onClick={() => fileInputRefs.current.get(slot.id)?.click()}
-                    disabled={isGenerating || slot.referenceImages.length >= 5}
+                    disabled={slot.referenceImages.length >= 5}
                     className={cn(
                       "size-8 rounded-lg flex items-center justify-center transition-colors shrink-0",
                       slot.referenceImages.length > 0
@@ -213,7 +210,6 @@ export function VariationsPanel() {
                 apis={availableApis}
                 selectedApiId={slot.apiId || selectedApiId}
                 onSelect={(id) => updateVariationSlot(slot.id, { apiId: id })}
-                disabled={isGenerating}
                 className="h-8 text-[10px]"
               />
 
@@ -221,8 +217,7 @@ export function VariationsPanel() {
               <Popover>
                 <PopoverTrigger asChild>
                   <button
-                    disabled={isGenerating}
-                    className="h-8 px-2 rounded-lg bg-muted/30 dark:bg-zinc-800/30 hover:bg-muted dark:hover:bg-zinc-800 text-[10px] font-mono text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed transition-colors shrink-0 flex items-center gap-1.5"
+                    className="h-8 px-2 rounded-lg bg-muted/30 dark:bg-zinc-800/30 hover:bg-muted dark:hover:bg-zinc-800 text-[10px] font-mono text-muted-foreground hover:text-foreground transition-colors shrink-0 flex items-center gap-1.5"
                   >
                     <AspectRatioShape ratio={slot.aspectRatio} className="text-muted-foreground" />
                     <span>{slot.aspectRatio}</span>
@@ -266,13 +261,12 @@ export function VariationsPanel() {
                   <Tooltip key={size.value}>
                     <TooltipTrigger asChild>
                       <button
-                        disabled={isGenerating}
                         onClick={() => updateVariationSlot(slot.id, { imageSize: size.value })}
                         className={cn(
                           "h-7 px-2 rounded-md text-[10px] font-medium transition-colors",
                           slot.imageSize === size.value
                             ? "bg-background dark:bg-zinc-700 text-foreground dark:text-zinc-100 shadow-sm"
-                            : "text-muted-foreground hover:text-foreground dark:hover:text-zinc-300 disabled:opacity-50"
+                            : "text-muted-foreground hover:text-foreground dark:hover:text-zinc-300"
                         )}
                       >
                         {size.label}
@@ -287,8 +281,7 @@ export function VariationsPanel() {
               {variationSlots.length > 1 && (
                 <button
                   onClick={() => removeVariationSlot(slot.id)}
-                  disabled={isGenerating}
-                  className="size-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive disabled:opacity-40 disabled:cursor-not-allowed transition-colors shrink-0"
+                  className="size-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-destructive transition-colors shrink-0"
                   aria-label={`Remove variation ${index + 1}`}
                 >
                   <X className="size-3.5" />
@@ -329,8 +322,7 @@ export function VariationsPanel() {
                 {slot.referenceImages.length < 5 && (
                   <button
                     onClick={() => fileInputRefs.current.get(slot.id)?.click()}
-                    disabled={isGenerating}
-                    className="size-8 rounded-md border border-dashed border-border dark:border-zinc-700 flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors disabled:opacity-40"
+                    className="size-8 rounded-md border border-dashed border-border dark:border-zinc-700 flex items-center justify-center text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
                   >
                     <Plus className="size-3" />
                   </button>
