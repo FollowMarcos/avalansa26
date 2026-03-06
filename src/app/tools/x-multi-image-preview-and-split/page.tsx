@@ -536,16 +536,8 @@ export default function XPreviewTool() {
                             {renderTimelinePost()}
                         </div>
 
-                        {/* Explanation / Footer */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
-                            <div className="p-6 rounded-[2rem] bg-primary/[0.03] border border-primary/10 space-y-3">
-                                <h3 className="font-vt323 text-[22px] text-primary uppercase leading-tight">Timeline Strategy</h3>
-                                <p className="font-lato text-sm text-muted-foreground leading-relaxed">
-                                    X displays multi-image posts in grids (2x2 for 4 images, etc.). Adjust the slice count and row layout to match your creative vision. This is often used for "surprise" reveals where the full image is only visible when expanded.
-                                </p>
-                            </div>
-
-                            {/* History Section */}
+                        {/* History */}
+                        <div className="pb-20">
                             <div className="p-6 rounded-[2rem] bg-card border border-border/50 space-y-4">
                                 <div className="flex items-center justify-between">
                                     <h3 className="font-vt323 text-xl text-muted-foreground uppercase tracking-wider flex items-center gap-2">
