@@ -117,6 +117,8 @@ export interface VariationSlot {
   secondaryPrompt: string;
   aspectRatio: AspectRatio;
   imageSize: ImageSize;
+  apiId: string | null;
+  referenceImages: ImageFile[];
 }
 
 interface CreateContextType {
@@ -206,7 +208,9 @@ interface CreateContextType {
   variationSlots: VariationSlot[];
   addVariationSlot: () => void;
   removeVariationSlot: (id: string) => void;
-  updateVariationSlot: (id: string, updates: Partial<VariationSlot>) => void;
+  updateVariationSlot: (id: string, updates: Partial<Omit<VariationSlot, "referenceImages">>) => void;
+  addVariationReferenceImages: (slotId: string, files: File[]) => Promise<void>;
+  removeVariationReferenceImage: (slotId: string, imageId: string) => void;
 
   // Gallery filters
   galleryFilterState: GalleryFilterState;
@@ -406,7 +410,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   // Variations mode
   const [variationsMode, setVariationsMode] = React.useState(false);
   const [variationSlots, setVariationSlots] = React.useState<VariationSlot[]>([
-    { id: "var-1", secondaryPrompt: "", aspectRatio: "1:1", imageSize: "2K" },
+    { id: "var-1", secondaryPrompt: "", aspectRatio: "1:1", imageSize: "2K", apiId: null, referenceImages: [] },
   ]);
 
   // Gallery layout state (with localStorage persistence)
@@ -1087,27 +1091,39 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       setIsGenerating(true);
       abortControllerRef.current = new AbortController();
 
-      const selectedApi = availableApis.find(api => api.id === selectedApiId);
-      const resolvedModelName = selectedApi?.name || settings.model;
-
-      const currentRefImages: ReferenceImageInfo[] = referenceImages
-        .filter(img => img.storagePath && !img.isUploading)
-        .map(img => ({ url: img.preview || '', storagePath: img.storagePath }));
-
-      const referenceImagePaths = referenceImages
-        .filter(img => img.storagePath && !img.isUploading)
-        .map(img => img.storagePath!);
-
-      // Wait for any uploading images
-      if (referenceImages.some(img => img.isUploading)) {
+      // Wait for any uploading images (global + per-slot)
+      const hasUploading = referenceImages.some(img => img.isUploading) ||
+        activeSlots.some(s => s.referenceImages.some(img => img.isUploading));
+      if (hasUploading) {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
+
+      // Global reference images (shared across all slots)
+      const globalRefPaths = referenceImages
+        .filter(img => img.storagePath && !img.isUploading)
+        .map(img => img.storagePath!);
+      const globalRefImages: ReferenceImageInfo[] = referenceImages
+        .filter(img => img.storagePath && !img.isUploading)
+        .map(img => ({ url: img.preview || '', storagePath: img.storagePath }));
 
       // Create one placeholder per variation
       const placeholderMap: { slotId: string; placeholderId: string }[] = [];
       const placeholders: GeneratedImage[] = [];
 
       for (const slot of activeSlots) {
+        // Resolve per-slot API or fall back to global
+        const slotApiId = slot.apiId || selectedApiId;
+        const slotApi = availableApis.find(api => api.id === slotApiId);
+        const slotModelName = slotApi?.name || settings.model;
+
+        // Merge global + per-slot reference images
+        const slotRefPaths = slot.referenceImages
+          .filter(img => img.storagePath && !img.isUploading)
+          .map(img => img.storagePath!);
+        const slotRefImages: ReferenceImageInfo[] = slot.referenceImages
+          .filter(img => img.storagePath && !img.isUploading)
+          .map(img => ({ url: img.preview || '', storagePath: img.storagePath }));
+
         const placeholderId = `gen-pending-${Date.now()}-${slot.id}`;
         placeholderMap.push({ slotId: slot.id, placeholderId });
         placeholders.push({
@@ -1117,11 +1133,11 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
           timestamp: Date.now(),
           settings: {
             ...settings,
-            model: resolvedModelName,
+            model: slotModelName,
             aspectRatio: slot.aspectRatio,
             imageSize: slot.imageSize,
             outputCount: 1,
-            referenceImages: currentRefImages,
+            referenceImages: [...globalRefImages, ...slotRefImages],
           },
           status: 'pending',
         });
@@ -1132,20 +1148,30 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       // Fire all API calls in parallel
       const promises = activeSlots.map(async (slot) => {
         const entry = placeholderMap.find(e => e.slotId === slot.id)!;
+        const slotApiId = slot.apiId || selectedApiId;
+        const slotApi = availableApis.find(api => api.id === slotApiId);
+        const slotModelName = slotApi?.name || settings.model;
+
         const combinedPrompt = `${prompt.trim()}. ${slot.secondaryPrompt.trim()}`;
         let finalPrompt = combinedPrompt;
         if (settings.negativePrompt.trim()) {
           finalPrompt += `\n\nNegative: ${settings.negativePrompt.trim()}`;
         }
 
+        // Merge global + per-slot reference image paths
+        const slotRefPaths = slot.referenceImages
+          .filter(img => img.storagePath && !img.isUploading)
+          .map(img => img.storagePath!);
+        const allRefPaths = [...globalRefPaths, ...slotRefPaths];
+
         const requestParams: Record<string, unknown> = {
-          apiId: selectedApiId,
+          apiId: slotApiId,
           prompt: finalPrompt,
           negativePrompt: settings.negativePrompt,
           aspectRatio: slot.aspectRatio,
           imageSize: slot.imageSize,
           outputCount: 1,
-          referenceImagePaths,
+          referenceImagePaths: allRefPaths,
           mode: 'fast',
         };
         if (settings.styleRef) requestParams.styleRefPath = settings.styleRef.storagePath || settings.styleRef.url;
@@ -1185,7 +1211,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
             timestamp: Date.now(),
             settings: {
               ...settings,
-              model: resolvedModelName,
+              model: slotModelName,
               aspectRatio: slot.aspectRatio,
               imageSize: slot.imageSize,
               outputCount: 1,
@@ -1449,22 +1475,99 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         secondaryPrompt: "",
         aspectRatio: settings.aspectRatio,
         imageSize: settings.imageSize,
+        apiId: null,
+        referenceImages: [],
       }];
     });
   }, [settings.aspectRatio, settings.imageSize]);
 
   const removeVariationSlot = React.useCallback((id: string) => {
     setVariationSlots(prev => {
+      // Revoke blob URLs for removed slot's reference images
+      const slot = prev.find(s => s.id === id);
+      if (slot) {
+        slot.referenceImages.forEach(img => URL.revokeObjectURL(img.preview));
+      }
       const filtered = prev.filter(s => s.id !== id);
       return filtered.length === 0
-        ? [{ id: "var-1", secondaryPrompt: "", aspectRatio: settings.aspectRatio, imageSize: settings.imageSize }]
+        ? [{ id: "var-1", secondaryPrompt: "", aspectRatio: settings.aspectRatio, imageSize: settings.imageSize, apiId: null, referenceImages: [] }]
         : filtered;
     });
   }, [settings.aspectRatio, settings.imageSize]);
 
-  const updateVariationSlot = React.useCallback((id: string, updates: Partial<VariationSlot>) => {
+  const updateVariationSlot = React.useCallback((id: string, updates: Partial<Omit<VariationSlot, "referenceImages">>) => {
     setVariationSlots(prev =>
       prev.map(s => s.id === id ? { ...s, ...updates } : s)
+    );
+  }, []);
+
+  const addVariationReferenceImages = React.useCallback(async (slotId: string, files: File[]) => {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    const slot = variationSlots.find(s => s.id === slotId);
+    const currentCount = slot?.referenceImages.length ?? 0;
+    const filesToAdd = files.slice(0, 5 - currentCount); // max 5 per slot
+    if (filesToAdd.length === 0) return;
+
+    const newImages: ImageFile[] = filesToAdd.map(file => ({
+      id: `ref-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
+      file,
+      preview: URL.createObjectURL(file),
+      isUploading: true,
+    }));
+
+    // Add to slot immediately with uploading state
+    setVariationSlots(prev =>
+      prev.map(s => s.id === slotId
+        ? { ...s, referenceImages: [...s.referenceImages, ...newImages].slice(0, 5) }
+        : s
+      )
+    );
+
+    // Upload in parallel
+    const { uploadReferenceImage: uploadToStorage } = await import("@/utils/supabase/storage");
+
+    for (const img of newImages) {
+      try {
+        const { path, error } = await uploadToStorage(img.file, user.id);
+        if (error || !path) {
+          setVariationSlots(prev =>
+            prev.map(s => s.id === slotId
+              ? { ...s, referenceImages: s.referenceImages.filter(i => i.id !== img.id) }
+              : s
+            )
+          );
+          URL.revokeObjectURL(img.preview);
+        } else {
+          setVariationSlots(prev =>
+            prev.map(s => s.id === slotId
+              ? { ...s, referenceImages: s.referenceImages.map(i => i.id === img.id ? { ...i, storagePath: path, isUploading: false } : i) }
+              : s
+            )
+          );
+        }
+      } catch {
+        setVariationSlots(prev =>
+          prev.map(s => s.id === slotId
+            ? { ...s, referenceImages: s.referenceImages.filter(i => i.id !== img.id) }
+            : s
+          )
+        );
+        URL.revokeObjectURL(img.preview);
+      }
+    }
+  }, [variationSlots]);
+
+  const removeVariationReferenceImage = React.useCallback((slotId: string, imageId: string) => {
+    setVariationSlots(prev =>
+      prev.map(s => {
+        if (s.id !== slotId) return s;
+        const img = s.referenceImages.find(i => i.id === imageId);
+        if (img) URL.revokeObjectURL(img.preview);
+        return { ...s, referenceImages: s.referenceImages.filter(i => i.id !== imageId) };
+      })
     );
   }, []);
 
@@ -2344,6 +2447,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     addVariationSlot,
     removeVariationSlot,
     updateVariationSlot,
+    addVariationReferenceImages,
+    removeVariationReferenceImage,
     // Gallery filters
     galleryFilterState,
     setSearchQuery,
@@ -2398,7 +2503,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     selectImage, clearHistory, loadMoreHistory, hasMoreHistory, isLoadingMoreHistory,
     toggleHistoryPanel, toggleInputVisibility, generate, cancelGeneration,
     hasAvailableSlots, activeGenerations, retryFailedImage, dismissFailedImage, buildFinalPrompt,
-    variationsMode, variationSlots, addVariationSlot, removeVariationSlot, updateVariationSlot,
+    variationsMode, variationSlots, addVariationSlot, removeVariationSlot, updateVariationSlot, addVariationReferenceImages, removeVariationReferenceImage,
     galleryFilterState, setSearchQuery, setSortBy, setGalleryFilters, clearGalleryFilters,
     toggleBulkSelection, toggleImageSelection, selectAllImages, deselectAllImages, getFilteredHistory, bulkDeleteImages,
     bulkAddToCollectionFn, bulkAddTagFn,
