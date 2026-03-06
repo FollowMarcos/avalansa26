@@ -11,25 +11,15 @@ import {
     Bookmark,
     Share,
     MoreHorizontal,
-    Plus,
-    X as XIcon,
     Image as ImageIcon,
     BarChart3,
-    Settings2,
-    Type,
-    User as UserIcon,
     Timer,
-    Camera,
     Smile,
-    Calendar,
-    MapPin,
     Scissors,
-    Rows3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { PageShell } from '@/components/layout/page-shell';
 import { toast } from 'sonner';
@@ -69,19 +59,25 @@ const GrokIcon = ({ className }: { className?: string }) => (
 
 // --- Component ---
 
+const FUNNY_PROFILES = [
+    { name: 'Unhinged Dev', handle: 'sudo_rm_rf_life', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=chaos', content: 'just deployed to prod on a friday. if i disappear, tell my mom i loved her spaghetti code', views: '6.9M', replies: '420', reposts: '1337', likes: '69K', bookmarks: '911' },
+    { name: 'CEO of Napping', handle: 'professional_sleeper', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=sleepy', content: 'my code works and i have no idea why. touching nothing. breathing carefully.', views: '2.1M', replies: '847', reposts: '3.2K', likes: '41K', bookmarks: '256' },
+    { name: 'Therapist Needed', handle: 'css_made_me_cry', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=tears', content: 'centred a div today. updated my linkedin. called my parents. cried in the shower. normal tuesday.', views: '8.4M', replies: '2.3K', reposts: '12K', likes: '89K', bookmarks: '4.2K' },
+    { name: 'git blame everyone', handle: 'not_a_bug_a_feature', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=blame', content: 'wrote mass of my code. went to lunch. came back. entire codebase is on fire. classic.', views: '4.2M', replies: '666', reposts: '2.8K', likes: '33K', bookmarks: '1.5K' },
+    { name: 'Stack Overflow Andy', handle: 'copied_from_2012', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=copy', content: 'interviewer: "describe your coding process"\nme: ctrl+c ctrl+v pray deploy repeat', views: '11M', replies: '5.1K', reposts: '24K', likes: '120K', bookmarks: '8.8K' },
+    { name: 'localhost:3000', handle: 'it_works_on_my_machine', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=local', content: 'my project has 847 dependencies and im too scared to run npm audit. ignorance is bliss', views: '3.7M', replies: '923', reposts: '4.1K', likes: '52K', bookmarks: '2.1K' },
+    { name: 'Semicolon Survivor', handle: 'forgot_the_semicolon', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=semi', content: 'spent 4 hours debugging. the issue was a missing comma. im going to become a farmer.', views: '7.7M', replies: '1.8K', reposts: '9.3K', likes: '74K', bookmarks: '3.3K' },
+    { name: 'Dark Mode Only', handle: 'light_mode_is_violence', avatar: 'https://api.dicebear.com/7.x/bottts/svg?seed=dark', content: 'someone showed me their IDE in light mode and i physically recoiled. my therapist says thats "not normal"', views: '5.5M', replies: '3.4K', reposts: '15K', likes: '95K', bookmarks: '6.1K' },
+];
+
+function getRandomProfile() {
+    return FUNNY_PROFILES[Math.floor(Math.random() * FUNNY_PROFILES.length)];
+}
+
 export default function XPreviewTool() {
-    // Post Details
-    const [name, setName] = useState('Ethereal');
-    const [handle, setHandle] = useState('ethereal_lab');
-    const [avatar, setAvatar] = useState('https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=500&auto=format&fit=crop&q=60');
-    const [content, setContent] = useState('Exploring the intersection of geometry and light. 💎✨');
-    const [time, setTime] = useState('11:11 PM');
-    const [date, setDate] = useState('Jan 30, 2026');
-    const [views, setViews] = useState('2.4M');
-    const [replies, setReplies] = useState('124');
-    const [reposts, setReposts] = useState('89');
-    const [likes, setLikes] = useState('4.2K');
-    const [bookmarks, setBookmarks] = useState('512');
+    // Post Details — randomized funny profiles
+    const [profile, setProfile] = useState(getRandomProfile);
+    const { name, handle, avatar, content, views, replies, reposts, likes, bookmarks } = profile;
 
     // Multi-Image State
     const [slices, setSlices] = useState<SlicedImage[]>([]);
@@ -288,7 +284,7 @@ export default function XPreviewTool() {
                         <VerifiedBadge className="w-[18px] h-[18px] flex-shrink-0" />
                         <span className="text-[#71767b] truncate text-[15px]">@{handle}</span>
                         <span className="text-[#71767b] text-[15px]">·</span>
-                        <span className="text-[#71767b] whitespace-nowrap text-[15px]">{date.split(',')[0]}</span>
+                        <span className="text-[#71767b] whitespace-nowrap text-[15px]">just now</span>
                         <div className="ml-auto flex items-center gap-2">
                             <GrokIcon className="w-[18px] h-[18px] text-[#71767b]" />
                             <button className="rounded-full hover:bg-[#71767b15] p-1 transition-colors" aria-label="More options">
@@ -434,61 +430,6 @@ export default function XPreviewTool() {
                     {/* Controls & Slices Column */}
                     <div className="lg:col-span-4 space-y-8">
 
-                        {/* Post Details Form */}
-                        <div className="p-6 rounded-[2rem] bg-card border border-border/50 space-y-6">
-                            <h2 className="font-vt323 text-xl text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                                <Settings2 className="w-5 h-5" /> Identity & Metadata
-                            </h2>
-
-                            <div className="space-y-4">
-                                <div className="space-y-1.5">
-                                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Display Name</Label>
-                                    <div className="relative">
-                                        <UserIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-20" />
-                                        <Input
-                                            value={name}
-                                            onChange={e => setName(e.target.value)}
-                                            className="rounded-xl pl-10 border-primary/10 bg-primary/[0.02] focus:bg-background"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Username Handle</Label>
-                                    <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 opacity-20 font-bold" aria-hidden="true">@</span>
-                                        <Input
-                                            value={handle}
-                                            onChange={e => setHandle(e.target.value)}
-                                            spellCheck={false}
-                                            autoComplete="off"
-                                            className="rounded-xl pl-8 border-primary/10 bg-primary/[0.02] focus:bg-background"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Avatar URL</Label>
-                                    <div className="relative">
-                                        <Camera className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-20" />
-                                        <Input
-                                            value={avatar}
-                                            onChange={e => setAvatar(e.target.value)}
-                                            className="rounded-xl pl-10 border-primary/10 bg-primary/[0.02] focus:bg-background"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="space-y-1.5 pt-2">
-                                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Post Text</Label>
-                                    <Textarea
-                                        value={content}
-                                        onChange={e => setContent(e.target.value)}
-                                        placeholder="What's happening?"
-                                        spellCheck={true}
-                                        className="rounded-xl border-primary/10 bg-primary/[0.02] focus:bg-background min-h-[80px] resize-none"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
                         {/* Slice Configuration */}
                         <div className="p-6 rounded-[2rem] bg-card border border-border/50 space-y-6">
                             <h2 className="font-vt323 text-xl text-muted-foreground uppercase tracking-wider flex items-center gap-2">
@@ -583,7 +524,15 @@ export default function XPreviewTool() {
                     {/* Preview Column */}
                     <div className="lg:col-span-8 space-y-8">
                         {/* Timeline Preview */}
-                        <div className="flex justify-center min-h-[400px]">
+                        <div className="flex flex-col items-center gap-3 min-h-[400px]">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setProfile(getRandomProfile())}
+                                className="text-muted-foreground hover:text-primary font-vt323 text-base uppercase tracking-wider"
+                            >
+                                <Smile className="w-4 h-4 mr-2" /> Shuffle Preview
+                            </Button>
                             {renderTimelinePost()}
                         </div>
 
