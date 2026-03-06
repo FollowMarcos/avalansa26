@@ -1,13 +1,10 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
 import {
     Upload,
     Download,
     Trash2,
-    Grid,
-    List,
     MessageCircle,
     Repeat2,
     Heart,
@@ -89,7 +86,6 @@ export default function XPreviewTool() {
     // Multi-Image State
     const [slices, setSlices] = useState<SlicedImage[]>([]);
     const [isSlicing, setIsSlicing] = useState(false);
-    const [previewTab, setPreviewTab] = useState<'timeline' | 'open'>('timeline');
     const [history, setHistory] = useState<HistoryItem[]>([]);
 
     // Slice Configuration
@@ -342,90 +338,6 @@ export default function XPreviewTool() {
         </div>
     );
 
-    const renderOpenPost = () => (
-        <div className="bg-black text-[#e7e9ea] p-4 max-w-[500px] w-full border border-[#2f3336] font-sans selection:bg-[#1d9cf040]">
-            <div className="flex items-center gap-3 mb-4">
-                <img src={avatar} className="w-10 h-10 rounded-full object-cover" alt="Avatar" />
-                <div className="flex flex-col leading-tight">
-                    <div className="flex items-center gap-1">
-                        <span className="font-bold text-[15px]">{name}</span>
-                        <VerifiedBadge className="w-[18px] h-[18px]" />
-                    </div>
-                    <span className="text-[#71767b] text-[15px]">@{handle}</span>
-                </div>
-                <div className="ml-auto flex items-center gap-3">
-                    <GrokIcon className="w-[20px] h-[20px] text-[#71767b]" />
-                    <MoreHorizontal className="w-[20px] h-[20px] text-[#71767b]" aria-label="More options" />
-                </div>
-            </div>
-
-            <div className="text-[17px] leading-normal mb-4 whitespace-pre-wrap break-words">
-                {content}
-            </div>
-
-            {/* Image Stack */}
-            {slices.length > 0 ? (
-                <div className="space-y-4 mb-4">
-                    {slices.map((slice, i) => (
-                        <div key={slice.id} className="rounded-2xl overflow-hidden border border-[#2f3336] bg-[#16181c]">
-                            <img src={slice.url} className="w-full object-contain" alt={`Slice ${i + 1}`} />
-                        </div>
-                    ))}
-                </div>
-            ) : (
-                <div className="aspect-video bg-[#16181c] rounded-2xl flex flex-col items-center justify-center border border-dashed border-[#2f3336] gap-2 p-4 text-center mb-4">
-                    <ImageIcon className="w-8 h-8 opacity-20" />
-                    <p className="text-[#71767b] text-sm italic">Upload & slice to preview the vertical stack</p>
-                </div>
-            )}
-
-            <div className="py-4 border-b border-[#2f3336] text-[15px] text-[#71767b] flex gap-1 items-center">
-                <span>{time}</span>
-                <span>·</span>
-                <span>{date}</span>
-                <span>·</span>
-                <span className="text-white font-bold ml-1 tabular-nums">{views}</span>
-                <span>Views</span>
-            </div>
-
-            <div className="flex items-center justify-between text-[#71767b] pt-2">
-                <button className="flex items-center group cursor-pointer hover:text-[#1d9bf0] bg-transparent border-none p-0 outline-none focus-visible:ring-2 ring-[#1d9bf0] rounded-full" aria-label={`${replies} replies`}>
-                    <div className="p-2 rounded-full group-hover:bg-[#1d9bf015]">
-                        <MessageCircle className="w-[18px] h-[18px]" />
-                    </div>
-                    <span className="text-[13px] tabular-nums">{replies}</span>
-                </button>
-                <button className="flex items-center group cursor-pointer hover:text-[#00ba7c] bg-transparent border-none p-0 outline-none focus-visible:ring-2 ring-[#00ba7c] rounded-full" aria-label={`${reposts} reposts`}>
-                    <div className="p-2 rounded-full group-hover:bg-[#00ba7c15]">
-                        <Repeat2 className="w-[18px] h-[18px]" />
-                    </div>
-                    <span className="text-[13px] tabular-nums">{reposts}</span>
-                </button>
-                <button className="flex items-center group cursor-pointer hover:text-[#f91880] bg-transparent border-none p-0 outline-none focus-visible:ring-2 ring-[#f91880] rounded-full" aria-label={`${likes} likes`}>
-                    <div className="p-2 rounded-full group-hover:bg-[#f9188015]">
-                        <Heart className="w-[18px] h-[18px]" />
-                    </div>
-                    <span className="text-[13px] tabular-nums">{likes}</span>
-                </button>
-                <button className="flex items-center group cursor-pointer hover:text-[#1d9bf0] bg-transparent border-none p-0 outline-none focus-visible:ring-2 ring-[#1d9bf0] rounded-full" aria-label={`${views} views`}>
-                    <div className="p-2 rounded-full group-hover:bg-[#1d9bf015]">
-                        <BarChart3 className="w-[18px] h-[18px]" />
-                    </div>
-                    <span className="text-[13px] tabular-nums">{views}</span>
-                </button>
-                <div className="flex items-center gap-1">
-                    <button className="p-2 rounded-full hover:bg-[#1d9bf015] hover:text-[#1d9bf0] cursor-pointer" aria-label="Bookmark">
-                        <Bookmark className="w-[18px] h-[18px]" />
-                    </button>
-                    <button className="p-2 rounded-full hover:bg-[#1d9bf015] hover:text-[#1d9bf0] cursor-pointer" aria-label="Share">
-                        <Share className="w-[18px] h-[18px]" />
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-
-    const renderComposeView = () => null;
 
     return (
         <PageShell contentClassName="bg-transparent">
@@ -554,7 +466,7 @@ export default function XPreviewTool() {
                                 <div className="space-y-2">
                                     <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Number of Slices</Label>
                                     <div className="flex items-center gap-2">
-                                        {[2, 3, 4, 6, 8, 9].map((n) => (
+                                        {[2, 3, 4].map((n) => (
                                             <button
                                                 key={n}
                                                 onClick={() => {
@@ -652,43 +564,9 @@ export default function XPreviewTool() {
 
                     {/* Preview Column */}
                     <div className="lg:col-span-8 space-y-8">
-                        <div className="relative">
-                            {/* Custom Tab Switcher */}
-                            <div className="flex p-1.5 bg-card border border-border/50 rounded-2xl w-fit mx-auto mb-10 relative z-20">
-                                {[
-                                    { id: 'timeline', icon: Grid, label: 'Timeline' },
-                                    { id: 'open', icon: List, label: 'Open Post' }
-                                ].map((tab) => (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => setPreviewTab(tab.id as any)}
-                                        className={cn(
-                                            "flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold uppercase tracking-[0.1em] transition-all duration-300",
-                                            previewTab === tab.id ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-primary/5 hover:text-foreground"
-                                        )}
-                                    >
-                                        <tab.icon className="w-3.5 h-3.5" /> {tab.label}
-                                    </button>
-                                ))}
-                            </div>
-
-                            {/* Preview Display */}
-                            <div className="flex justify-center min-h-[400px]">
-                                <AnimatePresence mode="wait">
-                                    <motion.div
-                                        key={previewTab}
-                                        initial={{ opacity: 0, scale: 0.98, y: 10 }}
-                                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                                        exit={{ opacity: 0, scale: 1.02, y: -10 }}
-                                        transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
-                                        className="w-full flex justify-center"
-                                    >
-                                        {previewTab === 'timeline' ? renderTimelinePost() :
-                                            previewTab === 'open' ? renderOpenPost() :
-                                                renderComposeView()}
-                                    </motion.div>
-                                </AnimatePresence>
-                            </div>
+                        {/* Timeline Preview */}
+                        <div className="flex justify-center min-h-[400px]">
+                            {renderTimelinePost()}
                         </div>
 
                         {/* Explanation / Footer */}
