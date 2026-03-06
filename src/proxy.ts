@@ -72,6 +72,7 @@ class EdgeRateLimiter {
 // Create rate limiters for different endpoint types
 const apiLimiter = new EdgeRateLimiter(60, 60000); // 60 req/min for general API
 const generateLimiter = new EdgeRateLimiter(10, 60000); // 10 req/min for generation
+const chatLimiter = new EdgeRateLimiter(20, 60000); // 20 req/min for chat
 const authLimiter = new EdgeRateLimiter(5, 300000); // 5 req/5min for auth
 // Get client identifier with proper IP handling
 function getClientIdentifier(request: NextRequest): string {
@@ -100,6 +101,9 @@ export async function proxy(request: NextRequest) {
     if (pathname.startsWith('/api/generate') || pathname.startsWith('/api/batch-status')) {
       result = generateLimiter.check(identifier);
       limitType = 'generation';
+    } else if (pathname.startsWith('/api/chat')) {
+      result = chatLimiter.check(identifier);
+      limitType = 'chat';
     } else if (pathname.includes('/auth/')) {
       result = authLimiter.check(identifier);
       limitType = 'authentication';
