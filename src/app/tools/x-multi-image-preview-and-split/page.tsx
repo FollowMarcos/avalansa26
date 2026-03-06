@@ -25,7 +25,9 @@ import {
     Camera,
     Smile,
     Calendar,
-    MapPin
+    MapPin,
+    Scissors,
+    Rows3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -89,6 +91,10 @@ export default function XPreviewTool() {
     const [isSlicing, setIsSlicing] = useState(false);
     const [previewTab, setPreviewTab] = useState<'timeline' | 'open'>('timeline');
     const [history, setHistory] = useState<HistoryItem[]>([]);
+
+    // Slice Configuration
+    const [sliceCount, setSliceCount] = useState(4);
+    const [rowCount, setRowCount] = useState(2);
 
     // Refs
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -194,12 +200,11 @@ export default function XPreviewTool() {
             const ctx = canvas.getContext('2d');
             if (!ctx) return;
 
-            const sliceHeight = img.height / 4;
-            const newSlices: SlicedImage[] = [];
+            const sliceHeight = img.height / sliceCount;
 
             // We need to collect all slices and then set state
             const processSlices = async () => {
-                const slicePromises = Array.from({ length: 4 }).map((_, i) => {
+                const slicePromises = Array.from({ length: sliceCount }).map((_, i) => {
                     return new Promise<SlicedImage>((resolve) => {
                         const tempCanvas = document.createElement('canvas');
                         const tempCtx = tempCanvas.getContext('2d')!;
@@ -276,18 +281,25 @@ export default function XPreviewTool() {
                     </div>
 
                     {/* Image Grid */}
-                    {slices.length === 4 ? (
-                        <div className="grid grid-cols-2 gap-[2px] rounded-2xl overflow-hidden border border-[#2f3336]">
+                    {slices.length > 0 ? (
+                        <div
+                            className="gap-[2px] rounded-2xl overflow-hidden border border-[#2f3336]"
+                            style={{
+                                display: 'grid',
+                                gridTemplateColumns: `repeat(${Math.ceil(sliceCount / rowCount)}, 1fr)`,
+                                gridTemplateRows: `repeat(${rowCount}, 1fr)`,
+                            }}
+                        >
                             {slices.map((slice, i) => (
                                 <div key={slice.id} className="aspect-square relative bg-[#16181c]">
-                                    <img src={slice.url} className="w-full h-full object-cover" alt={`Slice ${i}`} />
+                                    <img src={slice.url} className="w-full h-full object-cover" alt={`Slice ${i + 1}`} />
                                 </div>
                             ))}
                         </div>
                     ) : (
                         <div className="aspect-video bg-[#16181c] rounded-2xl flex flex-col items-center justify-center border border-dashed border-[#2f3336] gap-2 p-4 text-center">
                             <ImageIcon className="w-8 h-8 opacity-20" />
-                            <p className="text-[#71767b] text-sm italic">Upload & slice to preview the 2x2 grid</p>
+                            <p className="text-[#71767b] text-sm italic">Upload & slice to preview the {Math.ceil(sliceCount / rowCount)}x{rowCount} grid</p>
                         </div>
                     )}
 
@@ -352,11 +364,11 @@ export default function XPreviewTool() {
             </div>
 
             {/* Image Stack */}
-            {slices.length === 4 ? (
+            {slices.length > 0 ? (
                 <div className="space-y-4 mb-4">
                     {slices.map((slice, i) => (
                         <div key={slice.id} className="rounded-2xl overflow-hidden border border-[#2f3336] bg-[#16181c]">
-                            <img src={slice.url} className="w-full object-contain" alt={`Slice ${i}`} />
+                            <img src={slice.url} className="w-full object-contain" alt={`Slice ${i + 1}`} />
                         </div>
                     ))}
                 </div>
@@ -429,7 +441,7 @@ export default function XPreviewTool() {
                             <h1 className="text-4xl font-vt323 tracking-tight text-primary uppercase text-balance">X // Multi-Image Laboratory</h1>
                         </div>
                         <p className="font-lato text-muted-foreground text-lg italic opacity-80 max-w-2xl text-pretty">
-                            Upload a vertical image and slice it perfectly for X. Preview how it looks in the timeline and expanded view to ensure pixel-perfect alignment. (Max 20MB)
+                            Upload an image and slice it into configurable pieces for X. Choose your slice count and grid rows, then preview how it looks in the timeline and expanded view. (Max 20MB)
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -532,6 +544,72 @@ export default function XPreviewTool() {
                             </div>
                         </div>
 
+                        {/* Slice Configuration */}
+                        <div className="p-6 rounded-[2rem] bg-card border border-border/50 space-y-6">
+                            <h2 className="font-vt323 text-xl text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                                <Scissors className="w-5 h-5" /> Slice Configuration
+                            </h2>
+
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Number of Slices</Label>
+                                    <div className="flex items-center gap-2">
+                                        {[2, 3, 4, 6, 8, 9].map((n) => (
+                                            <button
+                                                key={n}
+                                                onClick={() => {
+                                                    setSliceCount(n);
+                                                    // Auto-adjust rows if current rowCount doesn't divide evenly
+                                                    if (n % rowCount !== 0) {
+                                                        // Find the best row count
+                                                        const possibleRows = Array.from({ length: n }, (_, i) => i + 1).filter(r => n % r === 0 && r > 1);
+                                                        setRowCount(possibleRows[0] || 1);
+                                                    }
+                                                    if (slices.length > 0) {
+                                                        removeSlices();
+                                                        toast('Slices cleared — re-upload to apply new settings');
+                                                    }
+                                                }}
+                                                className={cn(
+                                                    "w-10 h-10 rounded-xl text-sm font-bold transition-all",
+                                                    sliceCount === n
+                                                        ? "bg-primary text-primary-foreground"
+                                                        : "bg-primary/5 border border-primary/10 text-muted-foreground hover:bg-primary/10 hover:text-foreground"
+                                                )}
+                                            >
+                                                {n}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Grid Rows</Label>
+                                    <div className="flex items-center gap-2">
+                                        {Array.from({ length: sliceCount }, (_, i) => i + 1)
+                                            .filter(r => sliceCount % r === 0)
+                                            .map((r) => (
+                                                <button
+                                                    key={r}
+                                                    onClick={() => setRowCount(r)}
+                                                    className={cn(
+                                                        "h-10 px-4 rounded-xl text-sm font-bold transition-all",
+                                                        rowCount === r
+                                                            ? "bg-primary text-primary-foreground"
+                                                            : "bg-primary/5 border border-primary/10 text-muted-foreground hover:bg-primary/10 hover:text-foreground"
+                                                    )}
+                                                >
+                                                    {r} {r === 1 ? 'row' : 'rows'}
+                                                </button>
+                                            ))}
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground opacity-50">
+                                        {sliceCount} slices &times; {Math.ceil(sliceCount / rowCount)} cols &times; {rowCount} rows
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
                         {/* Slices Gallery */}
                         {slices.length > 0 && (
                             <div className="p-6 rounded-[2rem] bg-card border border-border/50 space-y-4">
@@ -564,7 +642,7 @@ export default function XPreviewTool() {
                                                     <Download className="w-5 h-5" />
                                                 </Button>
                                             </div>
-                                            <div className="absolute bottom-1 right-2 text-[8px] font-black italic opacity-30 text-white">#0{i + 1}</div>
+                                            <div className="absolute bottom-1 right-2 text-[8px] font-black italic opacity-30 text-white">#{String(i + 1).padStart(2, '0')}</div>
                                         </div>
                                     ))}
                                 </div>
@@ -618,7 +696,7 @@ export default function XPreviewTool() {
                             <div className="p-6 rounded-[2rem] bg-primary/[0.03] border border-primary/10 space-y-3">
                                 <h3 className="font-vt323 text-[22px] text-primary uppercase leading-tight">Timeline Strategy</h3>
                                 <p className="font-lato text-sm text-muted-foreground leading-relaxed">
-                                    X defaults to a 2x2 grid for 4 images. If you use horizontal slices, the timeline will look fragmented. This is often used for "surprise" reveals where the full image is only visible when opened.
+                                    X displays multi-image posts in grids (2x2 for 4 images, etc.). Adjust the slice count and row layout to match your creative vision. This is often used for "surprise" reveals where the full image is only visible when expanded.
                                 </p>
                             </div>
 
