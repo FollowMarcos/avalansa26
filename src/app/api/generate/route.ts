@@ -648,107 +648,143 @@ async function generateWithGemini(params: ProviderParams): Promise<GeneratedImag
   // Reference images + high resolution (2K/4K) can take 2-3 minutes
   const REQUEST_TIMEOUT = 180000;
 
+  // Retry config for transient errors (500, 503)
+  const MAX_RETRIES = 3;
+  const INITIAL_RETRY_DELAY = 2000; // 2 seconds
+
   // Helper function to make a single API call and extract image
   const makeSingleRequest = async (requestIndex: number): Promise<GeneratedImage | null> => {
     console.log(`[Gemini] Starting request ${requestIndex + 1}/${outputCount}`);
 
-    // Create AbortController with timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+    let lastError: Error | null = null;
 
-    try {
-      const response = await fetch(apiEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-goog-api-key': apiKey,
-        },
-        body: JSON.stringify(requestBody),
-        signal: controller.signal,
-      });
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      if (attempt > 0) {
+        const delay = INITIAL_RETRY_DELAY * Math.pow(2, attempt - 1);
+        console.log(`[Gemini] Request ${requestIndex + 1} retry ${attempt}/${MAX_RETRIES} after ${delay}ms`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
 
-      clearTimeout(timeoutId);
+      // Create AbortController with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`[Gemini] Request ${requestIndex + 1} failed:`, errorText);
+      try {
+        const response = await fetch(apiEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey,
+          },
+          body: JSON.stringify(requestBody),
+          signal: controller.signal,
+        });
 
-        // Parse and provide user-friendly error messages
-        if (response.status === 503) {
-          throw new Error('This model is experiencing high demand. Please try again in a few moments.');
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`[Gemini] Request ${requestIndex + 1} failed (attempt ${attempt + 1}):`, errorText);
+
+          // Retry on transient server errors (500, 502, 503)
+          if ([500, 502, 503].includes(response.status) && attempt < MAX_RETRIES) {
+            lastError = new Error(`Gemini API error (${response.status}): ${errorText}`);
+            continue;
+          }
+
+          // Parse and provide user-friendly error messages
+          if (response.status === 503) {
+            throw new Error('This model is experiencing high demand. Please try again in a few moments.');
+          }
+          if (response.status === 429) {
+            // Also retry on rate limit if we have retries left
+            if (attempt < MAX_RETRIES) {
+              lastError = new Error('Rate limit reached');
+              continue;
+            }
+            throw new Error('Rate limit reached. Please wait a moment before generating again.');
+          }
+          if (response.status === 400) {
+            try {
+              const parsed = JSON.parse(errorText);
+              const msg = parsed?.error?.message || errorText;
+              throw new Error(`Invalid request: ${msg}`);
+            } catch (e) {
+              if (e instanceof Error && e.message.startsWith('Invalid request:')) throw e;
+            }
+          }
+          throw new Error(`Gemini API error (${response.status}): Please try again.`);
         }
-        if (response.status === 429) {
-          throw new Error('Rate limit reached. Please wait a moment before generating again.');
+
+        const data = await response.json();
+
+        // Debug: Log the response structure
+        console.log(`[Gemini] Response ${requestIndex + 1}:`, {
+          hasCandidate: !!data.candidates?.[0],
+          finishReason: data.candidates?.[0]?.finishReason,
+          partsCount: data.candidates?.[0]?.content?.parts?.length || 0,
+        });
+
+        // Check for content blocked by safety filters
+        if (data.promptFeedback?.blockReason) {
+          throw new Error(`Content blocked: ${data.promptFeedback.blockReason}`);
         }
-        if (response.status === 400) {
-          try {
-            const parsed = JSON.parse(errorText);
-            const msg = parsed?.error?.message || errorText;
-            throw new Error(`Invalid request: ${msg}`);
-          } catch (e) {
-            if (e instanceof Error && e.message.startsWith('Invalid request:')) throw e;
+
+        // Check if the response was filtered
+        const finishReason = data.candidates?.[0]?.finishReason;
+        if (finishReason === 'SAFETY' || finishReason === 'IMAGE_SAFETY') {
+          throw new Error('Image generation blocked by safety filters. Try modifying your prompt or using a different reference image.');
+        }
+        if (finishReason === 'RECITATION') {
+          throw new Error('Content blocked due to potential copyright issues.');
+        }
+        if (finishReason === 'IMAGE_OTHER') {
+          throw new Error('Image generation failed (IMAGE_OTHER). Try a different prompt or reference image.');
+        }
+
+        // Extract image from response
+        if (data.candidates && data.candidates[0]?.content?.parts) {
+          for (const part of data.candidates[0].content.parts) {
+            if (part.inlineData) {
+              const dataUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+              return { url: dataUrl, base64: part.inlineData.data };
+            } else if (part.text) {
+              console.log(`[Gemini] Request ${requestIndex + 1} text response:`, part.text.slice(0, 200));
+            }
           }
         }
-        throw new Error(`Gemini API error (${response.status}): Please try again.`);
-      }
 
-      const data = await response.json();
-
-      // Debug: Log the response structure
-      console.log(`[Gemini] Response ${requestIndex + 1}:`, {
-        hasCandidate: !!data.candidates?.[0],
-        finishReason: data.candidates?.[0]?.finishReason,
-        partsCount: data.candidates?.[0]?.content?.parts?.length || 0,
-      });
-
-      // Check for content blocked by safety filters
-      if (data.promptFeedback?.blockReason) {
-        throw new Error(`Content blocked: ${data.promptFeedback.blockReason}`);
-      }
-
-      // Check if the response was filtered
-      const finishReason = data.candidates?.[0]?.finishReason;
-      if (finishReason === 'SAFETY' || finishReason === 'IMAGE_SAFETY') {
-        throw new Error('Image generation blocked by safety filters. Try modifying your prompt or using a different reference image.');
-      }
-      if (finishReason === 'RECITATION') {
-        throw new Error('Content blocked due to potential copyright issues.');
-      }
-      if (finishReason === 'IMAGE_OTHER') {
-        throw new Error('Image generation failed (IMAGE_OTHER). Try a different prompt or reference image.');
-      }
-
-      // Extract image from response
-      if (data.candidates && data.candidates[0]?.content?.parts) {
-        for (const part of data.candidates[0].content.parts) {
-          if (part.inlineData) {
-            // Convert base64 to data URL
-            const dataUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-            return { url: dataUrl, base64: part.inlineData.data };
-          } else if (part.text) {
-            // Log any text response (model might be explaining why it can't generate)
-            console.log(`[Gemini] Request ${requestIndex + 1} text response:`, part.text.slice(0, 200));
+        // If no image, check for text explanation
+        if (data.candidates?.[0]) {
+          const textParts = data.candidates[0].content?.parts?.filter((p: Record<string, unknown>) => p.text) || [];
+          if (textParts.length > 0) {
+            const textContent = textParts.map((p: { text: string }) => p.text).join(' ').slice(0, 200);
+            console.warn(`[Gemini] Request ${requestIndex + 1} returned text instead of image: "${textContent}..."`);
           }
         }
-      }
 
-      // If no image, check for text explanation
-      if (data.candidates?.[0]) {
-        const textParts = data.candidates[0].content?.parts?.filter((p: Record<string, unknown>) => p.text) || [];
-        if (textParts.length > 0) {
-          const textContent = textParts.map((p: { text: string }) => p.text).join(' ').slice(0, 200);
-          console.warn(`[Gemini] Request ${requestIndex + 1} returned text instead of image: "${textContent}..."`);
+        return null;
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error instanceof Error && error.name === 'AbortError') {
+          // Retry on timeout if we have retries left
+          if (attempt < MAX_RETRIES) {
+            lastError = new Error(`Gemini API request timed out after ${REQUEST_TIMEOUT / 1000} seconds`);
+            console.warn(`[Gemini] Request ${requestIndex + 1} timed out, will retry`);
+            continue;
+          }
+          throw new Error(`Gemini API request timed out after ${REQUEST_TIMEOUT / 1000} seconds`);
         }
+        throw error;
       }
-
-      return null;
-    } catch (error) {
-      clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error(`Gemini API request timed out after ${REQUEST_TIMEOUT / 1000} seconds`);
-      }
-      throw error;
     }
+
+    // All retries exhausted
+    if (lastError) {
+      console.error(`[Gemini] Request ${requestIndex + 1} failed after ${MAX_RETRIES} retries`);
+      throw lastError;
+    }
+    return null;
   };
 
   // Make parallel API calls for outputCount images

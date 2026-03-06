@@ -45,7 +45,8 @@
       "Bash(del \"src\\\\components\\\\create\\\\nodes\\\\image-node.tsx\")",
       "Bash(del \"src\\\\components\\\\create\\\\nodes\\\\index.ts\")",
       "WebFetch(domain:fal.ai)",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "Bash(npx next build)"
     ]
   }
 }
