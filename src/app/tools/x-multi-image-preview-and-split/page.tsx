@@ -87,6 +87,8 @@ export default function XPreviewTool() {
     const [slices, setSlices] = useState<SlicedImage[]>([]);
     const [isSlicing, setIsSlicing] = useState(false);
     const [history, setHistory] = useState<HistoryItem[]>([]);
+    const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+    const [uploadedPreview, setUploadedPreview] = useState<string | null>(null);
 
     // Slice Configuration
     const [sliceCount, setSliceCount] = useState(4);
@@ -176,29 +178,37 @@ export default function XPreviewTool() {
 
     const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
-    const handleSliceImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleUploadImage = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // --- File Size Check ---
         if (file.size > MAX_FILE_SIZE) {
             toast.error('File too large (Max 20MB)');
             if (fileInputRef.current) fileInputRef.current.value = '';
             return;
         }
 
+        // Clear previous slices
+        setSlices([]);
+        setUploadedFile(file);
+        if (uploadedPreview) URL.revokeObjectURL(uploadedPreview);
+        setUploadedPreview(URL.createObjectURL(file));
+        toast.success('Image uploaded — configure slices and hit Slice');
+    };
+
+    const handleSliceImage = () => {
+        if (!uploadedFile) return;
+
         setIsSlicing(true);
         const img = new Image();
-        img.src = URL.createObjectURL(file);
+        img.src = URL.createObjectURL(uploadedFile);
 
         img.onload = () => {
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
+            const ctx = document.createElement('canvas').getContext('2d');
             if (!ctx) return;
 
             const sliceHeight = img.height / sliceCount;
 
-            // We need to collect all slices and then set state
             const processSlices = async () => {
                 const slicePromises = Array.from({ length: sliceCount }).map((_, i) => {
                     return new Promise<SlicedImage>((resolve) => {
@@ -223,7 +233,7 @@ export default function XPreviewTool() {
                 const results = await Promise.all(slicePromises);
                 setSlices(results);
                 setIsSlicing(false);
-                saveToHistory(file.name, results);
+                saveToHistory(uploadedFile.name, results);
                 toast.success('Image sliced successfully!');
             };
 
@@ -243,6 +253,9 @@ export default function XPreviewTool() {
 
     const removeSlices = () => {
         setSlices([]);
+        setUploadedFile(null);
+        if (uploadedPreview) URL.revokeObjectURL(uploadedPreview);
+        setUploadedPreview(null);
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -377,12 +390,20 @@ export default function XPreviewTool() {
                             </Button>
                         )}
                         <Button
-                            className="rounded-full font-vt323 text-lg h-11 px-8"
+                            variant="outline"
+                            className="rounded-full font-vt323 text-lg h-11 border-primary/20 bg-primary/5 hover:bg-primary/10"
                             onClick={() => fileInputRef.current?.click()}
-                            disabled={isSlicing}
                         >
-                            {isSlicing ? <Timer className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" /> : <Upload className="w-4 h-4 mr-2" aria-hidden="true" />}
-                            {isSlicing ? 'Slicing…' : 'Upload Image'}
+                            <Upload className="w-4 h-4 mr-2" aria-hidden="true" />
+                            {uploadedFile ? 'Change Image' : 'Upload Image'}
+                        </Button>
+                        <Button
+                            className="rounded-full font-vt323 text-lg h-11 px-8"
+                            onClick={handleSliceImage}
+                            disabled={!uploadedFile || isSlicing}
+                        >
+                            {isSlicing ? <Timer className="w-4 h-4 mr-2 animate-spin" aria-hidden="true" /> : <Scissors className="w-4 h-4 mr-2" aria-hidden="true" />}
+                            {isSlicing ? 'Slicing…' : 'Slice'}
                         </Button>
                         <input
                             id="x-image-upload"
@@ -391,7 +412,7 @@ export default function XPreviewTool() {
                             className="hidden"
                             accept="image/*"
                             aria-label="Upload image to slice"
-                            onChange={handleSliceImage}
+                            onChange={handleUploadImage}
                         />
                     </div>
                 </div>
@@ -473,13 +494,12 @@ export default function XPreviewTool() {
                                                     setSliceCount(n);
                                                     // Auto-adjust rows if current rowCount doesn't divide evenly
                                                     if (n % rowCount !== 0) {
-                                                        // Find the best row count
                                                         const possibleRows = Array.from({ length: n }, (_, i) => i + 1).filter(r => n % r === 0 && r > 1);
                                                         setRowCount(possibleRows[0] || 1);
                                                     }
                                                     if (slices.length > 0) {
-                                                        removeSlices();
-                                                        toast('Slices cleared — re-upload to apply new settings');
+                                                        setSlices([]);
+                                                        toast('Settings changed — hit Slice to re-apply');
                                                     }
                                                 }}
                                                 className={cn(
