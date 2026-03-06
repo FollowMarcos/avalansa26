@@ -91,8 +91,9 @@ export default function XPreviewTool() {
     const [uploadedPreview, setUploadedPreview] = useState<string | null>(null);
 
     // Slice Configuration
-    const [sliceCount, setSliceCount] = useState(4);
     const [rowCount, setRowCount] = useState(2);
+    const [colCount, setColCount] = useState(2);
+    const sliceCount = rowCount * colCount;
 
     // Refs
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -176,14 +177,14 @@ export default function XPreviewTool() {
         loadHistory();
     }, []);
 
-    const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
+    const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30MB
 
     const handleUploadImage = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
         if (file.size > MAX_FILE_SIZE) {
-            toast.error('File too large (Max 20MB)');
+            toast.error('File too large (Max 30MB)');
             if (fileInputRef.current) fileInputRef.current.value = '';
             return;
         }
@@ -204,31 +205,42 @@ export default function XPreviewTool() {
         img.src = URL.createObjectURL(uploadedFile);
 
         img.onload = () => {
-            const ctx = document.createElement('canvas').getContext('2d');
-            if (!ctx) return;
-
-            const sliceHeight = img.height / sliceCount;
+            const sliceWidth = img.width / colCount;
+            const sliceHeight = img.height / rowCount;
 
             const processSlices = async () => {
-                const slicePromises = Array.from({ length: sliceCount }).map((_, i) => {
-                    return new Promise<SlicedImage>((resolve) => {
-                        const tempCanvas = document.createElement('canvas');
-                        const tempCtx = tempCanvas.getContext('2d')!;
-                        tempCanvas.width = img.width;
-                        tempCanvas.height = sliceHeight;
-                        tempCtx.drawImage(img, 0, i * sliceHeight, img.width, sliceHeight, 0, 0, img.width, sliceHeight);
+                const slicePromises: Promise<SlicedImage>[] = [];
 
-                        tempCanvas.toBlob((blob) => {
-                            if (blob) {
-                                resolve({
-                                    id: `slice-${i}`,
-                                    url: URL.createObjectURL(blob),
-                                    blob
-                                });
-                            }
-                        }, 'image/png');
-                    });
-                });
+                for (let row = 0; row < rowCount; row++) {
+                    for (let col = 0; col < colCount; col++) {
+                        const index = row * colCount + col;
+                        if (index >= sliceCount) break;
+
+                        slicePromises.push(
+                            new Promise<SlicedImage>((resolve) => {
+                                const tempCanvas = document.createElement('canvas');
+                                const tempCtx = tempCanvas.getContext('2d')!;
+                                tempCanvas.width = sliceWidth;
+                                tempCanvas.height = sliceHeight;
+                                tempCtx.drawImage(
+                                    img,
+                                    col * sliceWidth, row * sliceHeight, sliceWidth, sliceHeight,
+                                    0, 0, sliceWidth, sliceHeight
+                                );
+
+                                tempCanvas.toBlob((blob) => {
+                                    if (blob) {
+                                        resolve({
+                                            id: `slice-${index}`,
+                                            url: URL.createObjectURL(blob),
+                                            blob
+                                        });
+                                    }
+                                }, 'image/png');
+                            })
+                        );
+                    }
+                }
 
                 const results = await Promise.all(slicePromises);
                 setSlices(results);
@@ -295,7 +307,7 @@ export default function XPreviewTool() {
                             className="gap-[2px] rounded-2xl overflow-hidden border border-[#2f3336]"
                             style={{
                                 display: 'grid',
-                                gridTemplateColumns: `repeat(${Math.ceil(sliceCount / rowCount)}, 1fr)`,
+                                gridTemplateColumns: `repeat(${colCount}, 1fr)`,
                                 gridTemplateRows: `repeat(${rowCount}, 1fr)`,
                             }}
                         >
@@ -308,7 +320,7 @@ export default function XPreviewTool() {
                     ) : (
                         <div className="aspect-video bg-[#16181c] rounded-2xl flex flex-col items-center justify-center border border-dashed border-[#2f3336] gap-2 p-4 text-center">
                             <ImageIcon className="w-8 h-8 opacity-20" />
-                            <p className="text-[#71767b] text-sm italic">Upload & slice to preview the {Math.ceil(sliceCount / rowCount)}x{rowCount} grid</p>
+                            <p className="text-[#71767b] text-sm italic">Upload & slice to preview the {colCount}x{rowCount} grid</p>
                         </div>
                     )}
 
@@ -366,7 +378,7 @@ export default function XPreviewTool() {
                             <h1 className="text-4xl font-vt323 tracking-tight text-primary uppercase text-balance">X // Multi-Image Laboratory</h1>
                         </div>
                         <p className="font-lato text-muted-foreground text-lg italic opacity-80 max-w-2xl text-pretty">
-                            Upload an image and slice it into configurable pieces for X. Choose your slice count and grid rows, then preview how it looks in the timeline and expanded view. (Max 20MB)
+                            Upload an image and split it into frames for X. Set rows and columns, then preview how it looks in the timeline. (Max 30MB)
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
@@ -480,65 +492,51 @@ export default function XPreviewTool() {
                         {/* Slice Configuration */}
                         <div className="p-6 rounded-[2rem] bg-card border border-border/50 space-y-6">
                             <h2 className="font-vt323 text-xl text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                                <Scissors className="w-5 h-5" /> Slice Configuration
+                                <Scissors className="w-5 h-5" /> Split to Frames
                             </h2>
 
                             <div className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Number of Slices</Label>
-                                    <div className="flex items-center gap-2">
-                                        {[2, 3, 4].map((n) => (
-                                            <button
-                                                key={n}
-                                                onClick={() => {
-                                                    setSliceCount(n);
-                                                    // Auto-adjust rows if current rowCount doesn't divide evenly
-                                                    if (n % rowCount !== 0) {
-                                                        const possibleRows = Array.from({ length: n }, (_, i) => i + 1).filter(r => n % r === 0 && r > 1);
-                                                        setRowCount(possibleRows[0] || 1);
-                                                    }
-                                                    if (slices.length > 0) {
-                                                        setSlices([]);
-                                                        toast('Settings changed — hit Slice to re-apply');
-                                                    }
-                                                }}
-                                                className={cn(
-                                                    "w-10 h-10 rounded-xl text-sm font-bold transition-all",
-                                                    sliceCount === n
-                                                        ? "bg-primary text-primary-foreground"
-                                                        : "bg-primary/5 border border-primary/10 text-muted-foreground hover:bg-primary/10 hover:text-foreground"
-                                                )}
-                                            >
-                                                {n}
-                                            </button>
-                                        ))}
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Rows</Label>
+                                        <Input
+                                            type="number"
+                                            min={1}
+                                            max={10}
+                                            value={rowCount}
+                                            onChange={e => {
+                                                const val = Math.max(1, Math.min(10, parseInt(e.target.value) || 1));
+                                                setRowCount(val);
+                                                if (slices.length > 0) {
+                                                    setSlices([]);
+                                                    toast('Settings changed — hit Slice to re-apply');
+                                                }
+                                            }}
+                                            className="rounded-xl border-primary/10 bg-primary/[0.02] focus:bg-background"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Columns</Label>
+                                        <Input
+                                            type="number"
+                                            min={1}
+                                            max={10}
+                                            value={colCount}
+                                            onChange={e => {
+                                                const val = Math.max(1, Math.min(10, parseInt(e.target.value) || 1));
+                                                setColCount(val);
+                                                if (slices.length > 0) {
+                                                    setSlices([]);
+                                                    toast('Settings changed — hit Slice to re-apply');
+                                                }
+                                            }}
+                                            className="rounded-xl border-primary/10 bg-primary/[0.02] focus:bg-background"
+                                        />
                                     </div>
                                 </div>
-
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] uppercase font-bold tracking-widest opacity-40">Grid Rows</Label>
-                                    <div className="flex items-center gap-2">
-                                        {Array.from({ length: sliceCount }, (_, i) => i + 1)
-                                            .filter(r => sliceCount % r === 0)
-                                            .map((r) => (
-                                                <button
-                                                    key={r}
-                                                    onClick={() => setRowCount(r)}
-                                                    className={cn(
-                                                        "h-10 px-4 rounded-xl text-sm font-bold transition-all",
-                                                        rowCount === r
-                                                            ? "bg-primary text-primary-foreground"
-                                                            : "bg-primary/5 border border-primary/10 text-muted-foreground hover:bg-primary/10 hover:text-foreground"
-                                                    )}
-                                                >
-                                                    {r} {r === 1 ? 'row' : 'rows'}
-                                                </button>
-                                            ))}
-                                    </div>
-                                    <p className="text-[10px] text-muted-foreground opacity-50">
-                                        {sliceCount} slices &times; {Math.ceil(sliceCount / rowCount)} cols &times; {rowCount} rows
-                                    </p>
-                                </div>
+                                <p className="text-[10px] text-muted-foreground opacity-50">
+                                    {rowCount} rows &times; {colCount} cols = {sliceCount} frames
+                                </p>
                             </div>
                         </div>
 
