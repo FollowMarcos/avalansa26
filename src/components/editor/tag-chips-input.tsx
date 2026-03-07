@@ -83,7 +83,7 @@ export function TagChipsInput({
               type="button"
               onClick={() => toggleTag(tag)}
               className={cn(
-                "px-2 py-0.5 text-xs rounded-full border transition-colors cursor-pointer",
+                "px-2 py-0.5 text-xs rounded-full border transition-all duration-150 cursor-pointer hover:scale-105 active:scale-95",
                 isActive ? styles.chipActive : styles.chip
               )}
             >

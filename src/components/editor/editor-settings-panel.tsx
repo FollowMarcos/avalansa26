@@ -127,7 +127,7 @@ export function EditorSettingsPanel() {
   );
 
   return (
-    <div className="h-full overflow-y-auto px-3 py-3 space-y-1 scrollbar-thin">
+    <div className="h-full overflow-y-auto px-3 py-3 space-y-2 scrollbar-thin">
       <Accordion
         type="multiple"
         defaultValue={[
@@ -172,10 +172,10 @@ export function EditorSettingsPanel() {
                   aria-selected={settings.aspectRatio === ratio.value}
                   onClick={() => updateSettings({ aspectRatio: ratio.value })}
                   className={cn(
-                    "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors",
+                    "flex flex-col items-center gap-1 p-2 rounded-lg transition-all duration-150",
                     settings.aspectRatio === ratio.value
-                      ? "bg-primary/10 ring-1 ring-primary"
-                      : "hover:bg-muted"
+                      ? "bg-primary/10 ring-1 ring-primary shadow-sm"
+                      : "hover:bg-muted hover:scale-105 active:scale-95"
                   )}
                 >
                   <AspectRatioShape
@@ -210,10 +210,10 @@ export function EditorSettingsPanel() {
                   aria-checked={settings.imageSize === size.value}
                   onClick={() => updateSettings({ imageSize: size.value })}
                   className={cn(
-                    "flex-1 flex flex-col items-center py-2 rounded-lg text-xs transition-colors",
+                    "flex-1 flex flex-col items-center py-2 rounded-lg text-xs transition-all duration-150",
                     settings.imageSize === size.value
-                      ? "bg-primary/10 ring-1 ring-primary text-primary font-medium"
-                      : "bg-muted/50 hover:bg-muted text-muted-foreground"
+                      ? "bg-primary/10 ring-1 ring-primary text-primary font-medium shadow-sm"
+                      : "bg-muted/50 hover:bg-muted text-muted-foreground hover:scale-[1.03] active:scale-95"
                   )}
                 >
                   <span className="font-mono">{size.label}</span>
@@ -265,7 +265,7 @@ export function EditorSettingsPanel() {
               <Palette className="size-3.5 text-violet-500" />
               Art Style Reference
               {settings.styleRef?.url && (
-                <span className="size-2 rounded-full bg-violet-500" />
+                <span className="size-2.5 rounded-full bg-violet-500 animate-pulse" />
               )}
             </span>
           </AccordionTrigger>
@@ -290,7 +290,7 @@ export function EditorSettingsPanel() {
               <PersonStanding className="size-3.5 text-blue-500" />
               Pose Reference
               {settings.poseRef?.url && (
-                <span className="size-2 rounded-full bg-blue-500" />
+                <span className="size-2.5 rounded-full bg-blue-500 animate-pulse" />
               )}
             </span>
           </AccordionTrigger>
@@ -315,7 +315,7 @@ export function EditorSettingsPanel() {
               <Smile className="size-3.5 text-amber-500" />
               Expression
               {(settings.expressionRef?.image?.url || (settings.expressionRef?.tags?.length ?? 0) > 0) && (
-                <span className="size-2 rounded-full bg-amber-500" />
+                <span className="size-2.5 rounded-full bg-amber-500 animate-pulse" />
               )}
             </span>
           </AccordionTrigger>
@@ -362,7 +362,7 @@ export function EditorSettingsPanel() {
               <Shirt className="size-3.5 text-emerald-500" />
               Clothing
               {(settings.clothingRef?.image?.url || (settings.clothingRef?.tags?.length ?? 0) > 0) && (
-                <span className="size-2 rounded-full bg-emerald-500" />
+                <span className="size-2.5 rounded-full bg-emerald-500 animate-pulse" />
               )}
             </span>
           </AccordionTrigger>
@@ -409,7 +409,7 @@ export function EditorSettingsPanel() {
               <MapPin className="size-3.5 text-cyan-500" />
               Location
               {(settings.locationRef?.image?.url || (settings.locationRef?.tags?.length ?? 0) > 0) && (
-                <span className="size-2 rounded-full bg-cyan-500" />
+                <span className="size-2.5 rounded-full bg-cyan-500 animate-pulse" />
               )}
             </span>
           </AccordionTrigger>

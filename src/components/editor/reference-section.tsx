@@ -103,7 +103,7 @@ export function ReferenceSection({
       {/* Upload button */}
       <FileUpload onFilesAdded={handleUpload} accept="image/*">
         <FileUploadTrigger asChild>
-          <button className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 hover:bg-muted text-xs transition-colors border border-dashed border-border">
+          <button className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-muted/50 hover:bg-muted text-xs transition-all duration-150 border border-dashed border-border hover:border-border/80 hover:shadow-sm active:scale-[0.98]">
             <ImagePlus className="size-3.5" aria-hidden="true" />
             Upload
           </button>
@@ -123,10 +123,10 @@ export function ReferenceSection({
                 type="button"
                 onClick={() => onImageChange({ url: gen.url })}
                 className={cn(
-                  "aspect-square rounded-md overflow-hidden border transition-all focus-visible:ring-2 focus-visible:ring-ring",
+                  "aspect-square rounded-md overflow-hidden border transition-all duration-150 focus-visible:ring-2 focus-visible:ring-ring",
                   image?.url === gen.url
-                    ? `ring-1 ${ringColor}`
-                    : `border-border hover:ring-1 ${ringHover}`
+                    ? `ring-1 ${ringColor} shadow-sm`
+                    : `border-border hover:ring-1 ${ringHover} hover:scale-105 active:scale-95`
                 )}
                 title={gen.prompt?.slice(0, 40)}
               >
@@ -158,10 +158,10 @@ export function ReferenceSection({
                   onImageChange({ url: ref.url, storagePath: ref.storage_path })
                 }
                 className={cn(
-                  "aspect-square rounded-md overflow-hidden border transition-all focus-visible:ring-2 focus-visible:ring-ring",
+                  "aspect-square rounded-md overflow-hidden border transition-all duration-150 focus-visible:ring-2 focus-visible:ring-ring",
                   image?.storagePath === ref.storage_path
-                    ? `ring-1 ${ringColor}`
-                    : `border-border hover:ring-1 ${ringHover}`
+                    ? `ring-1 ${ringColor} shadow-sm`
+                    : `border-border hover:ring-1 ${ringHover} hover:scale-105 active:scale-95`
                 )}
                 title={ref.name || "Reference"}
               >

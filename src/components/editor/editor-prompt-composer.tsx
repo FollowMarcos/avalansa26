@@ -2,9 +2,16 @@
 
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "motion/react";
 import { useCreate } from "@/components/create/create-context";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   Sparkles,
   ChevronUp,
@@ -77,86 +84,128 @@ export function EditorPromptComposer() {
 
   const canGenerate = prompt.trim().length > 0 && !isGenerating && hasAvailableSlots && !!selectedApiId;
 
+  const disabledReason = !selectedApiId
+    ? "Select a model first"
+    : !prompt.trim()
+    ? "Enter a prompt"
+    : !hasAvailableSlots
+    ? "Generation slots full"
+    : null;
+
   return (
-    <div className="border-t border-border bg-background/95 backdrop-blur-sm px-4 py-3 space-y-2">
-      {/* Reference summary chips */}
-      {refChips.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {refChips.map((chip, i) => (
-            <span
-              key={i}
-              className={cn(
-                "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium",
-                chip.color
-              )}
+    <TooltipProvider delayDuration={300}>
+      <div className="border-t border-border bg-background/95 backdrop-blur-sm px-4 py-3 space-y-2">
+        {/* Reference summary chips */}
+        <AnimatePresence>
+          {refChips.length > 0 && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.15 }}
+              className="flex flex-wrap gap-1.5 overflow-hidden"
             >
-              {chip.icon}
-              <span className="max-w-[140px] truncate">{chip.label}</span>
-            </span>
-          ))}
-        </div>
-      )}
-
-      {/* Main prompt row */}
-      <div className="flex items-end gap-2">
-        <div className="flex-1 relative">
-          <textarea
-            ref={textareaRef}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Describe what you want to generate..."
-            rows={2}
-            className={cn(
-              "w-full resize-none rounded-xl border border-border bg-muted/30 px-3 py-2 text-sm",
-              "placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/40",
-              "scrollbar-thin"
-            )}
-          />
-        </div>
-
-        <Button
-          onClick={() => generate()}
-          disabled={!canGenerate}
-          size="sm"
-          className="h-10 px-4 rounded-xl gap-2 shrink-0"
-        >
-          {isGenerating ? (
-            <>
-              <Loader className="size-4" />
-              <span className="text-xs">
-                {activeGenerations > 0 ? `${activeGenerations} active` : "Generating..."}
-              </span>
-            </>
-          ) : (
-            <>
-              <Sparkles className="size-4" />
-              Generate
-            </>
+              {refChips.map((chip, i) => (
+                <motion.span
+                  key={chip.label}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.15, delay: i * 0.03 }}
+                  className={cn(
+                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium",
+                    chip.color
+                  )}
+                >
+                  {chip.icon}
+                  <span className="max-w-[140px] truncate">{chip.label}</span>
+                </motion.span>
+              ))}
+            </motion.div>
           )}
-        </Button>
-      </div>
+        </AnimatePresence>
 
-      {/* Negative prompt toggle */}
-      <div>
-        <button
-          type="button"
-          onClick={() => setShowNegative(!showNegative)}
-          className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
-        >
-          {showNegative ? <ChevronDown className="size-3" /> : <ChevronUp className="size-3" />}
-          Negative prompt
-        </button>
-        {showNegative && (
-          <input
-            type="text"
-            value={settings.negativePrompt}
-            onChange={(e) => updateSettings({ negativePrompt: e.target.value })}
-            placeholder="What to avoid..."
-            className="mt-1 w-full h-7 px-2 text-xs rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/40"
-          />
-        )}
+        {/* Main prompt row */}
+        <div className="flex items-end gap-2">
+          <div className="flex-1 relative">
+            <textarea
+              ref={textareaRef}
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Describe what you want to generate..."
+              rows={2}
+              className={cn(
+                "w-full resize-none rounded-xl border border-border bg-muted/30 px-3 py-2 text-sm",
+                "placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40",
+                "transition-shadow scrollbar-thin"
+              )}
+            />
+          </div>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="shrink-0">
+                <Button
+                  onClick={() => generate()}
+                  disabled={!canGenerate}
+                  size="sm"
+                  className="h-10 px-4 rounded-xl gap-2"
+                >
+                  {isGenerating ? (
+                    <>
+                      <Loader className="size-4" />
+                      <span className="text-xs">
+                        {activeGenerations > 0 ? `${activeGenerations} active` : "Generating..."}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="size-4" />
+                      Generate
+                    </>
+                  )}
+                </Button>
+              </span>
+            </TooltipTrigger>
+            {disabledReason && !canGenerate && (
+              <TooltipContent side="top" className="text-[10px]">
+                {disabledReason}
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </div>
+
+        {/* Negative prompt toggle */}
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowNegative(!showNegative)}
+            className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {showNegative ? <ChevronDown className="size-3" /> : <ChevronUp className="size-3" />}
+            Negative prompt
+          </button>
+          <AnimatePresence>
+            {showNegative && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.15 }}
+                className="overflow-hidden"
+              >
+                <input
+                  type="text"
+                  value={settings.negativePrompt}
+                  onChange={(e) => updateSettings({ negativePrompt: e.target.value })}
+                  placeholder="What to avoid..."
+                  className="mt-1 w-full h-7 px-2 text-xs rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/40 transition-shadow"
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
