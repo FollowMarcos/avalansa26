@@ -34,7 +34,9 @@ import {
   Heart,
   Loader2,
   ImageOff,
+  AlertCircle,
 } from "lucide-react";
+import { ImageDetailModal } from "@/components/create/image-detail-modal";
 
 function makeTaggedRef(
   current: TaggedReference | undefined,
@@ -61,9 +63,37 @@ export function EditorHistoryFeed() {
     toggleFavorite,
   } = useCreate();
 
+  const pendingImages = React.useMemo(
+    () => history.filter((img) => img.status === "pending"),
+    [history]
+  );
+
   const completedImages = React.useMemo(
     () => history.filter((img) => img.status === "completed" && img.url),
     [history]
+  );
+
+  const failedImages = React.useMemo(
+    () => history.filter((img) => img.status === "failed"),
+    [history]
+  );
+
+  // Detail modal state
+  const [detailImage, setDetailImage] = React.useState<GeneratedImage | null>(null);
+
+  const detailImageIndex = React.useMemo(
+    () => detailImage ? completedImages.findIndex((img) => img.id === detailImage.id) : -1,
+    [detailImage, completedImages]
+  );
+
+  const handleDetailNavigate = React.useCallback(
+    (direction: "prev" | "next") => {
+      const newIndex = direction === "prev" ? detailImageIndex - 1 : detailImageIndex + 1;
+      if (newIndex >= 0 && newIndex < completedImages.length) {
+        setDetailImage(completedImages[newIndex]);
+      }
+    },
+    [detailImageIndex, completedImages]
   );
 
   // Infinite scroll via intersection observer
@@ -113,7 +143,7 @@ export function EditorHistoryFeed() {
     }
   };
 
-  if (completedImages.length === 0) {
+  if (completedImages.length === 0 && pendingImages.length === 0 && failedImages.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground px-6">
         <div className="rounded-2xl bg-muted/40 p-5">
@@ -134,6 +164,33 @@ export function EditorHistoryFeed() {
       <div className="h-full overflow-y-auto p-3 scrollbar-thin">
         <div className="grid grid-cols-2 gap-2 xl:grid-cols-3">
           <AnimatePresence initial={false}>
+            {/* Pending / generating items */}
+            {pendingImages.map((image) => (
+              <motion.div
+                key={image.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+              >
+                <PendingItem image={image} />
+              </motion.div>
+            ))}
+
+            {/* Failed items */}
+            {failedImages.map((image) => (
+              <motion.div
+                key={image.id}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+              >
+                <FailedItem image={image} />
+              </motion.div>
+            ))}
+
+            {/* Completed items */}
             {completedImages.map((image, index) => (
               <motion.div
                 key={image.id}
@@ -144,6 +201,7 @@ export function EditorHistoryFeed() {
               >
                 <FeedItem
                   image={image}
+                  onClick={() => setDetailImage(image)}
                   onSetAsRef={setAsRef}
                   onInpaint={() => setInpaintSourceImage(image)}
                   onToggleFavorite={() => toggleFavorite(image.id)}
@@ -159,6 +217,16 @@ export function EditorHistoryFeed() {
             <Loader2 className="size-4 animate-spin text-muted-foreground" />
           )}
         </div>
+
+        {/* Image detail modal */}
+        <ImageDetailModal
+          image={detailImage}
+          isOpen={!!detailImage}
+          onClose={() => setDetailImage(null)}
+          onNavigate={handleDetailNavigate}
+          hasPrev={detailImageIndex > 0}
+          hasNext={detailImageIndex < completedImages.length - 1}
+        />
       </div>
     </TooltipProvider>
   );
@@ -168,6 +236,7 @@ export function EditorHistoryFeed() {
 
 interface FeedItemProps {
   image: GeneratedImage;
+  onClick: () => void;
   onSetAsRef: (image: GeneratedImage, type: string) => void;
   onInpaint: () => void;
   onToggleFavorite: () => void;
@@ -175,12 +244,19 @@ interface FeedItemProps {
 
 const FeedItem = React.memo(function FeedItem({
   image,
+  onClick,
   onSetAsRef,
   onInpaint,
   onToggleFavorite,
 }: FeedItemProps) {
   return (
-    <div className="group relative rounded-xl overflow-hidden border border-border/60 bg-muted/10 transition-all duration-200 hover:border-border hover:shadow-md hover:shadow-black/5 dark:hover:shadow-black/20">
+    <div
+      className="group relative rounded-xl overflow-hidden border border-border/60 bg-muted/10 transition-all duration-200 hover:border-border hover:shadow-md hover:shadow-black/5 dark:hover:shadow-black/20 cursor-pointer"
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
+    >
       {/* Image */}
       <div className="aspect-square relative">
         <img
@@ -282,3 +358,48 @@ const FeedItem = React.memo(function FeedItem({
     </div>
   );
 });
+
+// ── Pending (generating) item ───────────────────────────────────────────
+
+function PendingItem({ image }: { image: GeneratedImage }) {
+  return (
+    <div className="relative rounded-xl overflow-hidden border border-border/60 bg-muted/10">
+      <div className="aspect-square relative flex flex-col items-center justify-center gap-3 bg-muted/20">
+        <div className="relative">
+          <div className="size-10 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+        </div>
+        <span className="text-[10px] text-muted-foreground font-medium">Generating...</span>
+      </div>
+      {image.prompt && (
+        <div className="px-2.5 py-2">
+          <p className="text-[10px] text-muted-foreground line-clamp-2 leading-relaxed">
+            {image.prompt}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Failed item ─────────────────────────────────────────────────────────
+
+function FailedItem({ image }: { image: GeneratedImage }) {
+  return (
+    <div className="relative rounded-xl overflow-hidden border border-destructive/30 bg-destructive/5">
+      <div className="aspect-square relative flex flex-col items-center justify-center gap-2">
+        <AlertCircle className="size-6 text-destructive/60" />
+        <span className="text-[10px] text-destructive/80 font-medium">Failed</span>
+        {image.error && (
+          <p className="text-[9px] text-destructive/60 text-center px-4 line-clamp-2">{image.error}</p>
+        )}
+      </div>
+      {image.prompt && (
+        <div className="px-2.5 py-2 border-t border-destructive/10">
+          <p className="text-[10px] text-muted-foreground line-clamp-2 leading-relaxed">
+            {image.prompt}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}

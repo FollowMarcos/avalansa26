@@ -29,50 +29,17 @@ import {
   Sparkles,
   ChevronUp,
   ChevronDown,
-  Palette,
-  PersonStanding,
-  Smile,
-  Shirt,
-  MapPin,
   Minus,
   Plus,
   ImagePlus,
   X,
   Trash2,
-  type LucideIcon,
 } from "lucide-react";
-import { ReferenceSection } from "./reference-section";
-import { TagChipsInput } from "./tag-chips-input";
 import {
   baseAspectRatioOptions,
   baseImageSizeOptions,
   AspectRatioShape,
-  makeTaggedRef,
-  EXPRESSION_PRESETS,
-  CLOTHING_PRESETS,
-  LOCATION_PRESETS,
 } from "./editor-constants";
-
-// ── Reference toolbar items ──────────────────────────────────────────────
-
-interface RefItem {
-  id: string;
-  icon: LucideIcon;
-  label: string;
-  shortLabel: string;
-  dotColor: string;
-  iconColor: string;
-  activeColor: string;
-  accentColor: "violet" | "blue" | "amber" | "emerald" | "cyan";
-}
-
-const REF_ITEMS: RefItem[] = [
-  { id: "style", icon: Palette, shortLabel: "Style", label: "Art Style Reference", dotColor: "bg-violet-500", iconColor: "text-violet-500", activeColor: "bg-violet-500/15 text-violet-500 ring-1 ring-violet-500/30", accentColor: "violet" },
-  { id: "pose", icon: PersonStanding, shortLabel: "Pose", label: "Pose Reference", dotColor: "bg-blue-500", iconColor: "text-blue-500", activeColor: "bg-blue-500/15 text-blue-500 ring-1 ring-blue-500/30", accentColor: "blue" },
-  { id: "expression", icon: Smile, shortLabel: "Expr", label: "Expression", dotColor: "bg-amber-500", iconColor: "text-amber-500", activeColor: "bg-amber-500/15 text-amber-500 ring-1 ring-amber-500/30", accentColor: "amber" },
-  { id: "clothing", icon: Shirt, shortLabel: "Outfit", label: "Clothing", dotColor: "bg-emerald-500", iconColor: "text-emerald-500", activeColor: "bg-emerald-500/15 text-emerald-500 ring-1 ring-emerald-500/30", accentColor: "emerald" },
-  { id: "location", icon: MapPin, shortLabel: "Place", label: "Location", dotColor: "bg-cyan-500", iconColor: "text-cyan-500", activeColor: "bg-cyan-500/15 text-cyan-500 ring-1 ring-cyan-500/30", accentColor: "cyan" },
-];
 
 // ── Component ───────────────────────────────────────────────────────────
 
@@ -93,7 +60,6 @@ export function EditorPromptComposer() {
     allowedAspectRatios,
     allowedImageSizes,
     maxOutputCount,
-    history,
     savedReferences,
     referenceImages,
     addReferenceImages,
@@ -104,11 +70,6 @@ export function EditorPromptComposer() {
 
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const [showNegative, setShowNegative] = React.useState(false);
-
-  const completedGens = React.useMemo(
-    () => history.filter((g) => g.status === "completed" && g.url).slice(0, 40),
-    [history]
-  );
 
   const filteredAspectRatios = React.useMemo(
     () => baseAspectRatioOptions.filter((o) => allowedAspectRatios.includes(o.value)),
@@ -144,119 +105,6 @@ export function EditorPromptComposer() {
 
   const hasReferences = referenceImages.length > 0;
 
-  // Active reference indicators
-  const refChips = React.useMemo(() => {
-    const chips: { label: string; color: string; icon: React.ReactNode }[] = [];
-    if (settings.styleRef?.url)
-      chips.push({ label: "Style", color: "bg-violet-500/15 text-violet-600 dark:text-violet-400", icon: <Palette className="size-3" /> });
-    if (settings.poseRef?.url)
-      chips.push({ label: "Pose", color: "bg-blue-500/15 text-blue-600 dark:text-blue-400", icon: <PersonStanding className="size-3" /> });
-    if (settings.expressionRef?.image?.url || (settings.expressionRef?.tags?.length ?? 0) > 0) {
-      const tags = settings.expressionRef?.tags?.join(", ") || "";
-      chips.push({
-        label: tags ? `Expression: ${tags}` : "Expression",
-        color: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
-        icon: <Smile className="size-3" />,
-      });
-    }
-    if (settings.clothingRef?.image?.url || (settings.clothingRef?.tags?.length ?? 0) > 0) {
-      const tags = settings.clothingRef?.tags?.join(", ") || "";
-      chips.push({
-        label: tags ? `Clothing: ${tags}` : "Clothing",
-        color: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
-        icon: <Shirt className="size-3" />,
-      });
-    }
-    if (settings.locationRef?.image?.url || (settings.locationRef?.tags?.length ?? 0) > 0) {
-      const tags = settings.locationRef?.tags?.join(", ") || "";
-      chips.push({
-        label: tags ? `Location: ${tags}` : "Location",
-        color: "bg-cyan-500/15 text-cyan-600 dark:text-cyan-400",
-        icon: <MapPin className="size-3" />,
-      });
-    }
-    return chips;
-  }, [settings]);
-
-  const isRefActive = (id: string): boolean => {
-    switch (id) {
-      case "style": return !!settings.styleRef?.url;
-      case "pose": return !!settings.poseRef?.url;
-      case "expression": return !!(settings.expressionRef?.image?.url || (settings.expressionRef?.tags?.length ?? 0) > 0);
-      case "clothing": return !!(settings.clothingRef?.image?.url || (settings.clothingRef?.tags?.length ?? 0) > 0);
-      case "location": return !!(settings.locationRef?.image?.url || (settings.locationRef?.tags?.length ?? 0) > 0);
-      default: return false;
-    }
-  };
-
-  const renderRefContent = (id: string) => {
-    switch (id) {
-      case "style":
-        return (
-          <ReferenceSection label="Style" description="Pick an image to use only its art style." accentColor="violet" icon={Palette}
-            image={settings.styleRef} onImageChange={(ref) => updateSettings({ styleRef: ref })}
-            completedGens={completedGens} savedReferences={savedReferences} />
-        );
-      case "pose":
-        return (
-          <ReferenceSection label="Pose" description="Pick an image to match only its body pose." accentColor="blue" icon={PersonStanding}
-            image={settings.poseRef} onImageChange={(ref) => updateSettings({ poseRef: ref })}
-            completedGens={completedGens} savedReferences={savedReferences} />
-        );
-      case "expression":
-        return (
-          <ReferenceSection label="Expression" description="Set a facial expression via image and/or tags." accentColor="amber" icon={Smile}
-            image={settings.expressionRef?.image}
-            onImageChange={(ref) => updateSettings({ expressionRef: makeTaggedRef(settings.expressionRef, { image: ref }) })}
-            completedGens={completedGens} savedReferences={savedReferences}>
-            <TagChipsInput tags={settings.expressionRef?.tags || []}
-              onTagsChange={(tags) => updateSettings({ expressionRef: makeTaggedRef(settings.expressionRef, { tags }) })}
-              presetTags={EXPRESSION_PRESETS} customText={settings.expressionRef?.customText || ""}
-              onCustomTextChange={(customText) => updateSettings({ expressionRef: makeTaggedRef(settings.expressionRef, { customText }) })}
-              accentColor="amber" placeholder="Add expression..." />
-          </ReferenceSection>
-        );
-      case "clothing":
-        return (
-          <ReferenceSection label="Clothing" description="Set clothing style via image and/or tags." accentColor="emerald" icon={Shirt}
-            image={settings.clothingRef?.image}
-            onImageChange={(ref) => updateSettings({ clothingRef: makeTaggedRef(settings.clothingRef, { image: ref }) })}
-            completedGens={completedGens} savedReferences={savedReferences}>
-            <TagChipsInput tags={settings.clothingRef?.tags || []}
-              onTagsChange={(tags) => updateSettings({ clothingRef: makeTaggedRef(settings.clothingRef, { tags }) })}
-              presetTags={CLOTHING_PRESETS} customText={settings.clothingRef?.customText || ""}
-              onCustomTextChange={(customText) => updateSettings({ clothingRef: makeTaggedRef(settings.clothingRef, { customText }) })}
-              accentColor="emerald" placeholder="Add clothing..." />
-          </ReferenceSection>
-        );
-      case "location":
-        return (
-          <ReferenceSection label="Location" description="Set background/location via image and/or tags." accentColor="cyan" icon={MapPin}
-            image={settings.locationRef?.image}
-            onImageChange={(ref) => updateSettings({ locationRef: makeTaggedRef(settings.locationRef, { image: ref }) })}
-            completedGens={completedGens} savedReferences={savedReferences}>
-            <TagChipsInput tags={settings.locationRef?.tags || []}
-              onTagsChange={(tags) => updateSettings({ locationRef: makeTaggedRef(settings.locationRef, { tags }) })}
-              presetTags={LOCATION_PRESETS} customText={settings.locationRef?.customText || ""}
-              onCustomTextChange={(customText) => updateSettings({ locationRef: makeTaggedRef(settings.locationRef, { customText }) })}
-              accentColor="cyan" placeholder="Add location..." />
-          </ReferenceSection>
-        );
-      default: return null;
-    }
-  };
-
-  const getRefThumb = (id: string): string | undefined => {
-    switch (id) {
-      case "style": return settings.styleRef?.url;
-      case "pose": return settings.poseRef?.url;
-      case "expression": return settings.expressionRef?.image?.url;
-      case "clothing": return settings.clothingRef?.image?.url;
-      case "location": return settings.locationRef?.image?.url;
-      default: return undefined;
-    }
-  };
-
   const canGenerate = (prompt.trim().length > 0 || referenceImages.length > 0) && !isGenerating && hasAvailableSlots && !!selectedApiId;
 
   const disabledReason = !selectedApiId
@@ -271,35 +119,6 @@ export function EditorPromptComposer() {
     <TooltipProvider delayDuration={300}>
       <FileUpload onFilesAdded={addReferenceImages} multiple accept="image/*" disabled={!hasAvailableSlots}>
       <div className="border-t border-border bg-background/95 backdrop-blur-sm px-4 py-3 space-y-2">
-        {/* Reference summary chips */}
-        <AnimatePresence>
-          {refChips.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.15 }}
-              className="flex flex-wrap gap-1.5 overflow-hidden"
-            >
-              {refChips.map((chip, i) => (
-                <motion.span
-                  key={chip.label}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.15, delay: i * 0.03 }}
-                  className={cn(
-                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium",
-                    chip.color
-                  )}
-                >
-                  {chip.icon}
-                  <span className="max-w-[140px] truncate">{chip.label}</span>
-                </motion.span>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* Inline reference image thumbnails */}
         <AnimatePresence>
           {hasReferences && (
@@ -621,53 +440,6 @@ export function EditorPromptComposer() {
             </button>
           </div>
 
-          {/* Reference image buttons */}
-          <div className="w-px h-5 bg-border/60 shrink-0" />
-          {REF_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const active = isRefActive(item.id);
-            const thumb = getRefThumb(item.id);
-            return (
-              <Popover key={item.id}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        aria-label={item.label}
-                        className={cn(
-                          "relative flex items-center gap-1.5 h-8 px-2.5 rounded-lg transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-ring",
-                          active
-                            ? item.activeColor
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                        )}
-                      >
-                        <Icon className="size-3.5" aria-hidden="true" />
-                        <span className="text-xs font-medium hidden sm:inline">{item.shortLabel}</span>
-                        {thumb && (
-                          <div className={cn("size-4 rounded overflow-hidden border", active ? "border-current/30" : "border-border")}>
-                            <img src={thumb} alt="" className="w-full h-full object-cover" draggable={false} />
-                          </div>
-                        )}
-                      </button>
-                    </PopoverTrigger>
-                  </TooltipTrigger>
-                  <TooltipContent side="top" className="text-[10px]">{item.label}</TooltipContent>
-                </Tooltip>
-                <PopoverContent
-                  align="start"
-                  side="top"
-                  className="w-80 p-4 max-h-[60vh] overflow-y-auto scrollbar-thin"
-                >
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Icon className={cn("size-3.5", item.iconColor)} />
-                    <span className="text-xs font-semibold">{item.label}</span>
-                  </div>
-                  {renderRefContent(item.id)}
-                </PopoverContent>
-              </Popover>
-            );
-          })}
         </div>
 
         {/* Negative prompt toggle */}
