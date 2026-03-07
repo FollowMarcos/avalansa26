@@ -52,18 +52,16 @@ export function InpaintModal() {
     const img = new window.Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
-      // 85vh dialog - ~160px for header/padding/toolbar = available canvas height
-      const maxH = Math.min(512, Math.floor(window.innerHeight * 0.85 - 160));
-      const maxW = 512;
-      const scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
+      // Canvas resolution (not display size — CSS handles fitting to viewport)
+      const maxDim = 512;
+      const scale = Math.min(maxDim / img.naturalWidth, maxDim / img.naturalHeight, 1);
       setCanvasSize({
         w: Math.round(img.naturalWidth * scale),
         h: Math.round(img.naturalHeight * scale),
       });
     };
     img.onerror = () => {
-      const maxDim = Math.min(512, Math.floor(window.innerHeight * 0.85 - 160));
-      setCanvasSize({ w: maxDim, h: maxDim });
+      setCanvasSize({ w: 512, h: 512 });
     };
     img.src = inpaintSourceImage.url;
   }, [inpaintSourceImage?.url]);
@@ -99,9 +97,9 @@ export function InpaintModal() {
         </DialogHeader>
 
         {inpaintSourceImage && canvasSize && (
-          <div className="flex gap-4">
-            {/* Left: Canvas */}
-            <div className="flex-1 min-w-0">
+          <div className="flex gap-4" style={{ maxHeight: 'calc(85vh - 130px)' }}>
+            {/* Left: Canvas — min-h-0 lets flex child shrink below content size */}
+            <div className="flex-1 min-w-0 min-h-0">
               <InpaintCanvas
                 sourceImageUrl={inpaintSourceImage.url}
                 onMaskChange={setMaskDataUrl}

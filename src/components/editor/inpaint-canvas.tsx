@@ -364,11 +364,11 @@ export function InpaintCanvas({
   }, [brushSize, width, zoom]);
 
   return (
-    <div className="space-y-0">
-      {/* Canvas viewport */}
+    <div className="flex flex-col h-full max-h-full">
+      {/* Canvas viewport — takes remaining space */}
       <div
         ref={containerRef}
-        className="relative rounded-t-lg overflow-hidden border border-white/[0.06] bg-black/40"
+        className="relative flex-1 min-h-0 rounded-t-lg overflow-hidden border border-white/[0.06] bg-black/40 flex items-center justify-center"
         style={{
           cursor: activeTool === "pan" ? "grab" : "none",
         }}
@@ -387,7 +387,7 @@ export function InpaintCanvas({
             ref={canvasRef}
             width={width}
             height={height}
-            className="w-full touch-none"
+            className="max-w-full max-h-full touch-none"
             style={{ aspectRatio: `${width}/${height}`, display: "block" }}
             onMouseDown={handlePointerDown}
             onMouseMove={handlePointerMove}
@@ -443,7 +443,7 @@ export function InpaintCanvas({
 
       {/* Toolbar — attached to bottom of canvas */}
       <TooltipProvider delayDuration={300}>
-        <div className="flex items-center gap-1 px-2 py-1.5 rounded-b-lg border border-t-0 border-white/[0.06] bg-white/[0.03]">
+        <div className="flex items-center gap-1 px-2 py-1.5 rounded-b-lg border border-t-0 border-white/[0.06] bg-white/[0.03] shrink-0">
           {/* Tool group: brush, eraser, pan */}
           <div className="flex items-center gap-0.5 p-0.5 rounded-md bg-white/[0.04]">
             <ToolBtn
