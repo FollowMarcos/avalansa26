@@ -119,7 +119,7 @@ export function TagChipsInput({
       )}
 
       {/* Custom text input */}
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-1.5">
         <input
           ref={inputRef}
           type="text"
@@ -128,7 +128,7 @@ export function TagChipsInput({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className={cn(
-            "flex-1 h-7 px-2 text-xs rounded-md border border-border bg-background",
+            "w-full h-7 px-2 text-xs rounded-md border border-border bg-background",
             "focus:outline-none focus:ring-1",
             styles.input
           )}
@@ -140,7 +140,7 @@ export function TagChipsInput({
             onChange={(e) => onCustomTextChange(e.target.value)}
             placeholder="Custom description..."
             className={cn(
-              "flex-1 h-7 px-2 text-xs rounded-md border border-border bg-background",
+              "w-full h-7 px-2 text-xs rounded-md border border-border bg-background",
               "focus:outline-none focus:ring-1",
               styles.input
             )}

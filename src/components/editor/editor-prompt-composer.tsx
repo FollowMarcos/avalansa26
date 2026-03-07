@@ -19,13 +19,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import {
   Sparkles,
   ChevronUp,
   ChevronDown,
@@ -36,6 +29,7 @@ import {
   MapPin,
   Minus,
   Plus,
+  type LucideIcon,
 } from "lucide-react";
 import { ReferenceSection } from "./reference-section";
 import { TagChipsInput } from "./tag-chips-input";
@@ -49,14 +43,25 @@ import {
   LOCATION_PRESETS,
 } from "./editor-constants";
 
-// ── Mobile reference toolbar items ──────────────────────────────────────
+// ── Reference toolbar items ──────────────────────────────────────────────
 
-const MOBILE_REF_ITEMS = [
-  { id: "style", icon: Palette, label: "Art Style Reference", dotColor: "bg-violet-500", iconColor: "text-violet-500", accentColor: "violet" as const },
-  { id: "pose", icon: PersonStanding, label: "Pose Reference", dotColor: "bg-blue-500", iconColor: "text-blue-500", accentColor: "blue" as const },
-  { id: "expression", icon: Smile, label: "Expression", dotColor: "bg-amber-500", iconColor: "text-amber-500", accentColor: "amber" as const },
-  { id: "clothing", icon: Shirt, label: "Clothing", dotColor: "bg-emerald-500", iconColor: "text-emerald-500", accentColor: "emerald" as const },
-  { id: "location", icon: MapPin, label: "Location", dotColor: "bg-cyan-500", iconColor: "text-cyan-500", accentColor: "cyan" as const },
+interface RefItem {
+  id: string;
+  icon: LucideIcon;
+  label: string;
+  shortLabel: string;
+  dotColor: string;
+  iconColor: string;
+  activeColor: string;
+  accentColor: "violet" | "blue" | "amber" | "emerald" | "cyan";
+}
+
+const REF_ITEMS: RefItem[] = [
+  { id: "style", icon: Palette, shortLabel: "Style", label: "Art Style Reference", dotColor: "bg-violet-500", iconColor: "text-violet-500", activeColor: "bg-violet-500/15 text-violet-500 ring-1 ring-violet-500/30", accentColor: "violet" },
+  { id: "pose", icon: PersonStanding, shortLabel: "Pose", label: "Pose Reference", dotColor: "bg-blue-500", iconColor: "text-blue-500", activeColor: "bg-blue-500/15 text-blue-500 ring-1 ring-blue-500/30", accentColor: "blue" },
+  { id: "expression", icon: Smile, shortLabel: "Expr", label: "Expression", dotColor: "bg-amber-500", iconColor: "text-amber-500", activeColor: "bg-amber-500/15 text-amber-500 ring-1 ring-amber-500/30", accentColor: "amber" },
+  { id: "clothing", icon: Shirt, shortLabel: "Outfit", label: "Clothing", dotColor: "bg-emerald-500", iconColor: "text-emerald-500", activeColor: "bg-emerald-500/15 text-emerald-500 ring-1 ring-emerald-500/30", accentColor: "emerald" },
+  { id: "location", icon: MapPin, shortLabel: "Place", label: "Location", dotColor: "bg-cyan-500", iconColor: "text-cyan-500", activeColor: "bg-cyan-500/15 text-cyan-500 ring-1 ring-cyan-500/30", accentColor: "cyan" },
 ];
 
 // ── Component ───────────────────────────────────────────────────────────
@@ -208,6 +213,17 @@ export function EditorPromptComposer() {
           </ReferenceSection>
         );
       default: return null;
+    }
+  };
+
+  const getRefThumb = (id: string): string | undefined => {
+    switch (id) {
+      case "style": return settings.styleRef?.url;
+      case "pose": return settings.poseRef?.url;
+      case "expression": return settings.expressionRef?.image?.url;
+      case "clothing": return settings.clothingRef?.image?.url;
+      case "location": return settings.locationRef?.image?.url;
+      default: return undefined;
     }
   };
 
@@ -416,44 +432,53 @@ export function EditorPromptComposer() {
             </button>
           </div>
 
-          {/* Mobile-only: reference icons */}
-          <div className="flex md:hidden items-center gap-0.5 shrink-0">
-            <div className="w-px h-5 bg-border/60 shrink-0 mx-1" />
-            {MOBILE_REF_ITEMS.map((item) => {
-              const Icon = item.icon;
-              const active = isRefActive(item.id);
-              return (
-                <Sheet key={item.id}>
-                  <SheetTrigger asChild>
-                    <button
-                      type="button"
-                      className={cn(
-                        "relative size-8 rounded-lg flex items-center justify-center transition-colors",
-                        active ? "bg-muted" : "hover:bg-muted/50"
-                      )}
-                      aria-label={item.label}
-                    >
-                      <Icon className={cn("size-4", active ? item.iconColor : "text-muted-foreground")} />
-                      {active && (
-                        <span className={cn("absolute top-0.5 right-0.5 size-1.5 rounded-full", item.dotColor)} />
-                      )}
-                    </button>
-                  </SheetTrigger>
-                  <SheetContent side="bottom" className="max-h-[70vh] overflow-y-auto">
-                    <SheetHeader>
-                      <SheetTitle className="flex items-center gap-2 text-sm">
-                        <Icon className={cn("size-4", item.iconColor)} />
-                        {item.label}
-                      </SheetTitle>
-                    </SheetHeader>
-                    <div className="pt-4">
-                      {renderRefContent(item.id)}
-                    </div>
-                  </SheetContent>
-                </Sheet>
-              );
-            })}
-          </div>
+          {/* Reference image buttons */}
+          <div className="w-px h-5 bg-border/60 shrink-0" />
+          {REF_ITEMS.map((item) => {
+            const Icon = item.icon;
+            const active = isRefActive(item.id);
+            const thumb = getRefThumb(item.id);
+            return (
+              <Popover key={item.id}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label={item.label}
+                        className={cn(
+                          "relative flex items-center gap-1.5 h-8 px-2.5 rounded-lg transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-ring",
+                          active
+                            ? item.activeColor
+                            : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                        )}
+                      >
+                        <Icon className="size-3.5" aria-hidden="true" />
+                        <span className="text-xs font-medium hidden sm:inline">{item.shortLabel}</span>
+                        {thumb && (
+                          <div className={cn("size-4 rounded overflow-hidden border", active ? "border-current/30" : "border-border")}>
+                            <img src={thumb} alt="" className="w-full h-full object-cover" draggable={false} />
+                          </div>
+                        )}
+                      </button>
+                    </PopoverTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-[10px]">{item.label}</TooltipContent>
+                </Tooltip>
+                <PopoverContent
+                  align="start"
+                  side="top"
+                  className="w-80 p-4 max-h-[60vh] overflow-y-auto scrollbar-thin"
+                >
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Icon className={cn("size-3.5", item.iconColor)} />
+                    <span className="text-xs font-semibold">{item.label}</span>
+                  </div>
+                  {renderRefContent(item.id)}
+                </PopoverContent>
+              </Popover>
+            );
+          })}
         </div>
 
         {/* Negative prompt toggle */}

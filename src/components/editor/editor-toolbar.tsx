@@ -295,8 +295,8 @@ export function EditorToolbar() {
             <PopoverContent
               side="right"
               align="start"
-              sideOffset={8}
-              className="w-72 p-3 max-h-[60vh] overflow-y-auto scrollbar-thin"
+              sideOffset={16}
+              className="w-80 p-4 max-h-[60vh] overflow-y-auto scrollbar-thin"
             >
               <div className="flex items-center gap-1.5 mb-2">
                 <Icon className={cn("size-3.5", item.iconColor)} />
