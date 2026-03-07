@@ -52,7 +52,8 @@ export function InpaintModal() {
     const img = new window.Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
-      const maxH = Math.min(512, Math.floor(window.innerHeight * 0.55));
+      // 85vh dialog - ~160px for header/padding/toolbar = available canvas height
+      const maxH = Math.min(512, Math.floor(window.innerHeight * 0.85 - 160));
       const maxW = 512;
       const scale = Math.min(maxW / img.naturalWidth, maxH / img.naturalHeight, 1);
       setCanvasSize({
@@ -61,7 +62,7 @@ export function InpaintModal() {
       });
     };
     img.onerror = () => {
-      const maxDim = Math.min(512, Math.floor(window.innerHeight * 0.55));
+      const maxDim = Math.min(512, Math.floor(window.innerHeight * 0.85 - 160));
       setCanvasSize({ w: maxDim, h: maxDim });
     };
     img.src = inpaintSourceImage.url;
@@ -86,7 +87,7 @@ export function InpaintModal() {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[85vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Paintbrush className="size-4 text-rose-500" />
