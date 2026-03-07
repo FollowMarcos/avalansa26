@@ -656,11 +656,27 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
             status: 'failed' as const,
             error: 'Generation interrupted — page was refreshed.',
           }));
-          sessionStorage.removeItem('pending-generations');
         }
       } catch { /* ignore */ }
 
-      setHistory([...restoredFailed, ...historyImages]);
+      setHistory(prev => {
+        // Preserve any in-flight pending items added by generate() before initial data loaded
+        const inFlightPending = prev.filter(img => img.status === 'pending');
+        const inFlightIds = new Set(inFlightPending.map(img => img.id));
+        // Don't mark in-flight items as failed
+        const actuallyFailed = restoredFailed.filter(img => !inFlightIds.has(img.id));
+
+        // Update sessionStorage: keep only in-flight items
+        try {
+          if (inFlightPending.length > 0) {
+            sessionStorage.setItem('pending-generations', JSON.stringify(inFlightPending));
+          } else {
+            sessionStorage.removeItem('pending-generations');
+          }
+        } catch { /* ignore */ }
+
+        return [...inFlightPending, ...actuallyFailed, ...historyImages];
+      });
       setHasMoreHistory(generations.length >= 50);
       // Select the most recent image if available
       if (historyImages.length > 0) {
