@@ -63,6 +63,7 @@ export function EditorPromptComposer() {
     savedReferences,
     referenceImages,
     addReferenceImages,
+    addReferenceImageFromUrl,
     removeReferenceImage,
     addSavedReferenceToActive,
     removeSavedReference,
@@ -71,6 +72,8 @@ export function EditorPromptComposer() {
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const [showNegative, setShowNegative] = React.useState(false);
   const [refModalOpen, setRefModalOpen] = React.useState(false);
+  const [isDragOver, setIsDragOver] = React.useState(false);
+  const dragCounterRef = React.useRef(0);
 
   const filteredAspectRatios = React.useMemo(
     () => baseAspectRatioOptions.filter((o) => allowedAspectRatios.includes(o.value)),
@@ -106,6 +109,56 @@ export function EditorPromptComposer() {
 
   const hasReferences = referenceImages.length > 0;
 
+  // Drag-and-drop from history feed
+  const handleDragEnter = React.useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounterRef.current++;
+    if (e.dataTransfer.types.includes("application/x-editor-image") || e.dataTransfer.types.includes("text/uri-list")) {
+      setIsDragOver(true);
+    }
+  }, []);
+
+  const handleDragLeave = React.useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounterRef.current--;
+    if (dragCounterRef.current <= 0) {
+      dragCounterRef.current = 0;
+      setIsDragOver(false);
+    }
+  }, []);
+
+  const handleDragOver = React.useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "copy";
+  }, []);
+
+  const handleDrop = React.useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    dragCounterRef.current = 0;
+    setIsDragOver(false);
+
+    // Try custom data first (from history feed)
+    const editorData = e.dataTransfer.getData("application/x-editor-image");
+    if (editorData) {
+      try {
+        const { url } = JSON.parse(editorData);
+        if (url) addReferenceImageFromUrl(url);
+        return;
+      } catch { /* fall through */ }
+    }
+
+    // Fall back to URI list
+    const uri = e.dataTransfer.getData("text/uri-list");
+    if (uri && uri.startsWith("http")) {
+      addReferenceImageFromUrl(uri);
+      return;
+    }
+
+    // Fall back to dropped files
+    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith("image/"));
+    if (files.length > 0) addReferenceImages(files);
+  }, [addReferenceImageFromUrl, addReferenceImages]);
+
   const canGenerate = (prompt.trim().length > 0 || referenceImages.length > 0) && activeGenerations < 4 && !!selectedApiId;
 
   const disabledReason = !selectedApiId
@@ -119,7 +172,18 @@ export function EditorPromptComposer() {
   return (
     <TooltipProvider delayDuration={300}>
       <FileUpload onFilesAdded={addReferenceImages} multiple accept="image/*" disabled={!hasAvailableSlots}>
-      <div className="border border-white/[0.06] bg-background/95 backdrop-blur-sm px-3 py-2 space-y-2 rounded-xl mx-3 mb-3">
+      <div
+        className={cn(
+          "border bg-background/95 backdrop-blur-sm px-3 py-2 space-y-2 rounded-xl mx-3 mb-3 transition-colors",
+          isDragOver
+            ? "border-primary/50 bg-primary/[0.04] ring-1 ring-primary/30"
+            : "border-white/[0.06]"
+        )}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
         {/* Inline reference image thumbnails */}
         <AnimatePresence>
           {hasReferences && (

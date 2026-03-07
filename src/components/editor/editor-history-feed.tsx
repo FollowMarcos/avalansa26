@@ -238,6 +238,12 @@ const FeedItem = React.memo(function FeedItem({
   onInpaint,
   onToggleFavorite,
 }: FeedItemProps) {
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData("text/uri-list", image.url);
+    e.dataTransfer.setData("application/x-editor-image", JSON.stringify({ url: image.url, prompt: image.prompt }));
+    e.dataTransfer.effectAllowed = "copy";
+  };
+
   return (
     <div
       className="group relative rounded-lg overflow-hidden border border-white/[0.06] bg-white/[0.02] transition-all duration-200 hover:border-white/[0.12] cursor-pointer"
@@ -245,6 +251,8 @@ const FeedItem = React.memo(function FeedItem({
       role="button"
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
+      draggable
+      onDragStart={handleDragStart}
     >
       {/* Image */}
       <div className="aspect-square relative">
