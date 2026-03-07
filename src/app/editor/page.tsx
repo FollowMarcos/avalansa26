@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 
 export default function EditorPage() {
   return (
-    <PageShell showDock={true} dockPosition="left" className="p-0" noDockPadding>
+    <PageShell showDock={true} dockPosition="right" className="p-0" noDockPadding>
       <EditorLayout />
     </PageShell>
   );

@@ -27,7 +27,7 @@ export function EditorLayout() {
       {/* Main content: two columns */}
       <div className="flex-1 flex min-h-0 relative z-10">
         {/* Left column: settings panel (desktop) */}
-        <aside className="hidden md:flex flex-col w-[320px] border-r border-border bg-background/80 backdrop-blur-sm shrink-0">
+        <aside className="hidden md:flex flex-col w-[352px] border-r border-border bg-background/80 backdrop-blur-sm shrink-0">
           <div className="px-3 py-2 border-b border-border/50">
             <h2 className="text-xs font-semibold text-foreground tracking-wide">
               Settings
@@ -48,7 +48,7 @@ export function EditorLayout() {
                 <Settings2 className="size-5" />
               </button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[320px] p-0">
+            <SheetContent side="left" className="w-[352px] p-0">
               <div className="px-3 py-2 border-b border-border/50">
                 <h2 className="text-xs font-semibold text-foreground tracking-wide">
                   Settings

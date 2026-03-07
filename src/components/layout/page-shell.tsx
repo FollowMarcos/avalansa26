@@ -10,12 +10,13 @@ interface PageShellProps {
     className?: string; // Classes for the root container
     contentClassName?: string; // Classes for the internal main element
     showDock?: boolean;
-    dockPosition?: "bottom" | "left" | "top-left";
+    dockPosition?: "bottom" | "left" | "right" | "top-left";
     noDockPadding?: boolean; // Skip automatic dock padding
 }
 
 export function PageShell({ children, className, contentClassName, showDock = true, dockPosition = "bottom", noDockPadding = false }: PageShellProps) {
     const isLeft = dockPosition === "left";
+    const isRight = dockPosition === "right";
     const isTopLeft = dockPosition === "top-left";
 
     return (
@@ -28,8 +29,9 @@ export function PageShell({ children, className, contentClassName, showDock = tr
 
                 <main className={cn(
                     "flex-1 flex flex-col relative z-10 w-full",
-                    !noDockPadding && showDock && !isTopLeft && !isLeft && "pb-24 lg:pb-32",
+                    !noDockPadding && showDock && !isTopLeft && !isLeft && !isRight && "pb-24 lg:pb-32",
                     !noDockPadding && showDock && isLeft && "pl-20",
+                    !noDockPadding && showDock && isRight && "pr-20",
                     contentClassName
                 )}>
                     {children}
@@ -40,11 +42,13 @@ export function PageShell({ children, className, contentClassName, showDock = tr
                         "fixed z-[60] pointer-events-none",
                         isLeft
                             ? "top-0 left-0 bottom-0 p-3 flex items-center"
-                            : isTopLeft
-                                ? "top-0 left-0 p-4"
-                                : "bottom-0 left-0 right-0 p-6 flex justify-center"
+                            : isRight
+                                ? "top-0 right-0 bottom-0 p-3 flex items-center"
+                                : isTopLeft
+                                    ? "top-0 left-0 p-4"
+                                    : "bottom-0 left-0 right-0 p-6 flex justify-center"
                     )}>
-                        <SiteDock vertical={isLeft} />
+                        <SiteDock vertical={isLeft || isRight} />
                     </div>
                 )}
             </div>
