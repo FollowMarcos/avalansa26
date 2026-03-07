@@ -1,10 +1,12 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 import { useCreate } from "@/components/create/create-context";
 import { ApiSelector } from "@/components/create/api-selector";
+import { FileUpload, FileUploadTrigger } from "@/components/ui/file-upload";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
 import {
@@ -12,6 +14,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
@@ -29,6 +36,9 @@ import {
   MapPin,
   Minus,
   Plus,
+  ImagePlus,
+  X,
+  Trash2,
   type LucideIcon,
 } from "lucide-react";
 import { ReferenceSection } from "./reference-section";
@@ -85,6 +95,11 @@ export function EditorPromptComposer() {
     maxOutputCount,
     history,
     savedReferences,
+    referenceImages,
+    addReferenceImages,
+    removeReferenceImage,
+    addSavedReferenceToActive,
+    removeSavedReference,
   } = useCreate();
 
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
@@ -108,11 +123,26 @@ export function EditorPromptComposer() {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (prompt.trim() && !isGenerating && hasAvailableSlots && selectedApiId) {
+      if ((prompt.trim() || referenceImages.length > 0) && !isGenerating && hasAvailableSlots && selectedApiId) {
         generate();
       }
     }
   };
+
+  const handlePaste = React.useCallback((event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = event.clipboardData.items;
+    const imageFiles: File[] = [];
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith("image/")) {
+        event.preventDefault();
+        const file = items[i].getAsFile();
+        if (file) imageFiles.push(file);
+      }
+    }
+    if (imageFiles.length > 0) addReferenceImages(imageFiles);
+  }, [addReferenceImages]);
+
+  const hasReferences = referenceImages.length > 0;
 
   // Active reference indicators
   const refChips = React.useMemo(() => {
@@ -227,7 +257,7 @@ export function EditorPromptComposer() {
     }
   };
 
-  const canGenerate = prompt.trim().length > 0 && !isGenerating && hasAvailableSlots && !!selectedApiId;
+  const canGenerate = (prompt.trim().length > 0 || referenceImages.length > 0) && !isGenerating && hasAvailableSlots && !!selectedApiId;
 
   const disabledReason = !selectedApiId
     ? "Select a model first"
@@ -239,6 +269,7 @@ export function EditorPromptComposer() {
 
   return (
     <TooltipProvider delayDuration={300}>
+      <FileUpload onFilesAdded={addReferenceImages} multiple accept="image/*" disabled={!hasAvailableSlots}>
       <div className="border-t border-border bg-background/95 backdrop-blur-sm px-4 py-3 space-y-2">
         {/* Reference summary chips */}
         <AnimatePresence>
@@ -269,15 +300,173 @@ export function EditorPromptComposer() {
           )}
         </AnimatePresence>
 
+        {/* Inline reference image thumbnails */}
+        <AnimatePresence>
+          {hasReferences && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.15 }}
+              className="overflow-hidden"
+            >
+              <div className="flex items-center gap-1.5">
+                {referenceImages.slice(0, 6).map((img) => (
+                  <div key={img.id} className="relative group">
+                    <div className="size-9 rounded-lg overflow-hidden bg-muted border border-border">
+                      <Image src={img.preview} alt="Reference" width={36} height={36} className="w-full h-full object-cover" />
+                      {img.isUploading && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                          <Loader className="size-3 text-white" />
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removeReferenceImage(img.id)}
+                      aria-label="Remove reference"
+                      className="absolute -top-1.5 -right-1.5 size-4 rounded-full bg-background border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
+                    >
+                      <X className="size-2.5" />
+                    </button>
+                  </div>
+                ))}
+                {referenceImages.length > 6 && (
+                  <span className="text-[10px] text-muted-foreground font-mono">+{referenceImages.length - 6}</span>
+                )}
+                <span className="text-[10px] text-muted-foreground font-mono ml-auto">{referenceImages.length}/14</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Main prompt row */}
         <div className="flex items-end gap-2">
+          {/* Reference images button */}
+          <DropdownMenu>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className={cn(
+                      "size-10 rounded-xl flex items-center justify-center transition-colors shrink-0 relative focus-visible:ring-2 focus-visible:ring-ring",
+                      hasReferences
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted text-muted-foreground hover:text-foreground"
+                    )}
+                    aria-label="Add reference images"
+                  >
+                    <ImagePlus className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                    {hasReferences && (
+                      <span className="absolute -top-1 -right-1 size-4 rounded-full bg-background border-2 border-primary text-[9px] font-mono font-medium text-primary flex items-center justify-center">
+                        {referenceImages.length}
+                      </span>
+                    )}
+                  </button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-[10px]">
+                {hasReferences ? `${referenceImages.length} references` : "Add references"}
+              </TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent align="start" side="top" className="w-80 p-0">
+              <div className="p-3 space-y-3">
+                {/* Active References */}
+                {hasReferences && (
+                  <div className="space-y-2">
+                    <div className="text-xs font-medium">Active References</div>
+                    <div className="grid grid-cols-5 gap-1.5">
+                      {referenceImages.map((img) => (
+                        <div key={img.id} className="relative group">
+                          <div className="aspect-square rounded-lg overflow-hidden bg-muted border border-border">
+                            <Image src={img.preview} alt="Reference" width={48} height={48} className="w-full h-full object-cover" />
+                            {img.isUploading && (
+                              <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                <Loader className="size-3 text-white" />
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeReferenceImage(img.id)}
+                            aria-label="Remove from active"
+                            className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-background border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-ring"
+                          >
+                            <X className="size-2.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground text-right font-mono">{referenceImages.length}/14</div>
+                  </div>
+                )}
+
+                {/* Upload button */}
+                <FileUploadTrigger asChild>
+                  <button
+                    type="button"
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-muted hover:bg-muted/80 text-sm transition-colors border-2 border-dashed border-border"
+                    disabled={!hasAvailableSlots || referenceImages.length >= 14}
+                  >
+                    <ImagePlus className="size-4" aria-hidden="true" />
+                    <span>Upload images</span>
+                  </button>
+                </FileUploadTrigger>
+
+                {/* Saved library */}
+                {savedReferences.length > 0 && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Your Library</div>
+                      <div className="text-[10px] text-muted-foreground font-mono">{savedReferences.length} saved</div>
+                    </div>
+                    <div className="grid grid-cols-5 gap-1.5 max-h-32 overflow-y-auto">
+                      {savedReferences.map((saved) => (
+                        <div key={saved.id} className="relative group">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <button
+                                type="button"
+                                onClick={() => addSavedReferenceToActive(saved)}
+                                className="aspect-square w-full rounded-lg overflow-hidden border border-border hover:border-foreground/50 transition-colors"
+                                aria-label={`Add ${saved.name || "reference"}`}
+                              >
+                                <Image src={saved.url} alt={saved.name || "Reference"} width={48} height={48} className="w-full h-full object-cover" unoptimized />
+                              </button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top" className="text-xs">{saved.name || "Reference image"}</TooltipContent>
+                          </Tooltip>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); removeSavedReference(saved.id); }}
+                            aria-label="Delete from library"
+                            className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-ring"
+                          >
+                            <Trash2 className="size-2.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground/70">Click to use &middot; Uploads are auto-saved</p>
+                  </>
+                )}
+
+                {savedReferences.length === 0 && !hasReferences && (
+                  <p className="text-xs text-muted-foreground text-center py-2">Upload images to use as references.<br />They&apos;ll be saved to your library automatically.</p>
+                )}
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <div className="flex-1 relative">
             <textarea
               ref={textareaRef}
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Describe what you want to generate..."
+              onPaste={handlePaste}
+              placeholder={hasReferences ? "Describe how to transform your images..." : "Describe what you want to generate..."}
               rows={2}
               className={cn(
                 "w-full resize-none rounded-xl border border-border bg-muted/30 px-3 py-2 text-sm",
@@ -512,6 +701,7 @@ export function EditorPromptComposer() {
           </AnimatePresence>
         </div>
       </div>
+      </FileUpload>
     </TooltipProvider>
   );
 }
