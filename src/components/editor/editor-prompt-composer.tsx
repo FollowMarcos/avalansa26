@@ -4,14 +4,27 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "motion/react";
 import { useCreate } from "@/components/create/create-context";
+import { ApiSelector } from "@/components/create/api-selector";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import {
   Sparkles,
   ChevronUp,
@@ -21,7 +34,32 @@ import {
   Smile,
   Shirt,
   MapPin,
+  Minus,
+  Plus,
 } from "lucide-react";
+import { ReferenceSection } from "./reference-section";
+import { TagChipsInput } from "./tag-chips-input";
+import {
+  baseAspectRatioOptions,
+  baseImageSizeOptions,
+  AspectRatioShape,
+  makeTaggedRef,
+  EXPRESSION_PRESETS,
+  CLOTHING_PRESETS,
+  LOCATION_PRESETS,
+} from "./editor-constants";
+
+// ── Mobile reference toolbar items ──────────────────────────────────────
+
+const MOBILE_REF_ITEMS = [
+  { id: "style", icon: Palette, label: "Art Style Reference", dotColor: "bg-violet-500", iconColor: "text-violet-500", accentColor: "violet" as const },
+  { id: "pose", icon: PersonStanding, label: "Pose Reference", dotColor: "bg-blue-500", iconColor: "text-blue-500", accentColor: "blue" as const },
+  { id: "expression", icon: Smile, label: "Expression", dotColor: "bg-amber-500", iconColor: "text-amber-500", accentColor: "amber" as const },
+  { id: "clothing", icon: Shirt, label: "Clothing", dotColor: "bg-emerald-500", iconColor: "text-emerald-500", accentColor: "emerald" as const },
+  { id: "location", icon: MapPin, label: "Location", dotColor: "bg-cyan-500", iconColor: "text-cyan-500", accentColor: "cyan" as const },
+];
+
+// ── Component ───────────────────────────────────────────────────────────
 
 export function EditorPromptComposer() {
   const {
@@ -31,13 +69,36 @@ export function EditorPromptComposer() {
     hasAvailableSlots,
     generate,
     settings,
+    updateSettings,
     activeGenerations,
     selectedApiId,
+    availableApis,
+    setSelectedApiId,
+    isLoadingApis,
+    allowedAspectRatios,
+    allowedImageSizes,
+    maxOutputCount,
+    history,
+    savedReferences,
   } = useCreate();
 
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const [showNegative, setShowNegative] = React.useState(false);
-  const { updateSettings } = useCreate();
+
+  const completedGens = React.useMemo(
+    () => history.filter((g) => g.status === "completed" && g.url).slice(0, 40),
+    [history]
+  );
+
+  const filteredAspectRatios = React.useMemo(
+    () => baseAspectRatioOptions.filter((o) => allowedAspectRatios.includes(o.value)),
+    [allowedAspectRatios]
+  );
+
+  const filteredImageSizes = React.useMemo(
+    () => baseImageSizeOptions.filter((o) => allowedImageSizes.includes(o.value)),
+    [allowedImageSizes]
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -81,6 +142,74 @@ export function EditorPromptComposer() {
     }
     return chips;
   }, [settings]);
+
+  const isRefActive = (id: string): boolean => {
+    switch (id) {
+      case "style": return !!settings.styleRef?.url;
+      case "pose": return !!settings.poseRef?.url;
+      case "expression": return !!(settings.expressionRef?.image?.url || (settings.expressionRef?.tags?.length ?? 0) > 0);
+      case "clothing": return !!(settings.clothingRef?.image?.url || (settings.clothingRef?.tags?.length ?? 0) > 0);
+      case "location": return !!(settings.locationRef?.image?.url || (settings.locationRef?.tags?.length ?? 0) > 0);
+      default: return false;
+    }
+  };
+
+  const renderRefContent = (id: string) => {
+    switch (id) {
+      case "style":
+        return (
+          <ReferenceSection label="Style" description="Pick an image to use only its art style." accentColor="violet" icon={Palette}
+            image={settings.styleRef} onImageChange={(ref) => updateSettings({ styleRef: ref })}
+            completedGens={completedGens} savedReferences={savedReferences} />
+        );
+      case "pose":
+        return (
+          <ReferenceSection label="Pose" description="Pick an image to match only its body pose." accentColor="blue" icon={PersonStanding}
+            image={settings.poseRef} onImageChange={(ref) => updateSettings({ poseRef: ref })}
+            completedGens={completedGens} savedReferences={savedReferences} />
+        );
+      case "expression":
+        return (
+          <ReferenceSection label="Expression" description="Set a facial expression via image and/or tags." accentColor="amber" icon={Smile}
+            image={settings.expressionRef?.image}
+            onImageChange={(ref) => updateSettings({ expressionRef: makeTaggedRef(settings.expressionRef, { image: ref }) })}
+            completedGens={completedGens} savedReferences={savedReferences}>
+            <TagChipsInput tags={settings.expressionRef?.tags || []}
+              onTagsChange={(tags) => updateSettings({ expressionRef: makeTaggedRef(settings.expressionRef, { tags }) })}
+              presetTags={EXPRESSION_PRESETS} customText={settings.expressionRef?.customText || ""}
+              onCustomTextChange={(customText) => updateSettings({ expressionRef: makeTaggedRef(settings.expressionRef, { customText }) })}
+              accentColor="amber" placeholder="Add expression..." />
+          </ReferenceSection>
+        );
+      case "clothing":
+        return (
+          <ReferenceSection label="Clothing" description="Set clothing style via image and/or tags." accentColor="emerald" icon={Shirt}
+            image={settings.clothingRef?.image}
+            onImageChange={(ref) => updateSettings({ clothingRef: makeTaggedRef(settings.clothingRef, { image: ref }) })}
+            completedGens={completedGens} savedReferences={savedReferences}>
+            <TagChipsInput tags={settings.clothingRef?.tags || []}
+              onTagsChange={(tags) => updateSettings({ clothingRef: makeTaggedRef(settings.clothingRef, { tags }) })}
+              presetTags={CLOTHING_PRESETS} customText={settings.clothingRef?.customText || ""}
+              onCustomTextChange={(customText) => updateSettings({ clothingRef: makeTaggedRef(settings.clothingRef, { customText }) })}
+              accentColor="emerald" placeholder="Add clothing..." />
+          </ReferenceSection>
+        );
+      case "location":
+        return (
+          <ReferenceSection label="Location" description="Set background/location via image and/or tags." accentColor="cyan" icon={MapPin}
+            image={settings.locationRef?.image}
+            onImageChange={(ref) => updateSettings({ locationRef: makeTaggedRef(settings.locationRef, { image: ref }) })}
+            completedGens={completedGens} savedReferences={savedReferences}>
+            <TagChipsInput tags={settings.locationRef?.tags || []}
+              onTagsChange={(tags) => updateSettings({ locationRef: makeTaggedRef(settings.locationRef, { tags }) })}
+              presetTags={LOCATION_PRESETS} customText={settings.locationRef?.customText || ""}
+              onCustomTextChange={(customText) => updateSettings({ locationRef: makeTaggedRef(settings.locationRef, { customText }) })}
+              accentColor="cyan" placeholder="Add location..." />
+          </ReferenceSection>
+        );
+      default: return null;
+    }
+  };
 
   const canGenerate = prompt.trim().length > 0 && !isGenerating && hasAvailableSlots && !!selectedApiId;
 
@@ -173,6 +302,158 @@ export function EditorPromptComposer() {
               </TooltipContent>
             )}
           </Tooltip>
+        </div>
+
+        {/* Inline settings row */}
+        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 scrollbar-thin">
+          {/* API / Model selector */}
+          <ApiSelector
+            apis={availableApis}
+            selectedApiId={selectedApiId}
+            onSelect={setSelectedApiId}
+            disabled={isLoadingApis}
+          />
+
+          <div className="w-px h-5 bg-border/60 shrink-0" />
+
+          {/* Aspect Ratio popover */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label={`Aspect ratio: ${settings.aspectRatio}`}
+                className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-muted/50 hover:bg-muted transition-colors shrink-0"
+              >
+                <AspectRatioShape ratio={settings.aspectRatio} className="text-muted-foreground" />
+                <span className="text-xs font-medium">{settings.aspectRatio}</span>
+                <ChevronDown className="size-3 text-muted-foreground" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" side="top" className="w-auto p-2">
+              <div role="listbox" aria-label="Aspect ratio" className="grid grid-cols-3 gap-1">
+                {filteredAspectRatios.map((ratio) => (
+                  <button
+                    key={ratio.value}
+                    role="option"
+                    aria-selected={settings.aspectRatio === ratio.value}
+                    onClick={() => updateSettings({ aspectRatio: ratio.value })}
+                    className={cn(
+                      "flex flex-col items-center gap-1 p-2 rounded-lg transition-all duration-150",
+                      settings.aspectRatio === ratio.value
+                        ? "bg-primary/10 ring-1 ring-primary shadow-sm"
+                        : "hover:bg-muted hover:scale-105 active:scale-95"
+                    )}
+                  >
+                    <AspectRatioShape
+                      ratio={ratio.value}
+                      className={settings.aspectRatio === ratio.value ? "text-primary" : "text-muted-foreground"}
+                    />
+                    <span className={cn(
+                      "text-[10px] font-mono",
+                      settings.aspectRatio === ratio.value ? "text-primary font-medium" : "text-muted-foreground"
+                    )}>
+                      {ratio.value}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Quality segmented control */}
+          <div role="radiogroup" aria-label="Image quality" className="flex items-center h-8 p-0.5 rounded-lg bg-muted/50 shrink-0">
+            {filteredImageSizes.map((size) => (
+              <Tooltip key={size.value}>
+                <TooltipTrigger asChild>
+                  <button
+                    role="radio"
+                    aria-checked={settings.imageSize === size.value}
+                    onClick={() => updateSettings({ imageSize: size.value })}
+                    className={cn(
+                      "h-7 px-3 rounded-md text-xs font-medium transition-all duration-150",
+                      settings.imageSize === size.value
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {size.label}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="text-[10px]">{size.desc}</TooltipContent>
+              </Tooltip>
+            ))}
+          </div>
+
+          {/* Output count stepper */}
+          <div
+            role="spinbutton"
+            aria-label="Number of images"
+            aria-valuenow={settings.outputCount}
+            aria-valuemin={1}
+            aria-valuemax={maxOutputCount}
+            className="flex items-center h-8 rounded-lg bg-muted/50 shrink-0"
+          >
+            <button
+              type="button"
+              onClick={() => updateSettings({ outputCount: Math.max(1, settings.outputCount - 1) })}
+              disabled={settings.outputCount <= 1}
+              className="size-8 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+              aria-label="Decrease count"
+            >
+              <Minus className="size-3.5" />
+            </button>
+            <span className="w-5 text-center text-sm font-medium tabular-nums">
+              {settings.outputCount}
+            </span>
+            <button
+              type="button"
+              onClick={() => updateSettings({ outputCount: Math.min(maxOutputCount, settings.outputCount + 1) })}
+              disabled={settings.outputCount >= maxOutputCount}
+              className="size-8 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 transition-colors"
+              aria-label="Increase count"
+            >
+              <Plus className="size-3.5" />
+            </button>
+          </div>
+
+          {/* Mobile-only: reference icons */}
+          <div className="flex md:hidden items-center gap-0.5 shrink-0">
+            <div className="w-px h-5 bg-border/60 shrink-0 mx-1" />
+            {MOBILE_REF_ITEMS.map((item) => {
+              const Icon = item.icon;
+              const active = isRefActive(item.id);
+              return (
+                <Sheet key={item.id}>
+                  <SheetTrigger asChild>
+                    <button
+                      type="button"
+                      className={cn(
+                        "relative size-8 rounded-lg flex items-center justify-center transition-colors",
+                        active ? "bg-muted" : "hover:bg-muted/50"
+                      )}
+                      aria-label={item.label}
+                    >
+                      <Icon className={cn("size-4", active ? item.iconColor : "text-muted-foreground")} />
+                      {active && (
+                        <span className={cn("absolute top-0.5 right-0.5 size-1.5 rounded-full", item.dotColor)} />
+                      )}
+                    </button>
+                  </SheetTrigger>
+                  <SheetContent side="bottom" className="max-h-[70vh] overflow-y-auto">
+                    <SheetHeader>
+                      <SheetTitle className="flex items-center gap-2 text-sm">
+                        <Icon className={cn("size-4", item.iconColor)} />
+                        {item.label}
+                      </SheetTitle>
+                    </SheetHeader>
+                    <div className="pt-4">
+                      {renderRefContent(item.id)}
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              );
+            })}
+          </div>
         </div>
 
         {/* Negative prompt toggle */}
