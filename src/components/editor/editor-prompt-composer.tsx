@@ -174,9 +174,9 @@ export function EditorPromptComposer() {
       <FileUpload onFilesAdded={addReferenceImages} multiple accept="image/*" disabled={!hasAvailableSlots}>
       <div
         className={cn(
-          "border bg-background/95 backdrop-blur-sm px-3 py-2 space-y-2 rounded-xl mx-3 mb-3 transition-colors",
+          "relative border bg-background/95 backdrop-blur-sm px-3 py-2 space-y-2 rounded-xl mx-3 mb-3 transition-all duration-200",
           isDragOver
-            ? "border-primary/50 bg-primary/[0.04] ring-1 ring-primary/30"
+            ? "border-primary/50 bg-primary/[0.04] ring-2 ring-primary/20 scale-[1.01]"
             : "border-white/[0.06]"
         )}
         onDragEnter={handleDragEnter}
@@ -184,6 +184,24 @@ export function EditorPromptComposer() {
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >
+        {/* Drop overlay */}
+        <AnimatePresence>
+          {isDragOver && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-primary/[0.06] backdrop-blur-[2px] pointer-events-none"
+            >
+              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-background/90 border border-primary/30 shadow-lg">
+                <ImagePlus className="size-4 text-primary" />
+                <span className="text-xs font-medium text-primary">Drop to add as reference</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Inline reference image thumbnails */}
         <AnimatePresence>
           {hasReferences && (

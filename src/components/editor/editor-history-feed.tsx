@@ -238,21 +238,49 @@ const FeedItem = React.memo(function FeedItem({
   onInpaint,
   onToggleFavorite,
 }: FeedItemProps) {
+  const [isDragging, setIsDragging] = React.useState(false);
+  const dragGhostRef = React.useRef<HTMLDivElement | null>(null);
+
   const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData("text/uri-list", image.url);
     e.dataTransfer.setData("application/x-editor-image", JSON.stringify({ url: image.url, prompt: image.prompt }));
     e.dataTransfer.effectAllowed = "copy";
+
+    // Build a clean drag ghost: small rounded thumbnail
+    const ghost = document.createElement("div");
+    ghost.style.cssText = "position:fixed;top:-1000px;left:-1000px;width:64px;height:64px;border-radius:10px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.4);pointer-events:none;";
+    const img = document.createElement("img");
+    img.src = image.url;
+    img.style.cssText = "width:100%;height:100%;object-fit:cover;";
+    ghost.appendChild(img);
+    document.body.appendChild(ghost);
+    dragGhostRef.current = ghost;
+    e.dataTransfer.setDragImage(ghost, 32, 32);
+
+    setIsDragging(true);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    if (dragGhostRef.current) {
+      document.body.removeChild(dragGhostRef.current);
+      dragGhostRef.current = null;
+    }
   };
 
   return (
     <div
-      className="group relative rounded-lg overflow-hidden border border-white/[0.06] bg-white/[0.02] transition-all duration-200 hover:border-white/[0.12] cursor-pointer"
+      className={cn(
+        "group relative rounded-lg overflow-hidden border border-white/[0.06] bg-white/[0.02] transition-all duration-200 hover:border-white/[0.12] cursor-pointer",
+        isDragging && "opacity-40 scale-95 ring-1 ring-primary/30"
+      )}
       onClick={onClick}
       role="button"
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } }}
       draggable
       onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
     >
       {/* Image */}
       <div className="aspect-square relative">
