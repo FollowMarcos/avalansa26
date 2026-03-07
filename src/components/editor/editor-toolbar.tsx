@@ -39,58 +39,15 @@ interface ToolbarItem {
   id: string;
   icon: LucideIcon;
   label: string;
-  dotColor: string;
-  activeRing: string;
-  iconColor: string;
   accentColor: "violet" | "blue" | "amber" | "emerald" | "cyan";
 }
 
 const TOOLBAR_ITEMS: ToolbarItem[] = [
-  {
-    id: "style",
-    icon: Palette,
-    label: "Art Style Reference",
-    dotColor: "bg-violet-500",
-    activeRing: "ring-1 ring-violet-500/30 bg-violet-500/10",
-    iconColor: "text-violet-500",
-    accentColor: "violet",
-  },
-  {
-    id: "pose",
-    icon: PersonStanding,
-    label: "Pose Reference",
-    dotColor: "bg-blue-500",
-    activeRing: "ring-1 ring-blue-500/30 bg-blue-500/10",
-    iconColor: "text-blue-500",
-    accentColor: "blue",
-  },
-  {
-    id: "expression",
-    icon: Smile,
-    label: "Expression",
-    dotColor: "bg-amber-500",
-    activeRing: "ring-1 ring-amber-500/30 bg-amber-500/10",
-    iconColor: "text-amber-500",
-    accentColor: "amber",
-  },
-  {
-    id: "clothing",
-    icon: Shirt,
-    label: "Clothing",
-    dotColor: "bg-emerald-500",
-    activeRing: "ring-1 ring-emerald-500/30 bg-emerald-500/10",
-    iconColor: "text-emerald-500",
-    accentColor: "emerald",
-  },
-  {
-    id: "location",
-    icon: MapPin,
-    label: "Location",
-    dotColor: "bg-cyan-500",
-    activeRing: "ring-1 ring-cyan-500/30 bg-cyan-500/10",
-    iconColor: "text-cyan-500",
-    accentColor: "cyan",
-  },
+  { id: "style", icon: Palette, label: "Style", accentColor: "violet" },
+  { id: "pose", icon: PersonStanding, label: "Pose", accentColor: "blue" },
+  { id: "expression", icon: Smile, label: "Expression", accentColor: "amber" },
+  { id: "clothing", icon: Shirt, label: "Clothing", accentColor: "emerald" },
+  { id: "location", icon: MapPin, label: "Location", accentColor: "cyan" },
 ];
 
 // ── Component ───────────────────────────────────────────────────────────
@@ -248,7 +205,7 @@ export function EditorToolbar() {
   };
 
   return (
-    <div className="flex flex-col items-center py-3 gap-1.5">
+    <div className="flex flex-col items-center py-2 gap-1">
       {TOOLBAR_ITEMS.map((item) => {
         const Icon = item.icon;
         const active = isActive(item.id);
@@ -265,25 +222,20 @@ export function EditorToolbar() {
                   <button
                     type="button"
                     className={cn(
-                      "relative size-10 rounded-xl flex items-center justify-center transition-all duration-150",
-                      "hover:bg-muted active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      active && item.activeRing
+                      "relative size-9 rounded-lg flex items-center justify-center transition-all duration-150",
+                      "hover:bg-white/[0.06] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      active && "bg-white/[0.08]"
                     )}
                     aria-label={item.label}
                   >
                     <Icon
                       className={cn(
-                        "size-[18px]",
-                        active ? item.iconColor : "text-muted-foreground"
+                        "size-4",
+                        active ? "text-foreground" : "text-muted-foreground"
                       )}
                     />
                     {active && (
-                      <span
-                        className={cn(
-                          "absolute top-1 right-1 size-2 rounded-full animate-pulse",
-                          item.dotColor
-                        )}
-                      />
+                      <span className="absolute top-0.5 right-0.5 size-1.5 rounded-full bg-foreground/60 animate-pulse" />
                     )}
                   </button>
                 </PopoverTrigger>
@@ -295,12 +247,12 @@ export function EditorToolbar() {
             <PopoverContent
               side="right"
               align="start"
-              sideOffset={16}
-              className="w-80 p-4 max-h-[60vh] overflow-y-auto scrollbar-thin"
+              sideOffset={12}
+              className="w-72 p-3 max-h-[60vh] overflow-y-auto scrollbar-thin border-white/[0.08]"
             >
               <div className="flex items-center gap-1.5 mb-2">
-                <Icon className={cn("size-3.5", item.iconColor)} />
-                <span className="text-xs font-semibold">{item.label}</span>
+                <Icon className="size-3.5 text-muted-foreground" />
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">{item.label}</span>
               </div>
               {renderContent(item.id)}
             </PopoverContent>

@@ -16,19 +16,19 @@ interface TagChipsInputProps {
 
 const ACCENT_STYLES: Record<string, { chip: string; chipActive: string; input: string }> = {
   amber: {
-    chip: "border-amber-500/30 text-amber-700 dark:text-amber-300 hover:bg-amber-500/10",
-    chipActive: "bg-amber-500/20 border-amber-500/50 text-amber-800 dark:text-amber-200",
-    input: "focus:ring-amber-500/30",
+    chip: "border-white/[0.1] text-muted-foreground hover:bg-white/[0.06]",
+    chipActive: "bg-white/[0.1] border-white/[0.2] text-foreground",
+    input: "focus:ring-white/[0.15]",
   },
   emerald: {
-    chip: "border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10",
-    chipActive: "bg-emerald-500/20 border-emerald-500/50 text-emerald-800 dark:text-emerald-200",
-    input: "focus:ring-emerald-500/30",
+    chip: "border-white/[0.1] text-muted-foreground hover:bg-white/[0.06]",
+    chipActive: "bg-white/[0.1] border-white/[0.2] text-foreground",
+    input: "focus:ring-white/[0.15]",
   },
   cyan: {
-    chip: "border-cyan-500/30 text-cyan-700 dark:text-cyan-300 hover:bg-cyan-500/10",
-    chipActive: "bg-cyan-500/20 border-cyan-500/50 text-cyan-800 dark:text-cyan-200",
-    input: "focus:ring-cyan-500/30",
+    chip: "border-white/[0.1] text-muted-foreground hover:bg-white/[0.06]",
+    chipActive: "bg-white/[0.1] border-white/[0.2] text-foreground",
+    input: "focus:ring-white/[0.15]",
   },
 };
 
@@ -128,7 +128,7 @@ export function TagChipsInput({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className={cn(
-            "w-full h-7 px-2 text-xs rounded-md border border-border bg-background",
+            "w-full h-7 px-2 text-xs rounded-md border border-white/[0.08] bg-white/[0.04]",
             "focus:outline-none focus:ring-1",
             styles.input
           )}
@@ -140,7 +140,7 @@ export function TagChipsInput({
             onChange={(e) => onCustomTextChange(e.target.value)}
             placeholder="Custom description..."
             className={cn(
-              "w-full h-7 px-2 text-xs rounded-md border border-border bg-background",
+              "w-full h-7 px-2 text-xs rounded-md border border-white/[0.08] bg-white/[0.04]",
               "focus:outline-none focus:ring-1",
               styles.input
             )}

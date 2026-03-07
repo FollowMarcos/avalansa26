@@ -49,12 +49,17 @@ export const LOCATION_PRESETS = [
 export function makeTaggedRef(
   current: TaggedReference | undefined,
   patch: Partial<TaggedReference>
-): TaggedReference {
-  return {
-    image: patch.image !== undefined ? patch.image : current?.image,
-    tags: patch.tags !== undefined ? patch.tags : current?.tags || [],
-    customText: patch.customText !== undefined ? patch.customText : current?.customText || "",
+): TaggedReference | undefined {
+  const result: TaggedReference = {
+    image: "image" in patch ? patch.image : current?.image,
+    tags: "tags" in patch ? (patch.tags ?? []) : current?.tags || [],
+    customText: "customText" in patch ? (patch.customText ?? "") : current?.customText || "",
   };
+  // If everything is cleared, return undefined to fully remove the ref
+  if (!result.image && result.tags.length === 0 && !result.customText) {
+    return undefined;
+  }
+  return result;
 }
 
 // ── Visual aspect ratio shape ───────────────────────────────────────────

@@ -632,6 +632,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
         prompt: gen.prompt,
         timestamp: new Date(gen.created_at).getTime(),
         isFavorite: gen.is_favorite ?? false,
+        status: 'completed' as const,
         settings: {
           model: gen.settings.model || "Unknown",
           imageSize: (gen.settings.imageSize as ImageSize) || "2K",
@@ -715,6 +716,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
           prompt: gen.prompt,
           timestamp: new Date(gen.created_at).getTime(),
           isFavorite: gen.is_favorite ?? false,
+          status: 'completed' as const,
           settings: {
             model: gen.settings.model || "Unknown",
             imageSize: (gen.settings.imageSize as ImageSize) || "2K",
@@ -1502,7 +1504,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
   // Inpaint: send source image + mask + prompt to inpainting API
   const inpaint = React.useCallback(async (maskDataUrl: string, inpaintPrompt: string) => {
-    if (!inpaintSourceImage || !selectedApiId) return;
+    if (!inpaintSourceImage?.url || !selectedApiId) return;
     setIsInpainting(true);
     try {
       const response = await fetch('/api/inpaint', {

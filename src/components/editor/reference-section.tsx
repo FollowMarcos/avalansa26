@@ -21,27 +21,27 @@ interface ReferenceSectionProps {
 }
 
 const RING_COLORS: Record<string, string> = {
-  violet: "ring-violet-500",
-  blue: "ring-blue-500",
-  amber: "ring-amber-500",
-  emerald: "ring-emerald-500",
-  cyan: "ring-cyan-500",
+  violet: "ring-foreground/40",
+  blue: "ring-foreground/40",
+  amber: "ring-foreground/40",
+  emerald: "ring-foreground/40",
+  cyan: "ring-foreground/40",
 };
 
 const RING_HOVER: Record<string, string> = {
-  violet: "hover:ring-violet-500/50",
-  blue: "hover:ring-blue-500/50",
-  amber: "hover:ring-amber-500/50",
-  emerald: "hover:ring-emerald-500/50",
-  cyan: "hover:ring-cyan-500/50",
+  violet: "hover:ring-foreground/30",
+  blue: "hover:ring-foreground/30",
+  amber: "hover:ring-foreground/30",
+  emerald: "hover:ring-foreground/30",
+  cyan: "hover:ring-foreground/30",
 };
 
 const BORDER_ACTIVE: Record<string, string> = {
-  violet: "border-violet-500/30",
-  blue: "border-blue-500/30",
-  amber: "border-amber-500/30",
-  emerald: "border-emerald-500/30",
-  cyan: "border-cyan-500/30",
+  violet: "border-white/[0.15]",
+  blue: "border-white/[0.15]",
+  amber: "border-white/[0.15]",
+  emerald: "border-white/[0.15]",
+  cyan: "border-white/[0.15]",
 };
 
 export function ReferenceSection({
@@ -103,7 +103,7 @@ export function ReferenceSection({
       {/* Upload button */}
       <FileUpload onFilesAdded={handleUpload} accept="image/*">
         <FileUploadTrigger asChild>
-          <button className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-muted/50 hover:bg-muted text-xs transition-all duration-150 border border-dashed border-border hover:border-border/80 hover:shadow-sm active:scale-[0.98]">
+          <button className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] text-xs transition-all duration-150 border border-dashed border-white/[0.1] active:scale-[0.98]">
             <ImagePlus className="size-3.5" aria-hidden="true" />
             Upload
           </button>
@@ -113,7 +113,7 @@ export function ReferenceSection({
       {/* Pick from generated images */}
       {completedGens.length > 0 && (
         <>
-          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
+          <div className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">
             Generated Images
           </div>
           <div className="grid grid-cols-5 gap-1 max-h-28 overflow-y-auto">
@@ -126,7 +126,7 @@ export function ReferenceSection({
                   "aspect-square rounded-md overflow-hidden border transition-all duration-150 focus-visible:ring-2 focus-visible:ring-ring",
                   image?.url === gen.url
                     ? `ring-1 ${ringColor} shadow-sm`
-                    : `border-border hover:ring-1 ${ringHover} hover:scale-105 active:scale-95`
+                    : `border-white/[0.06] hover:ring-1 ${ringHover} hover:scale-105 active:scale-95`
                 )}
                 title={gen.prompt?.slice(0, 40)}
               >
@@ -146,7 +146,7 @@ export function ReferenceSection({
       {/* Pick from saved references */}
       {savedReferences.length > 0 && (
         <>
-          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">
+          <div className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">
             Your Library
           </div>
           <div className="grid grid-cols-5 gap-1 max-h-28 overflow-y-auto">
@@ -161,7 +161,7 @@ export function ReferenceSection({
                   "aspect-square rounded-md overflow-hidden border transition-all duration-150 focus-visible:ring-2 focus-visible:ring-ring",
                   image?.storagePath === ref.storage_path
                     ? `ring-1 ${ringColor} shadow-sm`
-                    : `border-border hover:ring-1 ${ringHover} hover:scale-105 active:scale-95`
+                    : `border-white/[0.06] hover:ring-1 ${ringHover} hover:scale-105 active:scale-95`
                 )}
                 title={ref.name || "Reference"}
               >

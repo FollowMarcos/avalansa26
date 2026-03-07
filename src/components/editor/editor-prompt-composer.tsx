@@ -118,7 +118,7 @@ export function EditorPromptComposer() {
   return (
     <TooltipProvider delayDuration={300}>
       <FileUpload onFilesAdded={addReferenceImages} multiple accept="image/*" disabled={!hasAvailableSlots}>
-      <div className="border-t border-border bg-background/95 backdrop-blur-sm px-4 py-3 space-y-2">
+      <div className="border-t border-white/[0.06] bg-background/95 backdrop-blur-sm px-3 py-2 space-y-2">
         {/* Inline reference image thumbnails */}
         <AnimatePresence>
           {hasReferences && (
@@ -132,7 +132,7 @@ export function EditorPromptComposer() {
               <div className="flex items-center gap-1.5">
                 {referenceImages.slice(0, 6).map((img) => (
                   <div key={img.id} className="relative group">
-                    <div className="size-9 rounded-lg overflow-hidden bg-muted border border-border">
+                    <div className="size-8 rounded-md overflow-hidden bg-muted border border-white/[0.06]">
                       <Image src={img.preview} alt="Reference" width={36} height={36} className="w-full h-full object-cover" />
                       {img.isUploading && (
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -144,7 +144,7 @@ export function EditorPromptComposer() {
                       type="button"
                       onClick={() => removeReferenceImage(img.id)}
                       aria-label="Remove reference"
-                      className="absolute -top-1.5 -right-1.5 size-4 rounded-full bg-background border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
+                      className="absolute -top-1.5 -right-1.5 size-4 rounded-full bg-background border border-white/[0.1] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground"
                     >
                       <X className="size-2.5" />
                     </button>
@@ -169,10 +169,10 @@ export function EditorPromptComposer() {
                   <button
                     type="button"
                     className={cn(
-                      "size-10 rounded-xl flex items-center justify-center transition-colors shrink-0 relative focus-visible:ring-2 focus-visible:ring-ring",
+                      "size-10 rounded-lg flex items-center justify-center transition-colors shrink-0 relative focus-visible:ring-2 focus-visible:ring-ring",
                       hasReferences
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-muted text-muted-foreground hover:text-foreground"
+                        ? "bg-white/[0.12] text-foreground"
+                        : "bg-white/[0.04] text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
                     )}
                     aria-label="Add reference images"
                   >
@@ -198,7 +198,7 @@ export function EditorPromptComposer() {
                     <div className="grid grid-cols-5 gap-1.5">
                       {referenceImages.map((img) => (
                         <div key={img.id} className="relative group">
-                          <div className="aspect-square rounded-lg overflow-hidden bg-muted border border-border">
+                          <div className="aspect-square rounded-md overflow-hidden bg-muted border border-white/[0.06]">
                             <Image src={img.preview} alt="Reference" width={48} height={48} className="w-full h-full object-cover" />
                             {img.isUploading && (
                               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -225,7 +225,7 @@ export function EditorPromptComposer() {
                 <FileUploadTrigger asChild>
                   <button
                     type="button"
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-muted hover:bg-muted/80 text-sm transition-colors border-2 border-dashed border-border"
+                    className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] text-sm transition-colors border-2 border-dashed border-white/[0.1]"
                     disabled={!hasAvailableSlots || referenceImages.length >= 14}
                   >
                     <ImagePlus className="size-4" aria-hidden="true" />
@@ -248,7 +248,7 @@ export function EditorPromptComposer() {
                               <button
                                 type="button"
                                 onClick={() => addSavedReferenceToActive(saved)}
-                                className="aspect-square w-full rounded-lg overflow-hidden border border-border hover:border-foreground/50 transition-colors"
+                                className="aspect-square w-full rounded-md overflow-hidden border border-white/[0.06] hover:border-white/[0.15] transition-colors"
                                 aria-label={`Add ${saved.name || "reference"}`}
                               >
                                 <Image src={saved.url} alt={saved.name || "Reference"} width={48} height={48} className="w-full h-full object-cover" unoptimized />
@@ -288,8 +288,8 @@ export function EditorPromptComposer() {
               placeholder={hasReferences ? "Describe how to transform your images..." : "Describe what you want to generate..."}
               rows={2}
               className={cn(
-                "w-full resize-none rounded-xl border border-border bg-muted/30 px-3 py-2 text-sm",
-                "placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/40",
+                "w-full resize-none rounded-lg border border-white/[0.06] bg-white/[0.04] px-3 py-2 text-sm",
+                "placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-white/[0.15] focus:border-white/[0.1]",
                 "transition-shadow scrollbar-thin"
               )}
             />
@@ -302,7 +302,7 @@ export function EditorPromptComposer() {
                   onClick={() => generate()}
                   disabled={!canGenerate}
                   size="sm"
-                  className="h-10 px-4 rounded-xl gap-2"
+                  className="h-10 px-4 rounded-lg gap-2"
                 >
                   {isGenerating ? (
                     <>
@@ -338,7 +338,7 @@ export function EditorPromptComposer() {
             disabled={isLoadingApis}
           />
 
-          <div className="w-px h-5 bg-border/60 shrink-0" />
+          <div className="w-px h-5 bg-white/[0.06] shrink-0" />
 
           {/* Aspect Ratio popover */}
           <Popover>
@@ -346,7 +346,7 @@ export function EditorPromptComposer() {
               <button
                 type="button"
                 aria-label={`Aspect ratio: ${settings.aspectRatio}`}
-                className="flex items-center gap-1.5 h-8 px-2.5 rounded-lg bg-muted/50 hover:bg-muted transition-colors shrink-0"
+                className="flex items-center gap-1.5 h-8 px-2.5 rounded-md bg-white/[0.04] hover:bg-white/[0.06] transition-colors shrink-0"
               >
                 <AspectRatioShape ratio={settings.aspectRatio} className="text-muted-foreground" />
                 <span className="text-xs font-medium">{settings.aspectRatio}</span>
@@ -385,7 +385,7 @@ export function EditorPromptComposer() {
           </Popover>
 
           {/* Quality segmented control */}
-          <div role="radiogroup" aria-label="Image quality" className="flex items-center h-8 p-0.5 rounded-lg bg-muted/50 shrink-0">
+          <div role="radiogroup" aria-label="Image quality" className="flex items-center h-8 p-0.5 rounded-md bg-white/[0.04] shrink-0">
             {filteredImageSizes.map((size) => (
               <Tooltip key={size.value}>
                 <TooltipTrigger asChild>
@@ -415,7 +415,7 @@ export function EditorPromptComposer() {
             aria-valuenow={settings.outputCount}
             aria-valuemin={1}
             aria-valuemax={maxOutputCount}
-            className="flex items-center h-8 rounded-lg bg-muted/50 shrink-0"
+            className="flex items-center h-8 rounded-md bg-white/[0.04] shrink-0"
           >
             <button
               type="button"
@@ -466,7 +466,7 @@ export function EditorPromptComposer() {
                   value={settings.negativePrompt}
                   onChange={(e) => updateSettings({ negativePrompt: e.target.value })}
                   placeholder="What to avoid..."
-                  className="mt-1 w-full h-7 px-2 text-xs rounded-md border border-border bg-background focus:outline-none focus:ring-1 focus:ring-primary/40 transition-shadow"
+                  className="mt-1 w-full h-7 px-2 text-xs rounded-md border border-white/[0.06] bg-white/[0.04] focus:outline-none focus:ring-1 focus:ring-white/[0.15] transition-shadow"
                 />
               </motion.div>
             )}

@@ -79,7 +79,7 @@ export function InpaintModal() {
               onChange={(e) => setInpaintPrompt(e.target.value)}
               placeholder="Describe what should appear in the painted area..."
               rows={2}
-              className="w-full resize-none rounded-lg border border-border bg-muted/30 px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary/40"
+              className="w-full resize-none rounded-lg border border-white/[0.06] bg-white/[0.04] px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-white/[0.15]"
             />
 
             {/* Actions */}

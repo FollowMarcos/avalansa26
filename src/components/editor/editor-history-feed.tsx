@@ -7,8 +7,8 @@ import {
   useCreate,
   type GeneratedImage,
   type ReferenceImageInfo,
-  type TaggedReference,
 } from "@/components/create/create-context";
+import { makeTaggedRef } from "./editor-constants";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,17 +38,6 @@ import {
 } from "lucide-react";
 import { ImageDetailModal } from "@/components/create/image-detail-modal";
 
-function makeTaggedRef(
-  current: TaggedReference | undefined,
-  patch: Partial<TaggedReference>
-): TaggedReference {
-  return {
-    image: patch.image !== undefined ? patch.image : current?.image,
-    tags: patch.tags !== undefined ? patch.tags : current?.tags || [],
-    customText:
-      patch.customText !== undefined ? patch.customText : current?.customText || "",
-  };
-}
 
 export function EditorHistoryFeed() {
   const {
@@ -161,8 +150,8 @@ export function EditorHistoryFeed() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="h-full overflow-y-auto p-3 scrollbar-thin">
-        <div className="grid grid-cols-2 gap-2 xl:grid-cols-3">
+      <div className="h-full overflow-y-auto p-2 scrollbar-thin">
+        <div className="grid grid-cols-2 gap-1.5 xl:grid-cols-3">
           <AnimatePresence initial={false}>
             {/* Pending / generating items */}
             {pendingImages.map((image) => (
@@ -251,7 +240,7 @@ const FeedItem = React.memo(function FeedItem({
 }: FeedItemProps) {
   return (
     <div
-      className="group relative rounded-xl overflow-hidden border border-border/60 bg-muted/10 transition-all duration-200 hover:border-border hover:shadow-md hover:shadow-black/5 dark:hover:shadow-black/20 cursor-pointer"
+      className="group relative rounded-lg overflow-hidden border border-white/[0.06] bg-white/[0.02] transition-all duration-200 hover:border-white/[0.12] cursor-pointer"
       onClick={onClick}
       role="button"
       tabIndex={0}
@@ -262,7 +251,7 @@ const FeedItem = React.memo(function FeedItem({
         <img
           src={image.url}
           alt={image.prompt?.slice(0, 60) || "Generated image"}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+          className="w-full h-full object-cover"
           loading="lazy"
           draggable={false}
         />
@@ -349,7 +338,7 @@ const FeedItem = React.memo(function FeedItem({
 
       {/* Prompt preview */}
       {image.prompt && (
-        <div className="px-2.5 py-2">
+        <div className="px-2 py-1.5">
           <p className="text-[10px] text-muted-foreground line-clamp-2 leading-relaxed">
             {image.prompt}
           </p>
@@ -363,15 +352,15 @@ const FeedItem = React.memo(function FeedItem({
 
 function PendingItem({ image }: { image: GeneratedImage }) {
   return (
-    <div className="relative rounded-xl overflow-hidden border border-border/60 bg-muted/10">
-      <div className="aspect-square relative flex flex-col items-center justify-center gap-3 bg-muted/20">
+    <div className="relative rounded-lg overflow-hidden border border-white/[0.06] bg-white/[0.02]">
+      <div className="aspect-square relative flex flex-col items-center justify-center gap-3">
         <div className="relative">
-          <div className="size-10 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+          <div className="size-8 rounded-full border-2 border-foreground/20 border-t-foreground/60 animate-spin" />
         </div>
         <span className="text-[10px] text-muted-foreground font-medium">Generating...</span>
       </div>
       {image.prompt && (
-        <div className="px-2.5 py-2">
+        <div className="px-2 py-1.5">
           <p className="text-[10px] text-muted-foreground line-clamp-2 leading-relaxed">
             {image.prompt}
           </p>
@@ -385,16 +374,16 @@ function PendingItem({ image }: { image: GeneratedImage }) {
 
 function FailedItem({ image }: { image: GeneratedImage }) {
   return (
-    <div className="relative rounded-xl overflow-hidden border border-destructive/30 bg-destructive/5">
+    <div className="relative rounded-lg overflow-hidden border border-destructive/30 bg-destructive/5">
       <div className="aspect-square relative flex flex-col items-center justify-center gap-2">
-        <AlertCircle className="size-6 text-destructive/60" />
+        <AlertCircle className="size-5 text-destructive/60" />
         <span className="text-[10px] text-destructive/80 font-medium">Failed</span>
         {image.error && (
           <p className="text-[9px] text-destructive/60 text-center px-4 line-clamp-2">{image.error}</p>
         )}
       </div>
       {image.prompt && (
-        <div className="px-2.5 py-2 border-t border-destructive/10">
+        <div className="px-2 py-1.5 border-t border-destructive/10">
           <p className="text-[10px] text-muted-foreground line-clamp-2 leading-relaxed">
             {image.prompt}
           </p>

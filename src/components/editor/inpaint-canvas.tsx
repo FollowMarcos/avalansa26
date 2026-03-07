@@ -38,17 +38,18 @@ export function InpaintCanvas({
   const [cursorPos, setCursorPos] = React.useState<{ x: number; y: number } | null>(null);
   const currentLine = React.useRef<Line | null>(null);
   const imageRef = React.useRef<HTMLImageElement | null>(null);
+  const [imageLoaded, setImageLoaded] = React.useState(false);
 
   // Load source image
   React.useEffect(() => {
+    setImageLoaded(false);
     const img = new window.Image();
     img.crossOrigin = "anonymous";
     img.onload = () => {
       imageRef.current = img;
-      redraw();
+      setImageLoaded(true);
     };
     img.src = sourceImageUrl;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sourceImageUrl]);
 
   // Redraw everything
@@ -60,7 +61,7 @@ export function InpaintCanvas({
     ctx.clearRect(0, 0, width, height);
 
     // Draw source image
-    if (imageRef.current) {
+    if (imageRef.current && imageLoaded) {
       ctx.drawImage(imageRef.current, 0, 0, width, height);
     }
 
@@ -71,7 +72,7 @@ export function InpaintCanvas({
     if (currentLine.current) {
       drawLine(ctx, currentLine.current);
     }
-  }, [width, height, lines]);
+  }, [width, height, lines, imageLoaded]);
 
   React.useEffect(() => {
     redraw();
@@ -222,7 +223,7 @@ export function InpaintCanvas({
     <div className="space-y-3">
       {/* Canvas */}
       <div
-        className="relative rounded-lg overflow-hidden border border-border bg-muted/30"
+        className="relative rounded-lg overflow-hidden border border-white/[0.06] bg-black/20"
         onMouseLeave={() => setCursorPos(null)}
       >
         <canvas
@@ -267,7 +268,7 @@ export function InpaintCanvas({
       <TooltipProvider delayDuration={300}>
         <div className="flex items-center gap-3">
           {/* Brush / Eraser toggle */}
-          <div className="flex items-center gap-1 p-0.5 rounded-lg bg-muted/50">
+          <div className="flex items-center gap-1 p-0.5 rounded-lg bg-white/[0.04]">
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
@@ -276,8 +277,8 @@ export function InpaintCanvas({
                   className={cn(
                     "p-1.5 rounded-md transition-all duration-150",
                     !isEraser
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
+                      ? "bg-white/[0.12] text-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-white/[0.06]"
                   )}
                   aria-label="Brush mode"
                 >
@@ -294,8 +295,8 @@ export function InpaintCanvas({
                   className={cn(
                     "p-1.5 rounded-md transition-all duration-150",
                     isEraser
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/80"
+                      ? "bg-white/[0.12] text-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-white/[0.06]"
                   )}
                   aria-label="Eraser mode"
                 >
@@ -314,7 +315,7 @@ export function InpaintCanvas({
                   type="button"
                   onClick={() => setBrushSize(Math.max(5, brushSize - 5))}
                   disabled={brushSize <= 5}
-                  className="p-1 rounded-md border border-border hover:bg-muted disabled:opacity-30 transition-colors"
+                  className="p-1 rounded-md border border-white/[0.08] hover:bg-white/[0.06] disabled:opacity-30 transition-colors"
                   aria-label="Decrease brush size"
                 >
                   <Minus className="size-3" />
@@ -329,7 +330,7 @@ export function InpaintCanvas({
                   type="button"
                   onClick={() => setBrushSize(Math.min(100, brushSize + 5))}
                   disabled={brushSize >= 100}
-                  className="p-1 rounded-md border border-border hover:bg-muted disabled:opacity-30 transition-colors"
+                  className="p-1 rounded-md border border-white/[0.08] hover:bg-white/[0.06] disabled:opacity-30 transition-colors"
                   aria-label="Increase brush size"
                 >
                   <Plus className="size-3" />
