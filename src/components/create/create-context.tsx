@@ -1296,13 +1296,6 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     // Determine how many images to generate (max 4 per API call)
     const outputCount = Math.min(settings.outputCount, 4);
 
-    setIsGenerating(true);
-    abortControllerRef.current = new AbortController();
-
-    // Initialize thinking steps
-    const steps = getThinkingSteps();
-    setThinkingSteps(steps);
-
     // Resolve the API config name for accurate model display
     const selectedApi = availableApis.find(api => api.id === selectedApiId);
     const resolvedModelName = selectedApi?.name || settings.model;
@@ -1335,165 +1328,126 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       sessionStorage.setItem('pending-generations', JSON.stringify([...placeholders, ...existing]));
     } catch { /* ignore */ }
 
-    try {
-      // Show thinking steps animation
-      for (let i = 0; i < steps.length - 1; i++) {
-        if (abortControllerRef.current?.signal.aborted) break;
+    // Capture values before async gap (allow user to modify prompt/settings for next generation)
+    const capturedPrompt = buildFinalPrompt();
+    const capturedSettings = { ...settings };
+    const capturedApiId = selectedApiId;
+    const capturedRefPaths = referenceImages
+      .filter(img => img.storagePath && !img.isUploading)
+      .map(img => img.storagePath!);
 
-        await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 200));
-        setThinkingSteps(prev =>
-          prev.map((step, idx) =>
-            idx === i ? { ...step, completed: true } : step
-          )
-        );
-      }
-
-      if (abortControllerRef.current?.signal.aborted) return;
-
-      // Wait for any uploading images to complete
-      const uploadingImages = referenceImages.filter(img => img.isUploading);
-      if (uploadingImages.length > 0) {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-
-      // Get storage paths for reference images (skip any still uploading)
-      const referenceImagePaths = referenceImages
-        .filter(img => img.storagePath && !img.isUploading)
-        .map(img => img.storagePath!);
-
-      // Build the final prompt
-      const finalPrompt = buildFinalPrompt();
-
-      const requestParams: Record<string, unknown> = {
-        apiId: selectedApiId,
-        prompt: finalPrompt,
-        negativePrompt: settings.negativePrompt,
-        aspectRatio: settings.aspectRatio,
-        imageSize: settings.imageSize,
-        outputCount,
-        referenceImagePaths,
-        mode: settings.generationSpeed,
-      };
-
-      // Add labeled style / pose references if set (prefer storagePath, fall back to URL)
-      if (settings.styleRef) requestParams.styleRefPath = settings.styleRef.storagePath || settings.styleRef.url;
-      if (settings.poseRef) requestParams.poseRefPath = settings.poseRef.storagePath || settings.poseRef.url;
-      // Add new tagged references (expression, clothing, location)
-      if (settings.expressionRef?.image) requestParams.expressionRefPath = settings.expressionRef.image.storagePath || settings.expressionRef.image.url;
-      if (settings.expressionRef?.tags?.length) requestParams.expressionTags = settings.expressionRef.tags;
-      if (settings.expressionRef?.customText) requestParams.expressionCustomText = settings.expressionRef.customText;
-      if (settings.clothingRef?.image) requestParams.clothingRefPath = settings.clothingRef.image.storagePath || settings.clothingRef.image.url;
-      if (settings.clothingRef?.tags?.length) requestParams.clothingTags = settings.clothingRef.tags;
-      if (settings.clothingRef?.customText) requestParams.clothingCustomText = settings.clothingRef.customText;
-      if (settings.locationRef?.image) requestParams.locationRefPath = settings.locationRef.image.storagePath || settings.locationRef.image.url;
-      if (settings.locationRef?.tags?.length) requestParams.locationTags = settings.locationRef.tags;
-      if (settings.locationRef?.customText) requestParams.locationCustomText = settings.locationRef.customText;
-
-      // Call the generation API
-      const response = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestParams),
-        signal: abortControllerRef.current.signal,
-      });
-
-      // Mark final step as completed
-      setThinkingSteps(prev =>
-        prev.map((step, idx) =>
-          idx === prev.length - 1 ? { ...step, completed: true } : step
-        )
-      );
-
-      if (!response.ok) {
-        let errorMessage = `Request failed with status ${response.status}`;
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-        } catch {
-          if (response.status === 413) {
-            errorMessage = 'Images are too large. Try using fewer or smaller reference images.';
-          }
-        }
-        throw new Error(errorMessage);
-      }
-
-      let data;
+    // Fire-and-forget: run API call in background so user can queue more jobs
+    (async () => {
       try {
-        data = await response.json();
-      } catch {
-        throw new Error('Invalid response from server. Please try again.');
-      }
+        const requestParams: Record<string, unknown> = {
+          apiId: capturedApiId,
+          prompt: capturedPrompt,
+          negativePrompt: capturedSettings.negativePrompt,
+          aspectRatio: capturedSettings.aspectRatio,
+          imageSize: capturedSettings.imageSize,
+          outputCount,
+          referenceImagePaths: capturedRefPaths,
+          mode: capturedSettings.generationSpeed,
+        };
 
-      if (!data.success) {
-        throw new Error(data.error || 'Generation failed');
-      }
+        // Add labeled style / pose references if set (prefer storagePath, fall back to URL)
+        if (capturedSettings.styleRef) requestParams.styleRefPath = capturedSettings.styleRef.storagePath || capturedSettings.styleRef.url;
+        if (capturedSettings.poseRef) requestParams.poseRefPath = capturedSettings.poseRef.storagePath || capturedSettings.poseRef.url;
+        // Add new tagged references (expression, clothing, location)
+        if (capturedSettings.expressionRef?.image) requestParams.expressionRefPath = capturedSettings.expressionRef.image.storagePath || capturedSettings.expressionRef.image.url;
+        if (capturedSettings.expressionRef?.tags?.length) requestParams.expressionTags = capturedSettings.expressionRef.tags;
+        if (capturedSettings.expressionRef?.customText) requestParams.expressionCustomText = capturedSettings.expressionRef.customText;
+        if (capturedSettings.clothingRef?.image) requestParams.clothingRefPath = capturedSettings.clothingRef.image.storagePath || capturedSettings.clothingRef.image.url;
+        if (capturedSettings.clothingRef?.tags?.length) requestParams.clothingTags = capturedSettings.clothingRef.tags;
+        if (capturedSettings.clothingRef?.customText) requestParams.clothingCustomText = capturedSettings.clothingRef.customText;
+        if (capturedSettings.locationRef?.image) requestParams.locationRefPath = capturedSettings.locationRef.image.storagePath || capturedSettings.locationRef.image.url;
+        if (capturedSettings.locationRef?.tags?.length) requestParams.locationTags = capturedSettings.locationRef.tags;
+        if (capturedSettings.locationRef?.customText) requestParams.locationCustomText = capturedSettings.locationRef.customText;
 
-      // Handle batch/relaxed mode
-      if (data.mode === 'relaxed' && data.batchJobId) {
-        // Replace placeholders with a single batch-pending entry
-        setHistory(prev => {
-          const filtered = prev.filter(img => !placeholderIds.includes(img.id));
-          const batchPlaceholder: GeneratedImage = {
-            id: `batch-${data.batchJobId}`,
-            url: '',
-            prompt: finalPrompt,
-            timestamp: Date.now(),
-            settings: { ...settings },
-            status: 'pending',
-          };
-          return [batchPlaceholder, ...filtered];
+        // Call the generation API
+        const response = await fetch('/api/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(requestParams),
         });
 
-        // Start polling for batch job completion
-        pollBatchJob(data.batchJobId, finalPrompt, { ...settings });
-        return;
-      }
+        if (!response.ok) {
+          let errorMessage = `Request failed with status ${response.status}`;
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+          } catch {
+            if (response.status === 413) {
+              errorMessage = 'Images are too large. Try using fewer or smaller reference images.';
+            }
+          }
+          throw new Error(errorMessage);
+        }
 
-      // Handle fast mode (immediate images)
-      if (!data.images || data.images.length === 0) {
-        throw new Error(data.error || 'No images generated');
-      }
+        let data;
+        try {
+          data = await response.json();
+        } catch {
+          throw new Error('Invalid response from server. Please try again.');
+        }
 
-      // Replace placeholder entries with actual images (use DB ID when available)
-      const newImages: GeneratedImage[] = data.images.map((img: { url: string; id?: string }, i: number) => ({
-        id: img.id || `gen-${Date.now()}-${i}`,
-        url: img.url,
-        prompt: finalPrompt,
-        timestamp: Date.now(),
-        settings: { ...settings, model: resolvedModelName },
-        status: 'completed' as const,
-      }));
+        if (!data.success) {
+          throw new Error(data.error || 'Generation failed');
+        }
 
-      setHistory(prev => {
-        const filtered = prev.filter(img => !placeholderIds.includes(img.id));
-        return [...newImages, ...filtered];
-      });
-      setSelectedImage(newImages[0]);
+        // Handle batch/relaxed mode
+        if (data.mode === 'relaxed' && data.batchJobId) {
+          setHistory(prev => {
+            const filtered = prev.filter(img => !placeholderIds.includes(img.id));
+            const batchPlaceholder: GeneratedImage = {
+              id: `batch-${data.batchJobId}`,
+              url: '',
+              prompt: capturedPrompt,
+              timestamp: Date.now(),
+              settings: capturedSettings,
+              status: 'pending',
+            };
+            return [batchPlaceholder, ...filtered];
+          });
+          pollBatchJob(data.batchJobId, capturedPrompt, capturedSettings);
+          return;
+        }
 
-      // Clear resolved pending entries from sessionStorage
-      clearPendingFromSession(placeholderIds);
+        // Handle fast mode (immediate images)
+        if (!data.images || data.images.length === 0) {
+          throw new Error(data.error || 'No images generated');
+        }
 
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        // Generation was cancelled - remove placeholder entries
-        setHistory(prev => prev.filter(img => !placeholderIds.includes(img.id)));
+        // Replace placeholder entries with actual images
+        const newImages: GeneratedImage[] = data.images.map((img: { url: string; id?: string }, i: number) => ({
+          id: img.id || `gen-${Date.now()}-${i}`,
+          url: img.url,
+          prompt: capturedPrompt,
+          timestamp: Date.now(),
+          settings: { ...capturedSettings, model: resolvedModelName },
+          status: 'completed' as const,
+        }));
+
+        setHistory(prev => {
+          const filtered = prev.filter(img => !placeholderIds.includes(img.id));
+          return [...newImages, ...filtered];
+        });
+        setSelectedImage(newImages[0]);
         clearPendingFromSession(placeholderIds);
-        return;
+
+      } catch (error) {
+        console.error("Generation error:", error);
+        const errorMessage = error instanceof Error ? error.message : "Generation failed";
+        setHistory(prev =>
+          prev.map(img =>
+            placeholderIds.includes(img.id)
+              ? { ...img, status: 'failed' as const, error: errorMessage }
+              : img
+          )
+        );
+        clearPendingFromSession(placeholderIds);
       }
-      console.error("Generation error:", error);
-      const errorMessage = error instanceof Error ? error.message : "Generation failed";
-      setHistory(prev =>
-        prev.map(img =>
-          placeholderIds.includes(img.id)
-            ? { ...img, status: 'failed' as const, error: errorMessage }
-            : img
-        )
-      );
-      clearPendingFromSession(placeholderIds);
-    } finally {
-      setIsGenerating(false);
-      setThinkingSteps([]);
-    }
+    })();
   }, [prompt, referenceImages, settings, selectedApiId, availableApis, getThinkingSteps, buildFinalPrompt, pollBatchJob, variationsMode, variationSlots]);
 
   const cancelGeneration = React.useCallback(() => {

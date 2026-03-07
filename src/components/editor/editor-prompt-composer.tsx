@@ -15,10 +15,11 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Tooltip,
   TooltipContent,
@@ -47,7 +48,6 @@ export function EditorPromptComposer() {
   const {
     prompt,
     setPrompt,
-    isGenerating,
     hasAvailableSlots,
     generate,
     settings,
@@ -70,6 +70,7 @@ export function EditorPromptComposer() {
 
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
   const [showNegative, setShowNegative] = React.useState(false);
+  const [refModalOpen, setRefModalOpen] = React.useState(false);
 
   const filteredAspectRatios = React.useMemo(
     () => baseAspectRatioOptions.filter((o) => allowedAspectRatios.includes(o.value)),
@@ -84,7 +85,7 @@ export function EditorPromptComposer() {
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if ((prompt.trim() || referenceImages.length > 0) && !isGenerating && hasAvailableSlots && selectedApiId) {
+      if ((prompt.trim() || referenceImages.length > 0) && activeGenerations < 4 && selectedApiId) {
         generate();
       }
     }
@@ -105,20 +106,20 @@ export function EditorPromptComposer() {
 
   const hasReferences = referenceImages.length > 0;
 
-  const canGenerate = (prompt.trim().length > 0 || referenceImages.length > 0) && !isGenerating && hasAvailableSlots && !!selectedApiId;
+  const canGenerate = (prompt.trim().length > 0 || referenceImages.length > 0) && activeGenerations < 4 && !!selectedApiId;
 
   const disabledReason = !selectedApiId
     ? "Select a model first"
     : !prompt.trim()
     ? "Enter a prompt"
-    : !hasAvailableSlots
-    ? "Generation slots full"
+    : activeGenerations >= 4
+    ? "Max 4 concurrent jobs"
     : null;
 
   return (
     <TooltipProvider delayDuration={300}>
       <FileUpload onFilesAdded={addReferenceImages} multiple accept="image/*" disabled={!hasAvailableSlots}>
-      <div className="border-t border-white/[0.06] bg-background/95 backdrop-blur-sm px-3 py-2 space-y-2">
+      <div className="border border-white/[0.06] bg-background/95 backdrop-blur-sm px-3 py-2 space-y-2 rounded-xl mx-3 mb-3">
         {/* Inline reference image thumbnails */}
         <AnimatePresence>
           {hasReferences && (
@@ -162,44 +163,55 @@ export function EditorPromptComposer() {
         {/* Main prompt row */}
         <div className="flex items-end gap-2">
           {/* Reference images button */}
-          <DropdownMenu>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className={cn(
-                      "size-10 rounded-lg flex items-center justify-center transition-colors shrink-0 relative focus-visible:ring-2 focus-visible:ring-ring",
-                      hasReferences
-                        ? "bg-white/[0.12] text-foreground"
-                        : "bg-white/[0.04] text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
-                    )}
-                    aria-label="Add reference images"
-                  >
-                    <ImagePlus className="size-4" strokeWidth={1.5} aria-hidden="true" />
-                    {hasReferences && (
-                      <span className="absolute -top-1 -right-1 size-4 rounded-full bg-background border-2 border-primary text-[9px] font-mono font-medium text-primary flex items-center justify-center">
-                        {referenceImages.length}
-                      </span>
-                    )}
-                  </button>
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="text-[10px]">
-                {hasReferences ? `${referenceImages.length} references` : "Add references"}
-              </TooltipContent>
-            </Tooltip>
-            <DropdownMenuContent align="start" side="top" className="w-80 p-0">
-              <div className="p-3 space-y-3">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={() => setRefModalOpen(true)}
+                className={cn(
+                  "size-10 rounded-lg flex items-center justify-center transition-colors shrink-0 relative focus-visible:ring-2 focus-visible:ring-ring",
+                  hasReferences
+                    ? "bg-white/[0.12] text-foreground"
+                    : "bg-white/[0.04] text-muted-foreground hover:bg-white/[0.06] hover:text-foreground"
+                )}
+                aria-label="Add reference images"
+              >
+                <ImagePlus className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                {hasReferences && (
+                  <span className="absolute -top-1 -right-1 size-4 rounded-full bg-background border-2 border-primary text-[9px] font-mono font-medium text-primary flex items-center justify-center">
+                    {referenceImages.length}
+                  </span>
+                )}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="text-[10px]">
+              {hasReferences ? `${referenceImages.length} references` : "Add references"}
+            </TooltipContent>
+          </Tooltip>
+
+          {/* Reference images modal */}
+          <Dialog open={refModalOpen} onOpenChange={setRefModalOpen}>
+            <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-sm">
+                  <ImagePlus className="size-4" />
+                  Reference Images
+                </DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-4">
                 {/* Active References */}
                 {hasReferences && (
                   <div className="space-y-2">
-                    <div className="text-xs font-medium">Active References</div>
-                    <div className="grid grid-cols-5 gap-1.5">
+                    <div className="flex items-center justify-between">
+                      <div className="text-xs font-medium">Active References</div>
+                      <div className="text-[10px] text-muted-foreground font-mono">{referenceImages.length}/14</div>
+                    </div>
+                    <div className="grid grid-cols-6 gap-2">
                       {referenceImages.map((img) => (
                         <div key={img.id} className="relative group">
                           <div className="aspect-square rounded-md overflow-hidden bg-muted border border-white/[0.06]">
-                            <Image src={img.preview} alt="Reference" width={48} height={48} className="w-full h-full object-cover" />
+                            <Image src={img.preview} alt="Reference" width={72} height={72} className="w-full h-full object-cover" />
                             {img.isUploading && (
                               <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                                 <Loader className="size-3 text-white" />
@@ -217,7 +229,6 @@ export function EditorPromptComposer() {
                         </div>
                       ))}
                     </div>
-                    <div className="text-[10px] text-muted-foreground text-right font-mono">{referenceImages.length}/14</div>
                   </div>
                 )}
 
@@ -225,7 +236,7 @@ export function EditorPromptComposer() {
                 <FileUploadTrigger asChild>
                   <button
                     type="button"
-                    className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] text-sm transition-colors border-2 border-dashed border-white/[0.1]"
+                    className="w-full flex items-center justify-center gap-2 px-3 py-3 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] text-sm transition-colors border-2 border-dashed border-white/[0.1]"
                     disabled={!hasAvailableSlots || referenceImages.length >= 14}
                   >
                     <ImagePlus className="size-4" aria-hidden="true" />
@@ -240,7 +251,7 @@ export function EditorPromptComposer() {
                       <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Your Library</div>
                       <div className="text-[10px] text-muted-foreground font-mono">{savedReferences.length} saved</div>
                     </div>
-                    <div className="grid grid-cols-5 gap-1.5 max-h-32 overflow-y-auto">
+                    <div className="grid grid-cols-6 gap-2 max-h-48 overflow-y-auto">
                       {savedReferences.map((saved) => (
                         <div key={saved.id} className="relative group">
                           <Tooltip>
@@ -251,7 +262,7 @@ export function EditorPromptComposer() {
                                 className="aspect-square w-full rounded-md overflow-hidden border border-white/[0.06] hover:border-white/[0.15] transition-colors"
                                 aria-label={`Add ${saved.name || "reference"}`}
                               >
-                                <Image src={saved.url} alt={saved.name || "Reference"} width={48} height={48} className="w-full h-full object-cover" unoptimized />
+                                <Image src={saved.url} alt={saved.name || "Reference"} width={72} height={72} className="w-full h-full object-cover" unoptimized />
                               </button>
                             </TooltipTrigger>
                             <TooltipContent side="top" className="text-xs">{saved.name || "Reference image"}</TooltipContent>
@@ -272,11 +283,11 @@ export function EditorPromptComposer() {
                 )}
 
                 {savedReferences.length === 0 && !hasReferences && (
-                  <p className="text-xs text-muted-foreground text-center py-2">Upload images to use as references.<br />They&apos;ll be saved to your library automatically.</p>
+                  <p className="text-xs text-muted-foreground text-center py-4">Upload images to use as references.<br />They&apos;ll be saved to your library automatically.</p>
                 )}
               </div>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </DialogContent>
+          </Dialog>
 
           <div className="flex-1 relative">
             <textarea
@@ -304,19 +315,8 @@ export function EditorPromptComposer() {
                   size="sm"
                   className="h-10 px-4 rounded-lg gap-2"
                 >
-                  {isGenerating ? (
-                    <>
-                      <Loader className="size-4" />
-                      <span className="text-xs">
-                        {activeGenerations > 0 ? `${activeGenerations} active` : "Generating..."}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="size-4" />
-                      Generate
-                    </>
-                  )}
+                    <Sparkles className="size-4" />
+                  {activeGenerations > 0 ? `Generate (${activeGenerations})` : "Generate"}
                 </Button>
               </span>
             </TooltipTrigger>
