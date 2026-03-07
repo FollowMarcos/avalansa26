@@ -208,9 +208,10 @@ export function InpaintCanvas({
 
   const handlePointerUp = () => {
     if (!isDrawing || !currentLine.current) return;
-    setIsDrawing(false);
-    setLines((prev) => [...prev, currentLine.current!]);
+    const finishedLine = currentLine.current;
     currentLine.current = null;
+    setIsDrawing(false);
+    setLines((prev) => [...prev, finishedLine]);
   };
 
   const clearMask = () => {

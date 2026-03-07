@@ -15,6 +15,8 @@ import { Paintbrush } from "lucide-react";
 import { InpaintCanvas } from "./inpaint-canvas";
 import { toast } from "sonner";
 
+const MAX_CANVAS = 512;
+
 export function InpaintModal() {
   const {
     inpaintSourceImage,
@@ -25,14 +27,38 @@ export function InpaintModal() {
 
   const [maskDataUrl, setMaskDataUrl] = React.useState<string | null>(null);
   const [inpaintPrompt, setInpaintPrompt] = React.useState("");
+  const [canvasSize, setCanvasSize] = React.useState<{ w: number; h: number } | null>(null);
 
   const isOpen = !!inpaintSourceImage;
+
+  // Load source image to get actual dimensions
+  React.useEffect(() => {
+    if (!inpaintSourceImage?.url) {
+      setCanvasSize(null);
+      return;
+    }
+    const img = new window.Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const scale = Math.min(MAX_CANVAS / img.naturalWidth, MAX_CANVAS / img.naturalHeight, 1);
+      setCanvasSize({
+        w: Math.round(img.naturalWidth * scale),
+        h: Math.round(img.naturalHeight * scale),
+      });
+    };
+    img.onerror = () => {
+      // Fallback to square
+      setCanvasSize({ w: MAX_CANVAS, h: MAX_CANVAS });
+    };
+    img.src = inpaintSourceImage.url;
+  }, [inpaintSourceImage?.url]);
 
   const handleClose = () => {
     if (isInpainting) return;
     setInpaintSourceImage(null);
     setMaskDataUrl(null);
     setInpaintPrompt("");
+    setCanvasSize(null);
   };
 
   const handleInpaint = async () => {
@@ -47,10 +73,6 @@ export function InpaintModal() {
     }
   };
 
-  // Canvas dimensions (fit within modal, maintain aspect ratio)
-  const canvasWidth = 512;
-  const canvasHeight = 512;
-
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
       <DialogContent className="max-w-xl">
@@ -64,13 +86,13 @@ export function InpaintModal() {
           </DialogDescription>
         </DialogHeader>
 
-        {inpaintSourceImage && (
+        {inpaintSourceImage && canvasSize && (
           <div className="space-y-4">
             <InpaintCanvas
               sourceImageUrl={inpaintSourceImage.url}
               onMaskChange={setMaskDataUrl}
-              width={canvasWidth}
-              height={canvasHeight}
+              width={canvasSize.w}
+              height={canvasSize.h}
             />
 
             {/* Prompt */}
@@ -106,6 +128,13 @@ export function InpaintModal() {
                 )}
               </Button>
             </div>
+          </div>
+        )}
+
+        {/* Loading state while image dimensions are being detected */}
+        {inpaintSourceImage && !canvasSize && (
+          <div className="flex items-center justify-center py-12">
+            <Loader className="size-6 text-muted-foreground" />
           </div>
         )}
       </DialogContent>

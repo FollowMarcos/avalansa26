@@ -327,7 +327,7 @@ const FeedItem = React.memo(function FeedItem({
                 Use as Generic Reference
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={onInpaint}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onInpaint(); }}>
                 <Paintbrush className="size-3.5 mr-2 text-rose-500" />
                 Inpaint this image
               </DropdownMenuItem>
