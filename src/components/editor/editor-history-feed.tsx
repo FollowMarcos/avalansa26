@@ -16,12 +16,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   Palette,
   PersonStanding,
@@ -293,72 +288,67 @@ const FeedItem = React.memo(function FeedItem({
         />
 
         {/* Gradient overlay on hover */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/0 to-black/0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-end justify-between p-2">
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+
+        {/* Action buttons — bottom bar */}
+        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-1.5 pb-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
           {/* Favorite */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onToggleFavorite();
-                }}
-                className="p-1.5 rounded-lg bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-colors"
-                aria-label={image.isFavorite ? "Remove from favorites" : "Add to favorites"}
-              >
-                <Heart
-                  className={cn(
-                    "size-3.5 transition-colors",
-                    image.isFavorite ? "fill-red-500 text-red-500" : "text-white"
-                  )}
-                />
-              </button>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="text-[10px]">
-              {image.isFavorite ? "Unfavorite" : "Favorite"}
-            </TooltipContent>
-          </Tooltip>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleFavorite();
+            }}
+            className={cn(
+              "size-8 rounded-full flex items-center justify-center backdrop-blur-md transition-all duration-150",
+              image.isFavorite
+                ? "bg-red-500/20 hover:bg-red-500/30"
+                : "bg-white/10 hover:bg-white/20"
+            )}
+            aria-label={image.isFavorite ? "Remove from favorites" : "Add to favorites"}
+          >
+            <Heart
+              className={cn(
+                "size-4 transition-colors",
+                image.isFavorite ? "fill-red-400 text-red-400" : "text-white/90"
+              )}
+            />
+          </button>
 
           {/* Edit dropdown */}
           <DropdownMenu>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="p-1.5 rounded-lg bg-black/40 backdrop-blur-sm hover:bg-black/60 transition-colors"
-                    aria-label="Use as reference"
-                  >
-                    <PenLine className="size-3.5 text-white" />
-                  </button>
-                </DropdownMenuTrigger>
-              </TooltipTrigger>
-              <TooltipContent side="top" className="text-[10px]">
-                Use as reference
-              </TooltipContent>
-            </Tooltip>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem onClick={() => onSetAsRef(image, "style")}>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                onClick={(e) => e.stopPropagation()}
+                className="size-8 rounded-full flex items-center justify-center bg-white/10 backdrop-blur-md hover:bg-white/20 transition-all duration-150"
+                aria-label="Use as reference"
+              >
+                <PenLine className="size-4 text-white/90" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSetAsRef(image, "style"); }}>
                 <Palette className="size-3.5 mr-2 text-violet-500" />
                 Use as Style Reference
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onSetAsRef(image, "pose")}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSetAsRef(image, "pose"); }}>
                 <PersonStanding className="size-3.5 mr-2 text-blue-500" />
                 Use as Pose Reference
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onSetAsRef(image, "expression")}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSetAsRef(image, "expression"); }}>
                 <Smile className="size-3.5 mr-2 text-amber-500" />
                 Use as Expression Reference
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onSetAsRef(image, "clothing")}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSetAsRef(image, "clothing"); }}>
                 <Shirt className="size-3.5 mr-2 text-emerald-500" />
                 Use as Clothing Reference
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onSetAsRef(image, "location")}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSetAsRef(image, "location"); }}>
                 <MapPin className="size-3.5 mr-2 text-cyan-500" />
                 Use as Location Reference
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onSetAsRef(image, "generic")}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSetAsRef(image, "generic"); }}>
                 <ImagePlus className="size-3.5 mr-2 text-muted-foreground" />
                 Use as Generic Reference
               </DropdownMenuItem>
