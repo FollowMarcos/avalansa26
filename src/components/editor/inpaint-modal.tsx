@@ -75,7 +75,7 @@ export function InpaintModal() {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Paintbrush className="size-4 text-rose-500" />
@@ -87,46 +87,53 @@ export function InpaintModal() {
         </DialogHeader>
 
         {inpaintSourceImage && canvasSize && (
-          <div className="space-y-4">
-            <InpaintCanvas
-              sourceImageUrl={inpaintSourceImage.url}
-              onMaskChange={setMaskDataUrl}
-              width={canvasSize.w}
-              height={canvasSize.h}
-            />
+          <div className="flex gap-4">
+            {/* Left: Canvas */}
+            <div className="flex-1 min-w-0">
+              <InpaintCanvas
+                sourceImageUrl={inpaintSourceImage.url}
+                onMaskChange={setMaskDataUrl}
+                width={canvasSize.w}
+                height={canvasSize.h}
+              />
+            </div>
 
-            {/* Prompt */}
-            <textarea
-              value={inpaintPrompt}
-              onChange={(e) => setInpaintPrompt(e.target.value)}
-              placeholder="Describe what should appear in the painted area..."
-              rows={2}
-              className="w-full resize-none rounded-lg border border-white/[0.06] bg-white/[0.04] px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-white/[0.15]"
-            />
+            {/* Right: Controls */}
+            <div className="flex flex-col gap-3 w-56 shrink-0">
+              {/* Prompt */}
+              <label className="text-xs font-medium text-muted-foreground">Prompt</label>
+              <textarea
+                value={inpaintPrompt}
+                onChange={(e) => setInpaintPrompt(e.target.value)}
+                placeholder="Describe what should appear in the painted area..."
+                rows={5}
+                className="w-full resize-none rounded-lg border border-white/[0.06] bg-white/[0.04] px-3 py-2 text-sm placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-white/[0.15]"
+              />
 
-            {/* Actions */}
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={handleClose} disabled={isInpainting}>
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleInpaint}
-                disabled={!maskDataUrl || !inpaintPrompt.trim() || isInpainting}
-                className="gap-2"
-              >
-                {isInpainting ? (
-                  <>
-                    <Loader className="size-4" />
-                    Inpainting...
-                  </>
-                ) : (
-                  <>
-                    <Paintbrush className="size-4" />
-                    Inpaint
-                  </>
-                )}
-              </Button>
+              {/* Actions */}
+              <div className="flex flex-col gap-2 mt-auto">
+                <Button
+                  size="sm"
+                  onClick={handleInpaint}
+                  disabled={!maskDataUrl || !inpaintPrompt.trim() || isInpainting}
+                  className="w-full gap-2"
+                >
+                  {isInpainting ? (
+                    <>
+                      <Loader className="size-4" />
+                      Inpainting...
+                    </>
+                  ) : (
+                    <>
+                      <Paintbrush className="size-4" />
+                      Inpaint
+                    </>
+                  )}
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleClose} disabled={isInpainting} className="w-full">
+                  Cancel
+                </Button>
+              </div>
             </div>
           </div>
         )}

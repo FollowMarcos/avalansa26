@@ -24,7 +24,8 @@ interface InpaintResponse {
 /**
  * POST /api/inpaint
  *
- * Inpaint an image using Fal.ai's inpainting model.
+ * Inpaint an image using the selected API provider.
+ * Routes to Gemini (Google) or Fal.ai based on the API config.
  * Takes a source image, a mask (white = area to regenerate), and a prompt.
  */
 export async function POST(request: NextRequest): Promise<NextResponse<InpaintResponse>> {
@@ -87,93 +88,250 @@ export async function POST(request: NextRequest): Promise<NextResponse<InpaintRe
       );
     }
 
-    // Upload mask to temporary storage so Fal.ai can access it via URL
-    // uploadGeneratedImage expects base64 string (with or without data URL prefix)
-    const maskUploadResult = await uploadGeneratedImage(
-      maskDataUrl,
-      user.id,
-      'image/png'
-    );
+    let resultImageUrl: string | undefined;
+    let resultBase64: string | undefined;
 
-    if (!maskUploadResult?.url) {
-      return NextResponse.json(
-        { success: false, error: 'Failed to upload mask image' },
-        { status: 500 }
-      );
-    }
+    // Route to provider
+    if (apiConfig.provider === 'google') {
+      // ================================================================
+      // GEMINI INPAINTING — send source + mask as inline data
+      // ================================================================
+      const { getImagesAsBase64 } = await import('@/utils/supabase/storage.server');
 
-    // Determine the source image URL
-    // sourceImagePath can be a full URL or a storage path
-    let sourceImageUrl = sourceImagePath;
-    if (!sourceImagePath.startsWith('http')) {
-      // It's a storage path, resolve to URL
-      const { getReferenceImageUrls } = await import('@/utils/supabase/storage.server');
-      const urls = await getReferenceImageUrls([sourceImagePath]);
-      sourceImageUrl = urls[0]?.url || sourceImagePath;
-    }
+      // Get source image as base64
+      let sourceBase64: string;
+      if (sourceImagePath.startsWith('data:')) {
+        sourceBase64 = sourceImagePath;
+      } else if (sourceImagePath.startsWith('http')) {
+        // Fetch and convert to base64
+        const imgResponse = await fetch(sourceImagePath);
+        if (!imgResponse.ok) {
+          return NextResponse.json(
+            { success: false, error: 'Failed to fetch source image' },
+            { status: 500 }
+          );
+        }
+        const buffer = await imgResponse.arrayBuffer();
+        const contentType = imgResponse.headers.get('content-type') || 'image/png';
+        sourceBase64 = `data:${contentType};base64,${Buffer.from(buffer).toString('base64')}`;
+      } else {
+        // Storage path — resolve to base64
+        const images = await getImagesAsBase64([sourceImagePath]);
+        if (!images[0]) {
+          return NextResponse.json(
+            { success: false, error: 'Failed to load source image' },
+            { status: 500 }
+          );
+        }
+        sourceBase64 = images[0];
+      }
 
-    // Call Fal.ai inpainting API
-    const inpaintEndpoint = 'https://fal.run/fal-ai/flux-pro/v1.1/inpainting';
+      // Parse base64 data from data URLs
+      const parseBase64 = (dataUrl: string) => {
+        const mimeMatch = dataUrl.match(/^data:([^;]+);base64,/);
+        const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
+        const data = mimeMatch ? dataUrl.replace(/^data:[^;]+;base64,/, '') : dataUrl;
+        return { mimeType, data };
+      };
 
-    const requestBody: Record<string, unknown> = {
-      image_url: sourceImageUrl,
-      mask_url: maskUploadResult.url,
-      prompt: prompt.trim(),
-      image_size: imageSize === '4K' ? { width: 2048, height: 2048 }
-        : imageSize === '2K' ? { width: 1024, height: 1024 }
-        : imageSize === '1K' ? { width: 768, height: 768 }
-        : { width: 1024, height: 1024 },
-      num_images: 1,
-      strength: 0.95,
-    };
+      const source = parseBase64(sourceBase64);
+      const mask = parseBase64(maskDataUrl);
 
-    if (negativePrompt) {
-      requestBody.negative_prompt = negativePrompt;
-    }
+      // Build Gemini request with source image + mask + editing instructions
+      const editPrompt = negativePrompt
+        ? `Edit this image: In the areas marked white in the mask, replace the content with: ${prompt.trim()}. Avoid: ${negativePrompt}. Keep all other areas exactly as they are in the original image.`
+        : `Edit this image: In the areas marked white in the mask, replace the content with: ${prompt.trim()}. Keep all other areas exactly as they are in the original image.`;
 
-    console.log('[Inpaint] Calling Fal.ai with:', {
-      endpoint: inpaintEndpoint,
-      hasSourceImage: !!sourceImageUrl,
-      hasMask: !!maskUploadResult.url,
-      prompt: prompt.slice(0, 100),
-    });
+      const parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }> = [
+        { text: editPrompt },
+        { text: 'SOURCE IMAGE (edit this image):' },
+        { inlineData: { mimeType: source.mimeType, data: source.data } },
+        { text: 'MASK (white areas = regions to edit, black = keep unchanged):' },
+        { inlineData: { mimeType: mask.mimeType, data: mask.data } },
+      ];
 
-    const response = await fetch(inpaintEndpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Key ${apiKey}`,
-      },
-      body: JSON.stringify(requestBody),
-    });
+      const model = apiConfig.model_id || 'gemini-3-pro-image-preview';
+      const apiEndpoint = apiConfig.endpoint ||
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[Inpaint] Fal.ai error:', errorText);
-      if (response.status === 429) {
+      const requestBody = {
+        contents: [{ parts }],
+        generationConfig: {
+          responseModalities: ['IMAGE', 'TEXT'],
+        },
+      };
+
+      console.log('[Inpaint] Calling Gemini with:', {
+        model,
+        hasSourceImage: true,
+        hasMask: true,
+        prompt: prompt.slice(0, 100),
+      });
+
+      const response = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Inpaint] Gemini error:', errorText);
+        if (response.status === 429) {
+          return NextResponse.json(
+            { success: false, error: 'Rate limit reached. Please wait a moment.' },
+            { status: 429 }
+          );
+        }
         return NextResponse.json(
-          { success: false, error: 'Rate limit reached. Please wait a moment.' },
-          { status: 429 }
+          { success: false, error: 'Inpainting failed. Please try again.' },
+          { status: 500 }
         );
       }
-      return NextResponse.json(
-        { success: false, error: 'Inpainting failed. Please try again.' },
-        { status: 500 }
-      );
-    }
 
-    const data = await response.json();
-    const resultImageUrl = data.images?.[0]?.url;
+      const data = await response.json();
 
-    if (!resultImageUrl) {
+      // Check for safety blocks
+      if (data.promptFeedback?.blockReason) {
+        return NextResponse.json(
+          { success: false, error: `Content blocked: ${data.promptFeedback.blockReason}` },
+          { status: 400 }
+        );
+      }
+
+      const finishReason = data.candidates?.[0]?.finishReason;
+      if (finishReason === 'SAFETY' || finishReason === 'IMAGE_SAFETY') {
+        return NextResponse.json(
+          { success: false, error: 'Image blocked by safety filters. Try a different prompt.' },
+          { status: 400 }
+        );
+      }
+
+      // Extract image from response
+      if (data.candidates?.[0]?.content?.parts) {
+        for (const part of data.candidates[0].content.parts) {
+          if (part.inlineData) {
+            resultBase64 = part.inlineData.data;
+            resultImageUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
+            break;
+          }
+        }
+      }
+
+      if (!resultImageUrl) {
+        return NextResponse.json(
+          { success: false, error: 'No image returned from inpainting' },
+          { status: 500 }
+        );
+      }
+
+    } else if (apiConfig.provider === 'fal') {
+      // ================================================================
+      // FAL.AI INPAINTING
+      // ================================================================
+
+      // Upload mask to storage so Fal can access it via URL
+      const maskUploadResult = await uploadGeneratedImage(maskDataUrl, user.id, 'image/png');
+      if (!maskUploadResult?.url) {
+        return NextResponse.json(
+          { success: false, error: 'Failed to upload mask image' },
+          { status: 500 }
+        );
+      }
+
+      // Resolve source image URL
+      let sourceImageUrl = sourceImagePath;
+      if (!sourceImagePath.startsWith('http')) {
+        const { getReferenceImageUrls } = await import('@/utils/supabase/storage.server');
+        const urls = await getReferenceImageUrls([sourceImagePath]);
+        sourceImageUrl = urls[0]?.url || sourceImagePath;
+      }
+
+      // Build inpainting endpoint from model_id or use apiConfig endpoint
+      const modelId = apiConfig.model_id || 'fal-ai/flux-pro/v1.1';
+      const inpaintEndpoint = apiConfig.endpoint
+        ? apiConfig.endpoint.replace(/\/?$/, '/inpainting')
+        : `https://fal.run/${modelId}/inpainting`;
+
+      const falBody: Record<string, unknown> = {
+        image_url: sourceImageUrl,
+        mask_url: maskUploadResult.url,
+        prompt: prompt.trim(),
+        image_size: imageSize === '4K' ? { width: 2048, height: 2048 }
+          : imageSize === '2K' ? { width: 1024, height: 1024 }
+          : imageSize === '1K' ? { width: 768, height: 768 }
+          : { width: 1024, height: 1024 },
+        num_images: 1,
+        strength: 0.95,
+      };
+
+      if (negativePrompt) {
+        falBody.negative_prompt = negativePrompt;
+      }
+
+      console.log('[Inpaint] Calling Fal.ai with:', {
+        endpoint: inpaintEndpoint,
+        hasSourceImage: !!sourceImageUrl,
+        hasMask: !!maskUploadResult.url,
+        prompt: prompt.slice(0, 100),
+      });
+
+      const response = await fetch(inpaintEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Key ${apiKey}`,
+        },
+        body: JSON.stringify(falBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Inpaint] Fal.ai error:', errorText);
+        if (response.status === 429) {
+          return NextResponse.json(
+            { success: false, error: 'Rate limit reached. Please wait a moment.' },
+            { status: 429 }
+          );
+        }
+        return NextResponse.json(
+          { success: false, error: 'Inpainting failed. Please try again.' },
+          { status: 500 }
+        );
+      }
+
+      const data = await response.json();
+      resultImageUrl = data.images?.[0]?.url;
+
+      if (!resultImageUrl) {
+        return NextResponse.json(
+          { success: false, error: 'No image returned from inpainting' },
+          { status: 500 }
+        );
+      }
+
+    } else {
       return NextResponse.json(
-        { success: false, error: 'No image returned from inpainting' },
-        { status: 500 }
+        { success: false, error: `Inpainting is not supported for provider: ${apiConfig.provider}` },
+        { status: 400 }
       );
     }
 
     // Upload result to permanent storage
-    const uploadResult = await uploadImageFromUrl(resultImageUrl, user.id);
+    let uploadResult;
+    if (resultBase64) {
+      // Gemini returns base64 — upload directly
+      const dataUrl = resultImageUrl!;
+      const mimeMatch = dataUrl.match(/^data:([^;]+);base64,/);
+      const mimeType = mimeMatch ? mimeMatch[1] : 'image/png';
+      uploadResult = await uploadGeneratedImage(dataUrl, user.id, mimeType);
+    } else {
+      // Fal returns a URL — download and re-upload
+      uploadResult = await uploadImageFromUrl(resultImageUrl!, user.id);
+    }
 
     // Save generation record
     if (uploadResult?.url) {
