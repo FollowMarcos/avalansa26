@@ -271,7 +271,7 @@ interface CreateContextType {
   inpaintSourceImage: GeneratedImage | null;
   setInpaintSourceImage: (image: GeneratedImage | null) => void;
   isInpainting: boolean;
-  inpaint: (maskDataUrl: string, prompt: string) => Promise<void>;
+  inpaint: (maskDataUrl: string, prompt: string, apiId?: string) => Promise<void>;
 
   // Admin settings (for restricting features)
   adminSettings: AdminCreateSettings | null;
@@ -1503,20 +1503,43 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Inpaint: send source image + mask + prompt to inpainting API
-  const inpaint = React.useCallback(async (maskDataUrl: string, inpaintPrompt: string) => {
-    if (!inpaintSourceImage?.url || !selectedApiId) return;
+  // Closes the modal immediately and adds a pending card to history.
+  const inpaint = React.useCallback(async (maskDataUrl: string, inpaintPrompt: string, overrideApiId?: string) => {
+    const resolvedApiId = overrideApiId || selectedApiId;
+    if (!inpaintSourceImage?.url || !resolvedApiId) return;
+
+    // Create a pending placeholder in history
+    const placeholderId = `inpaint-${Date.now()}`;
+    const placeholder: GeneratedImage = {
+      id: placeholderId,
+      url: '',
+      prompt: inpaintPrompt,
+      timestamp: Date.now(),
+      settings: { ...settings, source: 'inpaint' },
+      status: 'pending',
+    };
+    setHistory(prev => [placeholder, ...prev]);
+
+    // Close the modal immediately
+    setInpaintSourceImage(null);
     setIsInpainting(true);
+
+    // Capture values before async gap
+    const sourceUrl = inpaintSourceImage.url;
+    const negPrompt = settings.negativePrompt;
+    const imgSize = settings.imageSize;
+
     try {
       const response = await fetch('/api/inpaint', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          apiId: selectedApiId,
-          sourceImagePath: inpaintSourceImage.url,
+          apiId: resolvedApiId,
+          sourceImagePath: sourceUrl,
           maskDataUrl,
           prompt: inpaintPrompt,
-          negativePrompt: settings.negativePrompt,
-          imageSize: settings.imageSize,
+          negativePrompt: negPrompt,
+          imageSize: imgSize,
         }),
       });
       if (!response.ok) {
@@ -1525,20 +1548,24 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       }
       const data = await response.json();
       if (data.url) {
-        const newImage: GeneratedImage = {
-          id: `inpaint-${Date.now()}`,
-          url: data.url,
-          prompt: inpaintPrompt,
-          timestamp: Date.now(),
-          settings: { ...settings, source: 'inpaint' },
-          status: 'completed',
-        };
-        setHistory(prev => [newImage, ...prev]);
+        setHistory(prev =>
+          prev.map(h => h.id === placeholderId
+            ? { ...h, url: data.url, status: 'completed' as const }
+            : h
+          )
+        );
+      } else {
+        throw new Error('No image returned');
       }
-      setInpaintSourceImage(null);
     } catch (error) {
       console.error('[Inpaint] Error:', error);
-      throw error;
+      const errorMessage = error instanceof Error ? error.message : 'Inpainting failed';
+      setHistory(prev =>
+        prev.map(h => h.id === placeholderId
+          ? { ...h, status: 'failed' as const, error: errorMessage }
+          : h
+        )
+      );
     } finally {
       setIsInpainting(false);
     }
