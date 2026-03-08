@@ -274,9 +274,8 @@ function loadImg(src: string): Promise<HTMLImageElement> {
 }
 
 /**
- * Compute percentage-based styles for an image covering a container with pan + zoom.
- * Works on both axes regardless of aspect ratio mismatch — unlike object-fit:cover
- * which only creates overflow on one axis.
+ * Cover+pan+zoom styles. Only sets ONE dimension (width or height), leaving the
+ * other as `auto` so the browser natively preserves the image aspect ratio.
  */
 function coverStyles(
     natW: number,
@@ -287,27 +286,31 @@ function coverStyles(
     zoom: number,
 ): React.CSSProperties {
     const imageAspect = natW / natH;
-    let widthPct: number, heightPct: number;
+
+    let sizeStyle: React.CSSProperties;
+    let xOverflowRatio: number;
+    let yOverflowRatio: number;
 
     if (imageAspect > containerAspect) {
-        heightPct = 100 * zoom;
-        widthPct = (imageAspect / containerAspect) * 100 * zoom;
+        // Image wider than container — match height to cover, width overflows
+        sizeStyle = { height: `${100 * zoom}%`, width: 'auto' };
+        xOverflowRatio = (imageAspect / containerAspect) * zoom;
+        yOverflowRatio = zoom;
     } else {
-        widthPct = 100 * zoom;
-        heightPct = (containerAspect / imageAspect) * 100 * zoom;
+        // Image taller than container — match width to cover, height overflows
+        sizeStyle = { width: `${100 * zoom}%`, height: 'auto' };
+        xOverflowRatio = zoom;
+        yOverflowRatio = (containerAspect / imageAspect) * zoom;
     }
 
-    const overflowX = widthPct - 100;
-    const overflowY = heightPct - 100;
-    const offsetX = overflowX > 0 ? (panX / 100) * overflowX : 0;
-    const offsetY = overflowY > 0 ? (panY / 100) * overflowY : 0;
+    const leftPct = xOverflowRatio > 1 ? -(panX / 100) * (xOverflowRatio - 1) * 100 : 0;
+    const topPct = yOverflowRatio > 1 ? -(panY / 100) * (yOverflowRatio - 1) * 100 : 0;
 
     return {
         position: 'absolute' as const,
-        width: `${widthPct}%`,
-        height: `${heightPct}%`,
-        left: `${-offsetX}%`,
-        top: `${-offsetY}%`,
+        ...sizeStyle,
+        left: `${leftPct}%`,
+        top: `${topPct}%`,
     };
 }
 
