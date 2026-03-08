@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
     Upload,
     Download,
@@ -9,6 +9,10 @@ import {
     Image as ImageIcon,
     Plus,
     X,
+    Move,
+    Scissors,
+    ArrowLeft,
+    Crop,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -29,60 +33,162 @@ interface QuadrantData {
 interface FrameImage {
     url: string;
     file: File;
+    naturalWidth: number;
+    naturalHeight: number;
+    panX: number;
+    panY: number;
+}
+
+interface SourceImage {
+    url: string;
+    file: File;
+    naturalWidth: number;
+    naturalHeight: number;
+    panX: number;
+    panY: number;
 }
 
 // ---------------------------------------------------------------------------
-// FrameSlot — drop zone for top/bottom reference images
+// Aspect ratio presets
 // ---------------------------------------------------------------------------
 
-function FrameSlot({
+interface AspectPreset {
+    label: string;
+    /** null = free / original ratio */
+    ratio: [number, number] | null;
+}
+
+const ASPECT_PRESETS: AspectPreset[] = [
+    { label: 'Free', ratio: null },
+    { label: '16:9', ratio: [16, 9] },
+    { label: '3:2', ratio: [3, 2] },
+    { label: '4:3', ratio: [4, 3] },
+    { label: '1:1', ratio: [1, 1] },
+    { label: '9:16', ratio: [9, 16] },
+];
+
+// ---------------------------------------------------------------------------
+// usePanDrag — shared pointer-drag logic for cover+pan containers
+// ---------------------------------------------------------------------------
+
+function usePanDrag(
+    containerRef: React.RefObject<HTMLElement | null>,
+    naturalWidth: number,
+    naturalHeight: number,
+    panX: number,
+    panY: number,
+    onPanChange: (px: number, py: number) => void,
+) {
+    const dragState = useRef<{
+        startX: number;
+        startY: number;
+        startPanX: number;
+        startPanY: number;
+    } | null>(null);
+
+    const getOverflow = useCallback(() => {
+        if (!containerRef.current) return { x: 0, y: 0 };
+        const rect = containerRef.current.getBoundingClientRect();
+        const scale = Math.max(rect.width / naturalWidth, rect.height / naturalHeight);
+        return {
+            x: naturalWidth * scale - rect.width,
+            y: naturalHeight * scale - rect.height,
+        };
+    }, [containerRef, naturalWidth, naturalHeight]);
+
+    const onPointerDown = useCallback(
+        (e: React.PointerEvent) => {
+            e.preventDefault();
+            (e.target as HTMLElement).setPointerCapture(e.pointerId);
+            dragState.current = { startX: e.clientX, startY: e.clientY, startPanX: panX, startPanY: panY };
+        },
+        [panX, panY],
+    );
+
+    const onPointerMove = useCallback(
+        (e: React.PointerEvent) => {
+            if (!dragState.current) return;
+            const dx = e.clientX - dragState.current.startX;
+            const dy = e.clientY - dragState.current.startY;
+            const overflow = getOverflow();
+            let newPanX = dragState.current.startPanX;
+            let newPanY = dragState.current.startPanY;
+            if (overflow.x > 0) newPanX = dragState.current.startPanX - (dx / overflow.x) * 100;
+            if (overflow.y > 0) newPanY = dragState.current.startPanY - (dy / overflow.y) * 100;
+            onPanChange(Math.max(0, Math.min(100, newPanX)), Math.max(0, Math.min(100, newPanY)));
+        },
+        [getOverflow, onPanChange],
+    );
+
+    const onPointerUp = useCallback(() => {
+        dragState.current = null;
+    }, []);
+
+    return { onPointerDown, onPointerMove, onPointerUp, onPointerCancel: onPointerUp };
+}
+
+// ---------------------------------------------------------------------------
+// CroppableFrameSlot — for top/bottom reference frames
+// ---------------------------------------------------------------------------
+
+function CroppableFrameSlot({
     label,
     image,
+    quadrantAspect,
     onUpload,
     onRemove,
     onDrop,
+    onPanChange,
 }: {
     label: string;
     image: FrameImage | null;
+    quadrantAspect: number;
     onUpload: () => void;
     onRemove: () => void;
     onDrop: (file: File) => void;
+    onPanChange: (panX: number, panY: number) => void;
 }) {
     const [dragOver, setDragOver] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
 
-    const handleDragOver = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setDragOver(true);
-    };
-
-    const handleDragLeave = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setDragOver(false);
-    };
-
-    const handleDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setDragOver(false);
-        const file = e.dataTransfer.files?.[0];
-        if (file && file.type.startsWith('image/')) {
-            onDrop(file);
-        }
-    };
+    const pointerHandlers = usePanDrag(
+        containerRef,
+        image?.naturalWidth ?? 1,
+        image?.naturalHeight ?? 1,
+        image?.panX ?? 50,
+        image?.panY ?? 50,
+        onPanChange,
+    );
 
     if (image) {
         return (
-            <div className="relative group rounded-lg overflow-hidden border border-border/30 bg-black/20">
-                <img src={image.url} alt={label} className="w-full h-auto" draggable={false} />
+            <div
+                ref={containerRef}
+                className="relative group rounded-lg overflow-hidden border border-border/30 bg-black/20 cursor-grab active:cursor-grabbing touch-none"
+                style={{ aspectRatio: quadrantAspect }}
+                {...pointerHandlers}
+            >
+                <img
+                    src={image.url}
+                    alt={label}
+                    className="w-full h-full object-cover select-none pointer-events-none"
+                    style={{ objectPosition: `${image.panX}% ${image.panY}%` }}
+                    draggable={false}
+                />
                 <button
-                    onClick={onRemove}
-                    className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/80"
+                    onClick={(e) => { e.stopPropagation(); onRemove(); }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    className="absolute top-1.5 right-1.5 p-1 rounded-full bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/80 z-10"
                     aria-label={`Remove ${label}`}
                 >
                     <X className="w-3.5 h-3.5" />
                 </button>
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                    <span className="flex items-center gap-1 text-[9px] bg-black/50 text-white/80 px-2 py-0.5 rounded-full backdrop-blur-sm">
+                        <Move className="w-3 h-3" />
+                        drag to reposition
+                    </span>
+                </div>
             </div>
         );
     }
@@ -90,15 +196,22 @@ function FrameSlot({
     return (
         <button
             onClick={onUpload}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
+            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragOver(true); }}
+            onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragOver(false); }}
+            onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragOver(false);
+                const file = e.dataTransfer.files?.[0];
+                if (file && file.type.startsWith('image/')) onDrop(file);
+            }}
             className={cn(
-                'w-full py-5 rounded-lg border border-dashed border-border/40 bg-background/30 transition-all flex flex-col items-center gap-1.5 cursor-pointer',
+                'w-full rounded-lg border border-dashed bg-background/30 transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer',
                 dragOver
                     ? 'border-primary/60 bg-primary/10 scale-[1.02]'
-                    : 'hover:border-primary/30 hover:bg-primary/5',
+                    : 'border-border/40 hover:border-primary/30 hover:bg-primary/5',
             )}
+            style={{ aspectRatio: quadrantAspect }}
             aria-label={`Add ${label}`}
         >
             <Plus className="w-4 h-4 text-muted-foreground/40" />
@@ -110,134 +223,211 @@ function FrameSlot({
 }
 
 // ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const MAX_FILE_SIZE = 30 * 1024 * 1024;
+const QUADRANT_LABELS = ['Top Left', 'Top Right', 'Bottom Left', 'Bottom Right'];
+
+function loadImg(src: string): Promise<HTMLImageElement> {
+    return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.src = src;
+    });
+}
+
+/** Compute crop rect in source-pixel space from aspect ratio + pan values */
+function computeCropRect(
+    natW: number,
+    natH: number,
+    targetRatio: number, // w/h
+    panX: number,
+    panY: number,
+) {
+    const sourceRatio = natW / natH;
+    let cropW: number, cropH: number;
+
+    if (sourceRatio > targetRatio) {
+        // Source wider than target → constrain by height
+        cropH = natH;
+        cropW = Math.round(natH * targetRatio);
+    } else {
+        // Source taller than target → constrain by width
+        cropW = natW;
+        cropH = Math.round(natW / targetRatio);
+    }
+
+    const maxOffX = natW - cropW;
+    const maxOffY = natH - cropH;
+    const offX = Math.round((panX / 100) * maxOffX);
+    const offY = Math.round((panY / 100) * maxOffY);
+
+    return { cropW, cropH, offX, offY };
+}
+
+// ---------------------------------------------------------------------------
 // Page
 // ---------------------------------------------------------------------------
 
-const QUADRANT_LABELS = ['Top Left', 'Top Right', 'Bottom Left', 'Bottom Right'];
-const MAX_FILE_SIZE = 30 * 1024 * 1024; // 30 MB
-
 export default function QuadFrameStackerPage() {
-    // Source image
-    const [sourcePreview, setSourcePreview] = useState<string | null>(null);
+    // Phase: 'upload' → 'crop' → 'stack'
+    const [source, setSource] = useState<SourceImage | null>(null);
+    const [selectedPreset, setSelectedPreset] = useState<number>(1); // default 16:9
     const [quadrants, setQuadrants] = useState<QuadrantData[]>([]);
-
-    // Top and bottom images for each quadrant (indexed 0-3)
     const [topImages, setTopImages] = useState<(FrameImage | null)[]>([null, null, null, null]);
     const [bottomImages, setBottomImages] = useState<(FrameImage | null)[]>([null, null, null, null]);
 
-    // Refs
     const sourceInputRef = useRef<HTMLInputElement>(null);
+    const sourceCropRef = useRef<HTMLDivElement>(null);
     const topInputRefs = useRef<(HTMLInputElement | null)[]>([null, null, null, null]);
     const bottomInputRefs = useRef<(HTMLInputElement | null)[]>([null, null, null, null]);
-
-    // Drag state for source drop zone
     const [sourceDragOver, setSourceDragOver] = useState(false);
 
-    // -----------------------------------------------------------------------
-    // Split source image into 2×2 quadrants
-    // -----------------------------------------------------------------------
-    const splitImage = useCallback((file: File) => {
-        const img = new Image();
-        const url = URL.createObjectURL(file);
-        img.src = url;
+    const phase = !source ? 'upload' : quadrants.length === 0 ? 'crop' : 'stack';
 
-        img.onload = () => {
-            const halfW = Math.floor(img.width / 2);
-            const halfH = Math.floor(img.height / 2);
+    // Current target aspect ratio
+    const targetRatio = useMemo(() => {
+        const preset = ASPECT_PRESETS[selectedPreset];
+        if (preset.ratio) return preset.ratio[0] / preset.ratio[1];
+        if (source) return source.naturalWidth / source.naturalHeight;
+        return 16 / 9;
+    }, [selectedPreset, source]);
 
-            const positions = [
-                { x: 0, y: 0 },            // top-left
-                { x: halfW, y: 0 },         // top-right
-                { x: 0, y: halfH },         // bottom-left
-                { x: halfW, y: halfH },     // bottom-right
-            ];
+    // Quadrant dimensions preview (from crop)
+    const cropInfo = useMemo(() => {
+        if (!source) return null;
+        const { cropW, cropH } = computeCropRect(
+            source.naturalWidth,
+            source.naturalHeight,
+            targetRatio,
+            source.panX,
+            source.panY,
+        );
+        return { cropW, cropH, quadW: Math.floor(cropW / 2), quadH: Math.floor(cropH / 2) };
+    }, [source, targetRatio]);
 
-            const promises = positions.map(
-                (pos) =>
-                    new Promise<QuadrantData>((resolve) => {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = halfW;
-                        canvas.height = halfH;
-                        const ctx = canvas.getContext('2d')!;
-                        ctx.drawImage(img, pos.x, pos.y, halfW, halfH, 0, 0, halfW, halfH);
+    const quadrantAspect = cropInfo ? cropInfo.quadW / cropInfo.quadH : 16 / 9;
 
-                        canvas.toBlob((blob) => {
-                            if (blob) {
-                                resolve({
-                                    url: URL.createObjectURL(blob),
-                                    blob,
-                                    width: halfW,
-                                    height: halfH,
-                                });
-                            }
-                        }, 'image/png');
-                    }),
-            );
-
-            Promise.all(promises).then((results) => {
-                setQuadrants(results);
-                setSourcePreview(url);
-                toast.success('Image split into 4 quadrants');
-            });
-        };
-    }, []);
+    // Source pan drag handler
+    const sourcePointerHandlers = usePanDrag(
+        sourceCropRef,
+        source?.naturalWidth ?? 1,
+        source?.naturalHeight ?? 1,
+        source?.panX ?? 50,
+        source?.panY ?? 50,
+        (px, py) => setSource((prev) => prev ? { ...prev, panX: px, panY: py } : prev),
+    );
 
     // -----------------------------------------------------------------------
-    // Handlers
+    // Upload source
     // -----------------------------------------------------------------------
-    const handleSourceUpload = (file: File) => {
+    const handleSourceFile = (file: File) => {
         if (file.size > MAX_FILE_SIZE) {
             toast.error('File too large (Max 30MB)');
             return;
         }
-        // Reset everything
-        setTopImages([null, null, null, null]);
-        setBottomImages([null, null, null, null]);
-        splitImage(file);
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+            setSource({
+                url,
+                file,
+                naturalWidth: img.naturalWidth,
+                naturalHeight: img.naturalHeight,
+                panX: 50,
+                panY: 50,
+            });
+            setQuadrants([]);
+            setTopImages([null, null, null, null]);
+            setBottomImages([null, null, null, null]);
+        };
+        img.src = url;
     };
 
-    const handleSourceInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) handleSourceUpload(file);
+    // -----------------------------------------------------------------------
+    // Crop & Split
+    // -----------------------------------------------------------------------
+    const cropAndSplit = async () => {
+        if (!source || !cropInfo) return;
+
+        const img = await loadImg(source.url);
+        const { cropW, cropH, offX, offY } = computeCropRect(
+            source.naturalWidth,
+            source.naturalHeight,
+            targetRatio,
+            source.panX,
+            source.panY,
+        );
+
+        const halfW = Math.floor(cropW / 2);
+        const halfH = Math.floor(cropH / 2);
+
+        const positions = [
+            { x: offX, y: offY },
+            { x: offX + halfW, y: offY },
+            { x: offX, y: offY + halfH },
+            { x: offX + halfW, y: offY + halfH },
+        ];
+
+        const promises = positions.map(
+            (pos) =>
+                new Promise<QuadrantData>((resolve) => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = halfW;
+                    canvas.height = halfH;
+                    const ctx = canvas.getContext('2d')!;
+                    ctx.drawImage(img, pos.x, pos.y, halfW, halfH, 0, 0, halfW, halfH);
+                    canvas.toBlob((blob) => {
+                        if (blob) {
+                            resolve({ url: URL.createObjectURL(blob), blob, width: halfW, height: halfH });
+                        }
+                    }, 'image/png');
+                }),
+        );
+
+        const results = await Promise.all(promises);
+        setQuadrants(results);
+        toast.success(`Split into 4 quadrants (${halfW}×${halfH} each)`);
     };
 
-    const handleSourceDrop = (e: React.DragEvent) => {
-        e.preventDefault();
-        e.stopPropagation();
-        setSourceDragOver(false);
-        const file = e.dataTransfer.files?.[0];
-        if (file && file.type.startsWith('image/')) {
-            handleSourceUpload(file);
-        }
-    };
-
+    // -----------------------------------------------------------------------
+    // Frame handlers
+    // -----------------------------------------------------------------------
     const addFrameImage = (file: File, index: number, position: 'top' | 'bottom') => {
         if (file.size > MAX_FILE_SIZE) {
             toast.error('File too large (Max 30MB)');
             return;
         }
-
-        const frameImage: FrameImage = {
-            url: URL.createObjectURL(file),
-            file,
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+            const frameImage: FrameImage = {
+                url,
+                file,
+                naturalWidth: img.naturalWidth,
+                naturalHeight: img.naturalHeight,
+                panX: 50,
+                panY: 50,
+            };
+            const setter = position === 'top' ? setTopImages : setBottomImages;
+            setter((prev) => {
+                const next = [...prev];
+                if (next[index]) URL.revokeObjectURL(next[index]!.url);
+                next[index] = frameImage;
+                return next;
+            });
         };
+        img.src = url;
+    };
 
+    const updatePan = (index: number, position: 'top' | 'bottom', panX: number, panY: number) => {
         const setter = position === 'top' ? setTopImages : setBottomImages;
         setter((prev) => {
             const next = [...prev];
-            if (next[index]) URL.revokeObjectURL(next[index]!.url);
-            next[index] = frameImage;
+            if (next[index]) next[index] = { ...next[index]!, panX, panY };
             return next;
         });
-    };
-
-    const handleFrameInputChange = (
-        e: React.ChangeEvent<HTMLInputElement>,
-        index: number,
-        position: 'top' | 'bottom',
-    ) => {
-        const file = e.target.files?.[0];
-        if (file) addFrameImage(file, index, position);
     };
 
     const removeFrame = (index: number, position: 'top' | 'bottom') => {
@@ -251,14 +441,28 @@ export default function QuadFrameStackerPage() {
     };
 
     // -----------------------------------------------------------------------
-    // Canvas export
+    // Export — each frame is cropped to exact quadrant dimensions
     // -----------------------------------------------------------------------
-    const loadImg = (src: string): Promise<HTMLImageElement> =>
-        new Promise((resolve) => {
-            const img = new Image();
-            img.onload = () => resolve(img);
-            img.src = src;
-        });
+    const drawCroppedFrame = (
+        ctx: CanvasRenderingContext2D,
+        img: HTMLImageElement,
+        frame: FrameImage,
+        destX: number,
+        destY: number,
+        targetW: number,
+        targetH: number,
+    ) => {
+        const scale = Math.max(targetW / frame.naturalWidth, targetH / frame.naturalHeight);
+        const scaledW = frame.naturalWidth * scale;
+        const scaledH = frame.naturalHeight * scale;
+        const overflowX = scaledW - targetW;
+        const overflowY = scaledH - targetH;
+        const srcX = ((frame.panX / 100) * overflowX) / scale;
+        const srcY = ((frame.panY / 100) * overflowY) / scale;
+        const srcW = targetW / scale;
+        const srcH = targetH / scale;
+        ctx.drawImage(img, srcX, srcY, srcW, srcH, destX, destY, targetW, targetH);
+    };
 
     const exportStrip = async (index: number) => {
         const quadrant = quadrants[index];
@@ -266,45 +470,33 @@ export default function QuadFrameStackerPage() {
 
         const top = topImages[index];
         const bottom = bottomImages[index];
-
         const quadImg = await loadImg(quadrant.url);
-        const targetWidth = quadrant.width;
+        const W = quadrant.width;
+        const H = quadrant.height;
 
-        let totalHeight = quadrant.height;
-        let topImg: HTMLImageElement | null = null;
-        let bottomImg: HTMLImageElement | null = null;
-        let topScaledH = 0;
-        let bottomScaledH = 0;
-
-        if (top) {
-            topImg = await loadImg(top.url);
-            topScaledH = Math.round((topImg.height / topImg.width) * targetWidth);
-            totalHeight += topScaledH;
-        }
-
-        if (bottom) {
-            bottomImg = await loadImg(bottom.url);
-            bottomScaledH = Math.round((bottomImg.height / bottomImg.width) * targetWidth);
-            totalHeight += bottomScaledH;
-        }
+        let totalHeight = H;
+        if (top) totalHeight += H;
+        if (bottom) totalHeight += H;
 
         const canvas = document.createElement('canvas');
-        canvas.width = targetWidth;
+        canvas.width = W;
         canvas.height = totalHeight;
         const ctx = canvas.getContext('2d')!;
 
         let y = 0;
 
-        if (topImg) {
-            ctx.drawImage(topImg, 0, 0, topImg.width, topImg.height, 0, y, targetWidth, topScaledH);
-            y += topScaledH;
+        if (top) {
+            const topImg = await loadImg(top.url);
+            drawCroppedFrame(ctx, topImg, top, 0, y, W, H);
+            y += H;
         }
 
-        ctx.drawImage(quadImg, 0, 0, quadrant.width, quadrant.height, 0, y, targetWidth, quadrant.height);
-        y += quadrant.height;
+        ctx.drawImage(quadImg, 0, 0, W, H, 0, y, W, H);
+        y += H;
 
-        if (bottomImg) {
-            ctx.drawImage(bottomImg, 0, 0, bottomImg.width, bottomImg.height, 0, y, targetWidth, bottomScaledH);
+        if (bottom) {
+            const bottomImg = await loadImg(bottom.url);
+            drawCroppedFrame(ctx, bottomImg, bottom, 0, y, W, H);
         }
 
         canvas.toBlob((blob) => {
@@ -325,17 +517,28 @@ export default function QuadFrameStackerPage() {
         toast.success('All strips exported');
     };
 
-    const reset = () => {
-        if (sourcePreview) URL.revokeObjectURL(sourcePreview);
+    // -----------------------------------------------------------------------
+    // Reset / back
+    // -----------------------------------------------------------------------
+    const resetAll = () => {
+        if (source) URL.revokeObjectURL(source.url);
         quadrants.forEach((q) => URL.revokeObjectURL(q.url));
         topImages.forEach((t) => t && URL.revokeObjectURL(t.url));
         bottomImages.forEach((b) => b && URL.revokeObjectURL(b.url));
-
-        setSourcePreview(null);
+        setSource(null);
         setQuadrants([]);
         setTopImages([null, null, null, null]);
         setBottomImages([null, null, null, null]);
         if (sourceInputRef.current) sourceInputRef.current.value = '';
+    };
+
+    const backToCrop = () => {
+        quadrants.forEach((q) => URL.revokeObjectURL(q.url));
+        topImages.forEach((t) => t && URL.revokeObjectURL(t.url));
+        bottomImages.forEach((b) => b && URL.revokeObjectURL(b.url));
+        setQuadrants([]);
+        setTopImages([null, null, null, null]);
+        setBottomImages([null, null, null, null]);
     };
 
     // -----------------------------------------------------------------------
@@ -344,9 +547,7 @@ export default function QuadFrameStackerPage() {
     return (
         <PageShell contentClassName="bg-transparent">
             <div className="min-h-dvh pt-16 pb-12 px-6 max-w-7xl mx-auto">
-                {/* --------------------------------------------------------------- */}
                 {/* Header */}
-                {/* --------------------------------------------------------------- */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
                     <div className="space-y-3">
                         <div className="flex items-center gap-3">
@@ -358,20 +559,31 @@ export default function QuadFrameStackerPage() {
                             </h1>
                         </div>
                         <p className="font-lato text-muted-foreground text-lg italic opacity-80 max-w-2xl text-pretty">
-                            Split an image into 4 quadrants, attach reference frames above &amp; below each, then export as vertical strips. Fully client-side.
+                            Crop &amp; split an image into 4 quadrants, attach reference frames above &amp; below, then export as vertical strips. Fully client-side.
                         </p>
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
-                        <Button
-                            variant="outline"
-                            className="rounded-full font-vt323 text-lg h-11 border-primary/20 bg-primary/5 hover:bg-primary/10"
-                            onClick={reset}
-                            disabled={quadrants.length === 0}
-                        >
-                            <Trash2 className="w-4 h-4 mr-2" aria-hidden="true" />
-                            Reset
-                        </Button>
-                        {quadrants.length > 0 && (
+                        {phase === 'stack' && (
+                            <Button
+                                variant="outline"
+                                className="rounded-full font-vt323 text-lg h-11 border-primary/20 bg-primary/5 hover:bg-primary/10"
+                                onClick={backToCrop}
+                            >
+                                <ArrowLeft className="w-4 h-4 mr-2" aria-hidden="true" />
+                                Back
+                            </Button>
+                        )}
+                        {phase !== 'upload' && (
+                            <Button
+                                variant="outline"
+                                className="rounded-full font-vt323 text-lg h-11 border-primary/20 bg-primary/5 hover:bg-primary/10"
+                                onClick={resetAll}
+                            >
+                                <Trash2 className="w-4 h-4 mr-2" aria-hidden="true" />
+                                Reset
+                            </Button>
+                        )}
+                        {phase === 'stack' && (
                             <Button
                                 variant="outline"
                                 className="rounded-full font-vt323 text-lg h-11 border-primary/20 bg-primary/5 hover:bg-primary/10"
@@ -386,7 +598,7 @@ export default function QuadFrameStackerPage() {
                             onClick={() => sourceInputRef.current?.click()}
                         >
                             <Upload className="w-4 h-4 mr-2" aria-hidden="true" />
-                            {sourcePreview ? 'Change Source' : 'Upload Source'}
+                            {source ? 'Change Source' : 'Upload Source'}
                         </Button>
                         <input
                             type="file"
@@ -394,16 +606,18 @@ export default function QuadFrameStackerPage() {
                             className="hidden"
                             accept="image/*"
                             aria-label="Upload source image"
-                            onChange={handleSourceInputChange}
+                            onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) handleSourceFile(file);
+                            }}
                         />
                     </div>
                 </div>
 
-                {/* --------------------------------------------------------------- */}
-                {/* Main Content */}
-                {/* --------------------------------------------------------------- */}
-                {quadrants.length === 0 ? (
-                    /* Empty state — drop zone */
+                {/* =========================================================== */}
+                {/* Phase: Upload */}
+                {/* =========================================================== */}
+                {phase === 'upload' && (
                     <div
                         role="button"
                         tabIndex={0}
@@ -411,7 +625,13 @@ export default function QuadFrameStackerPage() {
                         onKeyDown={(e) => e.key === 'Enter' && sourceInputRef.current?.click()}
                         onDragOver={(e) => { e.preventDefault(); setSourceDragOver(true); }}
                         onDragLeave={() => setSourceDragOver(false)}
-                        onDrop={handleSourceDrop}
+                        onDrop={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSourceDragOver(false);
+                            const file = e.dataTransfer.files?.[0];
+                            if (file && file.type.startsWith('image/')) handleSourceFile(file);
+                        }}
                         className={cn(
                             'flex flex-col items-center justify-center gap-4 py-32 rounded-[2rem] border-2 border-dashed bg-card/50 transition-all',
                             sourceDragOver
@@ -431,8 +651,89 @@ export default function QuadFrameStackerPage() {
                             </p>
                         </div>
                     </div>
-                ) : (
-                    /* Stacking workspace — 4 columns */
+                )}
+
+                {/* =========================================================== */}
+                {/* Phase: Crop & Configure */}
+                {/* =========================================================== */}
+                {phase === 'crop' && source && cropInfo && (
+                    <div className="max-w-3xl mx-auto space-y-6">
+                        {/* Aspect ratio presets */}
+                        <div className="p-5 rounded-[1.5rem] bg-card border border-border/50 space-y-4">
+                            <h2 className="font-vt323 text-xl text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                                <Crop className="w-5 h-5" /> Aspect Ratio
+                            </h2>
+                            <div className="flex flex-wrap gap-2">
+                                {ASPECT_PRESETS.map((preset, i) => (
+                                    <Button
+                                        key={preset.label}
+                                        variant={selectedPreset === i ? 'default' : 'outline'}
+                                        size="sm"
+                                        className={cn(
+                                            'rounded-full font-vt323 text-base h-9 px-5',
+                                            selectedPreset !== i && 'border-primary/20 bg-primary/5 hover:bg-primary/10',
+                                        )}
+                                        onClick={() => {
+                                            setSelectedPreset(i);
+                                            // Reset pan when changing ratio
+                                            setSource((prev) => prev ? { ...prev, panX: 50, panY: 50 } : prev);
+                                        }}
+                                    >
+                                        {preset.label}
+                                    </Button>
+                                ))}
+                            </div>
+                            <p className="text-[11px] text-muted-foreground/50">
+                                Quadrant: {cropInfo.quadW} × {cropInfo.quadH}px
+                                · Strip: {cropInfo.quadW} × {cropInfo.quadH * 3}px (with both frames)
+                            </p>
+                        </div>
+
+                        {/* Croppable source preview */}
+                        <div
+                            ref={sourceCropRef}
+                            className="relative rounded-2xl overflow-hidden border border-border/30 bg-black/20 cursor-grab active:cursor-grabbing touch-none group"
+                            style={{ aspectRatio: targetRatio }}
+                            {...sourcePointerHandlers}
+                        >
+                            <img
+                                src={source.url}
+                                alt="Source image — drag to reposition"
+                                className="w-full h-full object-cover select-none pointer-events-none"
+                                style={{ objectPosition: `${source.panX}% ${source.panY}%` }}
+                                draggable={false}
+                            />
+                            {/* 2×2 grid overlay */}
+                            <div className="absolute inset-0 pointer-events-none">
+                                <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/20" />
+                                <div className="absolute top-1/2 left-0 right-0 h-px bg-white/20" />
+                            </div>
+                            {/* Drag hint */}
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                                <span className="flex items-center gap-1 text-xs bg-black/50 text-white/80 px-3 py-1 rounded-full backdrop-blur-sm">
+                                    <Move className="w-3.5 h-3.5" />
+                                    drag to reposition crop
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Split button */}
+                        <div className="flex justify-center">
+                            <Button
+                                className="rounded-full font-vt323 text-xl h-12 px-10"
+                                onClick={cropAndSplit}
+                            >
+                                <Scissors className="w-5 h-5 mr-2" aria-hidden="true" />
+                                Split into 4 Quadrants
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
+                {/* =========================================================== */}
+                {/* Phase: Stack & Export */}
+                {/* =========================================================== */}
+                {phase === 'stack' && (
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
                         {quadrants.map((quadrant, index) => (
                             <div key={index} className="space-y-3">
@@ -442,15 +743,17 @@ export default function QuadFrameStackerPage() {
 
                                 <div className="p-3 rounded-[1.5rem] bg-card border border-border/50 space-y-2">
                                     {/* Top frame slot */}
-                                    <FrameSlot
+                                    <CroppableFrameSlot
                                         label="Top Frame"
                                         image={topImages[index]}
+                                        quadrantAspect={quadrantAspect}
                                         onUpload={() => topInputRefs.current[index]?.click()}
                                         onRemove={() => removeFrame(index, 'top')}
                                         onDrop={(file) => addFrameImage(file, index, 'top')}
+                                        onPanChange={(px, py) => updatePan(index, 'top', px, py)}
                                     />
 
-                                    {/* Quadrant image */}
+                                    {/* Quadrant (locked) */}
                                     <div className="relative rounded-lg overflow-hidden border border-border/30 bg-black/20">
                                         <img
                                             src={quadrant.url}
@@ -464,12 +767,14 @@ export default function QuadFrameStackerPage() {
                                     </div>
 
                                     {/* Bottom frame slot */}
-                                    <FrameSlot
+                                    <CroppableFrameSlot
                                         label="Bottom Frame"
                                         image={bottomImages[index]}
+                                        quadrantAspect={quadrantAspect}
                                         onUpload={() => bottomInputRefs.current[index]?.click()}
                                         onRemove={() => removeFrame(index, 'bottom')}
                                         onDrop={(file) => addFrameImage(file, index, 'bottom')}
+                                        onPanChange={(px, py) => updatePan(index, 'bottom', px, py)}
                                     />
 
                                     {/* Export single strip */}
@@ -491,7 +796,10 @@ export default function QuadFrameStackerPage() {
                                     className="hidden"
                                     accept="image/*"
                                     aria-label={`Upload top frame for ${QUADRANT_LABELS[index]}`}
-                                    onChange={(e) => handleFrameInputChange(e, index, 'top')}
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) addFrameImage(file, index, 'top');
+                                    }}
                                 />
                                 <input
                                     type="file"
@@ -499,7 +807,10 @@ export default function QuadFrameStackerPage() {
                                     className="hidden"
                                     accept="image/*"
                                     aria-label={`Upload bottom frame for ${QUADRANT_LABELS[index]}`}
-                                    onChange={(e) => handleFrameInputChange(e, index, 'bottom')}
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) addFrameImage(file, index, 'bottom');
+                                    }}
                                 />
                             </div>
                         ))}
