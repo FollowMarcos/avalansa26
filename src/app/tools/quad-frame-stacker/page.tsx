@@ -12,7 +12,6 @@ import {
     Move,
     Scissors,
     ArrowLeft,
-    Crop,
     ZoomIn,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -51,23 +50,8 @@ interface SourceImage {
     zoom: number;
 }
 
-// ---------------------------------------------------------------------------
-// Aspect ratio presets
-// ---------------------------------------------------------------------------
-
-interface AspectPreset {
-    label: string;
-    ratio: [number, number] | null;
-}
-
-const ASPECT_PRESETS: AspectPreset[] = [
-    { label: 'Free', ratio: null },
-    { label: '16:9', ratio: [16, 9] },
-    { label: '3:2', ratio: [3, 2] },
-    { label: '4:3', ratio: [4, 3] },
-    { label: '1:1', ratio: [1, 1] },
-    { label: '9:16', ratio: [9, 16] },
-];
+const TARGET_RATIO = 16 / 9;
+const EXPORT_SCALES = [1, 1.5, 2, 3, 4];
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 5;
@@ -93,15 +77,16 @@ function usePanDrag(
         startPanY: number;
     } | null>(null);
 
+    // Overflow now includes zoom — at zoom > 1, both axes have overflow
     const getOverflow = useCallback(() => {
         if (!containerRef.current) return { x: 0, y: 0 };
         const rect = containerRef.current.getBoundingClientRect();
-        const scale = Math.max(rect.width / naturalWidth, rect.height / naturalHeight);
+        const scale = Math.max(rect.width / naturalWidth, rect.height / naturalHeight) * zoom;
         return {
             x: naturalWidth * scale - rect.width,
             y: naturalHeight * scale - rect.height,
         };
-    }, [containerRef, naturalWidth, naturalHeight]);
+    }, [containerRef, naturalWidth, naturalHeight, zoom]);
 
     const onPointerDown = useCallback(
         (e: React.PointerEvent) => {
@@ -120,12 +105,11 @@ function usePanDrag(
             const overflow = getOverflow();
             let newPanX = dragState.current.startPanX;
             let newPanY = dragState.current.startPanY;
-            // Factor zoom into drag sensitivity so dragging feels 1:1 on screen
-            if (overflow.x > 0) newPanX = dragState.current.startPanX - (dx / (overflow.x * zoom)) * 100;
-            if (overflow.y > 0) newPanY = dragState.current.startPanY - (dy / (overflow.y * zoom)) * 100;
+            if (overflow.x > 0) newPanX = dragState.current.startPanX - (dx / overflow.x) * 100;
+            if (overflow.y > 0) newPanY = dragState.current.startPanY - (dy / overflow.y) * 100;
             onPanChange(Math.max(0, Math.min(100, newPanX)), Math.max(0, Math.min(100, newPanY)));
         },
-        [getOverflow, onPanChange, zoom],
+        [getOverflow, onPanChange],
     );
 
     const onPointerUp = useCallback(() => {
@@ -193,11 +177,8 @@ function CroppableFrameSlot({
                 <img
                     src={image.url}
                     alt={label}
-                    className="w-full h-full object-cover select-none pointer-events-none origin-center"
-                    style={{
-                        objectPosition: `${image.panX}% ${image.panY}%`,
-                        transform: `scale(${image.zoom})`,
-                    }}
+                    className="select-none pointer-events-none"
+                    style={coverStyles(image.naturalWidth, image.naturalHeight, quadrantAspect, image.panX, image.panY, image.zoom)}
                     draggable={false}
                 />
                 <button
@@ -268,6 +249,46 @@ function loadImg(src: string): Promise<HTMLImageElement> {
     });
 }
 
+/**
+ * Compute percentage-based styles for an image covering a container with pan + zoom.
+ * Works on both axes regardless of aspect ratio mismatch — unlike object-fit:cover
+ * which only creates overflow on one axis.
+ */
+function coverStyles(
+    natW: number,
+    natH: number,
+    containerAspect: number,
+    panX: number,
+    panY: number,
+    zoom: number,
+): React.CSSProperties {
+    const imageAspect = natW / natH;
+    let widthPct: number, heightPct: number;
+
+    if (imageAspect > containerAspect) {
+        // Image wider → scale by height to cover, width overflows
+        heightPct = 100 * zoom;
+        widthPct = (imageAspect / containerAspect) * 100 * zoom;
+    } else {
+        // Image taller → scale by width to cover, height overflows
+        widthPct = 100 * zoom;
+        heightPct = (containerAspect / imageAspect) * 100 * zoom;
+    }
+
+    const overflowX = widthPct - 100;
+    const overflowY = heightPct - 100;
+    const offsetX = overflowX > 0 ? (panX / 100) * overflowX : 0;
+    const offsetY = overflowY > 0 ? (panY / 100) * overflowY : 0;
+
+    return {
+        position: 'absolute' as const,
+        width: `${widthPct}%`,
+        height: `${heightPct}%`,
+        left: `${-offsetX}%`,
+        top: `${-offsetY}%`,
+    };
+}
+
 /** Compute crop rect in source-pixel space from aspect ratio + pan + zoom */
 function computeCropRect(
     natW: number,
@@ -306,8 +327,7 @@ function computeCropRect(
 
 export default function QuadFrameStackerPage() {
     const [source, setSource] = useState<SourceImage | null>(null);
-    const [selectedPreset, setSelectedPreset] = useState<number>(1); // default 16:9
-    const [exportScale, setExportScale] = useState<number>(1);
+    const [exportScale, setExportScale] = useState<number>(2);
     const [quadrants, setQuadrants] = useState<QuadrantData[]>([]);
     const [topImages, setTopImages] = useState<(FrameImage | null)[]>([null, null, null, null]);
     const [bottomImages, setBottomImages] = useState<(FrameImage | null)[]>([null, null, null, null]);
@@ -320,27 +340,20 @@ export default function QuadFrameStackerPage() {
 
     const phase = !source ? 'upload' : quadrants.length === 0 ? 'crop' : 'stack';
 
-    const targetRatio = useMemo(() => {
-        const preset = ASPECT_PRESETS[selectedPreset];
-        if (preset.ratio) return preset.ratio[0] / preset.ratio[1];
-        if (source) return source.naturalWidth / source.naturalHeight;
-        return 16 / 9;
-    }, [selectedPreset, source]);
-
     const cropInfo = useMemo(() => {
         if (!source) return null;
         const { cropW, cropH } = computeCropRect(
             source.naturalWidth,
             source.naturalHeight,
-            targetRatio,
+            TARGET_RATIO,
             source.panX,
             source.panY,
             source.zoom,
         );
         return { cropW, cropH, quadW: Math.floor(cropW / 2), quadH: Math.floor(cropH / 2) };
-    }, [source, targetRatio]);
+    }, [source]);
 
-    const quadrantAspect = cropInfo ? cropInfo.quadW / cropInfo.quadH : 16 / 9;
+    const quadrantAspect = cropInfo ? cropInfo.quadW / cropInfo.quadH : TARGET_RATIO;
 
     const sourcePointerHandlers = usePanDrag(
         sourceCropRef,
@@ -401,33 +414,38 @@ export default function QuadFrameStackerPage() {
         const { cropW, cropH, offX, offY } = computeCropRect(
             source.naturalWidth,
             source.naturalHeight,
-            targetRatio,
+            TARGET_RATIO,
             source.panX,
             source.panY,
             source.zoom,
         );
 
-        const halfW = Math.floor(cropW / 2);
-        const halfH = Math.floor(cropH / 2);
+        // Source quadrant size (before scale)
+        const srcHalfW = Math.floor(cropW / 2);
+        const srcHalfH = Math.floor(cropH / 2);
+
+        // Output quadrant size (with scale baked in)
+        const outW = Math.round(srcHalfW * exportScale);
+        const outH = Math.round(srcHalfH * exportScale);
 
         const positions = [
             { x: offX, y: offY },
-            { x: offX + halfW, y: offY },
-            { x: offX, y: offY + halfH },
-            { x: offX + halfW, y: offY + halfH },
+            { x: offX + srcHalfW, y: offY },
+            { x: offX, y: offY + srcHalfH },
+            { x: offX + srcHalfW, y: offY + srcHalfH },
         ];
 
         const promises = positions.map(
             (pos) =>
                 new Promise<QuadrantData>((resolve) => {
                     const canvas = document.createElement('canvas');
-                    canvas.width = halfW;
-                    canvas.height = halfH;
+                    canvas.width = outW;
+                    canvas.height = outH;
                     const ctx = canvas.getContext('2d')!;
-                    ctx.drawImage(img, pos.x, pos.y, halfW, halfH, 0, 0, halfW, halfH);
+                    ctx.drawImage(img, pos.x, pos.y, srcHalfW, srcHalfH, 0, 0, outW, outH);
                     canvas.toBlob((blob) => {
                         if (blob) {
-                            resolve({ url: URL.createObjectURL(blob), blob, width: halfW, height: halfH });
+                            resolve({ url: URL.createObjectURL(blob), blob, width: outW, height: outH });
                         }
                     }, 'image/png');
                 }),
@@ -435,7 +453,7 @@ export default function QuadFrameStackerPage() {
 
         const results = await Promise.all(promises);
         setQuadrants(results);
-        toast.success(`Split into 4 quadrants (${halfW}×${halfH} each)`);
+        toast.success(`Split into 4 quadrants (${outW}×${outH} each)`);
     };
 
     // -----------------------------------------------------------------------
@@ -530,9 +548,9 @@ export default function QuadFrameStackerPage() {
         const bottom = bottomImages[index];
         const quadImg = await loadImg(quadrant.url);
 
-        const s = exportScale;
-        const W = Math.round(quadrant.width * s);
-        const H = Math.round(quadrant.height * s);
+        // Quadrants are already at final resolution (scale baked in at split time)
+        const W = quadrant.width;
+        const H = quadrant.height;
 
         let totalHeight = H;
         if (top) totalHeight += H;
@@ -551,7 +569,7 @@ export default function QuadFrameStackerPage() {
             y += H;
         }
 
-        ctx.drawImage(quadImg, 0, 0, quadrant.width, quadrant.height, 0, y, W, H);
+        ctx.drawImage(quadImg, 0, y, W, H);
         y += H;
 
         if (bottom) {
@@ -718,64 +736,31 @@ export default function QuadFrameStackerPage() {
                 {/* =========================================================== */}
                 {phase === 'crop' && source && cropInfo && (
                     <div className="max-w-3xl mx-auto space-y-6">
-                        {/* Controls card */}
-                        <div className="p-5 rounded-[1.5rem] bg-card border border-border/50 space-y-5">
-                            {/* Aspect ratio */}
-                            <div className="space-y-3">
-                                <h2 className="font-vt323 text-xl text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                                    <Crop className="w-5 h-5" /> Aspect Ratio
-                                </h2>
-                                <div className="flex flex-wrap gap-2">
-                                    {ASPECT_PRESETS.map((preset, i) => (
-                                        <Button
-                                            key={preset.label}
-                                            variant={selectedPreset === i ? 'default' : 'outline'}
-                                            size="sm"
-                                            className={cn(
-                                                'rounded-full font-vt323 text-base h-9 px-5',
-                                                selectedPreset !== i && 'border-primary/20 bg-primary/5 hover:bg-primary/10',
-                                            )}
-                                            onClick={() => {
-                                                setSelectedPreset(i);
-                                                setSource((prev) => prev ? { ...prev, panX: 50, panY: 50, zoom: 1 } : prev);
-                                            }}
-                                        >
-                                            {preset.label}
-                                        </Button>
-                                    ))}
-                                </div>
+                        {/* Export scale */}
+                        <div className="p-5 rounded-[1.5rem] bg-card border border-border/50 space-y-4">
+                            <h2 className="font-vt323 text-xl text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                                <ZoomIn className="w-5 h-5" /> Export Scale
+                            </h2>
+                            <div className="flex flex-wrap gap-2">
+                                {EXPORT_SCALES.map((s) => (
+                                    <Button
+                                        key={s}
+                                        variant={exportScale === s ? 'default' : 'outline'}
+                                        size="sm"
+                                        className={cn(
+                                            'rounded-full font-vt323 text-base h-9 px-5',
+                                            exportScale !== s && 'border-primary/20 bg-primary/5 hover:bg-primary/10',
+                                        )}
+                                        onClick={() => setExportScale(s)}
+                                    >
+                                        {s}x
+                                    </Button>
+                                ))}
                             </div>
-
-                            {/* Export scale */}
-                            <div className="space-y-3">
-                                <h2 className="font-vt323 text-xl text-muted-foreground uppercase tracking-wider">
-                                    Export Scale
-                                </h2>
-                                <div className="flex flex-wrap gap-2">
-                                    {[1, 1.5, 2].map((s) => (
-                                        <Button
-                                            key={s}
-                                            variant={exportScale === s ? 'default' : 'outline'}
-                                            size="sm"
-                                            className={cn(
-                                                'rounded-full font-vt323 text-base h-9 px-5',
-                                                exportScale !== s && 'border-primary/20 bg-primary/5 hover:bg-primary/10',
-                                            )}
-                                            onClick={() => setExportScale(s)}
-                                        >
-                                            {s}x
-                                        </Button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Dimensions info */}
                             <p className="text-[11px] text-muted-foreground/50">
-                                Quadrant: {Math.round(cropInfo.quadW * exportScale)} × {Math.round(cropInfo.quadH * exportScale)}px
-                                · Strip: {Math.round(cropInfo.quadW * exportScale)} × {Math.round(cropInfo.quadH * 3 * exportScale)}px (with both frames)
-                                {exportScale !== 1 && (
-                                    <span className="text-primary/60"> · {exportScale}x upscaled</span>
-                                )}
+                                Base: {cropInfo.quadW}×{cropInfo.quadH}px
+                                → Export: {Math.round(cropInfo.quadW * exportScale)}×{Math.round(cropInfo.quadH * exportScale)}px per section
+                                · Strip: {Math.round(cropInfo.quadW * exportScale)}×{Math.round(cropInfo.quadH * 3 * exportScale)}px
                             </p>
                         </div>
 
@@ -783,18 +768,15 @@ export default function QuadFrameStackerPage() {
                         <div
                             ref={sourceCropRef}
                             className="relative rounded-2xl overflow-hidden border border-border/30 bg-black/20 cursor-grab active:cursor-grabbing touch-none group"
-                            style={{ aspectRatio: targetRatio }}
+                            style={{ aspectRatio: TARGET_RATIO }}
                             onWheel={handleSourceWheel}
                             {...sourcePointerHandlers}
                         >
                             <img
                                 src={source.url}
                                 alt="Source image — drag to reposition, scroll to zoom"
-                                className="w-full h-full object-cover select-none pointer-events-none origin-center"
-                                style={{
-                                    objectPosition: `${source.panX}% ${source.panY}%`,
-                                    transform: `scale(${source.zoom})`,
-                                }}
+                                className="select-none pointer-events-none"
+                                style={coverStyles(source.naturalWidth, source.naturalHeight, TARGET_RATIO, source.panX, source.panY, source.zoom)}
                                 draggable={false}
                             />
                             {/* 2×2 grid overlay */}
