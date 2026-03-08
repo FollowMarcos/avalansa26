@@ -13,6 +13,7 @@ import {
     Scissors,
     ArrowLeft,
     Crop,
+    ZoomIn,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -37,6 +38,7 @@ interface FrameImage {
     naturalHeight: number;
     panX: number;
     panY: number;
+    zoom: number;
 }
 
 interface SourceImage {
@@ -46,6 +48,7 @@ interface SourceImage {
     naturalHeight: number;
     panX: number;
     panY: number;
+    zoom: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -54,7 +57,6 @@ interface SourceImage {
 
 interface AspectPreset {
     label: string;
-    /** null = free / original ratio */
     ratio: [number, number] | null;
 }
 
@@ -67,8 +69,12 @@ const ASPECT_PRESETS: AspectPreset[] = [
     { label: '9:16', ratio: [9, 16] },
 ];
 
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 5;
+const ZOOM_STEP = 0.1;
+
 // ---------------------------------------------------------------------------
-// usePanDrag — shared pointer-drag logic for cover+pan containers
+// usePanDrag — pointer-drag logic for cover+pan+zoom containers
 // ---------------------------------------------------------------------------
 
 function usePanDrag(
@@ -77,6 +83,7 @@ function usePanDrag(
     naturalHeight: number,
     panX: number,
     panY: number,
+    zoom: number,
     onPanChange: (px: number, py: number) => void,
 ) {
     const dragState = useRef<{
@@ -113,11 +120,12 @@ function usePanDrag(
             const overflow = getOverflow();
             let newPanX = dragState.current.startPanX;
             let newPanY = dragState.current.startPanY;
-            if (overflow.x > 0) newPanX = dragState.current.startPanX - (dx / overflow.x) * 100;
-            if (overflow.y > 0) newPanY = dragState.current.startPanY - (dy / overflow.y) * 100;
+            // Factor zoom into drag sensitivity so dragging feels 1:1 on screen
+            if (overflow.x > 0) newPanX = dragState.current.startPanX - (dx / (overflow.x * zoom)) * 100;
+            if (overflow.y > 0) newPanY = dragState.current.startPanY - (dy / (overflow.y * zoom)) * 100;
             onPanChange(Math.max(0, Math.min(100, newPanX)), Math.max(0, Math.min(100, newPanY)));
         },
-        [getOverflow, onPanChange],
+        [getOverflow, onPanChange, zoom],
     );
 
     const onPointerUp = useCallback(() => {
@@ -139,6 +147,7 @@ function CroppableFrameSlot({
     onRemove,
     onDrop,
     onPanChange,
+    onZoomChange,
 }: {
     label: string;
     image: FrameImage | null;
@@ -147,6 +156,7 @@ function CroppableFrameSlot({
     onRemove: () => void;
     onDrop: (file: File) => void;
     onPanChange: (panX: number, panY: number) => void;
+    onZoomChange: (zoom: number) => void;
 }) {
     const [dragOver, setDragOver] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -157,7 +167,18 @@ function CroppableFrameSlot({
         image?.naturalHeight ?? 1,
         image?.panX ?? 50,
         image?.panY ?? 50,
+        image?.zoom ?? 1,
         onPanChange,
+    );
+
+    const handleWheel = useCallback(
+        (e: React.WheelEvent) => {
+            if (!image) return;
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+            onZoomChange(Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, image.zoom + delta)));
+        },
+        [image, onZoomChange],
     );
 
     if (image) {
@@ -166,13 +187,17 @@ function CroppableFrameSlot({
                 ref={containerRef}
                 className="relative group rounded-lg overflow-hidden border border-border/30 bg-black/20 cursor-grab active:cursor-grabbing touch-none"
                 style={{ aspectRatio: quadrantAspect }}
+                onWheel={handleWheel}
                 {...pointerHandlers}
             >
                 <img
                     src={image.url}
                     alt={label}
-                    className="w-full h-full object-cover select-none pointer-events-none"
-                    style={{ objectPosition: `${image.panX}% ${image.panY}%` }}
+                    className="w-full h-full object-cover select-none pointer-events-none origin-center"
+                    style={{
+                        objectPosition: `${image.panX}% ${image.panY}%`,
+                        transform: `scale(${image.zoom})`,
+                    }}
                     draggable={false}
                 />
                 <button
@@ -183,10 +208,16 @@ function CroppableFrameSlot({
                 >
                     <X className="w-3.5 h-3.5" />
                 </button>
+                {/* Zoom badge */}
+                {image.zoom > 1 && (
+                    <div className="absolute top-1.5 left-1.5 text-[9px] bg-black/50 text-white/70 px-1.5 py-0.5 rounded-full backdrop-blur-sm font-mono z-10">
+                        {image.zoom.toFixed(1)}x
+                    </div>
+                )}
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                     <span className="flex items-center gap-1 text-[9px] bg-black/50 text-white/80 px-2 py-0.5 rounded-full backdrop-blur-sm">
                         <Move className="w-3 h-3" />
-                        drag to reposition
+                        drag · scroll to zoom
                     </span>
                 </div>
             </div>
@@ -237,26 +268,29 @@ function loadImg(src: string): Promise<HTMLImageElement> {
     });
 }
 
-/** Compute crop rect in source-pixel space from aspect ratio + pan values */
+/** Compute crop rect in source-pixel space from aspect ratio + pan + zoom */
 function computeCropRect(
     natW: number,
     natH: number,
-    targetRatio: number, // w/h
+    targetRatio: number,
     panX: number,
     panY: number,
+    zoom: number = 1,
 ) {
     const sourceRatio = natW / natH;
-    let cropW: number, cropH: number;
+    let baseCropW: number, baseCropH: number;
 
     if (sourceRatio > targetRatio) {
-        // Source wider than target → constrain by height
-        cropH = natH;
-        cropW = Math.round(natH * targetRatio);
+        baseCropH = natH;
+        baseCropW = Math.round(natH * targetRatio);
     } else {
-        // Source taller than target → constrain by width
-        cropW = natW;
-        cropH = Math.round(natW / targetRatio);
+        baseCropW = natW;
+        baseCropH = Math.round(natW / targetRatio);
     }
+
+    // Zoom shrinks the crop area (shows less of the source)
+    const cropW = Math.round(baseCropW / zoom);
+    const cropH = Math.round(baseCropH / zoom);
 
     const maxOffX = natW - cropW;
     const maxOffY = natH - cropH;
@@ -271,9 +305,9 @@ function computeCropRect(
 // ---------------------------------------------------------------------------
 
 export default function QuadFrameStackerPage() {
-    // Phase: 'upload' → 'crop' → 'stack'
     const [source, setSource] = useState<SourceImage | null>(null);
     const [selectedPreset, setSelectedPreset] = useState<number>(1); // default 16:9
+    const [exportScale, setExportScale] = useState<number>(1);
     const [quadrants, setQuadrants] = useState<QuadrantData[]>([]);
     const [topImages, setTopImages] = useState<(FrameImage | null)[]>([null, null, null, null]);
     const [bottomImages, setBottomImages] = useState<(FrameImage | null)[]>([null, null, null, null]);
@@ -286,7 +320,6 @@ export default function QuadFrameStackerPage() {
 
     const phase = !source ? 'upload' : quadrants.length === 0 ? 'crop' : 'stack';
 
-    // Current target aspect ratio
     const targetRatio = useMemo(() => {
         const preset = ASPECT_PRESETS[selectedPreset];
         if (preset.ratio) return preset.ratio[0] / preset.ratio[1];
@@ -294,7 +327,6 @@ export default function QuadFrameStackerPage() {
         return 16 / 9;
     }, [selectedPreset, source]);
 
-    // Quadrant dimensions preview (from crop)
     const cropInfo = useMemo(() => {
         if (!source) return null;
         const { cropW, cropH } = computeCropRect(
@@ -303,20 +335,33 @@ export default function QuadFrameStackerPage() {
             targetRatio,
             source.panX,
             source.panY,
+            source.zoom,
         );
         return { cropW, cropH, quadW: Math.floor(cropW / 2), quadH: Math.floor(cropH / 2) };
     }, [source, targetRatio]);
 
     const quadrantAspect = cropInfo ? cropInfo.quadW / cropInfo.quadH : 16 / 9;
 
-    // Source pan drag handler
     const sourcePointerHandlers = usePanDrag(
         sourceCropRef,
         source?.naturalWidth ?? 1,
         source?.naturalHeight ?? 1,
         source?.panX ?? 50,
         source?.panY ?? 50,
+        source?.zoom ?? 1,
         (px, py) => setSource((prev) => prev ? { ...prev, panX: px, panY: py } : prev),
+    );
+
+    const handleSourceWheel = useCallback(
+        (e: React.WheelEvent) => {
+            if (!source) return;
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+            setSource((prev) =>
+                prev ? { ...prev, zoom: Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prev.zoom + delta)) } : prev,
+            );
+        },
+        [source],
     );
 
     // -----------------------------------------------------------------------
@@ -337,6 +382,7 @@ export default function QuadFrameStackerPage() {
                 naturalHeight: img.naturalHeight,
                 panX: 50,
                 panY: 50,
+                zoom: 1,
             });
             setQuadrants([]);
             setTopImages([null, null, null, null]);
@@ -358,6 +404,7 @@ export default function QuadFrameStackerPage() {
             targetRatio,
             source.panX,
             source.panY,
+            source.zoom,
         );
 
         const halfW = Math.floor(cropW / 2);
@@ -409,6 +456,7 @@ export default function QuadFrameStackerPage() {
                 naturalHeight: img.naturalHeight,
                 panX: 50,
                 panY: 50,
+                zoom: 1,
             };
             const setter = position === 'top' ? setTopImages : setBottomImages;
             setter((prev) => {
@@ -421,11 +469,15 @@ export default function QuadFrameStackerPage() {
         img.src = url;
     };
 
-    const updatePan = (index: number, position: 'top' | 'bottom', panX: number, panY: number) => {
+    const updateFrame = (
+        index: number,
+        position: 'top' | 'bottom',
+        updates: Partial<Pick<FrameImage, 'panX' | 'panY' | 'zoom'>>,
+    ) => {
         const setter = position === 'top' ? setTopImages : setBottomImages;
         setter((prev) => {
             const next = [...prev];
-            if (next[index]) next[index] = { ...next[index]!, panX, panY };
+            if (next[index]) next[index] = { ...next[index]!, ...updates };
             return next;
         });
     };
@@ -443,6 +495,11 @@ export default function QuadFrameStackerPage() {
     // -----------------------------------------------------------------------
     // Export — each frame is cropped to exact quadrant dimensions
     // -----------------------------------------------------------------------
+
+    /**
+     * Draws a frame image cropped to targetW × targetH using pan + zoom.
+     * Mirrors CSS object-fit:cover + object-position + transform:scale in pixel space.
+     */
     const drawCroppedFrame = (
         ctx: CanvasRenderingContext2D,
         img: HTMLImageElement,
@@ -452,7 +509,8 @@ export default function QuadFrameStackerPage() {
         targetW: number,
         targetH: number,
     ) => {
-        const scale = Math.max(targetW / frame.naturalWidth, targetH / frame.naturalHeight);
+        // Cover scale × zoom
+        const scale = Math.max(targetW / frame.naturalWidth, targetH / frame.naturalHeight) * frame.zoom;
         const scaledW = frame.naturalWidth * scale;
         const scaledH = frame.naturalHeight * scale;
         const overflowX = scaledW - targetW;
@@ -471,8 +529,10 @@ export default function QuadFrameStackerPage() {
         const top = topImages[index];
         const bottom = bottomImages[index];
         const quadImg = await loadImg(quadrant.url);
-        const W = quadrant.width;
-        const H = quadrant.height;
+
+        const s = exportScale;
+        const W = Math.round(quadrant.width * s);
+        const H = Math.round(quadrant.height * s);
 
         let totalHeight = H;
         if (top) totalHeight += H;
@@ -491,7 +551,7 @@ export default function QuadFrameStackerPage() {
             y += H;
         }
 
-        ctx.drawImage(quadImg, 0, 0, W, H, 0, y, W, H);
+        ctx.drawImage(quadImg, 0, 0, quadrant.width, quadrant.height, 0, y, W, H);
         y += H;
 
         if (bottom) {
@@ -658,34 +718,64 @@ export default function QuadFrameStackerPage() {
                 {/* =========================================================== */}
                 {phase === 'crop' && source && cropInfo && (
                     <div className="max-w-3xl mx-auto space-y-6">
-                        {/* Aspect ratio presets */}
-                        <div className="p-5 rounded-[1.5rem] bg-card border border-border/50 space-y-4">
-                            <h2 className="font-vt323 text-xl text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                                <Crop className="w-5 h-5" /> Aspect Ratio
-                            </h2>
-                            <div className="flex flex-wrap gap-2">
-                                {ASPECT_PRESETS.map((preset, i) => (
-                                    <Button
-                                        key={preset.label}
-                                        variant={selectedPreset === i ? 'default' : 'outline'}
-                                        size="sm"
-                                        className={cn(
-                                            'rounded-full font-vt323 text-base h-9 px-5',
-                                            selectedPreset !== i && 'border-primary/20 bg-primary/5 hover:bg-primary/10',
-                                        )}
-                                        onClick={() => {
-                                            setSelectedPreset(i);
-                                            // Reset pan when changing ratio
-                                            setSource((prev) => prev ? { ...prev, panX: 50, panY: 50 } : prev);
-                                        }}
-                                    >
-                                        {preset.label}
-                                    </Button>
-                                ))}
+                        {/* Controls card */}
+                        <div className="p-5 rounded-[1.5rem] bg-card border border-border/50 space-y-5">
+                            {/* Aspect ratio */}
+                            <div className="space-y-3">
+                                <h2 className="font-vt323 text-xl text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                                    <Crop className="w-5 h-5" /> Aspect Ratio
+                                </h2>
+                                <div className="flex flex-wrap gap-2">
+                                    {ASPECT_PRESETS.map((preset, i) => (
+                                        <Button
+                                            key={preset.label}
+                                            variant={selectedPreset === i ? 'default' : 'outline'}
+                                            size="sm"
+                                            className={cn(
+                                                'rounded-full font-vt323 text-base h-9 px-5',
+                                                selectedPreset !== i && 'border-primary/20 bg-primary/5 hover:bg-primary/10',
+                                            )}
+                                            onClick={() => {
+                                                setSelectedPreset(i);
+                                                setSource((prev) => prev ? { ...prev, panX: 50, panY: 50, zoom: 1 } : prev);
+                                            }}
+                                        >
+                                            {preset.label}
+                                        </Button>
+                                    ))}
+                                </div>
                             </div>
+
+                            {/* Export scale */}
+                            <div className="space-y-3">
+                                <h2 className="font-vt323 text-xl text-muted-foreground uppercase tracking-wider">
+                                    Export Scale
+                                </h2>
+                                <div className="flex flex-wrap gap-2">
+                                    {[1, 1.5, 2].map((s) => (
+                                        <Button
+                                            key={s}
+                                            variant={exportScale === s ? 'default' : 'outline'}
+                                            size="sm"
+                                            className={cn(
+                                                'rounded-full font-vt323 text-base h-9 px-5',
+                                                exportScale !== s && 'border-primary/20 bg-primary/5 hover:bg-primary/10',
+                                            )}
+                                            onClick={() => setExportScale(s)}
+                                        >
+                                            {s}x
+                                        </Button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Dimensions info */}
                             <p className="text-[11px] text-muted-foreground/50">
-                                Quadrant: {cropInfo.quadW} × {cropInfo.quadH}px
-                                · Strip: {cropInfo.quadW} × {cropInfo.quadH * 3}px (with both frames)
+                                Quadrant: {Math.round(cropInfo.quadW * exportScale)} × {Math.round(cropInfo.quadH * exportScale)}px
+                                · Strip: {Math.round(cropInfo.quadW * exportScale)} × {Math.round(cropInfo.quadH * 3 * exportScale)}px (with both frames)
+                                {exportScale !== 1 && (
+                                    <span className="text-primary/60"> · {exportScale}x upscaled</span>
+                                )}
                             </p>
                         </div>
 
@@ -694,13 +784,17 @@ export default function QuadFrameStackerPage() {
                             ref={sourceCropRef}
                             className="relative rounded-2xl overflow-hidden border border-border/30 bg-black/20 cursor-grab active:cursor-grabbing touch-none group"
                             style={{ aspectRatio: targetRatio }}
+                            onWheel={handleSourceWheel}
                             {...sourcePointerHandlers}
                         >
                             <img
                                 src={source.url}
-                                alt="Source image — drag to reposition"
-                                className="w-full h-full object-cover select-none pointer-events-none"
-                                style={{ objectPosition: `${source.panX}% ${source.panY}%` }}
+                                alt="Source image — drag to reposition, scroll to zoom"
+                                className="w-full h-full object-cover select-none pointer-events-none origin-center"
+                                style={{
+                                    objectPosition: `${source.panX}% ${source.panY}%`,
+                                    transform: `scale(${source.zoom})`,
+                                }}
                                 draggable={false}
                             />
                             {/* 2×2 grid overlay */}
@@ -708,11 +802,18 @@ export default function QuadFrameStackerPage() {
                                 <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/20" />
                                 <div className="absolute top-1/2 left-0 right-0 h-px bg-white/20" />
                             </div>
-                            {/* Drag hint */}
+                            {/* Zoom badge */}
+                            {source.zoom > 1 && (
+                                <div className="absolute top-3 left-3 flex items-center gap-1 text-xs bg-black/50 text-white/70 px-2 py-1 rounded-full backdrop-blur-sm font-mono z-10">
+                                    <ZoomIn className="w-3 h-3" />
+                                    {source.zoom.toFixed(1)}x
+                                </div>
+                            )}
+                            {/* Hint */}
                             <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                                 <span className="flex items-center gap-1 text-xs bg-black/50 text-white/80 px-3 py-1 rounded-full backdrop-blur-sm">
                                     <Move className="w-3.5 h-3.5" />
-                                    drag to reposition crop
+                                    drag to pan · scroll to zoom
                                 </span>
                             </div>
                         </div>
@@ -742,7 +843,6 @@ export default function QuadFrameStackerPage() {
                                 </h3>
 
                                 <div className="p-3 rounded-[1.5rem] bg-card border border-border/50 space-y-2">
-                                    {/* Top frame slot */}
                                     <CroppableFrameSlot
                                         label="Top Frame"
                                         image={topImages[index]}
@@ -750,10 +850,10 @@ export default function QuadFrameStackerPage() {
                                         onUpload={() => topInputRefs.current[index]?.click()}
                                         onRemove={() => removeFrame(index, 'top')}
                                         onDrop={(file) => addFrameImage(file, index, 'top')}
-                                        onPanChange={(px, py) => updatePan(index, 'top', px, py)}
+                                        onPanChange={(px, py) => updateFrame(index, 'top', { panX: px, panY: py })}
+                                        onZoomChange={(z) => updateFrame(index, 'top', { zoom: z })}
                                     />
 
-                                    {/* Quadrant (locked) */}
                                     <div className="relative rounded-lg overflow-hidden border border-border/30 bg-black/20">
                                         <img
                                             src={quadrant.url}
@@ -766,7 +866,6 @@ export default function QuadFrameStackerPage() {
                                         </div>
                                     </div>
 
-                                    {/* Bottom frame slot */}
                                     <CroppableFrameSlot
                                         label="Bottom Frame"
                                         image={bottomImages[index]}
@@ -774,10 +873,10 @@ export default function QuadFrameStackerPage() {
                                         onUpload={() => bottomInputRefs.current[index]?.click()}
                                         onRemove={() => removeFrame(index, 'bottom')}
                                         onDrop={(file) => addFrameImage(file, index, 'bottom')}
-                                        onPanChange={(px, py) => updatePan(index, 'bottom', px, py)}
+                                        onPanChange={(px, py) => updateFrame(index, 'bottom', { panX: px, panY: py })}
+                                        onZoomChange={(z) => updateFrame(index, 'bottom', { zoom: z })}
                                     />
 
-                                    {/* Export single strip */}
                                     <Button
                                         variant="ghost"
                                         size="sm"
@@ -789,7 +888,6 @@ export default function QuadFrameStackerPage() {
                                     </Button>
                                 </div>
 
-                                {/* Hidden file inputs */}
                                 <input
                                     type="file"
                                     ref={(el) => { topInputRefs.current[index] = el; }}
