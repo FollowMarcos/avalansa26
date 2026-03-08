@@ -129,10 +129,19 @@ export function StudioLayout() {
         {/* Theme toggle */}
         <button
           onClick={() => setNervTheme(nervTheme === "default" ? "eva01" : "default")}
-          className="size-4 rounded-full border border-[var(--steel-faint)] hover:border-[var(--nerv-orange-dim)] transition-colors shrink-0"
-          style={{ background: nervTheme === "eva01" ? "#B040E8" : "var(--nerv-orange)" }}
+          className={`flex items-center gap-1.5 h-5 px-2.5 rounded-full border text-[8px] uppercase tracking-[0.1em] transition-colors shrink-0 ${
+            nervTheme === "eva01"
+              ? "border-[#B040E8]/60 text-[#B040E8] hover:border-[#B040E8] bg-[#B040E8]/10"
+              : "border-[var(--steel-faint)] text-[var(--steel-dim)] hover:border-[#B040E8]/40 hover:text-[#B040E8]"
+          }`}
           aria-label={`Switch to ${nervTheme === "default" ? "EVA-01" : "default"} theme`}
-        />
+        >
+          <span
+            className="size-1.5 rounded-full shrink-0"
+            style={{ background: nervTheme === "eva01" ? "#B040E8" : "var(--steel-dim)", boxShadow: nervTheme === "eva01" ? "0 0 4px #B040E8" : "none" }}
+          />
+          {nervTheme === "eva01" ? "UNIT-01 ACTIVE" : "ENGAGE UNIT-01"}
+        </button>
 
         {/* Clock */}
         <span className="text-[9px] text-[var(--data-green)] glow-green shrink-0">
