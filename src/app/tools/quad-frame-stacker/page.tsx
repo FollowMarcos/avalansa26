@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import {
     Upload,
     Download,
@@ -51,7 +51,7 @@ interface SourceImage {
 }
 
 const TARGET_RATIO = 16 / 9;
-const EXPORT_SCALES = [1, 1.5, 2, 3, 4];
+const EXPORT_SCALE = 2;
 
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 5;
@@ -77,7 +77,6 @@ function usePanDrag(
         startPanY: number;
     } | null>(null);
 
-    // Overflow now includes zoom — at zoom > 1, both axes have overflow
     const getOverflow = useCallback(() => {
         if (!containerRef.current) return { x: 0, y: 0 };
         const rect = containerRef.current.getBoundingClientRect();
@@ -120,6 +119,35 @@ function usePanDrag(
 }
 
 // ---------------------------------------------------------------------------
+// useWheelZoom — native wheel listener with { passive: false } to prevent
+// page scroll while zooming images
+// ---------------------------------------------------------------------------
+
+function useWheelZoom(
+    containerRef: React.RefObject<HTMLElement | null>,
+    getZoom: () => number,
+    setZoom: (z: number) => void,
+    enabled: boolean,
+) {
+    const getZoomRef = useRef(getZoom);
+    const setZoomRef = useRef(setZoom);
+    getZoomRef.current = getZoom;
+    setZoomRef.current = setZoom;
+
+    useEffect(() => {
+        const el = containerRef.current;
+        if (!el || !enabled) return;
+        const handler = (e: WheelEvent) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
+            setZoomRef.current(Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, getZoomRef.current() + delta)));
+        };
+        el.addEventListener('wheel', handler, { passive: false });
+        return () => el.removeEventListener('wheel', handler);
+    }, [containerRef, enabled]);
+}
+
+// ---------------------------------------------------------------------------
 // CroppableFrameSlot — for top/bottom reference frames
 // ---------------------------------------------------------------------------
 
@@ -155,14 +183,11 @@ function CroppableFrameSlot({
         onPanChange,
     );
 
-    const handleWheel = useCallback(
-        (e: React.WheelEvent) => {
-            if (!image) return;
-            e.preventDefault();
-            const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
-            onZoomChange(Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, image.zoom + delta)));
-        },
-        [image, onZoomChange],
+    useWheelZoom(
+        containerRef,
+        () => image?.zoom ?? 1,
+        onZoomChange,
+        !!image,
     );
 
     if (image) {
@@ -171,7 +196,6 @@ function CroppableFrameSlot({
                 ref={containerRef}
                 className="relative group rounded-lg overflow-hidden border border-border/30 bg-black/20 cursor-grab active:cursor-grabbing touch-none"
                 style={{ aspectRatio: quadrantAspect }}
-                onWheel={handleWheel}
                 {...pointerHandlers}
             >
                 <img
@@ -266,11 +290,9 @@ function coverStyles(
     let widthPct: number, heightPct: number;
 
     if (imageAspect > containerAspect) {
-        // Image wider → scale by height to cover, width overflows
         heightPct = 100 * zoom;
         widthPct = (imageAspect / containerAspect) * 100 * zoom;
     } else {
-        // Image taller → scale by width to cover, height overflows
         widthPct = 100 * zoom;
         heightPct = (containerAspect / imageAspect) * 100 * zoom;
     }
@@ -309,7 +331,6 @@ function computeCropRect(
         baseCropH = Math.round(natW / targetRatio);
     }
 
-    // Zoom shrinks the crop area (shows less of the source)
     const cropW = Math.round(baseCropW / zoom);
     const cropH = Math.round(baseCropH / zoom);
 
@@ -327,7 +348,6 @@ function computeCropRect(
 
 export default function QuadFrameStackerPage() {
     const [source, setSource] = useState<SourceImage | null>(null);
-    const [exportScale, setExportScale] = useState<number>(2);
     const [quadrants, setQuadrants] = useState<QuadrantData[]>([]);
     const [topImages, setTopImages] = useState<(FrameImage | null)[]>([null, null, null, null]);
     const [bottomImages, setBottomImages] = useState<(FrameImage | null)[]>([null, null, null, null]);
@@ -365,16 +385,11 @@ export default function QuadFrameStackerPage() {
         (px, py) => setSource((prev) => prev ? { ...prev, panX: px, panY: py } : prev),
     );
 
-    const handleSourceWheel = useCallback(
-        (e: React.WheelEvent) => {
-            if (!source) return;
-            e.preventDefault();
-            const delta = e.deltaY > 0 ? -ZOOM_STEP : ZOOM_STEP;
-            setSource((prev) =>
-                prev ? { ...prev, zoom: Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prev.zoom + delta)) } : prev,
-            );
-        },
-        [source],
+    useWheelZoom(
+        sourceCropRef,
+        () => source?.zoom ?? 1,
+        (z) => setSource((prev) => prev ? { ...prev, zoom: z } : prev),
+        !!source && phase === 'crop',
     );
 
     // -----------------------------------------------------------------------
@@ -420,13 +435,12 @@ export default function QuadFrameStackerPage() {
             source.zoom,
         );
 
-        // Source quadrant size (before scale)
         const srcHalfW = Math.floor(cropW / 2);
         const srcHalfH = Math.floor(cropH / 2);
 
-        // Output quadrant size (with scale baked in)
-        const outW = Math.round(srcHalfW * exportScale);
-        const outH = Math.round(srcHalfH * exportScale);
+        // Bake export scale into quadrant dimensions
+        const outW = Math.round(srcHalfW * EXPORT_SCALE);
+        const outH = Math.round(srcHalfH * EXPORT_SCALE);
 
         const positions = [
             { x: offX, y: offY },
@@ -453,7 +467,7 @@ export default function QuadFrameStackerPage() {
 
         const results = await Promise.all(promises);
         setQuadrants(results);
-        toast.success(`Split into 4 quadrants (${outW}×${outH} each)`);
+        toast.success(`Split into 4 quadrants (${outW}\u00D7${outH} each)`);
     };
 
     // -----------------------------------------------------------------------
@@ -514,10 +528,7 @@ export default function QuadFrameStackerPage() {
     // Export — each frame is cropped to exact quadrant dimensions
     // -----------------------------------------------------------------------
 
-    /**
-     * Draws a frame image cropped to targetW × targetH using pan + zoom.
-     * Mirrors CSS object-fit:cover + object-position + transform:scale in pixel space.
-     */
+    /** Draws a frame image cropped to targetW x targetH using pan + zoom. */
     const drawCroppedFrame = (
         ctx: CanvasRenderingContext2D,
         img: HTMLImageElement,
@@ -527,7 +538,6 @@ export default function QuadFrameStackerPage() {
         targetW: number,
         targetH: number,
     ) => {
-        // Cover scale × zoom
         const scale = Math.max(targetW / frame.naturalWidth, targetH / frame.naturalHeight) * frame.zoom;
         const scaledW = frame.naturalWidth * scale;
         const scaledH = frame.naturalHeight * scale;
@@ -548,7 +558,6 @@ export default function QuadFrameStackerPage() {
         const bottom = bottomImages[index];
         const quadImg = await loadImg(quadrant.url);
 
-        // Quadrants are already at final resolution (scale baked in at split time)
         const W = quadrant.width;
         const H = quadrant.height;
 
@@ -736,40 +745,11 @@ export default function QuadFrameStackerPage() {
                 {/* =========================================================== */}
                 {phase === 'crop' && source && cropInfo && (
                     <div className="max-w-3xl mx-auto space-y-6">
-                        {/* Export scale */}
-                        <div className="p-5 rounded-[1.5rem] bg-card border border-border/50 space-y-4">
-                            <h2 className="font-vt323 text-xl text-muted-foreground uppercase tracking-wider flex items-center gap-2">
-                                <ZoomIn className="w-5 h-5" /> Export Scale
-                            </h2>
-                            <div className="flex flex-wrap gap-2">
-                                {EXPORT_SCALES.map((s) => (
-                                    <Button
-                                        key={s}
-                                        variant={exportScale === s ? 'default' : 'outline'}
-                                        size="sm"
-                                        className={cn(
-                                            'rounded-full font-vt323 text-base h-9 px-5',
-                                            exportScale !== s && 'border-primary/20 bg-primary/5 hover:bg-primary/10',
-                                        )}
-                                        onClick={() => setExportScale(s)}
-                                    >
-                                        {s}x
-                                    </Button>
-                                ))}
-                            </div>
-                            <p className="text-[11px] text-muted-foreground/50">
-                                Base: {cropInfo.quadW}×{cropInfo.quadH}px
-                                → Export: {Math.round(cropInfo.quadW * exportScale)}×{Math.round(cropInfo.quadH * exportScale)}px per section
-                                · Strip: {Math.round(cropInfo.quadW * exportScale)}×{Math.round(cropInfo.quadH * 3 * exportScale)}px
-                            </p>
-                        </div>
-
                         {/* Croppable source preview */}
                         <div
                             ref={sourceCropRef}
                             className="relative rounded-2xl overflow-hidden border border-border/30 bg-black/20 cursor-grab active:cursor-grabbing touch-none group"
                             style={{ aspectRatio: TARGET_RATIO }}
-                            onWheel={handleSourceWheel}
                             {...sourcePointerHandlers}
                         >
                             <img
@@ -779,7 +759,7 @@ export default function QuadFrameStackerPage() {
                                 style={coverStyles(source.naturalWidth, source.naturalHeight, TARGET_RATIO, source.panX, source.panY, source.zoom)}
                                 draggable={false}
                             />
-                            {/* 2×2 grid overlay */}
+                            {/* 2x2 grid overlay */}
                             <div className="absolute inset-0 pointer-events-none">
                                 <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/20" />
                                 <div className="absolute top-1/2 left-0 right-0 h-px bg-white/20" />
@@ -799,6 +779,12 @@ export default function QuadFrameStackerPage() {
                                 </span>
                             </div>
                         </div>
+
+                        {/* Dimensions info */}
+                        <p className="text-center text-[11px] text-muted-foreground/50">
+                            Quadrant: {Math.round(cropInfo.quadW * EXPORT_SCALE)}{'\u00D7'}{Math.round(cropInfo.quadH * EXPORT_SCALE)}px
+                            · Strip: {Math.round(cropInfo.quadW * EXPORT_SCALE)}{'\u00D7'}{Math.round(cropInfo.quadH * 3 * EXPORT_SCALE)}px
+                        </p>
 
                         {/* Split button */}
                         <div className="flex justify-center">
