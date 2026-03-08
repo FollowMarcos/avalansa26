@@ -129,10 +129,10 @@ export function UnifiedToolbar({
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 max-w-[calc(100vw-10rem)]">
-        <div className="flex flex-col gap-2">
+      <div className="shrink-0 z-20 w-full">
+        <div className="flex flex-col">
           {/* Main toolbar */}
-          <div className="relative flex items-center gap-1.5 rounded-none bg-[#010101] border border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)] px-2 py-1.5 font-[family-name:var(--font-ibm-plex-mono)]">
+          <div className="relative flex items-center gap-1.5 bg-[var(--void)] border-b border-[var(--nerv-orange-dim)]/20 px-3 py-1 font-[family-name:var(--font-ibm-plex-mono)]">
             {/* Sidebar toggle */}
             <Tooltip>
               <TooltipTrigger asChild>
@@ -452,7 +452,7 @@ function ActiveFiltersRow({
   clearGalleryFilters: () => void;
 }) {
   return (
-    <div className="flex items-center gap-1.5 justify-center flex-wrap font-[family-name:var(--font-ibm-plex-mono)]">
+    <div className="flex items-center gap-1.5 px-3 py-1 flex-wrap font-[family-name:var(--font-ibm-plex-mono)] bg-[var(--void)] border-b border-[var(--nerv-orange-dim)]/10">
       {showFavoritesOnly && (
         <Badge variant="outline" className="gap-1 text-[10px] h-5 px-1.5 rounded-none border-[var(--steel-faint)] text-[var(--steel-dim)]">
           <Heart

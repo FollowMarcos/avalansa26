@@ -471,8 +471,8 @@ export function GenerationGallery() {
             onClose={() => setGallerySidebarOpen(false)}
           />
 
-          {/* Gallery grid — top padding accounts for floating toolbar */}
-          <div ref={scrollContainerRef} className="flex-1 overflow-auto px-6 pt-16 pb-4">
+          {/* Gallery grid */}
+          <div ref={scrollContainerRef} className="flex-1 overflow-auto px-3 pt-3 pb-4">
             {filteredHistory.length === 0 && pendingCount === 0 ? (
               /* Empty state */
               <div className="flex flex-col items-center justify-center h-full text-center p-8 max-w-sm mx-auto nerv-grid-overlay">
@@ -536,7 +536,7 @@ export function GenerationGallery() {
                           ({images.length})
                         </span>
                       </h2>
-                      <div className="grid gap-3" style={gridStyle}>
+                      <div className="grid gap-[2px]" style={gridStyle}>
                         {images.map((image) => {
                           const idx = globalIndex++;
                           return image.status === "pending" ? (
@@ -605,7 +605,7 @@ export function GenerationGallery() {
                         </span>
                       </button>
                       {!isCollapsed && (
-                        <div className="grid gap-3" style={gridStyle}>
+                        <div className="grid gap-[2px]" style={gridStyle}>
                           {images.map((image) => {
                             const idx = globalIndex++;
                             return image.status === "pending" ? (
@@ -646,7 +646,7 @@ export function GenerationGallery() {
               </div>
             ) : (
               /* Flat layout (prompt sort) */
-              <div className="grid gap-3" style={gridStyle}>
+              <div className="grid gap-[2px]" style={gridStyle}>
                 {filteredHistory.map((image) => {
                   const idx = globalIndex++;
                   return image.status === "pending" ? (

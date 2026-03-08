@@ -287,18 +287,16 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
       <motion.div
         initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
         animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-        className="absolute bottom-0 left-0 right-0 z-30 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        className="shrink-0 z-30"
       >
-        <div className="mx-auto max-w-5xl">
-          <FileUpload
-            onFilesAdded={addReferenceImages}
-            multiple
-            accept="image/*"
-            disabled={!hasAvailableSlots}
-          >
-            {/* Main Composer Panel */}
-            <div className="relative">
-              <div className="relative bg-[#010101] border border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)] rounded-none overflow-hidden font-[family-name:var(--font-ibm-plex-mono)]">
+        <FileUpload
+          onFilesAdded={addReferenceImages}
+          multiple
+          accept="image/*"
+          disabled={!hasAvailableSlots}
+        >
+          {/* Main Composer Panel — full-width docked */}
+          <div className="relative bg-[var(--void)] border-t-2 border-t-[var(--nerv-orange)] overflow-hidden font-[family-name:var(--font-ibm-plex-mono)]">
                 {/* Institutional header */}
                 <div className="flex items-center gap-2 px-4 pt-3 pb-0">
                   <span className="text-base tracking-[0.15em] text-[var(--nerv-orange)] font-[family-name:var(--font-bebas-neue)] glow-orange">
@@ -360,11 +358,11 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                           {/* Active References for this generation */}
                           {hasReferences && (
                             <div className="space-y-2">
-                              <div className="text-xs font-medium text-foreground">Active References</div>
+                              <div className="text-xs font-medium text-[var(--steel)]">Active References</div>
                               <div className="grid grid-cols-5 gap-1.5">
                                 {referenceImages.map((img) => (
                                   <div key={img.id} className="relative group">
-                                    <div className="aspect-square rounded-lg overflow-hidden bg-muted dark:bg-zinc-800 border border-border dark:border-white/10">
+                                    <div className="aspect-square rounded-none overflow-hidden bg-[var(--void-panel)] border border-[var(--steel-faint)]">
                                       <Image src={img.preview} alt="Reference" width={48} height={48} className="w-full h-full object-cover" />
                                       {img.isUploading && (
                                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -372,19 +370,19 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                                         </div>
                                       )}
                                     </div>
-                                    <button onClick={() => removeReferenceImage(img.id)} aria-label="Remove from active" className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-background dark:bg-zinc-900 border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-ring">
+                                    <button onClick={() => removeReferenceImage(img.id)} aria-label="Remove from active" className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-[var(--void)] border border-[var(--steel-faint)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[var(--alert-red)] hover:text-[var(--void)] focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-[var(--nerv-orange)]">
                                       <X className="size-2.5" />
                                     </button>
                                   </div>
                                 ))}
                               </div>
-                              <div className="text-[10px] text-muted-foreground text-right font-mono">{referenceImages.length}/14</div>
+                              <div className="text-[10px] text-[var(--steel-dim)] text-right font-mono">{referenceImages.length}/14</div>
                             </div>
                           )}
 
                           {/* Upload button */}
                           <FileUploadTrigger asChild>
-                            <button className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl bg-muted dark:bg-zinc-800 hover:bg-muted/80 dark:hover:bg-zinc-700 text-sm transition-colors border-2 border-dashed border-border dark:border-zinc-700" disabled={!hasAvailableSlots || referenceImages.length >= 14}>
+                            <button className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-none bg-[var(--void-panel)] hover:bg-[var(--nerv-orange)]/10 text-sm transition-colors border-2 border-dashed border-[var(--steel-faint)]" disabled={!hasAvailableSlots || referenceImages.length >= 14}>
                               <ImagePlus className="size-4" aria-hidden="true" />
                               <span>Upload images</span>
                             </button>
@@ -394,32 +392,32 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                           {savedReferences.length > 0 && (
                             <>
                               <div className="flex items-center justify-between">
-                                <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Your Library</div>
-                                <div className="text-[10px] text-muted-foreground font-mono">{savedReferences.length} saved</div>
+                                <div className="text-[10px] text-[var(--steel-dim)] uppercase tracking-wider">Your Library</div>
+                                <div className="text-[10px] text-[var(--steel-dim)] font-mono">{savedReferences.length} saved</div>
                               </div>
                               <div className="grid grid-cols-5 gap-1.5 max-h-32 overflow-y-auto">
                                 {savedReferences.map((saved) => (
                                   <div key={saved.id} className="relative group">
                                     <Tooltip>
                                       <TooltipTrigger asChild>
-                                        <button onClick={() => addSavedReferenceToActive(saved)} className="aspect-square w-full rounded-lg overflow-hidden border border-border hover:border-foreground/50 transition-colors" aria-label={`Add ${saved.name || 'reference'}`}>
+                                        <button onClick={() => addSavedReferenceToActive(saved)} className="aspect-square w-full rounded-none overflow-hidden border border-[var(--steel-faint)] hover:border-[var(--nerv-orange-dim)] transition-colors" aria-label={`Add ${saved.name || 'reference'}`}>
                                           <Image src={saved.url} alt={saved.name || 'Reference'} width={48} height={48} className="w-full h-full object-cover" unoptimized />
                                         </button>
                                       </TooltipTrigger>
                                       <TooltipContent side="top" className="text-xs">{saved.name || 'Reference image'}</TooltipContent>
                                     </Tooltip>
-                                    <button onClick={(e) => { e.stopPropagation(); removeSavedReference(saved.id); }} aria-label="Delete from library" className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-ring">
+                                    <button onClick={(e) => { e.stopPropagation(); removeSavedReference(saved.id); }} aria-label="Delete from library" className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-[var(--alert-red)] text-[var(--void)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-[var(--nerv-orange)]">
                                       <Trash2 className="size-2.5" />
                                     </button>
                                   </div>
                                 ))}
                               </div>
-                              <p className="text-[10px] text-muted-foreground/70">Click to use • Uploads are auto-saved</p>
+                              <p className="text-[10px] text-[var(--steel-dim)]/70">Click to use • Uploads are auto-saved</p>
                             </>
                           )}
 
                           {savedReferences.length === 0 && !hasReferences && (
-                            <p className="text-xs text-muted-foreground text-center py-2">Upload images to use as references.<br />They'll be saved to your library automatically.</p>
+                            <p className="text-xs text-[var(--steel-dim)] text-center py-2">Upload images to use as references.<br />They'll be saved to your library automatically.</p>
                           )}
                         </div>
                       </DropdownMenuContent>
@@ -438,7 +436,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                           <div className="flex items-center gap-1.5">
                               {referenceImages.slice(0, maxVisibleRefs).map((img) => (
                                 <div key={img.id} className="relative group">
-                                  <div className="w-8 h-8 rounded-lg overflow-hidden bg-muted dark:bg-zinc-800 border border-border dark:border-white/10">
+                                  <div className="w-8 h-8 rounded-none overflow-hidden bg-[var(--void-panel)] border border-[var(--steel-faint)]">
                                     <Image src={img.preview} alt="Reference" width={32} height={32} className="w-full h-full object-cover" />
                                     {img.isUploading && (
                                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
@@ -446,13 +444,13 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                                       </div>
                                     )}
                                   </div>
-                                  <button onClick={() => removeReferenceImage(img.id)} aria-label="Remove" className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-background dark:bg-zinc-900 border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-destructive hover:text-destructive-foreground focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-ring">
+                                  <button onClick={() => removeReferenceImage(img.id)} aria-label="Remove" className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-[var(--void)] border border-[var(--steel-faint)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[var(--alert-red)] hover:text-[var(--void)] focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-[var(--nerv-orange)]">
                                     <X className="size-2.5" />
                                   </button>
                                 </div>
                               ))}
                               {hiddenRefCount > 0 && (
-                                <span className="text-[10px] text-muted-foreground font-mono">+{hiddenRefCount}</span>
+                                <span className="text-[10px] text-[var(--steel-dim)] font-mono">+{hiddenRefCount}</span>
                               )}
                           </div>
                         </div>
@@ -460,7 +458,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
 
                       {/* Textarea */}
                       <div className="relative">
-                        <div className={cn("overflow-hidden rounded-lg", isPromptExpanded ? "max-h-[200px]" : "max-h-[44px]")}>
+                        <div className={cn("overflow-hidden rounded-none", isPromptExpanded ? "max-h-[200px]" : "max-h-[44px]")}>
                           <textarea
                             ref={textareaRef}
                             value={prompt}
@@ -520,7 +518,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                           aria-label="Generate image"
                         >
                           {isGenerating && !hasAvailableSlots ? (
-                            <Loader variant="circular" size="sm" className="border-background dark:border-zinc-900" />
+                            <Loader variant="circular" size="sm" className="border-[var(--void)]" />
                           ) : (
                             <Sparkles className="size-5" strokeWidth={1.5} aria-hidden="true" />
                           )}
@@ -712,7 +710,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                     <PopoverContent align="end" side="top" className="w-80 p-0 rounded-none bg-[#010101] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)]">
                       <div className="p-2 border-b border-[var(--steel-faint)]">
                         <div className="flex items-center gap-2 px-2">
-                          <Search className="size-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
+                          <Search className="size-3.5 text-[var(--steel-dim)] shrink-0" aria-hidden="true" />
                           <input
                             ref={promptSearchInputRef}
                             type="text"
@@ -721,23 +719,23 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                             placeholder={"Search saved prompts\u2026"}
                             autoComplete="off"
                             spellCheck={false}
-                            className="flex-1 min-w-0 bg-transparent text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+                            className="flex-1 min-w-0 bg-transparent text-sm text-[var(--steel)] placeholder:text-[var(--steel-dim)] focus:outline-none"
                             aria-label="Search saved prompts"
                             // eslint-disable-next-line jsx-a11y/no-autofocus
                             autoFocus
                           />
                           {isSearchingPrompts && (
-                            <Loader2 className="size-3.5 text-muted-foreground animate-spin shrink-0" aria-hidden="true" />
+                            <Loader2 className="size-3.5 text-[var(--steel-dim)] animate-spin shrink-0" aria-hidden="true" />
                           )}
                         </div>
                       </div>
                       <div className="max-h-64 overflow-y-auto overscroll-contain">
                         {promptSearchQuery.trim().length < 2 ? (
-                          <p className="text-xs text-muted-foreground text-center py-6">
+                          <p className="text-xs text-[var(--steel-dim)] text-center py-6">
                             Type to search your saved prompts
                           </p>
                         ) : promptSearchResults.length === 0 && !isSearchingPrompts ? (
-                          <p className="text-xs text-muted-foreground text-center py-6">
+                          <p className="text-xs text-[var(--steel-dim)] text-center py-6">
                             No prompts found
                           </p>
                         ) : (
@@ -747,15 +745,15 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                                 key={result.id}
                                 type="button"
                                 onClick={() => handleSelectSearchResult(result)}
-                                className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-muted transition-colors group"
+                                className="w-full text-left px-2.5 py-2 rounded-none hover:bg-[var(--nerv-orange)]/10 transition-colors group"
                               >
                                 <div className="flex items-center gap-1.5 mb-0.5">
                                   {result.is_favorite && (
-                                    <Star className="size-3 text-amber-500 fill-amber-500 shrink-0" aria-hidden="true" />
+                                    <Star className="size-3 text-[var(--nerv-orange)] fill-[var(--nerv-orange)] shrink-0" aria-hidden="true" />
                                   )}
                                   <span className="text-sm font-medium truncate">{result.name}</span>
                                 </div>
-                                <p className="text-xs text-muted-foreground line-clamp-2">{result.prompt_text}</p>
+                                <p className="text-xs text-[var(--steel-dim)] line-clamp-2">{result.prompt_text}</p>
                               </button>
                             ))}
                           </div>
@@ -799,7 +797,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                             <Palette className="size-3.5" aria-hidden="true" />
                             <span className="text-xs font-medium">Style</span>
                             {hasStyleRef && (
-                              <div className="size-4 rounded overflow-hidden border border-violet-500/30">
+                              <div className="size-4 rounded overflow-hidden border border-[var(--thermal-purple)]/30">
                                 <img src={settings.styleRef?.url} alt="" className="w-full h-full object-cover" draggable={false} />
                               </div>
                             )}
@@ -812,12 +810,12 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium text-[var(--nerv-orange)] uppercase tracking-[0.08em]">Art Style Reference</span>
                         {hasStyleRef && (
-                          <button type="button" onClick={() => updateSettings({ styleRef: undefined })} className="text-[10px] text-destructive hover:underline" aria-label="Remove style reference">Remove</button>
+                          <button type="button" onClick={() => updateSettings({ styleRef: undefined })} className="text-[10px] text-[var(--alert-red)] hover:underline" aria-label="Remove style reference">Remove</button>
                         )}
                       </div>
-                      <p className="text-[10px] text-muted-foreground">Pick an image to use only its art style (color palette, brushwork, technique).</p>
+                      <p className="text-[10px] text-[var(--steel-dim)]">Pick an image to use only its art style (color palette, brushwork, technique).</p>
                       {hasStyleRef && (
-                        <div className="relative rounded-lg overflow-hidden border border-border">
+                        <div className="relative rounded-none overflow-hidden border border-[var(--steel-faint)]">
                           <img src={settings.styleRef?.url} alt="Style reference" className="w-full h-24 object-contain" draggable={false} />
                         </div>
                       )}
@@ -838,7 +836,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                         accept="image/*"
                       >
                         <FileUploadTrigger asChild>
-                          <button className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-muted/50 hover:bg-muted text-xs transition-colors border border-dashed border-border">
+                          <button className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-none bg-[var(--void-panel)] hover:bg-[var(--nerv-orange)]/10 text-xs transition-colors border border-dashed border-[var(--steel-faint)]">
                             <ImagePlus className="size-3.5" aria-hidden="true" />Upload
                           </button>
                         </FileUploadTrigger>
@@ -846,10 +844,10 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                       {/* Pick from generations */}
                       {completedGens.length > 0 && (
                         <>
-                          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Generated Images</div>
+                          <div className="text-[10px] text-[var(--steel-dim)] uppercase tracking-wider">Generated Images</div>
                           <div className="grid grid-cols-5 gap-1 max-h-28 overflow-y-auto">
                             {completedGens.map((gen) => (
-                              <button key={gen.id} type="button" onClick={() => updateSettings({ styleRef: { url: gen.url } })} className={cn("aspect-square rounded-md overflow-hidden border transition-all focus-visible:ring-2 focus-visible:ring-ring", settings.styleRef?.url === gen.url ? "ring-1 ring-violet-500" : "border-border hover:ring-1 hover:ring-violet-500/50")} title={gen.prompt?.slice(0, 40)}>
+                              <button key={gen.id} type="button" onClick={() => updateSettings({ styleRef: { url: gen.url } })} className={cn("aspect-square rounded-none overflow-hidden border transition-all focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)]", settings.styleRef?.url === gen.url ? "ring-1 ring-[var(--thermal-purple)]" : "border-[var(--steel-faint)] hover:ring-1 hover:ring-[var(--thermal-purple)]/50")} title={gen.prompt?.slice(0, 40)}>
                                 <img src={gen.url} alt="" className="w-full h-full object-cover" loading="lazy" draggable={false} />
                               </button>
                             ))}
@@ -859,10 +857,10 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                       {/* Pick from saved references */}
                       {savedReferences.length > 0 && (
                         <>
-                          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Your Library</div>
+                          <div className="text-[10px] text-[var(--steel-dim)] uppercase tracking-wider">Your Library</div>
                           <div className="grid grid-cols-5 gap-1 max-h-28 overflow-y-auto">
                             {savedReferences.map((ref) => (
-                              <button key={ref.id} type="button" onClick={() => updateSettings({ styleRef: { url: ref.url, storagePath: ref.storage_path } })} className={cn("aspect-square rounded-md overflow-hidden border transition-all focus-visible:ring-2 focus-visible:ring-ring", settings.styleRef?.storagePath === ref.storage_path ? "ring-1 ring-violet-500" : "border-border hover:ring-1 hover:ring-violet-500/50")} title={ref.name || "Reference"}>
+                              <button key={ref.id} type="button" onClick={() => updateSettings({ styleRef: { url: ref.url, storagePath: ref.storage_path } })} className={cn("aspect-square rounded-none overflow-hidden border transition-all focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)]", settings.styleRef?.storagePath === ref.storage_path ? "ring-1 ring-[var(--thermal-purple)]" : "border-[var(--steel-faint)] hover:ring-1 hover:ring-[var(--thermal-purple)]/50")} title={ref.name || "Reference"}>
                                 <Image src={ref.url} alt="" width={48} height={48} className="w-full h-full object-cover" unoptimized />
                               </button>
                             ))}
@@ -889,7 +887,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                             <PersonStanding className="size-3.5" aria-hidden="true" />
                             <span className="text-xs font-medium">Pose</span>
                             {hasPoseRef && (
-                              <div className="size-4 rounded overflow-hidden border border-blue-500/30">
+                              <div className="size-4 rounded overflow-hidden border border-[var(--wire-cyan)]/30">
                                 <img src={settings.poseRef?.url} alt="" className="w-full h-full object-cover" draggable={false} />
                               </div>
                             )}
@@ -902,12 +900,12 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-medium text-[var(--nerv-orange)] uppercase tracking-[0.08em]">Pose Reference</span>
                         {hasPoseRef && (
-                          <button type="button" onClick={() => updateSettings({ poseRef: undefined })} className="text-[10px] text-destructive hover:underline" aria-label="Remove pose reference">Remove</button>
+                          <button type="button" onClick={() => updateSettings({ poseRef: undefined })} className="text-[10px] text-[var(--alert-red)] hover:underline" aria-label="Remove pose reference">Remove</button>
                         )}
                       </div>
-                      <p className="text-[10px] text-muted-foreground">Pick an image to match only the body pose and position.</p>
+                      <p className="text-[10px] text-[var(--steel-dim)]">Pick an image to match only the body pose and position.</p>
                       {hasPoseRef && (
-                        <div className="relative rounded-lg overflow-hidden border border-border">
+                        <div className="relative rounded-none overflow-hidden border border-[var(--steel-faint)]">
                           <img src={settings.poseRef?.url} alt="Pose reference" className="w-full h-24 object-contain" draggable={false} />
                         </div>
                       )}
@@ -928,7 +926,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                         accept="image/*"
                       >
                         <FileUploadTrigger asChild>
-                          <button className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-muted/50 hover:bg-muted text-xs transition-colors border border-dashed border-border">
+                          <button className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-none bg-[var(--void-panel)] hover:bg-[var(--nerv-orange)]/10 text-xs transition-colors border border-dashed border-[var(--steel-faint)]">
                             <ImagePlus className="size-3.5" aria-hidden="true" />Upload
                           </button>
                         </FileUploadTrigger>
@@ -936,10 +934,10 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                       {/* Pick from generations */}
                       {completedGens.length > 0 && (
                         <>
-                          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Generated Images</div>
+                          <div className="text-[10px] text-[var(--steel-dim)] uppercase tracking-wider">Generated Images</div>
                           <div className="grid grid-cols-5 gap-1 max-h-28 overflow-y-auto">
                             {completedGens.map((gen) => (
-                              <button key={gen.id} type="button" onClick={() => updateSettings({ poseRef: { url: gen.url } })} className={cn("aspect-square rounded-md overflow-hidden border transition-all focus-visible:ring-2 focus-visible:ring-ring", settings.poseRef?.url === gen.url ? "ring-1 ring-blue-500" : "border-border hover:ring-1 hover:ring-blue-500/50")} title={gen.prompt?.slice(0, 40)}>
+                              <button key={gen.id} type="button" onClick={() => updateSettings({ poseRef: { url: gen.url } })} className={cn("aspect-square rounded-none overflow-hidden border transition-all focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)]", settings.poseRef?.url === gen.url ? "ring-1 ring-[var(--wire-cyan)]" : "border-[var(--steel-faint)] hover:ring-1 hover:ring-[var(--wire-cyan)]/50")} title={gen.prompt?.slice(0, 40)}>
                                 <img src={gen.url} alt="" className="w-full h-full object-cover" loading="lazy" draggable={false} />
                               </button>
                             ))}
@@ -949,10 +947,10 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                       {/* Pick from saved references */}
                       {savedReferences.length > 0 && (
                         <>
-                          <div className="text-[10px] text-muted-foreground uppercase tracking-wider">Your Library</div>
+                          <div className="text-[10px] text-[var(--steel-dim)] uppercase tracking-wider">Your Library</div>
                           <div className="grid grid-cols-5 gap-1 max-h-28 overflow-y-auto">
                             {savedReferences.map((ref) => (
-                              <button key={ref.id} type="button" onClick={() => updateSettings({ poseRef: { url: ref.url, storagePath: ref.storage_path } })} className={cn("aspect-square rounded-md overflow-hidden border transition-all focus-visible:ring-2 focus-visible:ring-ring", settings.poseRef?.storagePath === ref.storage_path ? "ring-1 ring-blue-500" : "border-border hover:ring-1 hover:ring-blue-500/50")} title={ref.name || "Reference"}>
+                              <button key={ref.id} type="button" onClick={() => updateSettings({ poseRef: { url: ref.url, storagePath: ref.storage_path } })} className={cn("aspect-square rounded-none overflow-hidden border transition-all focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)]", settings.poseRef?.storagePath === ref.storage_path ? "ring-1 ring-[var(--wire-cyan)]" : "border-[var(--steel-faint)] hover:ring-1 hover:ring-[var(--wire-cyan)]/50")} title={ref.name || "Reference"}>
                                 <Image src={ref.url} alt="" width={48} height={48} className="w-full h-full object-cover" unoptimized />
                               </button>
                             ))}
@@ -964,19 +962,17 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
 
                   {/* Status - Show active generation count */}
                   {activeGenerations > 0 && (
-                    <span className="text-[10px] text-muted-foreground font-mono shrink-0 flex items-center gap-1.5 ml-2">
+                    <span className="text-[10px] text-[var(--steel-dim)] font-mono shrink-0 flex items-center gap-1.5 ml-2 uppercase tracking-[0.06em]">
                       <span className="relative flex size-1.5">
-                        <span className={cn("absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75", !prefersReducedMotion && "animate-ping")} />
-                        <span className="relative inline-flex rounded-full size-1.5 bg-amber-500" />
+                        <span className={cn("absolute inline-flex h-full w-full rounded-full bg-[var(--nerv-orange)] opacity-75", !prefersReducedMotion && "animate-ping")} />
+                        <span className="relative inline-flex rounded-full size-1.5 bg-[var(--nerv-orange)]" />
                       </span>
-                      <span>Generating {activeGenerations}</span>
+                      <span>GEN:{activeGenerations}</span>
                     </span>
                   )}
                 </div>
               </div>
-            </div>
-          </FileUpload>
-        </div>
+        </FileUpload>
       </motion.div>
     </TooltipProvider>
   );

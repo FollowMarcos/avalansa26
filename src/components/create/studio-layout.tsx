@@ -93,8 +93,8 @@ export function StudioLayout() {
       {/* Maintenance mode banner (blocks entire page) */}
       <MaintenanceBanner />
 
-      {/* ── AVA Institutional Header ── */}
-      <header className="flex items-center h-8 px-3 bg-[var(--void)] border-b border-[var(--nerv-orange-dim)]/30 shrink-0 gap-3 select-none">
+      {/* ── AVA Institutional Header + Toolbar (merged) ── */}
+      <header className="flex items-center h-8 px-3 bg-[var(--void)] border-b border-[var(--nerv-orange-dim)]/20 shrink-0 gap-3 select-none">
         <span className="text-sm tracking-[0.2em] uppercase text-[var(--nerv-orange)] font-[family-name:var(--font-bebas-neue)] glow-orange">AVA</span>
         <span className="text-[8px] tracking-[0.1em] text-[var(--steel-dim)] font-[family-name:var(--font-noto-sans-jp)]">画像生成システム</span>
         <div className="w-px h-4 bg-[var(--nerv-orange-dim)]/30" />
@@ -139,15 +139,16 @@ export function StudioLayout() {
         </span>
       </header>
 
+      {/* Docked toolbar strip */}
+      <UnifiedToolbar
+        vaultOpen={promptVault.vaultOpen}
+        onToggleVault={promptVault.toggleVault}
+      />
+
       {/* Main content area */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden min-h-0">
         {/* Center - Canvas/Gallery */}
         <div className="relative flex-1 flex flex-col overflow-hidden">
-          {/* Unified floating toolbar */}
-          <UnifiedToolbar
-            vaultOpen={promptVault.vaultOpen}
-            onToggleVault={promptVault.toggleVault}
-          />
 
           {/* Canvas Viewport — gallery view */}
           <CanvasViewport />
