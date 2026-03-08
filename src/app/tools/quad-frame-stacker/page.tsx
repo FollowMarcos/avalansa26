@@ -274,8 +274,12 @@ function loadImg(src: string): Promise<HTMLImageElement> {
 }
 
 /**
- * Cover+pan+zoom styles. Only sets ONE dimension (width or height), leaving the
- * other as `auto` so the browser natively preserves the image aspect ratio.
+ * Cover+pan+zoom styles.
+ * - Sets ONE dimension (width or height) at the base cover size, other `auto`
+ *   → browser preserves aspect ratio, no distortion.
+ * - Uses `transform: scale(zoom)` from center for visual zoom instead of
+ *   changing CSS dimensions (which grows from the top-left corner).
+ * - Adjusts left/top to keep the pan point stable during zoom changes.
  */
 function coverStyles(
     natW: number,
@@ -287,30 +291,42 @@ function coverStyles(
 ): React.CSSProperties {
     const imageAspect = natW / natH;
 
+    // Base cover dimensions at zoom=1 (as multiples of container size)
     let sizeStyle: React.CSSProperties;
-    let xOverflowRatio: number;
-    let yOverflowRatio: number;
+    let coverW: number;
+    let coverH: number;
 
     if (imageAspect > containerAspect) {
-        // Image wider than container — match height to cover, width overflows
-        sizeStyle = { height: `${100 * zoom}%`, width: 'auto' };
-        xOverflowRatio = (imageAspect / containerAspect) * zoom;
-        yOverflowRatio = zoom;
+        sizeStyle = { height: '100%', width: 'auto' };
+        coverW = imageAspect / containerAspect;
+        coverH = 1;
     } else {
-        // Image taller than container — match width to cover, height overflows
-        sizeStyle = { width: `${100 * zoom}%`, height: 'auto' };
-        xOverflowRatio = zoom;
-        yOverflowRatio = (containerAspect / imageAspect) * zoom;
+        sizeStyle = { width: '100%', height: 'auto' };
+        coverW = 1;
+        coverH = containerAspect / imageAspect;
     }
 
-    const leftPct = xOverflowRatio > 1 ? -(panX / 100) * (xOverflowRatio - 1) * 100 : 0;
-    const topPct = yOverflowRatio > 1 ? -(panY / 100) * (yOverflowRatio - 1) * 100 : 0;
+    // Total visual overflow after zoom (as multiples of container size)
+    const overflowX = coverW * zoom - 1;
+    const overflowY = coverH * zoom - 1;
+
+    // scale(zoom) from center pushes edges outward — compensate via left/top
+    // so the pan point in the image aligns with the same point in the container
+    const centerShiftX = coverW * (zoom - 1) / 2;
+    const centerShiftY = coverH * (zoom - 1) / 2;
+    const panShiftX = (panX / 100) * overflowX;
+    const panShiftY = (panY / 100) * overflowY;
+
+    const leftPct = (centerShiftX - panShiftX) * 100;
+    const topPct = (centerShiftY - panShiftY) * 100;
 
     return {
         position: 'absolute' as const,
         ...sizeStyle,
         left: `${leftPct}%`,
         top: `${topPct}%`,
+        transform: `scale(${zoom})`,
+        transformOrigin: '50% 50%',
     };
 }
 
