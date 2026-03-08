@@ -132,7 +132,7 @@
   }
 }
 
-/* ── NERV Operations Console Design System ────────────────────────────── */
+/* ── AVA Operations Console Design System ─────────────────────────────── */
 
 .nerv {
   --void: #000000;
@@ -151,12 +151,16 @@
   --alert-red-dim: #CC3028;
   --alert-red-hot: #FF6858;
   --alert-red-fill: rgba(255, 72, 64, 0.18);
+  --thermal-yellow: #FFE820;
+  --thermal-magenta: #F030C0;
+  --thermal-blue: #3060F0;
+  --thermal-purple: #A030E0;
   --steel: #E0E0D8;
   --steel-dim: #9A9A90;
   --steel-faint: rgba(224, 224, 216, 0.08);
 }
 
-/* CRT scanline overlay */
+/* CRT scanline overlay — heavier for authenticity */
 .nerv-crt {
   position: relative;
 }
@@ -168,28 +172,28 @@
     0deg,
     transparent,
     transparent 2px,
-    rgba(0, 0, 0, 0.06) 2px,
-    rgba(0, 0, 0, 0.06) 4px
+    rgba(0, 0, 0, 0.12) 2px,
+    rgba(0, 0, 0, 0.12) 4px
   );
   pointer-events: none;
   z-index: 9999;
 }
 
-/* CRT vignette */
+/* CRT vignette — more aggressive edge darkening */
 .nerv-crt::before {
   content: '';
   position: fixed;
   inset: 0;
   background: radial-gradient(
     ellipse at center,
-    transparent 60%,
-    rgba(0, 0, 0, 0.35) 100%
+    transparent 50%,
+    rgba(0, 0, 0, 0.45) 100%
   );
   pointer-events: none;
   z-index: 9998;
 }
 
-/* Phosphor flicker */
+/* Phosphor flicker — subtle CRT instability */
 @keyframes nerv-phosphor {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.97; }
@@ -198,7 +202,21 @@
   animation: nerv-phosphor 0.08s infinite;
 }
 
-/* NERV scanline loading animation */
+/* ── Phosphor glow text utilities ── */
+.glow-orange {
+  text-shadow: 0 0 8px rgba(255, 152, 48, 0.6), 0 0 20px rgba(255, 152, 48, 0.2);
+}
+.glow-green {
+  text-shadow: 0 0 8px rgba(80, 255, 80, 0.6), 0 0 20px rgba(80, 255, 80, 0.2);
+}
+.glow-cyan {
+  text-shadow: 0 0 8px rgba(32, 240, 255, 0.6), 0 0 20px rgba(32, 240, 255, 0.2);
+}
+.glow-red {
+  text-shadow: 0 0 8px rgba(255, 72, 64, 0.6), 0 0 20px rgba(255, 72, 64, 0.2);
+}
+
+/* ── Scanline loading animation ── */
 @keyframes nerv-scan {
   0% { background-position: 0 0; }
   100% { background-position: 0 100%; }
@@ -215,13 +233,100 @@
   animation: nerv-scan 2s linear infinite;
 }
 
-/* Reduced motion */
+/* ── Boot sequence typing animation ── */
+@keyframes nerv-boot-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.nerv-boot-cursor::after {
+  content: '█';
+  animation: nerv-boot-cursor 0.6s step-end infinite;
+  color: var(--data-green);
+}
+
+/* ── LED pulse animation ── */
+@keyframes nerv-led-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+.nerv-led-pulse {
+  animation: nerv-led-pulse 1.2s ease-in-out infinite;
+}
+
+/* ── Ticker tape scroll ── */
+@keyframes nerv-ticker {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(-100%); }
+}
+.nerv-ticker-scroll {
+  display: inline-block;
+  white-space: nowrap;
+  animation: nerv-ticker 40s linear infinite;
+}
+
+/* ── Hazard stripe pattern ── */
+.nerv-hazard {
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--alert-red) 0px,
+    var(--alert-red) 8px,
+    var(--void) 8px,
+    var(--void) 16px
+  );
+}
+
+/* ── Measurement grid overlay ── */
+.nerv-grid-overlay {
+  background-image:
+    linear-gradient(var(--steel-faint) 1px, transparent 1px),
+    linear-gradient(90deg, var(--steel-faint) 1px, transparent 1px);
+  background-size: 80px 80px;
+}
+
+/* ── Alert flash for critical state ── */
+@keyframes nerv-critical {
+  0%, 100% { background-color: var(--void); }
+  50% { background-color: var(--alert-red-fill); }
+}
+.nerv-state-critical {
+  animation: nerv-critical 0.5s ease-in-out infinite;
+}
+
+/* ── Crosshair registration mark ── */
+.nerv-crosshair {
+  position: relative;
+}
+.nerv-crosshair::before,
+.nerv-crosshair::after {
+  content: '';
+  position: absolute;
+  background: var(--nerv-orange-dim);
+  opacity: 0.4;
+}
+.nerv-crosshair::before {
+  width: 1px;
+  height: 12px;
+  left: 0;
+  top: 0;
+}
+.nerv-crosshair::after {
+  width: 12px;
+  height: 1px;
+  left: 0;
+  top: 0;
+}
+
+/* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
   .nerv-flicker { animation: none !important; }
   .nerv-scan-loading { animation: none !important; }
+  .nerv-boot-cursor::after { animation: none !important; }
+  .nerv-led-pulse { animation: none !important; }
+  .nerv-ticker-scroll { animation-duration: 120s; }
+  .nerv-state-critical { animation: none !important; }
 }
 
-/* High contrast override */
+/* ── High contrast override ── */
 @media (prefers-contrast: more) {
   .nerv {
     --nerv-orange: #FFB030;

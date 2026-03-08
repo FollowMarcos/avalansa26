@@ -128,17 +128,26 @@ export function EditorHistoryFeed() {
 
   if (completedImages.length === 0 && pendingImages.length === 0 && failedImages.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 px-6">
+      <div className="flex flex-col items-center justify-center h-full gap-4 px-6 nerv-grid-overlay">
+        {/* Crosshair registration mark */}
+        <div className="relative size-16 mb-2">
+          <div className="absolute left-1/2 top-0 bottom-0 w-px bg-[var(--nerv-orange-dim)]/30" />
+          <div className="absolute top-1/2 left-0 right-0 h-px bg-[var(--nerv-orange-dim)]/30" />
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-6 border border-[var(--nerv-orange-dim)]/40" />
+        </div>
         <div className="text-center space-y-2">
-          <p className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--nerv-orange)]">
+          <p className="text-base font-[family-name:var(--font-bebas-neue)] tracking-[0.2em] text-[var(--nerv-orange)] glow-orange">
             NO GENERATIONS DETECTED
           </p>
           <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--steel-dim)]">
             INITIATE PROMPT SEQUENCE BELOW
           </p>
-          <span className="text-[8px] tracking-[0.15em] text-[var(--steel-dim)] font-[family-name:var(--font-noto-sans-jp)]">
+          <span className="text-[9px] tracking-[0.15em] text-[var(--steel-dim)] font-[family-name:var(--font-noto-sans-jp)]">
             生成履歴なし
           </span>
+        </div>
+        <div className="text-[7px] tracking-[0.1em] text-[var(--nerv-orange-dim)] uppercase mt-4">
+          SYSTEM STATUS: STANDBY — AWAITING INPUT
         </div>
       </div>
     );
@@ -149,15 +158,36 @@ export function EditorHistoryFeed() {
       <div className="h-full overflow-y-auto p-2 scrollbar-thin">
         {/* Institutional header */}
         <div className="flex items-center gap-2 mb-2 px-1">
-          <span className="text-[8px] tracking-[0.15em] uppercase text-[var(--nerv-orange-dim)]">
+          <div className="w-2 h-px bg-[var(--nerv-orange)]" />
+          <span className="text-[9px] tracking-[0.15em] uppercase text-[var(--nerv-orange)] font-medium glow-orange">
             GENERATION HISTORY
           </span>
           <span className="text-[8px] tracking-[0.1em] text-[var(--steel-dim)] font-[family-name:var(--font-noto-sans-jp)]">
             生成履歴
           </span>
-          <span className="text-[8px] tracking-[0.1em] text-[var(--data-green-dim)] ml-auto tabular-nums">
-            {completedImages.length} RECORDS
+          <div className="flex-1 h-px bg-[var(--nerv-orange-dim)]/20" />
+          <span className="text-[8px] tracking-[0.08em] text-[var(--data-green)] tabular-nums glow-green">
+            {String(completedImages.length).padStart(4, "0")}
           </span>
+          <span className="text-[7px] tracking-[0.08em] text-[var(--steel-dim)] uppercase">
+            REC
+          </span>
+          {pendingImages.length > 0 && (
+            <>
+              <div className="w-px h-3 bg-[var(--nerv-orange-dim)]/30" />
+              <span className="text-[8px] text-[var(--nerv-orange)] tabular-nums nerv-led-pulse">
+                {pendingImages.length} ACTIVE
+              </span>
+            </>
+          )}
+          {failedImages.length > 0 && (
+            <>
+              <div className="w-px h-3 bg-[var(--alert-red-dim)]/30" />
+              <span className="text-[8px] text-[var(--alert-red-dim)] tabular-nums">
+                {failedImages.length} ERR
+              </span>
+            </>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-0.5 xl:grid-cols-3">
@@ -300,6 +330,16 @@ const FeedItem = React.memo(function FeedItem({
           draggable={false}
         />
 
+        {/* Crosshair corner marks */}
+        <div className="absolute top-0 left-0 w-3 h-px bg-[var(--nerv-orange-dim)]/40 pointer-events-none" />
+        <div className="absolute top-0 left-0 w-px h-3 bg-[var(--nerv-orange-dim)]/40 pointer-events-none" />
+        <div className="absolute top-0 right-0 w-3 h-px bg-[var(--nerv-orange-dim)]/40 pointer-events-none" />
+        <div className="absolute top-0 right-0 w-px h-3 bg-[var(--nerv-orange-dim)]/40 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-3 h-px bg-[var(--nerv-orange-dim)]/40 pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-px h-3 bg-[var(--nerv-orange-dim)]/40 pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-3 h-px bg-[var(--nerv-orange-dim)]/40 pointer-events-none" />
+        <div className="absolute bottom-0 right-0 w-px h-3 bg-[var(--nerv-orange-dim)]/40 pointer-events-none" />
+
         {/* Overlay on hover — solid dark, no gradient */}
         <div className="absolute inset-0 bg-[var(--void)]/70 opacity-0 group-hover:opacity-100 transition-opacity duration-100" />
 
@@ -392,16 +432,33 @@ const FeedItem = React.memo(function FeedItem({
 function PendingItem({ image }: { image: GeneratedImage }) {
   return (
     <div className="relative overflow-hidden border border-[var(--nerv-orange-dim)]/40 bg-[var(--void)] nerv-scan-loading">
-      <div className="aspect-square relative flex flex-col items-center justify-center gap-3">
-        <div className="relative">
+      <div className="aspect-square relative flex flex-col items-center justify-center gap-2 px-3">
+        {/* Scanning crosshair */}
+        <div className="relative size-10 mb-1">
+          <div className="absolute left-1/2 top-0 bottom-0 w-px bg-[var(--nerv-orange)]/30" />
+          <div className="absolute top-1/2 left-0 right-0 h-px bg-[var(--nerv-orange)]/30" />
           <div
-            className="size-2 rounded-full bg-[var(--nerv-orange)] animate-pulse"
-            style={{ boxShadow: "0 0 8px var(--nerv-orange)" }}
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 size-2 rounded-full bg-[var(--nerv-orange)] nerv-led-pulse"
+            style={{ boxShadow: "0 0 12px var(--nerv-orange)" }}
           />
         </div>
-        <span className="text-[10px] text-[var(--nerv-orange)] font-medium uppercase tracking-[0.12em]">
-          GENERATING...
-        </span>
+        {/* Boot sequence readout */}
+        <div className="text-center space-y-1 w-full">
+          <span className="text-[10px] text-[var(--nerv-orange)] font-medium uppercase tracking-[0.12em] glow-orange">
+            GENERATING
+          </span>
+          <div className="space-y-0.5 font-[family-name:var(--font-ibm-plex-mono)]">
+            <p className="text-[7px] text-[var(--data-green-dim)] uppercase tracking-[0.08em]">
+              PATTERN ANALYSIS... <span className="text-[var(--data-green)]">OK</span>
+            </p>
+            <p className="text-[7px] text-[var(--data-green-dim)] uppercase tracking-[0.08em]">
+              NEURAL SYNTHESIS... <span className="text-[var(--nerv-orange)] nerv-led-pulse">ACTIVE</span>
+            </p>
+            <p className="text-[7px] text-[var(--steel-dim)] uppercase tracking-[0.08em] nerv-boot-cursor">
+              RENDERING
+            </p>
+          </div>
+        </div>
       </div>
       {image.prompt && (
         <div className="px-2 py-1.5 border-t border-[var(--nerv-orange-dim)]/20">
@@ -418,17 +475,22 @@ function PendingItem({ image }: { image: GeneratedImage }) {
 
 function FailedItem({ image }: { image: GeneratedImage }) {
   return (
-    <div className="relative overflow-hidden border border-[var(--alert-red-dim)] bg-[var(--alert-red-fill)]">
+    <div className="relative overflow-hidden border-2 border-[var(--alert-red-dim)] bg-[var(--alert-red-fill)]">
+      {/* Hazard stripe top bar */}
+      <div className="h-1.5 nerv-hazard" />
       <div className="aspect-square relative flex flex-col items-center justify-center gap-2">
-        <AlertCircle className="size-5 text-[var(--alert-red)]" />
-        <span className="text-[10px] text-[var(--alert-red)] font-medium uppercase tracking-[0.12em]">
-          GENERATION FAILED
+        <AlertCircle className="size-5 text-[var(--alert-red)]" style={{ filter: "drop-shadow(0 0 6px rgba(255, 72, 64, 0.5))" }} />
+        <span className="text-sm text-[var(--alert-red)] font-[family-name:var(--font-bebas-neue)] tracking-[0.15em] glow-red">
+          FAILED
         </span>
         {image.error && (
-          <p className="text-[9px] text-[var(--alert-red-dim)] text-center px-4 line-clamp-2 font-[family-name:var(--font-ibm-plex-mono)]">
+          <p className="text-[8px] text-[var(--alert-red-dim)] text-center px-4 line-clamp-2 font-[family-name:var(--font-ibm-plex-mono)] uppercase tracking-[0.05em]">
             {image.error}
           </p>
         )}
+        <span className="text-[7px] text-[var(--steel-dim)] uppercase tracking-[0.1em]">
+          ERROR — RETRY FROM CONSOLE
+        </span>
       </div>
       {image.prompt && (
         <div className="px-2 py-1.5 border-t border-[var(--alert-red-dim)]/30">
@@ -437,6 +499,8 @@ function FailedItem({ image }: { image: GeneratedImage }) {
           </p>
         </div>
       )}
+      {/* Hazard stripe bottom bar */}
+      <div className="h-1.5 nerv-hazard" />
     </div>
   );
 }

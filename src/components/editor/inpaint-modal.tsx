@@ -84,8 +84,11 @@ export function InpaintModal() {
       <DialogContent className="max-w-3xl max-h-[85vh] rounded-none bg-[var(--void)] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-[var(--nerv-orange)] uppercase tracking-[0.1em] text-sm font-[family-name:var(--font-ibm-plex-mono)]">
-            <Paintbrush className="size-4 text-[var(--alert-red)]" />
-            INPAINT OPERATION
+            <Paintbrush className="size-4 text-[var(--alert-red)]" style={{ filter: "drop-shadow(0 0 4px rgba(255, 72, 64, 0.4))" }} />
+            <span className="glow-orange">INPAINT OPERATION</span>
+            <span className="text-[8px] tracking-[0.1em] text-[var(--steel-dim)] font-[family-name:var(--font-noto-sans-jp)] ml-1">
+              塗り替え
+            </span>
           </DialogTitle>
           <DialogDescription className="text-[var(--steel-dim)] text-xs uppercase tracking-[0.05em] font-[family-name:var(--font-ibm-plex-mono)]">
             Paint over the target area, then specify replacement parameters.

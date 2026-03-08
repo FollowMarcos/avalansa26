@@ -195,14 +195,33 @@ export function EditorPromptComposer() {
           )}
         </AnimatePresence>
 
-        {/* Institutional label */}
+        {/* Institutional header with stamp label */}
         <div className="flex items-center gap-2">
-          <span className="text-[8px] tracking-[0.15em] uppercase text-[var(--nerv-orange-dim)]">
-            COMMAND INPUT
+          <span className="text-base tracking-[0.15em] text-[var(--nerv-orange)] font-[family-name:var(--font-bebas-neue)] glow-orange">
+            GENERATION SYSTEM
           </span>
           <span className="text-[8px] tracking-[0.1em] text-[var(--steel-dim)] font-[family-name:var(--font-noto-sans-jp)]">
             指令入力
           </span>
+          <div className="flex-1 h-px bg-[var(--nerv-orange-dim)]/20" />
+          {/* Active generation LEDs */}
+          <div className="flex items-center gap-1.5">
+            {[0, 1, 2, 3].map((i) => (
+              <span
+                key={i}
+                className={cn(
+                  "size-1.5 rounded-full transition-colors",
+                  i < activeGenerations
+                    ? "bg-[var(--nerv-orange)] nerv-led-pulse"
+                    : "bg-[var(--steel-faint)]"
+                )}
+                style={i < activeGenerations ? { boxShadow: "0 0 4px var(--nerv-orange)" } : undefined}
+              />
+            ))}
+            <span className="text-[7px] text-[var(--steel-dim)] uppercase tracking-[0.08em] ml-0.5">
+              SLOTS
+            </span>
+          </div>
         </div>
 
         {/* Inline reference image thumbnails */}
@@ -388,13 +407,17 @@ export function EditorPromptComposer() {
               placeholder={hasReferences ? "Describe transformation parameters..." : "Enter generation prompt..."}
               rows={2}
               className={cn(
-                "w-full resize-none border border-[var(--nerv-orange-dim)]/40 bg-[var(--void)] px-3 py-2 text-sm",
+                "w-full resize-none border border-[var(--nerv-orange-dim)]/40 bg-[var(--void)] px-3 py-2 pr-14 text-sm",
                 "text-[var(--data-green)] font-[family-name:var(--font-ibm-plex-mono)]",
                 "placeholder:text-[var(--steel-dim)]",
                 "focus:outline-none focus:ring-1 focus:ring-[var(--nerv-orange)]/50 focus:border-[var(--nerv-orange-dim)]",
                 "transition-shadow scrollbar-thin"
               )}
             />
+            {/* Character count readout */}
+            <span className="absolute bottom-1.5 right-2 text-[8px] tabular-nums text-[var(--steel-dim)] pointer-events-none">
+              {prompt.length > 0 ? prompt.length : ""}
+            </span>
           </div>
 
           <Tooltip>
@@ -426,6 +449,9 @@ export function EditorPromptComposer() {
 
         {/* Inline settings row */}
         <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 scrollbar-thin">
+          {/* Section label */}
+          <span className="text-[7px] tracking-[0.1em] uppercase text-[var(--nerv-orange-dim)] shrink-0">SYS</span>
+          <div className="w-px h-4 bg-[var(--nerv-orange-dim)]/20 shrink-0" />
           {/* API / Model selector */}
           <ApiSelector
             apis={availableApis}

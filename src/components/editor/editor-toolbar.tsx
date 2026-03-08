@@ -196,71 +196,109 @@ export function EditorToolbar() {
     }
   };
 
+  // Count active references
+  const activeRefCount = TOOLBAR_ITEMS.filter((item) => isActive(item.id)).length;
+
   return (
-    <div className="flex flex-col items-center py-2 gap-0.5">
+    <div className="flex flex-col items-center py-2 gap-0.5 h-full">
       {/* Institutional label */}
-      <span className="text-[8px] tracking-[0.15em] uppercase text-[var(--steel-dim)] mb-1 font-[family-name:var(--font-noto-sans-jp)]">
+      <span className="text-[8px] tracking-[0.15em] uppercase text-[var(--steel-dim)] mb-0.5 font-[family-name:var(--font-noto-sans-jp)]">
         参照制御
       </span>
+      <span className="text-[7px] tracking-[0.12em] uppercase text-[var(--nerv-orange-dim)] mb-1">
+        REF CTRL
+      </span>
 
-      {TOOLBAR_ITEMS.map((item) => {
+      {/* Axis tick mark */}
+      <div className="w-6 h-px bg-[var(--nerv-orange-dim)]/40 mb-1" />
+
+      {TOOLBAR_ITEMS.map((item, index) => {
         const Icon = item.icon;
         const active = isActive(item.id);
 
         return (
-          <Popover
-            key={item.id}
-            open={openPopover === item.id}
-            onOpenChange={(open) => setOpenPopover(open ? item.id : null)}
-          >
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    className={cn(
-                      "relative size-9 flex items-center justify-center transition-all duration-100",
-                      "border border-transparent",
-                      "hover:bg-[var(--nerv-orange)]/10 hover:border-[var(--steel-faint)]",
-                      "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--nerv-orange)]",
-                      active && "bg-[var(--nerv-orange)]/10 border-[var(--nerv-orange-dim)]/40"
-                    )}
-                    aria-label={item.label}
-                  >
-                    <Icon
-                      className={cn(
-                        "size-4",
-                        active ? "text-[var(--nerv-orange)]" : "text-[var(--nerv-orange-dim)]"
-                      )}
-                    />
-                    {active && (
-                      <span
-                        className="absolute top-0.5 right-0.5 size-1.5 rounded-full bg-[var(--data-green)]"
-                        style={{ boxShadow: "0 0 6px var(--data-green)" }}
-                      />
-                    )}
-                  </button>
-                </PopoverTrigger>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="text-[10px] font-[family-name:var(--font-ibm-plex-mono)] bg-[var(--void-panel)] border-[var(--nerv-orange-dim)]/40 text-[var(--nerv-orange)]">
-                {item.label}
-              </TooltipContent>
-            </Tooltip>
-            <PopoverContent
-              side="right"
-              align="start"
-              sideOffset={12}
-              className="w-72 p-3 max-h-[60vh] overflow-y-auto scrollbar-thin rounded-none bg-[var(--void)] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)]"
+          <React.Fragment key={item.id}>
+            <Popover
+              open={openPopover === item.id}
+              onOpenChange={(open) => setOpenPopover(open ? item.id : null)}
             >
-              <div className="flex items-center gap-1.5 mb-2">
-                <Icon className="size-3.5 text-[var(--nerv-orange-dim)]" />
-                <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--nerv-orange)]">{item.label}</span>
-              </div>
-              {renderContent(item.id)}
-            </PopoverContent>
-          </Popover>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className={cn(
+                        "relative size-9 flex items-center justify-center transition-all duration-100",
+                        "border border-transparent",
+                        "hover:bg-[var(--nerv-orange)]/10 hover:border-[var(--steel-faint)]",
+                        "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--nerv-orange)]",
+                        active && "bg-[var(--nerv-orange)]/10 border-[var(--nerv-orange-dim)]/40"
+                      )}
+                      aria-label={item.label}
+                    >
+                      <Icon
+                        className={cn(
+                          "size-4",
+                          active ? "text-[var(--nerv-orange)]" : "text-[var(--nerv-orange-dim)]"
+                        )}
+                      />
+                      {active && (
+                        <span
+                          className="absolute top-0.5 right-0.5 size-1.5 rounded-full bg-[var(--data-green)]"
+                          style={{ boxShadow: "0 0 6px var(--data-green)" }}
+                        />
+                      )}
+                      {/* Short label under icon */}
+                      <span className="absolute -bottom-0.5 text-[5px] tracking-[0.1em] text-[var(--steel-dim)] uppercase">
+                        {item.shortLabel}
+                      </span>
+                    </button>
+                  </PopoverTrigger>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="text-[10px] font-[family-name:var(--font-ibm-plex-mono)] bg-[var(--void-panel)] border-[var(--nerv-orange-dim)]/40 text-[var(--nerv-orange)]">
+                  {item.label}
+                </TooltipContent>
+              </Tooltip>
+              <PopoverContent
+                side="right"
+                align="start"
+                sideOffset={12}
+                className="w-72 p-3 max-h-[60vh] overflow-y-auto scrollbar-thin rounded-none bg-[var(--void)] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)]"
+              >
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Icon className="size-3.5 text-[var(--nerv-orange-dim)]" />
+                  <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--nerv-orange)]">{item.label}</span>
+                </div>
+                {renderContent(item.id)}
+              </PopoverContent>
+            </Popover>
+            {/* Tick mark between items */}
+            {index < TOOLBAR_ITEMS.length - 1 && (
+              <div className="w-3 h-px bg-[var(--steel-faint)] my-0.5" />
+            )}
+          </React.Fragment>
         );
       })}
+
+      {/* Bottom system status */}
+      <div className="mt-auto flex flex-col items-center gap-1 pb-2">
+        <div className="w-6 h-px bg-[var(--nerv-orange-dim)]/40" />
+        <span className="text-[7px] tracking-[0.1em] text-[var(--data-green-dim)] tabular-nums">
+          {activeRefCount}/{TOOLBAR_ITEMS.length}
+        </span>
+        <div className="flex gap-0.5">
+          {TOOLBAR_ITEMS.map((item) => (
+            <span
+              key={item.id}
+              className={cn(
+                "size-1 rounded-full",
+                isActive(item.id) ? "bg-[var(--data-green)]" : "bg-[var(--steel-faint)]"
+              )}
+              style={isActive(item.id) ? { boxShadow: "0 0 3px var(--data-green)" } : undefined}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
