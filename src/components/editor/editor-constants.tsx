@@ -78,7 +78,7 @@ export function AspectRatioShape({
   const height = h > w ? maxSize : Math.round((h / w) * maxSize);
   return (
     <div
-      className={cn("border-2 border-current rounded-sm", className)}
+      className={cn("border-2 border-current", className)}
       style={{ width: `${width}px`, height: `${height}px` }}
       aria-hidden="true"
     />

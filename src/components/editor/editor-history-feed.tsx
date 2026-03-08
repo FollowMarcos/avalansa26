@@ -28,7 +28,6 @@ import {
   Paintbrush,
   Heart,
   Loader2,
-  ImageOff,
   AlertCircle,
 } from "lucide-react";
 import { ImageDetailModal } from "@/components/create/image-detail-modal";
@@ -129,15 +128,17 @@ export function EditorHistoryFeed() {
 
   if (completedImages.length === 0 && pendingImages.length === 0 && failedImages.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-full gap-4 text-muted-foreground px-6">
-        <div className="rounded-2xl bg-muted/40 p-5">
-          <ImageOff className="size-10 text-muted-foreground/50" strokeWidth={1.5} />
-        </div>
-        <div className="text-center space-y-1">
-          <p className="text-sm font-medium text-foreground/70">No generations yet</p>
-          <p className="text-xs text-muted-foreground">
-            Write a prompt below and hit Generate to get started.
+      <div className="flex flex-col items-center justify-center h-full gap-4 px-6">
+        <div className="text-center space-y-2">
+          <p className="text-xs font-medium uppercase tracking-[0.15em] text-[var(--nerv-orange)]">
+            NO GENERATIONS DETECTED
           </p>
+          <p className="text-[10px] uppercase tracking-[0.1em] text-[var(--steel-dim)]">
+            INITIATE PROMPT SEQUENCE BELOW
+          </p>
+          <span className="text-[8px] tracking-[0.15em] text-[var(--steel-dim)] font-[family-name:var(--font-noto-sans-jp)]">
+            生成履歴なし
+          </span>
         </div>
       </div>
     );
@@ -146,16 +147,29 @@ export function EditorHistoryFeed() {
   return (
     <TooltipProvider delayDuration={300}>
       <div className="h-full overflow-y-auto p-2 scrollbar-thin">
-        <div className="grid grid-cols-2 gap-1.5 xl:grid-cols-3">
+        {/* Institutional header */}
+        <div className="flex items-center gap-2 mb-2 px-1">
+          <span className="text-[8px] tracking-[0.15em] uppercase text-[var(--nerv-orange-dim)]">
+            GENERATION HISTORY
+          </span>
+          <span className="text-[8px] tracking-[0.1em] text-[var(--steel-dim)] font-[family-name:var(--font-noto-sans-jp)]">
+            生成履歴
+          </span>
+          <span className="text-[8px] tracking-[0.1em] text-[var(--data-green-dim)] ml-auto tabular-nums">
+            {completedImages.length} RECORDS
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-0.5 xl:grid-cols-3">
           <AnimatePresence initial={false}>
             {/* Pending / generating items */}
             {pendingImages.map((image) => (
               <motion.div
                 key={image.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.1 }}
               >
                 <PendingItem image={image} />
               </motion.div>
@@ -165,10 +179,10 @@ export function EditorHistoryFeed() {
             {failedImages.map((image) => (
               <motion.div
                 key={image.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2 }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.1 }}
               >
                 <FailedItem image={image} />
               </motion.div>
@@ -178,10 +192,10 @@ export function EditorHistoryFeed() {
             {completedImages.map((image, index) => (
               <motion.div
                 key={image.id}
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
-                transition={{ duration: 0.2, delay: Math.min(index * 0.03, 0.15) }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.1, delay: Math.min(index * 0.02, 0.1) }}
               >
                 <FeedItem
                   image={image}
@@ -198,7 +212,7 @@ export function EditorHistoryFeed() {
         {/* Infinite scroll sentinel */}
         <div ref={sentinelRef} className="h-8 flex items-center justify-center">
           {isLoadingMoreHistory && (
-            <Loader2 className="size-4 animate-spin text-muted-foreground" />
+            <Loader2 className="size-4 animate-spin text-[var(--nerv-orange-dim)]" />
           )}
         </div>
 
@@ -241,9 +255,8 @@ const FeedItem = React.memo(function FeedItem({
     e.dataTransfer.setData("application/x-editor-image", JSON.stringify({ url: image.url, prompt: image.prompt }));
     e.dataTransfer.effectAllowed = "copy";
 
-    // Build a clean drag ghost: small rounded thumbnail
     const ghost = document.createElement("div");
-    ghost.style.cssText = "position:fixed;top:-1000px;left:-1000px;width:64px;height:64px;border-radius:10px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.4);pointer-events:none;";
+    ghost.style.cssText = "position:fixed;top:-1000px;left:-1000px;width:64px;height:64px;overflow:hidden;box-shadow:0 0 12px rgba(255,152,48,0.4);pointer-events:none;border:1px solid #FF9830;";
     const img = document.createElement("img");
     img.src = image.url;
     img.style.cssText = "width:100%;height:100%;object-fit:cover;";
@@ -266,8 +279,8 @@ const FeedItem = React.memo(function FeedItem({
   return (
     <div
       className={cn(
-        "group relative rounded-lg overflow-hidden border border-white/[0.06] bg-white/[0.02] transition-all duration-200 hover:border-white/[0.12] cursor-pointer",
-        isDragging && "opacity-40 scale-95 ring-1 ring-primary/30"
+        "group relative overflow-hidden border border-[var(--steel-faint)] bg-[var(--void)] transition-all duration-100 hover:border-[var(--nerv-orange-dim)] cursor-pointer",
+        isDragging && "opacity-40 scale-95 ring-1 ring-[var(--nerv-orange)]/30"
       )}
       onClick={onClick}
       role="button"
@@ -287,12 +300,12 @@ const FeedItem = React.memo(function FeedItem({
           draggable={false}
         />
 
-        {/* Gradient overlay on hover */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+        {/* Overlay on hover — solid dark, no gradient */}
+        <div className="absolute inset-0 bg-[var(--void)]/70 opacity-0 group-hover:opacity-100 transition-opacity duration-100" />
 
         {/* Action buttons — bottom bar */}
-        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-1.5 pb-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
-          {/* Favorite */}
+        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-1.5 pb-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-10">
+          {/* Favorite — LED style */}
           <button
             type="button"
             onClick={(e) => {
@@ -300,17 +313,17 @@ const FeedItem = React.memo(function FeedItem({
               onToggleFavorite();
             }}
             className={cn(
-              "size-8 rounded-full flex items-center justify-center backdrop-blur-md transition-all duration-150",
+              "size-7 flex items-center justify-center transition-all duration-100",
               image.isFavorite
-                ? "bg-red-500/20 hover:bg-red-500/30"
-                : "bg-white/10 hover:bg-white/20"
+                ? "text-[var(--alert-red)]"
+                : "text-[var(--steel-dim)] hover:text-[var(--nerv-orange)]"
             )}
             aria-label={image.isFavorite ? "Remove from favorites" : "Add to favorites"}
           >
             <Heart
               className={cn(
-                "size-4 transition-colors",
-                image.isFavorite ? "fill-red-400 text-red-400" : "text-white/90"
+                "size-4",
+                image.isFavorite && "fill-[var(--alert-red)]"
               )}
             />
           </button>
@@ -321,41 +334,41 @@ const FeedItem = React.memo(function FeedItem({
               <button
                 type="button"
                 onClick={(e) => e.stopPropagation()}
-                className="size-8 rounded-full flex items-center justify-center bg-white/10 backdrop-blur-md hover:bg-white/20 transition-all duration-150"
+                className="size-7 flex items-center justify-center text-[var(--steel-dim)] hover:text-[var(--nerv-orange)] transition-all duration-100"
                 aria-label="Use as reference"
               >
-                <PenLine className="size-4 text-white/90" />
+                <PenLine className="size-4" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52" onClick={(e) => e.stopPropagation()}>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSetAsRef(image, "style"); }}>
-                <Palette className="size-3.5 mr-2 text-violet-500" />
-                Use as Style Reference
+            <DropdownMenuContent align="end" className="w-52 rounded-none bg-[var(--void)] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)]" onClick={(e) => e.stopPropagation()}>
+              <DropdownMenuItem className="text-[var(--nerv-orange)] hover:bg-[var(--nerv-orange)]/10 rounded-none text-[11px] tracking-wide" onClick={(e) => { e.stopPropagation(); onSetAsRef(image, "style"); }}>
+                <Palette className="size-3.5 mr-2 text-[var(--nerv-orange-dim)]" />
+                STYLE REFERENCE
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSetAsRef(image, "pose"); }}>
-                <PersonStanding className="size-3.5 mr-2 text-blue-500" />
-                Use as Pose Reference
+              <DropdownMenuItem className="text-[var(--nerv-orange)] hover:bg-[var(--nerv-orange)]/10 rounded-none text-[11px] tracking-wide" onClick={(e) => { e.stopPropagation(); onSetAsRef(image, "pose"); }}>
+                <PersonStanding className="size-3.5 mr-2 text-[var(--nerv-orange-dim)]" />
+                POSE REFERENCE
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSetAsRef(image, "expression"); }}>
-                <Smile className="size-3.5 mr-2 text-amber-500" />
-                Use as Expression Reference
+              <DropdownMenuItem className="text-[var(--nerv-orange)] hover:bg-[var(--nerv-orange)]/10 rounded-none text-[11px] tracking-wide" onClick={(e) => { e.stopPropagation(); onSetAsRef(image, "expression"); }}>
+                <Smile className="size-3.5 mr-2 text-[var(--nerv-orange-dim)]" />
+                EXPRESSION REFERENCE
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSetAsRef(image, "clothing"); }}>
-                <Shirt className="size-3.5 mr-2 text-emerald-500" />
-                Use as Clothing Reference
+              <DropdownMenuItem className="text-[var(--nerv-orange)] hover:bg-[var(--nerv-orange)]/10 rounded-none text-[11px] tracking-wide" onClick={(e) => { e.stopPropagation(); onSetAsRef(image, "clothing"); }}>
+                <Shirt className="size-3.5 mr-2 text-[var(--nerv-orange-dim)]" />
+                CLOTHING REFERENCE
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSetAsRef(image, "location"); }}>
-                <MapPin className="size-3.5 mr-2 text-cyan-500" />
-                Use as Location Reference
+              <DropdownMenuItem className="text-[var(--nerv-orange)] hover:bg-[var(--nerv-orange)]/10 rounded-none text-[11px] tracking-wide" onClick={(e) => { e.stopPropagation(); onSetAsRef(image, "location"); }}>
+                <MapPin className="size-3.5 mr-2 text-[var(--nerv-orange-dim)]" />
+                LOCATION REFERENCE
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onSetAsRef(image, "generic"); }}>
-                <ImagePlus className="size-3.5 mr-2 text-muted-foreground" />
-                Use as Generic Reference
+              <DropdownMenuItem className="text-[var(--nerv-orange)] hover:bg-[var(--nerv-orange)]/10 rounded-none text-[11px] tracking-wide" onClick={(e) => { e.stopPropagation(); onSetAsRef(image, "generic"); }}>
+                <ImagePlus className="size-3.5 mr-2 text-[var(--steel-dim)]" />
+                GENERIC REFERENCE
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onInpaint(); }}>
-                <Paintbrush className="size-3.5 mr-2 text-rose-500" />
-                Inpaint this image
+              <DropdownMenuSeparator className="bg-[var(--steel-faint)]" />
+              <DropdownMenuItem className="text-[var(--alert-red)] hover:bg-[var(--alert-red-fill)] rounded-none text-[11px] tracking-wide" onClick={(e) => { e.stopPropagation(); onInpaint(); }}>
+                <Paintbrush className="size-3.5 mr-2 text-[var(--alert-red-dim)]" />
+                INPAINT
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -364,8 +377,8 @@ const FeedItem = React.memo(function FeedItem({
 
       {/* Prompt preview */}
       {image.prompt && (
-        <div className="px-2 py-1.5">
-          <p className="text-[10px] text-muted-foreground line-clamp-2 leading-relaxed">
+        <div className="px-2 py-1.5 border-t border-[var(--steel-faint)]">
+          <p className="text-[10px] text-[var(--data-green-dim)] line-clamp-2 leading-relaxed font-[family-name:var(--font-ibm-plex-mono)]">
             {image.prompt}
           </p>
         </div>
@@ -378,16 +391,21 @@ const FeedItem = React.memo(function FeedItem({
 
 function PendingItem({ image }: { image: GeneratedImage }) {
   return (
-    <div className="relative rounded-lg overflow-hidden border border-white/[0.06] bg-white/[0.02]">
+    <div className="relative overflow-hidden border border-[var(--nerv-orange-dim)]/40 bg-[var(--void)] nerv-scan-loading">
       <div className="aspect-square relative flex flex-col items-center justify-center gap-3">
         <div className="relative">
-          <div className="size-8 rounded-full border-2 border-foreground/20 border-t-foreground/60 animate-spin" />
+          <div
+            className="size-2 rounded-full bg-[var(--nerv-orange)] animate-pulse"
+            style={{ boxShadow: "0 0 8px var(--nerv-orange)" }}
+          />
         </div>
-        <span className="text-[10px] text-muted-foreground font-medium">Generating...</span>
+        <span className="text-[10px] text-[var(--nerv-orange)] font-medium uppercase tracking-[0.12em]">
+          GENERATING...
+        </span>
       </div>
       {image.prompt && (
-        <div className="px-2 py-1.5">
-          <p className="text-[10px] text-muted-foreground line-clamp-2 leading-relaxed">
+        <div className="px-2 py-1.5 border-t border-[var(--nerv-orange-dim)]/20">
+          <p className="text-[10px] text-[var(--steel-dim)] line-clamp-2 leading-relaxed font-[family-name:var(--font-ibm-plex-mono)]">
             {image.prompt}
           </p>
         </div>
@@ -400,17 +418,21 @@ function PendingItem({ image }: { image: GeneratedImage }) {
 
 function FailedItem({ image }: { image: GeneratedImage }) {
   return (
-    <div className="relative rounded-lg overflow-hidden border border-destructive/30 bg-destructive/5">
+    <div className="relative overflow-hidden border border-[var(--alert-red-dim)] bg-[var(--alert-red-fill)]">
       <div className="aspect-square relative flex flex-col items-center justify-center gap-2">
-        <AlertCircle className="size-5 text-destructive/60" />
-        <span className="text-[10px] text-destructive/80 font-medium">Failed</span>
+        <AlertCircle className="size-5 text-[var(--alert-red)]" />
+        <span className="text-[10px] text-[var(--alert-red)] font-medium uppercase tracking-[0.12em]">
+          GENERATION FAILED
+        </span>
         {image.error && (
-          <p className="text-[9px] text-destructive/60 text-center px-4 line-clamp-2">{image.error}</p>
+          <p className="text-[9px] text-[var(--alert-red-dim)] text-center px-4 line-clamp-2 font-[family-name:var(--font-ibm-plex-mono)]">
+            {image.error}
+          </p>
         )}
       </div>
       {image.prompt && (
-        <div className="px-2 py-1.5 border-t border-destructive/10">
-          <p className="text-[10px] text-muted-foreground line-clamp-2 leading-relaxed">
+        <div className="px-2 py-1.5 border-t border-[var(--alert-red-dim)]/30">
+          <p className="text-[10px] text-[var(--steel-dim)] line-clamp-2 leading-relaxed font-[family-name:var(--font-ibm-plex-mono)]">
             {image.prompt}
           </p>
         </div>

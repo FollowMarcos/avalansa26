@@ -66,7 +66,6 @@ export function InpaintCanvas({
     startPanX: 0,
     startPanY: 0,
   });
-  // Space-held = temporary pan mode
   const [spaceHeld, setSpaceHeld] = React.useState(false);
 
   const activeTool = spaceHeld ? "pan" : tool;
@@ -74,7 +73,6 @@ export function InpaintCanvas({
   // Keyboard shortcuts
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't capture if typing in textarea/input
       if (
         e.target instanceof HTMLTextAreaElement ||
         e.target instanceof HTMLInputElement
@@ -152,7 +150,6 @@ export function InpaintCanvas({
     ctx.globalCompositeOperation = line.isEraser
       ? "destination-out"
       : "source-over";
-    // Bright yellow-green for mask, matching reference UI
     ctx.strokeStyle = line.isEraser
       ? "rgba(0,0,0,1)"
       : "rgba(200, 255, 0, 0.55)";
@@ -237,7 +234,6 @@ export function InpaintCanvas({
     setLines((prev) => [...prev, line]);
   };
 
-  // Convert screen coords to canvas coords (accounts for CSS zoom/pan)
   const getPos = (e: React.MouseEvent | React.TouchEvent) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
@@ -257,7 +253,6 @@ export function InpaintCanvas({
     };
   };
 
-  // Get raw screen position relative to the overflow container
   const getScreenPos = (e: React.MouseEvent | React.TouchEvent) => {
     if ("touches" in e) {
       return { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -291,7 +286,6 @@ export function InpaintCanvas({
   };
 
   const handlePointerMove = (e: React.MouseEvent | React.TouchEvent) => {
-    // Track cursor for brush preview (screen-space)
     if (!("touches" in e)) {
       const container = containerRef.current;
       if (container) {
@@ -329,11 +323,9 @@ export function InpaintCanvas({
     currentLine.current = null;
     setIsDrawing(false);
     setLines((prev) => [...prev, finishedLine]);
-    // Clear redo stack on new stroke
     setRedoStack([]);
   };
 
-  // Zoom with scroll wheel
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     const delta = e.deltaY < 0 ? 0.15 : -0.15;
@@ -355,7 +347,6 @@ export function InpaintCanvas({
   const zoomPercent = Math.round(zoom * 100);
   const showBrushCursor = activeTool !== "pan" && cursorPos;
 
-  // Compute display-space brush size for the cursor overlay
   const displayBrushSize = React.useMemo(() => {
     const canvas = canvasRef.current;
     if (!canvas) return brushSize;
@@ -365,16 +356,28 @@ export function InpaintCanvas({
 
   return (
     <div className="flex flex-col h-full max-h-full">
-      {/* Canvas viewport — takes remaining space */}
+      {/* Canvas viewport */}
       <div
         ref={containerRef}
-        className="relative flex-1 min-h-0 rounded-t-lg overflow-hidden border border-white/[0.06] bg-black/40 flex items-center justify-center"
+        className="relative flex-1 min-h-0 overflow-hidden border border-[var(--wire-cyan-dim)] bg-[var(--void)] flex items-center justify-center"
         style={{
           cursor: activeTool === "pan" ? "grab" : "none",
         }}
         onMouseLeave={() => setCursorPos(null)}
         onWheel={handleWheel}
       >
+        {/* Measurement grid overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none z-[1]"
+          style={{
+            backgroundImage: `
+              linear-gradient(var(--steel-faint) 1px, transparent 1px),
+              linear-gradient(90deg, var(--steel-faint) 1px, transparent 1px)
+            `,
+            backgroundSize: "80px 80px",
+          }}
+        />
+
         {/* Zoomable/pannable layer */}
         <div
           style={{
@@ -411,12 +414,12 @@ export function InpaintCanvas({
               transform: "translate(-50%, -50%)",
               borderColor:
                 activeTool === "eraser"
-                  ? "rgba(255,255,255,0.7)"
-                  : "rgba(200,255,0,0.7)",
+                  ? "var(--steel)"
+                  : "var(--wire-cyan)",
               backgroundColor:
                 activeTool === "eraser"
-                  ? "rgba(255,255,255,0.1)"
-                  : "rgba(200,255,0,0.1)",
+                  ? "rgba(224,224,216,0.1)"
+                  : "rgba(32,240,255,0.1)",
             }}
           />
         )}
@@ -426,7 +429,7 @@ export function InpaintCanvas({
           <button
             type="button"
             onClick={resetView}
-            className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/60 text-[10px] tabular-nums text-white/70 hover:text-white hover:bg-black/80 transition-colors"
+            className="absolute top-2 right-2 px-1.5 py-0.5 bg-[var(--void)]/80 border border-[var(--nerv-orange-dim)]/40 text-[10px] tabular-nums text-[var(--nerv-orange)] hover:text-[var(--nerv-orange-hot)] hover:bg-[var(--void)] transition-colors font-[family-name:var(--font-ibm-plex-mono)]"
           >
             {zoomPercent}%
           </button>
@@ -441,11 +444,11 @@ export function InpaintCanvas({
         />
       </div>
 
-      {/* Toolbar — attached to bottom of canvas */}
+      {/* Toolbar */}
       <TooltipProvider delayDuration={300}>
-        <div className="flex items-center gap-1 px-2 py-1.5 rounded-b-lg border border-t-0 border-white/[0.06] bg-white/[0.03] shrink-0">
+        <div className="flex items-center gap-1 px-2 py-1.5 border border-t-0 border-[var(--steel-faint)] bg-[var(--void-panel)] shrink-0">
           {/* Tool group: brush, eraser, pan */}
-          <div className="flex items-center gap-0.5 p-0.5 rounded-md bg-white/[0.04]">
+          <div className="flex items-center gap-0.5 p-0.5 border border-[var(--steel-faint)]">
             <ToolBtn
               icon={Paintbrush}
               active={tool === "brush"}
@@ -467,7 +470,7 @@ export function InpaintCanvas({
           </div>
 
           {/* Divider */}
-          <div className="w-px h-4 bg-white/[0.08] mx-1" />
+          <div className="w-px h-4 bg-[var(--nerv-orange-dim)]/30 mx-1" />
 
           {/* Brush size */}
           <div className="flex items-center gap-1">
@@ -477,7 +480,7 @@ export function InpaintCanvas({
               disabled={brushSize <= 5}
               tooltip="Smaller brush ([)"
             />
-            <span className="text-[10px] tabular-nums w-7 text-center font-medium text-muted-foreground">
+            <span className="text-[10px] tabular-nums w-7 text-center font-medium text-[var(--data-green)] font-[family-name:var(--font-ibm-plex-mono)]">
               {brushSize}
             </span>
             <ToolBtn
@@ -489,7 +492,7 @@ export function InpaintCanvas({
           </div>
 
           {/* Divider */}
-          <div className="w-px h-4 bg-white/[0.08] mx-1" />
+          <div className="w-px h-4 bg-[var(--nerv-orange-dim)]/30 mx-1" />
 
           {/* Undo / Redo */}
           <ToolBtn
@@ -506,7 +509,7 @@ export function InpaintCanvas({
           />
 
           {/* Divider */}
-          <div className="w-px h-4 bg-white/[0.08] mx-1" />
+          <div className="w-px h-4 bg-[var(--nerv-orange-dim)]/30 mx-1" />
 
           {/* Zoom */}
           <ToolBtn
@@ -517,7 +520,7 @@ export function InpaintCanvas({
             disabled={zoom <= 0.5}
             tooltip="Zoom out"
           />
-          <span className="text-[10px] tabular-nums w-8 text-center font-medium text-muted-foreground">
+          <span className="text-[10px] tabular-nums w-8 text-center font-medium text-[var(--data-green)] font-[family-name:var(--font-ibm-plex-mono)]">
             {zoomPercent}%
           </span>
           <ToolBtn
@@ -536,14 +539,19 @@ export function InpaintCanvas({
                 type="button"
                 onClick={clearMask}
                 disabled={lines.length === 0}
-                className="ml-auto flex items-center gap-1 px-2 py-1 rounded-md text-[10px] text-muted-foreground hover:text-foreground hover:bg-white/[0.06] disabled:opacity-30 transition-colors"
+                className={cn(
+                  "ml-auto flex items-center gap-1 px-2 py-1 text-[10px] uppercase tracking-[0.08em] transition-colors font-[family-name:var(--font-ibm-plex-mono)]",
+                  lines.length > 0
+                    ? "text-[var(--alert-red)] hover:bg-[var(--alert-red-fill)]"
+                    : "text-[var(--steel-dim)] opacity-30"
+                )}
                 aria-label="Clear mask"
               >
                 <RotateCcw className="size-3" />
-                Clear
+                CLEAR
               </button>
             </TooltipTrigger>
-            <TooltipContent side="bottom" className="text-[10px]">
+            <TooltipContent side="bottom" className="text-[10px] bg-[var(--void-panel)] border-[var(--nerv-orange-dim)]/40 text-[var(--nerv-orange)]">
               Clear all strokes
             </TooltipContent>
           </Tooltip>
@@ -576,10 +584,10 @@ function ToolBtn({
           onClick={onClick}
           disabled={disabled}
           className={cn(
-            "p-1.5 rounded-md transition-all duration-100",
+            "p-1.5 transition-all duration-100",
             active
-              ? "bg-white/[0.12] text-foreground"
-              : "text-muted-foreground hover:text-foreground hover:bg-white/[0.06]",
+              ? "bg-[var(--nerv-orange)]/15 text-[var(--nerv-orange)]"
+              : "text-[var(--steel-dim)] hover:text-[var(--nerv-orange)] hover:bg-[var(--nerv-orange)]/10",
             disabled && "opacity-30 pointer-events-none"
           )}
           aria-label={tooltip}
@@ -587,7 +595,7 @@ function ToolBtn({
           <Icon className="size-3.5" />
         </button>
       </TooltipTrigger>
-      <TooltipContent side="bottom" className="text-[10px]">
+      <TooltipContent side="bottom" className="text-[10px] bg-[var(--void-panel)] border-[var(--nerv-orange-dim)]/40 text-[var(--nerv-orange)]">
         {tooltip}
       </TooltipContent>
     </Tooltip>

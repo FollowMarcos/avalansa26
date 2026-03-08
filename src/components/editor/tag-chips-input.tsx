@@ -14,24 +14,6 @@ interface TagChipsInputProps {
   accentColor?: string;
 }
 
-const ACCENT_STYLES: Record<string, { chip: string; chipActive: string; input: string }> = {
-  amber: {
-    chip: "border-white/[0.1] text-muted-foreground hover:bg-white/[0.06]",
-    chipActive: "bg-white/[0.1] border-white/[0.2] text-foreground",
-    input: "focus:ring-white/[0.15]",
-  },
-  emerald: {
-    chip: "border-white/[0.1] text-muted-foreground hover:bg-white/[0.06]",
-    chipActive: "bg-white/[0.1] border-white/[0.2] text-foreground",
-    input: "focus:ring-white/[0.15]",
-  },
-  cyan: {
-    chip: "border-white/[0.1] text-muted-foreground hover:bg-white/[0.06]",
-    chipActive: "bg-white/[0.1] border-white/[0.2] text-foreground",
-    input: "focus:ring-white/[0.15]",
-  },
-};
-
 export function TagChipsInput({
   tags,
   onTagsChange,
@@ -39,11 +21,9 @@ export function TagChipsInput({
   customText,
   onCustomTextChange,
   placeholder = "Add custom tag...",
-  accentColor = "amber",
 }: TagChipsInputProps) {
   const [inputValue, setInputValue] = React.useState("");
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const styles = ACCENT_STYLES[accentColor] || ACCENT_STYLES.amber;
 
   const toggleTag = (tag: string) => {
     if (tags.includes(tag)) {
@@ -74,7 +54,7 @@ export function TagChipsInput({
   return (
     <div className="space-y-2">
       {/* Preset chips */}
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap gap-1">
         {presetTags.map((tag) => {
           const isActive = tags.includes(tag);
           return (
@@ -83,8 +63,10 @@ export function TagChipsInput({
               type="button"
               onClick={() => toggleTag(tag)}
               className={cn(
-                "px-2 py-0.5 text-xs rounded-full border transition-all duration-150 cursor-pointer hover:scale-105 active:scale-95",
-                isActive ? styles.chipActive : styles.chip
+                "px-2 py-0.5 text-[10px] border transition-all duration-100 cursor-pointer uppercase tracking-[0.05em]",
+                isActive
+                  ? "bg-[var(--nerv-orange)]/15 border-[var(--nerv-orange)] text-[var(--nerv-orange)]"
+                  : "border-[var(--steel-faint)] text-[var(--steel-dim)] hover:bg-[var(--nerv-orange)]/10 hover:border-[var(--nerv-orange-dim)]/40 hover:text-[var(--nerv-orange-dim)]"
               )}
             >
               {tag}
@@ -95,14 +77,11 @@ export function TagChipsInput({
 
       {/* Custom tags */}
       {customTags.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1">
           {customTags.map((tag) => (
             <span
               key={tag}
-              className={cn(
-                "px-2 py-0.5 text-xs rounded-full border flex items-center gap-1",
-                styles.chipActive
-              )}
+              className="px-2 py-0.5 text-[10px] border border-[var(--data-green-dim)] text-[var(--data-green)] flex items-center gap-1 uppercase tracking-[0.05em]"
             >
               {tag}
               <button
@@ -127,23 +106,15 @@ export function TagChipsInput({
           onChange={(e) => setInputValue(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
-          className={cn(
-            "w-full h-7 px-2 text-xs rounded-md border border-white/[0.08] bg-white/[0.04]",
-            "focus:outline-none focus:ring-1",
-            styles.input
-          )}
+          className="w-full h-7 px-2 text-xs bg-[var(--void)] border border-[var(--nerv-orange-dim)]/40 text-[var(--data-green)] font-[family-name:var(--font-ibm-plex-mono)] placeholder:text-[var(--steel-dim)] focus:outline-none focus:ring-1 focus:ring-[var(--nerv-orange)]/50"
         />
         {customText !== undefined && (
           <input
             type="text"
             value={customText}
             onChange={(e) => onCustomTextChange(e.target.value)}
-            placeholder="Custom description..."
-            className={cn(
-              "w-full h-7 px-2 text-xs rounded-md border border-white/[0.08] bg-white/[0.04]",
-              "focus:outline-none focus:ring-1",
-              styles.input
-            )}
+            placeholder={"Custom description..."}
+            className="w-full h-7 px-2 text-xs bg-[var(--void)] border border-[var(--nerv-orange-dim)]/40 text-[var(--data-green)] font-[family-name:var(--font-ibm-plex-mono)] placeholder:text-[var(--steel-dim)] focus:outline-none focus:ring-1 focus:ring-[var(--nerv-orange)]/50"
           />
         )}
       </div>

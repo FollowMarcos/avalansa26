@@ -11,7 +11,6 @@ import Image from "next/image";
 interface ReferenceSectionProps {
   label: string;
   description: string;
-  accentColor: "violet" | "blue" | "amber" | "emerald" | "cyan";
   icon: LucideIcon;
   image?: ReferenceImageInfo;
   onImageChange: (ref: ReferenceImageInfo | undefined) => void;
@@ -20,34 +19,9 @@ interface ReferenceSectionProps {
   children?: React.ReactNode;
 }
 
-const RING_COLORS: Record<string, string> = {
-  violet: "ring-foreground/40",
-  blue: "ring-foreground/40",
-  amber: "ring-foreground/40",
-  emerald: "ring-foreground/40",
-  cyan: "ring-foreground/40",
-};
-
-const RING_HOVER: Record<string, string> = {
-  violet: "hover:ring-foreground/30",
-  blue: "hover:ring-foreground/30",
-  amber: "hover:ring-foreground/30",
-  emerald: "hover:ring-foreground/30",
-  cyan: "hover:ring-foreground/30",
-};
-
-const BORDER_ACTIVE: Record<string, string> = {
-  violet: "border-white/[0.15]",
-  blue: "border-white/[0.15]",
-  amber: "border-white/[0.15]",
-  emerald: "border-white/[0.15]",
-  cyan: "border-white/[0.15]",
-};
-
 export function ReferenceSection({
   label,
   description,
-  accentColor,
   icon: Icon,
   image,
   onImageChange,
@@ -55,9 +29,6 @@ export function ReferenceSection({
   savedReferences,
   children,
 }: ReferenceSectionProps) {
-  const ringColor = RING_COLORS[accentColor];
-  const ringHover = RING_HOVER[accentColor];
-  const borderActive = BORDER_ACTIVE[accentColor];
 
   const handleUpload = async (files: File[]) => {
     if (!files[0]) return;
@@ -78,21 +49,21 @@ export function ReferenceSection({
 
   return (
     <div className="space-y-2">
-      <p className="text-[10px] text-muted-foreground leading-snug">{description}</p>
+      <p className="text-[10px] text-[var(--steel-dim)] leading-snug uppercase tracking-[0.05em]">{description}</p>
 
       {/* Current image preview */}
       {image?.url && (
-        <div className={cn("relative rounded-lg overflow-hidden border", borderActive)}>
+        <div className="relative overflow-hidden border border-[var(--wire-cyan)]">
           <img
             src={image.url}
             alt={`${label} reference`}
-            className="w-full h-24 object-contain bg-muted/30"
+            className="w-full h-24 object-contain bg-[var(--void-panel)]"
             draggable={false}
           />
           <button
             type="button"
             onClick={() => onImageChange(undefined)}
-            className="absolute top-1 right-1 p-0.5 rounded-full bg-black/60 text-white hover:bg-black/80 transition-colors"
+            className="absolute top-1 right-1 p-0.5 bg-[var(--void)] border border-[var(--alert-red-dim)] text-[var(--alert-red)] hover:bg-[var(--alert-red)] hover:text-[var(--void)] transition-colors"
             aria-label={`Remove ${label.toLowerCase()} reference`}
           >
             <X className="h-3 w-3" />
@@ -103,9 +74,9 @@ export function ReferenceSection({
       {/* Upload button */}
       <FileUpload onFilesAdded={handleUpload} accept="image/*">
         <FileUploadTrigger asChild>
-          <button className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white/[0.03] hover:bg-white/[0.06] text-xs transition-all duration-150 border border-dashed border-white/[0.1] active:scale-[0.98]">
+          <button className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[var(--void)] hover:bg-[var(--nerv-orange)]/10 text-xs transition-all duration-100 border border-dashed border-[var(--nerv-orange-dim)]/40 text-[var(--nerv-orange-dim)] hover:text-[var(--nerv-orange)] uppercase tracking-[0.08em] active:scale-[0.98]">
             <ImagePlus className="size-3.5" aria-hidden="true" />
-            Upload
+            UPLOAD
           </button>
         </FileUploadTrigger>
       </FileUpload>
@@ -113,20 +84,20 @@ export function ReferenceSection({
       {/* Pick from generated images */}
       {completedGens.length > 0 && (
         <>
-          <div className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">
-            Generated Images
+          <div className="text-[10px] text-[var(--nerv-orange-dim)] uppercase tracking-[0.12em]">
+            GENERATED IMAGES
           </div>
-          <div className="grid grid-cols-5 gap-1 max-h-28 overflow-y-auto">
+          <div className="grid grid-cols-5 gap-0.5 max-h-28 overflow-y-auto">
             {completedGens.slice(0, 20).map((gen) => (
               <button
                 key={gen.id}
                 type="button"
                 onClick={() => onImageChange({ url: gen.url })}
                 className={cn(
-                  "aspect-square rounded-md overflow-hidden border transition-all duration-150 focus-visible:ring-2 focus-visible:ring-ring",
+                  "aspect-square overflow-hidden border transition-all duration-100 focus-visible:ring-1 focus-visible:ring-[var(--nerv-orange)]",
                   image?.url === gen.url
-                    ? `ring-1 ${ringColor} shadow-sm`
-                    : `border-white/[0.06] hover:ring-1 ${ringHover} hover:scale-105 active:scale-95`
+                    ? "ring-1 ring-[var(--wire-cyan)] border-[var(--wire-cyan)]"
+                    : "border-[var(--steel-faint)] hover:border-[var(--nerv-orange-dim)]"
                 )}
                 title={gen.prompt?.slice(0, 40)}
               >
@@ -146,10 +117,10 @@ export function ReferenceSection({
       {/* Pick from saved references */}
       {savedReferences.length > 0 && (
         <>
-          <div className="text-[10px] text-muted-foreground/50 uppercase tracking-wider">
-            Your Library
+          <div className="text-[10px] text-[var(--nerv-orange-dim)] uppercase tracking-[0.12em]">
+            YOUR LIBRARY
           </div>
-          <div className="grid grid-cols-5 gap-1 max-h-28 overflow-y-auto">
+          <div className="grid grid-cols-5 gap-0.5 max-h-28 overflow-y-auto">
             {savedReferences.map((ref) => (
               <button
                 key={ref.id}
@@ -158,10 +129,10 @@ export function ReferenceSection({
                   onImageChange({ url: ref.url, storagePath: ref.storage_path })
                 }
                 className={cn(
-                  "aspect-square rounded-md overflow-hidden border transition-all duration-150 focus-visible:ring-2 focus-visible:ring-ring",
+                  "aspect-square overflow-hidden border transition-all duration-100 focus-visible:ring-1 focus-visible:ring-[var(--nerv-orange)]",
                   image?.storagePath === ref.storage_path
-                    ? `ring-1 ${ringColor} shadow-sm`
-                    : `border-white/[0.06] hover:ring-1 ${ringHover} hover:scale-105 active:scale-95`
+                    ? "ring-1 ring-[var(--wire-cyan)] border-[var(--wire-cyan)]"
+                    : "border-[var(--steel-faint)] hover:border-[var(--nerv-orange-dim)]"
                 )}
                 title={ref.name || "Reference"}
               >

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono, VT323, Lato } from "next/font/google";
+import { Geist, Geist_Mono, VT323, Lato, IBM_Plex_Mono, Bebas_Neue, Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -21,6 +21,24 @@ const vt323 = VT323({
 const lato = Lato({
   weight: ["100", "300", "400", "700", "900"],
   variable: "--font-lato",
+  subsets: ["latin"],
+});
+
+const ibmPlexMono = IBM_Plex_Mono({
+  weight: ["400", "500", "700"],
+  variable: "--font-ibm-plex-mono",
+  subsets: ["latin"],
+});
+
+const bebasNeue = Bebas_Neue({
+  weight: "400",
+  variable: "--font-bebas-neue",
+  subsets: ["latin"],
+});
+
+const notoSansJP = Noto_Sans_JP({
+  weight: ["400", "700"],
+  variable: "--font-noto-sans-jp",
   subsets: ["latin"],
 });
 
@@ -95,7 +113,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} ${vt323.variable} ${lato.variable} antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} ${vt323.variable} ${lato.variable} ${ibmPlexMono.variable} ${bebasNeue.variable} ${notoSansJP.variable} antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

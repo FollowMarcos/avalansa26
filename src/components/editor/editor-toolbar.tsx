@@ -39,15 +39,15 @@ interface ToolbarItem {
   id: string;
   icon: LucideIcon;
   label: string;
-  accentColor: "violet" | "blue" | "amber" | "emerald" | "cyan";
+  shortLabel: string;
 }
 
 const TOOLBAR_ITEMS: ToolbarItem[] = [
-  { id: "style", icon: Palette, label: "Style", accentColor: "violet" },
-  { id: "pose", icon: PersonStanding, label: "Pose", accentColor: "blue" },
-  { id: "expression", icon: Smile, label: "Expression", accentColor: "amber" },
-  { id: "clothing", icon: Shirt, label: "Clothing", accentColor: "emerald" },
-  { id: "location", icon: MapPin, label: "Location", accentColor: "cyan" },
+  { id: "style", icon: Palette, label: "Style Reference", shortLabel: "STY" },
+  { id: "pose", icon: PersonStanding, label: "Pose Reference", shortLabel: "POS" },
+  { id: "expression", icon: Smile, label: "Expression Reference", shortLabel: "EXP" },
+  { id: "clothing", icon: Shirt, label: "Clothing Reference", shortLabel: "CLO" },
+  { id: "location", icon: MapPin, label: "Location Reference", shortLabel: "LOC" },
 ];
 
 // ── Component ───────────────────────────────────────────────────────────
@@ -91,7 +91,6 @@ export function EditorToolbar() {
           <ReferenceSection
             label="Style"
             description="Pick an image to use only its art style (color palette, brushwork, technique)."
-            accentColor="violet"
             icon={Palette}
             image={settings.styleRef}
             onImageChange={(ref) => updateSettings({ styleRef: ref })}
@@ -104,7 +103,6 @@ export function EditorToolbar() {
           <ReferenceSection
             label="Pose"
             description="Pick an image to match only its body pose and position."
-            accentColor="blue"
             icon={PersonStanding}
             image={settings.poseRef}
             onImageChange={(ref) => updateSettings({ poseRef: ref })}
@@ -117,7 +115,6 @@ export function EditorToolbar() {
           <ReferenceSection
             label="Expression"
             description="Set a facial expression via image and/or descriptive tags."
-            accentColor="amber"
             icon={Smile}
             image={settings.expressionRef?.image}
             onImageChange={(ref) =>
@@ -136,7 +133,6 @@ export function EditorToolbar() {
               onCustomTextChange={(customText) =>
                 updateSettings({ expressionRef: makeTaggedRef(settings.expressionRef, { customText }) })
               }
-              accentColor="amber"
               placeholder="Add expression..."
             />
           </ReferenceSection>
@@ -146,7 +142,6 @@ export function EditorToolbar() {
           <ReferenceSection
             label="Clothing"
             description="Set clothing style via image and/or descriptive tags."
-            accentColor="emerald"
             icon={Shirt}
             image={settings.clothingRef?.image}
             onImageChange={(ref) =>
@@ -165,7 +160,6 @@ export function EditorToolbar() {
               onCustomTextChange={(customText) =>
                 updateSettings({ clothingRef: makeTaggedRef(settings.clothingRef, { customText }) })
               }
-              accentColor="emerald"
               placeholder="Add clothing..."
             />
           </ReferenceSection>
@@ -175,7 +169,6 @@ export function EditorToolbar() {
           <ReferenceSection
             label="Location"
             description="Set background/location via image and/or descriptive tags."
-            accentColor="cyan"
             icon={MapPin}
             image={settings.locationRef?.image}
             onImageChange={(ref) =>
@@ -194,7 +187,6 @@ export function EditorToolbar() {
               onCustomTextChange={(customText) =>
                 updateSettings({ locationRef: makeTaggedRef(settings.locationRef, { customText }) })
               }
-              accentColor="cyan"
               placeholder="Add location..."
             />
           </ReferenceSection>
@@ -205,7 +197,12 @@ export function EditorToolbar() {
   };
 
   return (
-    <div className="flex flex-col items-center py-2 gap-1">
+    <div className="flex flex-col items-center py-2 gap-0.5">
+      {/* Institutional label */}
+      <span className="text-[8px] tracking-[0.15em] uppercase text-[var(--steel-dim)] mb-1 font-[family-name:var(--font-noto-sans-jp)]">
+        参照制御
+      </span>
+
       {TOOLBAR_ITEMS.map((item) => {
         const Icon = item.icon;
         const active = isActive(item.id);
@@ -222,25 +219,30 @@ export function EditorToolbar() {
                   <button
                     type="button"
                     className={cn(
-                      "relative size-9 rounded-lg flex items-center justify-center transition-all duration-150",
-                      "hover:bg-white/[0.06] active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      active && "bg-white/[0.08]"
+                      "relative size-9 flex items-center justify-center transition-all duration-100",
+                      "border border-transparent",
+                      "hover:bg-[var(--nerv-orange)]/10 hover:border-[var(--steel-faint)]",
+                      "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-[var(--nerv-orange)]",
+                      active && "bg-[var(--nerv-orange)]/10 border-[var(--nerv-orange-dim)]/40"
                     )}
                     aria-label={item.label}
                   >
                     <Icon
                       className={cn(
                         "size-4",
-                        active ? "text-foreground" : "text-muted-foreground"
+                        active ? "text-[var(--nerv-orange)]" : "text-[var(--nerv-orange-dim)]"
                       )}
                     />
                     {active && (
-                      <span className="absolute top-0.5 right-0.5 size-1.5 rounded-full bg-foreground/60 animate-pulse" />
+                      <span
+                        className="absolute top-0.5 right-0.5 size-1.5 rounded-full bg-[var(--data-green)]"
+                        style={{ boxShadow: "0 0 6px var(--data-green)" }}
+                      />
                     )}
                   </button>
                 </PopoverTrigger>
               </TooltipTrigger>
-              <TooltipContent side="right" className="text-xs">
+              <TooltipContent side="right" className="text-[10px] font-[family-name:var(--font-ibm-plex-mono)] bg-[var(--void-panel)] border-[var(--nerv-orange-dim)]/40 text-[var(--nerv-orange)]">
                 {item.label}
               </TooltipContent>
             </Tooltip>
@@ -248,11 +250,11 @@ export function EditorToolbar() {
               side="right"
               align="start"
               sideOffset={12}
-              className="w-72 p-3 max-h-[60vh] overflow-y-auto scrollbar-thin border-white/[0.08]"
+              className="w-72 p-3 max-h-[60vh] overflow-y-auto scrollbar-thin rounded-none bg-[var(--void)] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)]"
             >
               <div className="flex items-center gap-1.5 mb-2">
-                <Icon className="size-3.5 text-muted-foreground" />
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/80">{item.label}</span>
+                <Icon className="size-3.5 text-[var(--nerv-orange-dim)]" />
+                <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--nerv-orange)]">{item.label}</span>
               </div>
               {renderContent(item.id)}
             </PopoverContent>

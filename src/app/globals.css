@@ -131,3 +131,101 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ── NERV Operations Console Design System ────────────────────────────── */
+
+.nerv {
+  --void: #000000;
+  --void-warm: #0A0A08;
+  --void-panel: #111110;
+  --nerv-orange: #FF9830;
+  --nerv-orange-dim: #D08028;
+  --nerv-orange-hot: #FFCC50;
+  --data-green: #50FF50;
+  --data-green-dim: #30BB30;
+  --data-green-faint: rgba(80, 255, 80, 0.1);
+  --wire-cyan: #20F0FF;
+  --wire-cyan-dim: #10A8B8;
+  --wire-cyan-glow: rgba(32, 240, 255, 0.15);
+  --alert-red: #FF4840;
+  --alert-red-dim: #CC3028;
+  --alert-red-hot: #FF6858;
+  --alert-red-fill: rgba(255, 72, 64, 0.18);
+  --steel: #E0E0D8;
+  --steel-dim: #9A9A90;
+  --steel-faint: rgba(224, 224, 216, 0.08);
+}
+
+/* CRT scanline overlay */
+.nerv-crt {
+  position: relative;
+}
+.nerv-crt::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.06) 2px,
+    rgba(0, 0, 0, 0.06) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* CRT vignette */
+.nerv-crt::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 60%,
+    rgba(0, 0, 0, 0.35) 100%
+  );
+  pointer-events: none;
+  z-index: 9998;
+}
+
+/* Phosphor flicker */
+@keyframes nerv-phosphor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.97; }
+}
+.nerv-flicker {
+  animation: nerv-phosphor 0.08s infinite;
+}
+
+/* NERV scanline loading animation */
+@keyframes nerv-scan {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100%; }
+}
+.nerv-scan-loading {
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 4px,
+    rgba(255, 152, 48, 0.08) 4px,
+    rgba(255, 152, 48, 0.08) 8px
+  );
+  background-size: 100% 200%;
+  animation: nerv-scan 2s linear infinite;
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .nerv-flicker { animation: none !important; }
+  .nerv-scan-loading { animation: none !important; }
+}
+
+/* High contrast override */
+@media (prefers-contrast: more) {
+  .nerv {
+    --nerv-orange: #FFB030;
+    --alert-red: #FF6050;
+    --data-green: #40FF40;
+  }
+}
