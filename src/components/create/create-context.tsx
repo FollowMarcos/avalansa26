@@ -197,6 +197,10 @@ interface CreateContextType {
   dockCollapsed: boolean;
   setDockCollapsed: (collapsed: boolean) => void;
 
+  // NERV theme variant
+  nervTheme: "default" | "eva01";
+  setNervTheme: (theme: "default" | "eva01") => void;
+
   // Generation
   isGenerating: boolean;
   thinkingSteps: ThinkingStep[];
@@ -445,6 +449,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   // Dock collapsed state (with localStorage persistence)
   const [dockCollapsed, setDockCollapsed] = React.useState(false);
 
+  // NERV theme variant (with localStorage persistence)
+  const [nervTheme, setNervTheme] = React.useState<"default" | "eva01">("default");
+
   // Restore layout state from localStorage after mount (hydration-safe)
   React.useEffect(() => {
     try {
@@ -452,6 +459,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       if (savedCols) setGalleryColumnCount(Math.max(2, Math.min(8, parseInt(savedCols, 10) || 4)));
       if (localStorage.getItem("gallery-sidebar-open") === "true") setGallerySidebarOpen(true);
       if (localStorage.getItem("dock-collapsed") === "true") setDockCollapsed(true);
+      const savedTheme = localStorage.getItem("nerv-theme");
+      if (savedTheme === "eva01") setNervTheme("eva01");
     } catch { /* localStorage unavailable */ }
   }, []);
 
@@ -466,7 +475,8 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("gallery-column-count", String(galleryColumnCount));
     localStorage.setItem("gallery-sidebar-open", String(gallerySidebarOpen));
     localStorage.setItem("dock-collapsed", String(dockCollapsed));
-  }, [galleryColumnCount, gallerySidebarOpen, dockCollapsed]);
+    localStorage.setItem("nerv-theme", nervTheme);
+  }, [galleryColumnCount, gallerySidebarOpen, dockCollapsed, nervTheme]);
   const [historyPanelOpen, setHistoryPanelOpen] = React.useState(true);
   const [isInputVisible, setIsInputVisible] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState("create");
@@ -2512,6 +2522,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     // Dock
     dockCollapsed,
     setDockCollapsed,
+    // NERV theme
+    nervTheme,
+    setNervTheme,
     // Generation
     isGenerating,
     thinkingSteps,
@@ -2585,7 +2598,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     availableApis, selectedApiId, isLoadingApis, pendingBatchJobs,
     prompt, isPromptExpanded, settings, referenceImages, history, selectedImage,
     inpaintSourceImage, isInpainting, inpaint,
-    viewMode, historyPanelOpen, isInputVisible, activeTab, interactionMode, galleryColumnCount, gallerySidebarOpen, dockCollapsed,
+    viewMode, historyPanelOpen, isInputVisible, activeTab, interactionMode, galleryColumnCount, gallerySidebarOpen, dockCollapsed, nervTheme,
     isGenerating, thinkingSteps,
     updateSettings, addReferenceImages, addReferenceImageFromUrl, removeReferenceImage, clearReferenceImages,
     savedReferences, loadSavedReferences, removeSavedReference, renameSavedReference, addSavedReferenceToActive,

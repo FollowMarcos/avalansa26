@@ -28,7 +28,7 @@ function SystemClock() {
 }
 
 export function EditorLayout() {
-  const { activeGenerations, history } = useCreate();
+  const { activeGenerations, history, nervTheme } = useCreate();
   const completedCount = React.useMemo(
     () => history.filter((g) => g.status === "completed").length,
     [history]
@@ -36,7 +36,7 @@ export function EditorLayout() {
 
   return (
     <TooltipProvider delayDuration={300}>
-      <div className="nerv nerv-crt nerv-flicker relative h-[100dvh] flex flex-col overflow-hidden bg-[var(--void)] font-[family-name:var(--font-ibm-plex-mono)]">
+      <div className={`nerv nerv-crt nerv-flicker relative h-[100dvh] flex flex-col overflow-hidden bg-[var(--void)] font-[family-name:var(--font-ibm-plex-mono)]${nervTheme === "eva01" ? " nerv-eva01" : ""}`}>
 
         {/* ── AVA Institutional Header ── */}
         <header className="flex items-center h-8 px-3 bg-[var(--void)] border-b border-[var(--nerv-orange-dim)]/30 shrink-0 gap-3 select-none">

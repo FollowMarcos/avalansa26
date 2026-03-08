@@ -85,7 +85,7 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
     const pathname = usePathname();
     const router = useRouter();
     const { theme, setTheme } = useTheme();
-    const { isInputVisible, toggleInputVisibility, setActiveTab, dockCollapsed, setDockCollapsed } = useCreate();
+    const { isInputVisible, toggleInputVisibility, setActiveTab, dockCollapsed, setDockCollapsed, nervTheme } = useCreate();
     const [profile, setProfile] = React.useState<UserProfile | null>(null);
     const [isAuthenticated, setIsAuthenticated] = React.useState<boolean | null>(null);
     const [items, setItems] = React.useState<DockItem[]>(DEFAULT_ITEMS);
@@ -241,6 +241,7 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
             transition={{ duration: 0.5, ease: "easeOut" }}
             className={cn(
                 "nerv flex justify-center pointer-events-auto",
+                nervTheme === "eva01" && "nerv-eva01",
                 vertical ? "flex-col items-center" : "items-center"
             )}
         >

@@ -299,6 +299,32 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
             {/* Main Composer Panel */}
             <div className="relative">
               <div className="relative bg-[#010101] border border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)] rounded-none overflow-hidden font-[family-name:var(--font-ibm-plex-mono)]">
+                {/* Institutional header */}
+                <div className="flex items-center gap-2 px-4 pt-3 pb-0">
+                  <span className="text-base tracking-[0.15em] text-[var(--nerv-orange)] font-[family-name:var(--font-bebas-neue)] glow-orange">
+                    GENERATION SYSTEM
+                  </span>
+                  <span className="text-[8px] tracking-[0.1em] text-[var(--steel-dim)] font-[family-name:var(--font-noto-sans-jp)]">
+                    指令入力
+                  </span>
+                  <div className="flex-1 h-px bg-[var(--nerv-orange-dim)]/20" />
+                  {/* Active generation LEDs */}
+                  <div className="flex items-center gap-1.5">
+                    {[0, 1, 2, 3].map((i) => (
+                      <span
+                        key={i}
+                        className={cn(
+                          "size-1.5 rounded-full transition-colors",
+                          i < activeGenerations
+                            ? "bg-[var(--nerv-orange)] nerv-led-pulse"
+                            : "bg-[var(--steel-faint)]"
+                        )}
+                        style={i < activeGenerations ? { boxShadow: "0 0 4px var(--nerv-orange)" } : undefined}
+                      />
+                    ))}
+                    <span className="text-[7px] text-[var(--steel-dim)] uppercase tracking-[0.08em] ml-0.5">SLOTS</span>
+                  </div>
+                </div>
                 {/* Main Input Area */}
                 <div className="p-4 pb-2">
                   <div className="flex items-start gap-3">
@@ -452,7 +478,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                           />
                         </div>
                         <div className="absolute bottom-0.5 right-0 flex items-center gap-1">
-                          <span className="text-[10px] text-[var(--steel-dim)] font-mono tabular-nums">{prompt.length}</span>
+                          <span className="text-[8px] text-[var(--steel-dim)] font-mono tabular-nums">{prompt.length > 0 ? prompt.length : ""}</span>
                           <button onClick={() => setIsPromptExpanded(!isPromptExpanded)} className="size-6 rounded-none flex items-center justify-center text-[var(--steel-dim)] hover:text-[var(--nerv-orange)] transition-colors focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)]" aria-label={isPromptExpanded ? "Collapse" : "Expand"}>
                             {isPromptExpanded ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
                           </button>

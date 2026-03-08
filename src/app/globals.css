@@ -160,6 +160,16 @@
   --steel-faint: rgba(224, 224, 216, 0.08);
 }
 
+/* ── EVA-01 variant — purple primary + neon green ── */
+.nerv.nerv-eva01 {
+  --nerv-orange: #B040E8;
+  --nerv-orange-dim: #8830B8;
+  --nerv-orange-hot: #D068FF;
+  --data-green: #00FF41;
+  --data-green-dim: #00CC33;
+  --data-green-faint: rgba(0, 255, 65, 0.1);
+}
+
 /* CRT scanline overlay — heavier for authenticity */
 .nerv-crt {
   position: relative;
@@ -215,6 +225,17 @@
 .glow-red {
   text-shadow: 0 0 8px rgba(255, 72, 64, 0.6), 0 0 20px rgba(255, 72, 64, 0.2);
 }
+.glow-purple {
+  text-shadow: 0 0 8px rgba(176, 64, 232, 0.6), 0 0 20px rgba(176, 64, 232, 0.2);
+}
+
+/* EVA-01 glow overrides (hardcoded rgba → purple/green) */
+.nerv-eva01 .glow-orange {
+  text-shadow: 0 0 8px rgba(176, 64, 232, 0.6), 0 0 20px rgba(176, 64, 232, 0.2);
+}
+.nerv-eva01 .glow-green {
+  text-shadow: 0 0 8px rgba(0, 255, 65, 0.6), 0 0 20px rgba(0, 255, 65, 0.2);
+}
 
 /* ── Scanline loading animation ── */
 @keyframes nerv-scan {
@@ -231,6 +252,15 @@
   );
   background-size: 100% 200%;
   animation: nerv-scan 2s linear infinite;
+}
+.nerv-eva01 .nerv-scan-loading {
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 4px,
+    rgba(176, 64, 232, 0.08) 4px,
+    rgba(176, 64, 232, 0.08) 8px
+  );
 }
 
 /* ── Boot sequence typing animation ── */
@@ -332,5 +362,9 @@
     --nerv-orange: #FFB030;
     --alert-red: #FF6050;
     --data-green: #40FF40;
+  }
+  .nerv.nerv-eva01 {
+    --nerv-orange: #C860FF;
+    --data-green: #00FF50;
   }
 }
