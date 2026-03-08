@@ -12,6 +12,7 @@ import {
   Plus,
   ImageIcon,
   BookMarked,
+  GitCompareArrows,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -81,6 +82,8 @@ export function UnifiedToolbar({
     toggleBulkSelection,
     getFilteredHistory,
     history,
+    compareToolOpen,
+    setCompareToolOpen,
   } = useCreate();
 
   // Compute stats from context
@@ -330,6 +333,27 @@ export function UnifiedToolbar({
                   ? "Cancel Selection"
                   : "Bulk Select"}
               </TooltipContent>
+            </Tooltip>
+
+            {/* Compare */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={cn(
+                    "size-8 rounded-none hover:bg-[var(--nerv-orange)]/10",
+                    compareToolOpen
+                      ? "bg-[var(--nerv-orange)]/15 text-[var(--nerv-orange)]"
+                      : "text-[var(--steel-dim)] hover:text-[var(--nerv-orange)]"
+                  )}
+                  onClick={() => setCompareToolOpen(true)}
+                  aria-label="Compare images"
+                >
+                  <GitCompareArrows className="size-4" aria-hidden="true" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Compare</TooltipContent>
             </Tooltip>
 
             <div

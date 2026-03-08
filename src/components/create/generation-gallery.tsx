@@ -10,7 +10,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { BulkActionBar } from "./bulk-action-bar";
 import { ImageDetailModal } from "./image-detail-modal";
 import { GalleryItem, PendingCard, FailedCard } from "./gallery-item";
-import { ComparisonModal } from "./gallery-comparison-modal";
+import { ImageCompareModal } from "./image-compare-modal";
 import { CollectionSidebar } from "./gallery-collection-sidebar";
 import {
   AlertDialog,
@@ -743,10 +743,11 @@ export function GenerationGallery() {
         />
 
         {/* Comparison Modal */}
-        <ComparisonModal
+        <ImageCompareModal
           images={comparisonPair}
           isOpen={!!comparisonPair}
           onClose={() => setComparisonPair(null)}
+          history={history}
         />
 
         {/* Delete Confirmation */}

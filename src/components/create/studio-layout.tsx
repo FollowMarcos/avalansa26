@@ -14,6 +14,7 @@ import { useAvaVault } from "./use-ava-vault";
 import { CreateAvaDialog } from "./create-ava-dialog";
 import { RunAvaDialog } from "./run-ava-dialog";
 import { ShareAvaDialog } from "./share-ava-dialog";
+import { ImageCompareModal } from "./image-compare-modal";
 import { cn } from "@/lib/utils";
 import { motion, useReducedMotion } from "motion/react";
 
@@ -35,7 +36,7 @@ function SystemClock() {
 
 export function StudioLayout() {
   const prefersReducedMotion = useReducedMotion();
-  const { addReferenceImages, prompt, setPrompt, settings, updateSettings, selectedApiId, activeGenerations, history, nervTheme, setNervTheme } = useCreate();
+  const { addReferenceImages, prompt, setPrompt, settings, updateSettings, selectedApiId, activeGenerations, history, nervTheme, setNervTheme, compareToolOpen, setCompareToolOpen } = useCreate();
 
   const completedCount = React.useMemo(
     () => history.filter((g) => g.status === "completed").length,
@@ -283,6 +284,14 @@ export function StudioLayout() {
           }
         }}
         onSearchUsers={avaVault.searchUsers}
+      />
+
+      {/* Image Compare Tool */}
+      <ImageCompareModal
+        images={null}
+        isOpen={compareToolOpen}
+        onClose={() => setCompareToolOpen(false)}
+        history={history}
       />
 
     </motion.div>

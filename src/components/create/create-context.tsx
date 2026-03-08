@@ -201,6 +201,10 @@ interface CreateContextType {
   nervTheme: "default" | "eva01";
   setNervTheme: (theme: "default" | "eva01") => void;
 
+  // Compare tool
+  compareToolOpen: boolean;
+  setCompareToolOpen: (open: boolean) => void;
+
   // Generation
   isGenerating: boolean;
   thinkingSteps: ThinkingStep[];
@@ -451,6 +455,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
 
   // NERV theme variant (with localStorage persistence)
   const [nervTheme, setNervTheme] = React.useState<"default" | "eva01">("default");
+
+  // Compare tool
+  const [compareToolOpen, setCompareToolOpen] = React.useState(false);
 
   // Restore layout state from localStorage after mount (hydration-safe)
   React.useEffect(() => {
@@ -2525,6 +2532,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     // NERV theme
     nervTheme,
     setNervTheme,
+    // Compare tool
+    compareToolOpen,
+    setCompareToolOpen,
     // Generation
     isGenerating,
     thinkingSteps,
@@ -2598,7 +2608,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
     availableApis, selectedApiId, isLoadingApis, pendingBatchJobs,
     prompt, isPromptExpanded, settings, referenceImages, history, selectedImage,
     inpaintSourceImage, isInpainting, inpaint,
-    viewMode, historyPanelOpen, isInputVisible, activeTab, interactionMode, galleryColumnCount, gallerySidebarOpen, dockCollapsed, nervTheme,
+    viewMode, historyPanelOpen, isInputVisible, activeTab, interactionMode, galleryColumnCount, gallerySidebarOpen, dockCollapsed, nervTheme, compareToolOpen,
     isGenerating, thinkingSteps,
     updateSettings, addReferenceImages, addReferenceImageFromUrl, removeReferenceImage, clearReferenceImages,
     savedReferences, loadSavedReferences, removeSavedReference, renameSavedReference, addSavedReferenceToActive,
