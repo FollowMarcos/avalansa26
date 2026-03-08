@@ -462,7 +462,7 @@ export function GenerationGallery() {
 
   return (
     <TooltipProvider delayDuration={400}>
-      <div className={cn("flex-1 flex flex-col min-h-0 bg-background transition-[padding] duration-200", dockCollapsed ? "pl-4" : "pl-20")}>
+      <div className={cn("flex-1 flex flex-col min-h-0 bg-[var(--void)] transition-[padding] duration-200", dockCollapsed ? "pl-4" : "pl-20")}>
         {/* Main content area with optional sidebar */}
         <div className="flex-1 flex min-h-0">
           {/* Collection sidebar */}
@@ -475,24 +475,24 @@ export function GenerationGallery() {
           <div ref={scrollContainerRef} className="flex-1 overflow-auto px-6 pt-16 pb-4">
             {filteredHistory.length === 0 && pendingCount === 0 ? (
               /* Empty state */
-              <div className="flex flex-col items-center justify-center h-full text-center p-8 max-w-sm mx-auto">
-                <div className="size-16 rounded-2xl bg-muted flex items-center justify-center mb-4">
+              <div className="flex flex-col items-center justify-center h-full text-center p-8 max-w-sm mx-auto nerv-grid-overlay">
+                <div className="size-16 border border-[var(--nerv-orange-dim)]/40 bg-[var(--void-panel)] flex items-center justify-center mb-4">
                   <ImageIcon
-                    className="size-8 text-muted-foreground"
+                    className="size-8 text-[var(--nerv-orange-dim)]"
                     strokeWidth={1.5}
                     aria-hidden="true"
                   />
                 </div>
-                <p className="text-muted-foreground font-mono text-balance">
+                <p className="text-[var(--nerv-orange)] font-[family-name:var(--font-bebas-neue)] tracking-[0.15em] uppercase text-xl glow-orange text-balance">
                   {galleryFilterState.searchQuery ||
                   galleryFilterState.filters.aspectRatio.length > 0 ||
                   galleryFilterState.filters.imageSize.length > 0 ||
                   galleryFilterState.filters.modelIds.length > 0 ||
                   galleryFilterState.filters.dateRange.preset
-                    ? "No images match your filters"
-                    : "No generations yet"}
+                    ? "NO MATCH FOUND"
+                    : "NO GENERATIONS"}
                 </p>
-                <p className="text-sm text-muted-foreground mt-1 text-pretty">
+                <p className="text-sm text-[var(--steel-dim)] mt-1 uppercase tracking-[0.08em] font-[family-name:var(--font-ibm-plex-mono)] text-pretty">
                   {galleryFilterState.searchQuery ||
                   galleryFilterState.filters.aspectRatio.length > 0 ||
                   galleryFilterState.filters.imageSize.length > 0 ||
@@ -510,9 +510,8 @@ export function GenerationGallery() {
                 ) && (
                   <button
                     type="button"
-                    className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+                    className="mt-4 inline-flex items-center gap-2 px-5 py-2 bg-[var(--nerv-orange)] text-[var(--void)] text-xs font-medium uppercase tracking-[0.1em] hover:bg-[var(--nerv-orange-hot)] transition-colors focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)] font-[family-name:var(--font-ibm-plex-mono)]"
                     onClick={() => {
-                      // Focus the prompt input
                       const input = document.querySelector<HTMLTextAreaElement>(
                         'textarea[name="prompt"]',
                       );
@@ -520,7 +519,7 @@ export function GenerationGallery() {
                     }}
                   >
                     <Sparkles className="size-4" aria-hidden="true" />
-                    Start Creating
+                    START CREATING
                   </button>
                 )}
               </div>
@@ -531,9 +530,9 @@ export function GenerationGallery() {
                   const startIdx = globalIndex;
                   return (
                     <section key={dateLabel} aria-label={dateLabel}>
-                      <h2 className="sticky top-0 z-10 text-xs font-mono font-medium text-muted-foreground uppercase tracking-wider py-2 px-1 bg-background/95 backdrop-blur-sm border-b border-border/30 mb-3">
+                      <h2 className="sticky top-0 z-10 text-xs font-[family-name:var(--font-ibm-plex-mono)] font-medium text-[var(--nerv-orange)] uppercase tracking-[0.12em] py-2 px-1 bg-[var(--void)]/95 backdrop-blur-sm border-b border-[var(--nerv-orange-dim)]/20 mb-3 glow-orange">
                         {dateLabel}
-                        <span className="ml-2 tabular-nums text-muted-foreground/60">
+                        <span className="ml-2 tabular-nums text-[var(--data-green)] glow-green">
                           ({images.length})
                         </span>
                       </h2>
@@ -589,7 +588,7 @@ export function GenerationGallery() {
                     <section key={promptKey} aria-label={`Prompt: ${displayPrompt}`}>
                       <button
                         type="button"
-                        className="sticky top-0 z-10 w-full flex items-center gap-2 text-left text-xs font-mono font-medium text-muted-foreground py-2 px-1 bg-background/95 backdrop-blur-sm border-b border-border/30 mb-3 hover:text-foreground transition-colors"
+                        className="sticky top-0 z-10 w-full flex items-center gap-2 text-left text-xs font-[family-name:var(--font-ibm-plex-mono)] font-medium text-[var(--nerv-orange)] uppercase tracking-[0.08em] py-2 px-1 bg-[var(--void)]/95 backdrop-blur-sm border-b border-[var(--nerv-orange-dim)]/20 mb-3 hover:text-[var(--nerv-orange-hot)] transition-colors glow-orange"
                         onClick={() => togglePromptGroup(promptKey)}
                         aria-expanded={!isCollapsed}
                       >
@@ -601,7 +600,7 @@ export function GenerationGallery() {
                           aria-hidden="true"
                         />
                         <span className="truncate max-w-[500px]">{displayPrompt}</span>
-                        <span className="ml-2 tabular-nums text-muted-foreground/60 shrink-0">
+                        <span className="ml-2 tabular-nums text-[var(--data-green)] glow-green shrink-0">
                           ({images.length})
                         </span>
                       </button>
@@ -702,14 +701,13 @@ export function GenerationGallery() {
             onClick={scrollToTop}
             aria-label="Scroll to top"
             className={cn(
-              "fixed bottom-24 z-40 size-10 rounded-full",
-              "bg-background/95 dark:bg-zinc-900/95 backdrop-blur-xl",
-              "border border-border dark:border-white/10",
-              "shadow-lg dark:shadow-none",
+              "fixed bottom-24 z-40 size-10",
+              "bg-[#010101]/90 backdrop-blur-xl",
+              "border border-[var(--nerv-orange-dim)]/40",
               "flex items-center justify-center",
-              "text-muted-foreground dark:text-zinc-400 hover:text-foreground dark:hover:text-zinc-200",
+              "text-[var(--steel-dim)] hover:text-[var(--nerv-orange)]",
               "transition-colors",
-              "focus-visible:ring-2 focus-visible:ring-ring",
+              "focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)]",
               dockCollapsed ? "left-6" : "left-24",
             )}
           >
@@ -719,11 +717,11 @@ export function GenerationGallery() {
 
         {/* Comparison hint */}
         {comparisonA && (
-          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-30 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-mono shadow-lg flex items-center gap-2">
+          <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-30 px-4 py-2 bg-[#010101] border border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)] text-[var(--steel)] text-xs font-[family-name:var(--font-ibm-plex-mono)] uppercase tracking-[0.08em] flex items-center gap-2">
             <span>Click another image to compare</span>
             <button
               type="button"
-              className="ml-1 underline hover:no-underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-sm"
+              className="ml-1 text-[var(--nerv-orange)] hover:text-[var(--nerv-orange-hot)] underline hover:no-underline focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)]"
               onClick={() => setComparisonA(null)}
             >
               Cancel
@@ -753,16 +751,16 @@ export function GenerationGallery() {
 
         {/* Delete Confirmation */}
         <AlertDialog open={!!pendingDeleteId} onOpenChange={(open) => { if (!open) setPendingDeleteId(null); }}>
-          <AlertDialogContent>
+          <AlertDialogContent className="rounded-none bg-[#010101] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)]">
             <AlertDialogHeader>
-              <AlertDialogTitle>Delete Image</AlertDialogTitle>
-              <AlertDialogDescription>
+              <AlertDialogTitle className="text-[var(--alert-red)] uppercase tracking-[0.1em] text-sm font-[family-name:var(--font-ibm-plex-mono)]">Delete Image</AlertDialogTitle>
+              <AlertDialogDescription className="text-[var(--steel-dim)] text-xs font-[family-name:var(--font-ibm-plex-mono)]">
                 This will permanently delete this image. This action cannot be undone.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              <AlertDialogCancel className="rounded-none border-[var(--steel-dim)]/40 text-[var(--steel-dim)] hover:bg-[var(--steel-faint)] hover:text-[var(--steel)] bg-transparent">Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDelete} className="rounded-none bg-[var(--alert-red)] text-[var(--void)] hover:bg-[var(--alert-red-hot)] border-none">
                 Delete
               </AlertDialogAction>
             </AlertDialogFooter>

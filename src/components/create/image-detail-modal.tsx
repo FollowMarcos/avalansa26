@@ -346,7 +346,7 @@ export function ImageDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-4xl max-h-[90dvh] p-0 gap-0 overflow-hidden overscroll-contain">
+      <DialogContent className="max-w-4xl max-h-[90dvh] p-0 gap-0 overflow-hidden overscroll-contain bg-[#010101]">
         <div className="flex flex-col md:flex-row h-full max-h-[90dvh]">
           {/* Image Section */}
           <div className="relative flex-1 min-h-[300px] md:min-h-0 bg-muted flex items-center justify-center group">
@@ -719,7 +719,7 @@ export function ImageDetailModal({
                         Delete Image
                       </Button>
                     </AlertDialogTrigger>
-                    <AlertDialogContent>
+                    <AlertDialogContent className="bg-[#010101]">
                       <AlertDialogHeader>
                         <AlertDialogTitle>Delete this image?</AlertDialogTitle>
                         <AlertDialogDescription>

@@ -101,11 +101,12 @@ export const GalleryItem = React.memo(function GalleryItem({
                 e.dataTransfer.effectAllowed = "copy";
               }}
               className={cn(
-                "relative group rounded-lg overflow-hidden bg-muted border outline-none",
-                "focus-visible:ring-2 focus-visible:ring-ring",
-                isFocused && "ring-2 ring-ring",
-                isCurrentSelected && !isBulkMode && "ring-2 ring-foreground",
-                isSelected && isBulkMode && "ring-2 ring-primary border-primary",
+                "relative group rounded-none overflow-hidden bg-[var(--void)] border border-[var(--steel-faint)] outline-none",
+                "focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)]",
+                isFocused && "ring-2 ring-[var(--nerv-orange)]",
+                isCurrentSelected && !isBulkMode && "ring-2 ring-[var(--nerv-orange)]",
+                isSelected && isBulkMode && "ring-2 ring-[var(--nerv-orange)] border-[var(--nerv-orange)]",
+                "hover:border-[var(--nerv-orange-dim)]",
               )}
               style={{ contentVisibility: "auto" }}
               onClick={(e) => onImageClick(image, e)}
@@ -141,37 +142,47 @@ export const GalleryItem = React.memo(function GalleryItem({
                 />
               </div>
 
+              {/* Crosshair corner marks */}
+              <div className="absolute top-0 left-0 w-3 h-px bg-[var(--nerv-orange-dim)]/60 pointer-events-none" />
+              <div className="absolute top-0 left-0 w-px h-3 bg-[var(--nerv-orange-dim)]/60 pointer-events-none" />
+              <div className="absolute top-0 right-0 w-3 h-px bg-[var(--nerv-orange-dim)]/60 pointer-events-none" />
+              <div className="absolute top-0 right-0 w-px h-3 bg-[var(--nerv-orange-dim)]/60 pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-3 h-px bg-[var(--nerv-orange-dim)]/60 pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-px h-3 bg-[var(--nerv-orange-dim)]/60 pointer-events-none" />
+              <div className="absolute bottom-0 right-0 w-3 h-px bg-[var(--nerv-orange-dim)]/60 pointer-events-none" />
+              <div className="absolute bottom-0 right-0 w-px h-3 bg-[var(--nerv-orange-dim)]/60 pointer-events-none" />
+
               {/* Copy prompt & paste to composer buttons (top-left) */}
               {!isBulkMode && image.prompt && (
                 <div
                   className={cn(
                     "absolute top-1 left-1 z-10 flex items-center gap-0.5",
-                    "rounded-lg bg-background/80 backdrop-blur-sm px-0.5 py-0.5",
+                    "bg-[var(--void)]/80 backdrop-blur-sm px-0.5 py-0.5",
                     "opacity-0 group-hover:opacity-100 focus-within:opacity-100",
                     "transition-opacity duration-150",
                   )}
                 >
                   <button
                     type="button"
-                    className="size-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+                    className="size-8 flex items-center justify-center hover:bg-[var(--nerv-orange)]/10 transition-colors focus-visible:ring-1 focus-visible:ring-[var(--nerv-orange)]"
                     aria-label="Copy prompt"
                     onClick={(e) => {
                       e.stopPropagation();
                       onCopyPrompt(image.prompt);
                     }}
                   >
-                    <ClipboardCopy className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                    <ClipboardCopy className="size-3.5 text-[var(--steel-dim)]" aria-hidden="true" />
                   </button>
                   <button
                     type="button"
-                    className="size-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+                    className="size-8 flex items-center justify-center hover:bg-[var(--nerv-orange)]/10 transition-colors focus-visible:ring-1 focus-visible:ring-[var(--nerv-orange)]"
                     aria-label="Use prompt in composer"
                     onClick={(e) => {
                       e.stopPropagation();
                       onPasteToComposer(image.prompt);
                     }}
                   >
-                    <TextCursorInput className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                    <TextCursorInput className="size-3.5 text-[var(--steel-dim)]" aria-hidden="true" />
                   </button>
                 </div>
               )}
@@ -181,9 +192,9 @@ export const GalleryItem = React.memo(function GalleryItem({
                 <button
                   type="button"
                   className={cn(
-                    "absolute top-1 right-1 z-10 size-9 rounded-full flex items-center justify-center",
-                    "bg-background/80 hover:bg-background transition-[color,background-color,opacity] duration-150",
-                    "focus-visible:ring-2 focus-visible:ring-ring focus-visible:opacity-100",
+                    "absolute top-1 right-1 z-10 size-9 flex items-center justify-center",
+                    "bg-[var(--void)]/80 hover:bg-[var(--void)] transition-[color,background-color,opacity] duration-150",
+                    "focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)] focus-visible:opacity-100",
                     image.isFavorite
                       ? "opacity-100"
                       : "opacity-0 group-hover:opacity-100 focus:opacity-100",
@@ -207,8 +218,8 @@ export const GalleryItem = React.memo(function GalleryItem({
                     className={cn(
                       "size-4 transition-colors",
                       image.isFavorite
-                        ? "fill-red-500 text-red-500"
-                        : "text-muted-foreground hover:text-red-500",
+                        ? "fill-[var(--alert-red)] text-[var(--alert-red)]"
+                        : "text-[var(--steel-dim)] hover:text-[var(--alert-red)]",
                     )}
                     aria-hidden="true"
                   />
@@ -236,10 +247,10 @@ export const GalleryItem = React.memo(function GalleryItem({
                 >
                   <div
                     className={cn(
-                      "size-6 rounded-md border-2 flex items-center justify-center",
+                      "size-6 border-2 flex items-center justify-center",
                       isSelected
-                        ? "bg-primary border-primary text-primary-foreground"
-                        : "bg-background/80 border-border hover:border-primary",
+                        ? "bg-[var(--nerv-orange)] border-[var(--nerv-orange)] text-[var(--void)]"
+                        : "bg-[var(--void)]/80 border-[var(--steel-dim)] hover:border-[var(--nerv-orange)]",
                     )}
                   >
                     {isSelected && (
@@ -254,54 +265,54 @@ export const GalleryItem = React.memo(function GalleryItem({
                 <div
                   className={cn(
                     "absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex items-center gap-0.5",
-                    "rounded-lg bg-background/90 backdrop-blur-sm border border-border shadow-sm px-1 py-0.5",
+                    "bg-[var(--void)]/90 backdrop-blur-sm border border-[var(--nerv-orange-dim)]/40 px-1 py-0.5",
                     "opacity-0 group-hover:opacity-100 focus-within:opacity-100",
                     "transition-opacity duration-150",
                   )}
                 >
                   <button
                     type="button"
-                    className="size-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+                    className="size-8 flex items-center justify-center hover:bg-[var(--nerv-orange)]/10 transition-colors focus-visible:ring-1 focus-visible:ring-[var(--nerv-orange)]"
                     aria-label="Download"
                     onClick={(e) => {
                       e.stopPropagation();
                       onDownload(image.url, image.id);
                     }}
                   >
-                    <Download className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                    <Download className="size-3.5 text-[var(--steel-dim)]" aria-hidden="true" />
                   </button>
                   <button
                     type="button"
-                    className="size-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+                    className="size-8 flex items-center justify-center hover:bg-[var(--nerv-orange)]/10 transition-colors focus-visible:ring-1 focus-visible:ring-[var(--nerv-orange)]"
                     aria-label="Split & download"
                     onClick={(e) => {
                       e.stopPropagation();
                       onSplitDownload(image.url, image.id);
                     }}
                   >
-                    <Grid2x2 className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                    <Grid2x2 className="size-3.5 text-[var(--steel-dim)]" aria-hidden="true" />
                   </button>
                   <button
                     type="button"
-                    className="size-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+                    className="size-8 flex items-center justify-center hover:bg-[var(--nerv-orange)]/10 transition-colors focus-visible:ring-1 focus-visible:ring-[var(--nerv-orange)]"
                     aria-label="Use as reference"
                     onClick={(e) => {
                       e.stopPropagation();
                       onUseAsReference(image.url);
                     }}
                   >
-                    <ImagePlus className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                    <ImagePlus className="size-3.5 text-[var(--steel-dim)]" aria-hidden="true" />
                   </button>
                   <button
                     type="button"
-                    className="size-8 rounded-md flex items-center justify-center hover:bg-muted transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+                    className="size-8 flex items-center justify-center hover:bg-[var(--nerv-orange)]/10 transition-colors focus-visible:ring-1 focus-visible:ring-[var(--nerv-orange)]"
                     aria-label="Reuse setup"
                     onClick={(e) => {
                       e.stopPropagation();
                       onReuseSetup(image);
                     }}
                   >
-                    <RotateCw className="size-3.5 text-muted-foreground" aria-hidden="true" />
+                    <RotateCw className="size-3.5 text-[var(--steel-dim)]" aria-hidden="true" />
                   </button>
                 </div>
               )}
@@ -309,18 +320,18 @@ export const GalleryItem = React.memo(function GalleryItem({
               {/* Info badge */}
               <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between pointer-events-none">
                 <div className="flex items-center gap-1 flex-wrap">
-                  <span className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono tabular-nums">
+                  <span className="px-1.5 py-0.5 bg-[var(--void)]/80 text-[10px] font-[family-name:var(--font-ibm-plex-mono)] tabular-nums text-[var(--data-green)]">
                     {image.settings.imageSize}
                   </span>
-                  <span className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono tabular-nums text-muted-foreground">
+                  <span className="px-1.5 py-0.5 bg-[var(--void)]/80 text-[10px] font-[family-name:var(--font-ibm-plex-mono)] tabular-nums text-[var(--steel-dim)]">
                     {image.settings.aspectRatio}
                   </span>
-                  <span className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono tabular-nums text-muted-foreground truncate max-w-[80px]" title={image.settings.model}>
+                  <span className="px-1.5 py-0.5 bg-[var(--void)]/80 text-[10px] font-[family-name:var(--font-ibm-plex-mono)] tabular-nums text-[var(--steel-dim)] truncate max-w-[80px]" title={image.settings.model}>
                     {image.settings.model}
                   </span>
                 </div>
                 <span
-                  className="px-1.5 py-0.5 rounded bg-background/80 text-[10px] font-mono tabular-nums text-muted-foreground"
+                  className="px-1.5 py-0.5 bg-[var(--void)]/80 text-[10px] font-[family-name:var(--font-ibm-plex-mono)] tabular-nums text-[var(--steel-dim)]"
                   suppressHydrationWarning
                 >
                   {formatTime(image.timestamp)}
@@ -332,7 +343,7 @@ export const GalleryItem = React.memo(function GalleryItem({
           {image.prompt && !isBulkMode && (
             <TooltipContent
               side="bottom"
-              className="max-w-[280px] font-mono text-xs"
+              className="max-w-[280px] font-[family-name:var(--font-ibm-plex-mono)] text-xs rounded-none bg-[#010101] border-[var(--nerv-orange-dim)]/40 text-[var(--steel)]"
             >
               <p className="line-clamp-3">{image.prompt}</p>
             </TooltipContent>
@@ -341,67 +352,68 @@ export const GalleryItem = React.memo(function GalleryItem({
       </ContextMenuTrigger>
 
       {/* Right-click context menu */}
-      <ContextMenuContent className="w-56">
-        <ContextMenuItem onClick={() => onViewDetails(image)}>
+      <ContextMenuContent className="w-56 rounded-none bg-[#010101] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)]">
+        <ContextMenuItem onClick={() => onViewDetails(image)} className="rounded-none text-[var(--steel)] focus:bg-[var(--nerv-orange)]/15 focus:text-[var(--nerv-orange)]">
           <Eye className="size-4" aria-hidden="true" />
           View Details
         </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem onClick={() => onDownload(image.url, image.id)}>
+        <ContextMenuSeparator className="bg-[var(--steel-faint)]" />
+        <ContextMenuItem onClick={() => onDownload(image.url, image.id)} className="rounded-none text-[var(--steel)] focus:bg-[var(--nerv-orange)]/15 focus:text-[var(--nerv-orange)]">
           <Download className="size-4" aria-hidden="true" />
           Download
-          <ContextMenuShortcut>Ctrl+D</ContextMenuShortcut>
+          <ContextMenuShortcut className="text-[var(--steel-dim)]">Ctrl+D</ContextMenuShortcut>
         </ContextMenuItem>
         <ContextMenuItem
           onClick={() => onSplitDownload(image.url, image.id)}
+          className="rounded-none text-[var(--steel)] focus:bg-[var(--nerv-orange)]/15 focus:text-[var(--nerv-orange)]"
         >
           <Grid2x2 className="size-4" aria-hidden="true" />
           Split & Download (4 Slices)
         </ContextMenuItem>
-        <ContextMenuSeparator />
+        <ContextMenuSeparator className="bg-[var(--steel-faint)]" />
         {image.prompt && (
-          <ContextMenuItem onClick={() => onCopyPrompt(image.prompt)}>
+          <ContextMenuItem onClick={() => onCopyPrompt(image.prompt)} className="rounded-none text-[var(--steel)] focus:bg-[var(--nerv-orange)]/15 focus:text-[var(--nerv-orange)]">
             <Copy className="size-4" aria-hidden="true" />
             Copy Prompt
-            <ContextMenuShortcut>Ctrl+C</ContextMenuShortcut>
+            <ContextMenuShortcut className="text-[var(--steel-dim)]">Ctrl+C</ContextMenuShortcut>
           </ContextMenuItem>
         )}
-        <ContextMenuItem onClick={() => onCopyUrl(image.url)}>
+        <ContextMenuItem onClick={() => onCopyUrl(image.url)} className="rounded-none text-[var(--steel)] focus:bg-[var(--nerv-orange)]/15 focus:text-[var(--nerv-orange)]">
           <Link2 className="size-4" aria-hidden="true" />
           Copy Image URL
         </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem onClick={() => onUseAsReference(image.url)}>
+        <ContextMenuSeparator className="bg-[var(--steel-faint)]" />
+        <ContextMenuItem onClick={() => onUseAsReference(image.url)} className="rounded-none text-[var(--steel)] focus:bg-[var(--nerv-orange)]/15 focus:text-[var(--nerv-orange)]">
           <ImagePlus className="size-4" aria-hidden="true" />
           Use as Reference
         </ContextMenuItem>
-        <ContextMenuItem onClick={() => onReuseSetup(image)}>
+        <ContextMenuItem onClick={() => onReuseSetup(image)} className="rounded-none text-[var(--steel)] focus:bg-[var(--nerv-orange)]/15 focus:text-[var(--nerv-orange)]">
           <RotateCw className="size-4" aria-hidden="true" />
           Reuse Setup
         </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem onClick={() => onToggleFavorite(image.id)}>
+        <ContextMenuSeparator className="bg-[var(--steel-faint)]" />
+        <ContextMenuItem onClick={() => onToggleFavorite(image.id)} className="rounded-none text-[var(--steel)] focus:bg-[var(--nerv-orange)]/15 focus:text-[var(--nerv-orange)]">
           <Heart
             className={cn(
               "size-4",
-              image.isFavorite && "fill-red-500 text-red-500",
+              image.isFavorite && "fill-[var(--alert-red)] text-[var(--alert-red)]",
             )}
             aria-hidden="true"
           />
           {image.isFavorite ? "Remove from Favorites" : "Add to Favorites"}
         </ContextMenuItem>
-        <ContextMenuItem onClick={() => onCompare(image)}>
+        <ContextMenuItem onClick={() => onCompare(image)} className="rounded-none text-[var(--steel)] focus:bg-[var(--nerv-orange)]/15 focus:text-[var(--nerv-orange)]">
           <GitCompareArrows className="size-4" aria-hidden="true" />
           Compare With…
         </ContextMenuItem>
-        <ContextMenuSeparator />
+        <ContextMenuSeparator className="bg-[var(--steel-faint)]" />
         <ContextMenuItem
           onClick={() => onDelete(image.id)}
-          className="text-destructive focus:text-destructive"
+          className="rounded-none text-[var(--alert-red)] focus:text-[var(--alert-red)] focus:bg-[var(--alert-red)]/15"
         >
           <Trash2 className="size-4" aria-hidden="true" />
           Delete
-          <ContextMenuShortcut>Del</ContextMenuShortcut>
+          <ContextMenuShortcut className="text-[var(--steel-dim)]">Del</ContextMenuShortcut>
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
@@ -417,7 +429,7 @@ export function PendingCard({ image }: { image: GeneratedImage }) {
 
   return (
     <div
-      className="relative rounded-lg overflow-hidden bg-zinc-950 dark:bg-zinc-950 border border-border"
+      className="relative rounded-none overflow-hidden bg-[var(--void)] border border-[var(--nerv-orange-dim)]/40"
       role="status"
       aria-label="Generating image"
     >
@@ -469,27 +481,27 @@ export function FailedCard({
 }) {
   return (
     <div
-      className="relative rounded-lg overflow-hidden bg-destructive/5 border border-destructive/20"
+      className="relative rounded-none overflow-hidden bg-[var(--void)] border border-[var(--alert-red-dim)]/40"
       role="alert"
       aria-label="Generation failed"
     >
       <div className="aspect-square flex flex-col items-center justify-center gap-2 p-4">
-        <div className="size-8 rounded-full bg-destructive/10 flex items-center justify-center">
-          <span className="text-destructive text-sm" aria-hidden="true">
+        <div className="size-8 border border-[var(--alert-red-dim)]/40 bg-[var(--alert-red)]/10 flex items-center justify-center">
+          <span className="text-[var(--alert-red)] text-sm font-[family-name:var(--font-ibm-plex-mono)]" aria-hidden="true">
             !
           </span>
         </div>
-        <p className="text-xs text-destructive font-mono text-center">
+        <p className="text-xs text-[var(--alert-red)] font-[family-name:var(--font-ibm-plex-mono)] text-center uppercase tracking-[0.05em]">
           {image.error || "Generation failed"}
         </p>
-        <p className="text-[10px] text-muted-foreground text-center line-clamp-2">
+        <p className="text-[10px] text-[var(--steel-dim)] text-center line-clamp-2 font-[family-name:var(--font-ibm-plex-mono)]">
           {image.prompt}
         </p>
         <div className="flex items-center gap-2 mt-1">
           {onRetry && (
             <button
               type="button"
-              className="px-2.5 py-1 rounded-md bg-primary text-primary-foreground text-[10px] font-medium hover:bg-primary/90 transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+              className="px-2.5 py-1 bg-[var(--nerv-orange)] text-[var(--void)] text-[10px] font-medium uppercase tracking-[0.05em] hover:bg-[var(--nerv-orange-hot)] transition-colors focus-visible:ring-1 focus-visible:ring-[var(--nerv-orange)] font-[family-name:var(--font-ibm-plex-mono)]"
               onClick={() => onRetry(image)}
             >
               Try again
@@ -498,7 +510,7 @@ export function FailedCard({
           {onDelete && (
             <button
               type="button"
-              className="px-2.5 py-1 rounded-md bg-muted text-muted-foreground text-[10px] font-medium hover:bg-muted/80 transition-colors focus-visible:ring-1 focus-visible:ring-ring"
+              className="px-2.5 py-1 bg-[var(--void-panel)] text-[var(--steel-dim)] text-[10px] font-medium uppercase tracking-[0.05em] border border-[var(--steel-faint)] hover:bg-[var(--steel-faint)] transition-colors focus-visible:ring-1 focus-visible:ring-[var(--nerv-orange)] font-[family-name:var(--font-ibm-plex-mono)]"
               onClick={() => onDelete(image.id)}
               aria-label="Dismiss"
             >

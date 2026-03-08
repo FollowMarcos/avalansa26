@@ -251,20 +251,20 @@ export function PromptVaultIsland({
                   : { opacity: 0, scale: 0.95, x: -20 }
               }
               transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
-              className="w-[640px] bg-background/95 backdrop-blur-xl border border-border rounded-2xl shadow-lg overflow-hidden"
+              className="w-[640px] bg-[#010101]/95 backdrop-blur-xl border border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)] rounded-none overflow-hidden"
             >
               {/* Header */}
-              <div className="flex items-center justify-between px-3 py-2 border-b border-border">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--nerv-orange-dim)]/20">
                 <div className="flex items-center gap-2">
                   <BookMarked
-                    className="size-4 text-muted-foreground"
+                    className="size-4 text-[var(--nerv-orange)]"
                     aria-hidden="true"
                   />
-                  <span className="text-sm font-mono font-medium">
+                  <span className="text-sm font-[family-name:var(--font-ibm-plex-mono)] font-medium text-[var(--nerv-orange)] uppercase tracking-[0.1em] glow-orange">
                     Prompt Vault
                   </span>
                   {prompts.length > 0 && (
-                    <span className="text-xs text-muted-foreground font-mono">
+                    <span className="text-xs text-[var(--data-green)] font-[family-name:var(--font-ibm-plex-mono)] glow-green">
                       ({prompts.length})
                     </span>
                   )}
@@ -274,20 +274,20 @@ export function PromptVaultIsland({
                   {/* Sort dropdown */}
                   {activeSection !== "avas" && (
                     <Select value={sortBy} onValueChange={(v) => setSortBy(v as VaultSort)}>
-                      <SelectTrigger className="h-6 w-[100px] text-[10px] border-none bg-transparent">
-                        <ArrowUpDown className="size-3 mr-1 text-muted-foreground" />
+                      <SelectTrigger className="h-6 w-[100px] text-[10px] border-none bg-transparent text-[var(--steel-dim)] font-[family-name:var(--font-ibm-plex-mono)]">
+                        <ArrowUpDown className="size-3 mr-1 text-[var(--steel-dim)]" />
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="recent" className="text-xs">Recent</SelectItem>
-                        <SelectItem value="name" className="text-xs">Name</SelectItem>
-                        <SelectItem value="usage" className="text-xs">Most Used</SelectItem>
+                      <SelectContent className="rounded-none bg-[#010101] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)]">
+                        <SelectItem value="recent" className="text-xs text-[var(--steel)] focus:bg-[var(--nerv-orange)]/15 focus:text-[var(--nerv-orange)] rounded-none">Recent</SelectItem>
+                        <SelectItem value="name" className="text-xs text-[var(--steel)] focus:bg-[var(--nerv-orange)]/15 focus:text-[var(--nerv-orange)] rounded-none">Name</SelectItem>
+                        <SelectItem value="usage" className="text-xs text-[var(--steel)] focus:bg-[var(--nerv-orange)]/15 focus:text-[var(--nerv-orange)] rounded-none">Most Used</SelectItem>
                       </SelectContent>
                     </Select>
                   )}
 
                   {/* Keyboard hint */}
-                  <span className="text-[9px] text-muted-foreground/50 font-mono hidden sm:inline">
+                  <span className="text-[9px] text-[var(--steel-dim)]/50 font-[family-name:var(--font-ibm-plex-mono)] hidden sm:inline">
                     Ctrl+Shift+P
                   </span>
 
@@ -296,7 +296,7 @@ export function PromptVaultIsland({
                     size="icon"
                     onClick={onToggle}
                     aria-label="Close prompt vault"
-                    className="size-7 rounded-lg"
+                    className="size-7 rounded-none text-[var(--steel-dim)] hover:text-[var(--nerv-orange)] hover:bg-[var(--nerv-orange)]/10"
                   >
                     <X className="size-3.5" aria-hidden="true" />
                   </Button>
@@ -304,23 +304,23 @@ export function PromptVaultIsland({
               </div>
 
               {/* Search */}
-              <div className="px-3 py-2 border-b border-border">
+              <div className="px-3 py-2 border-b border-[var(--nerv-orange-dim)]/20">
                 <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" aria-hidden="true" />
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-[var(--steel-dim)]" aria-hidden="true" />
                   <Input
                     ref={searchInputRef}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={activeSection === "avas" ? "Search Avas\u2026" : "Search prompts\u2026  (press / to focus)"}
                     aria-label={activeSection === "avas" ? "Search Avas" : "Search prompts"}
-                    className="h-8 pl-8 text-sm"
+                    className="h-8 pl-8 text-sm bg-[var(--void)] border-[var(--steel-faint)] text-[var(--steel)] placeholder:text-[var(--steel-dim)] font-[family-name:var(--font-ibm-plex-mono)] rounded-none focus-visible:ring-[var(--nerv-orange)]/50"
                   />
                   {searchQuery && (
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => setSearchQuery("")}
-                      className="absolute right-1 top-1/2 -translate-y-1/2 size-6"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 size-6 text-[var(--steel-dim)] hover:text-[var(--nerv-orange)]"
                       aria-label="Clear search"
                     >
                       <X className="size-3" aria-hidden="true" />
@@ -332,7 +332,7 @@ export function PromptVaultIsland({
               {/* Content */}
               <div className="flex">
                 {/* Sidebar */}
-                <div className="w-36 border-r border-border">
+                <div className="w-36 border-r border-[var(--nerv-orange-dim)]/20">
                   <ScrollArea className="h-[400px]">
                     <div className="p-1.5 space-y-0.5">
                       {/* All */}
@@ -340,16 +340,16 @@ export function PromptVaultIsland({
                         onClick={() => setActiveSection("all")}
                         aria-current={activeSection === "all" ? "true" : undefined}
                         className={cn(
-                          "w-full text-left px-2.5 py-2 rounded-lg text-xs transition-colors flex items-center gap-2",
-                          "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                          "w-full text-left px-2.5 py-2 text-xs transition-colors flex items-center gap-2 font-[family-name:var(--font-ibm-plex-mono)]",
+                          "focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)] focus-visible:outline-none",
                           activeSection === "all"
-                            ? "bg-accent text-accent-foreground"
-                            : "hover:bg-muted"
+                            ? "bg-[var(--nerv-orange)]/15 text-[var(--nerv-orange)]"
+                            : "text-[var(--steel-dim)] hover:bg-[var(--nerv-orange)]/10 hover:text-[var(--nerv-orange)]"
                         )}
                       >
                         <Sparkles className="size-3.5 shrink-0" aria-hidden="true" />
                         <span className="truncate">All</span>
-                        <span className="text-muted-foreground ml-auto text-[10px] tabular-nums">
+                        <span className="text-[var(--data-green)] ml-auto text-[10px] tabular-nums">
                           {prompts.length}
                         </span>
                       </button>
@@ -359,17 +359,17 @@ export function PromptVaultIsland({
                         onClick={() => setActiveSection("favorites")}
                         aria-current={activeSection === "favorites" ? "true" : undefined}
                         className={cn(
-                          "w-full text-left px-2.5 py-2 rounded-lg text-xs transition-colors flex items-center gap-2",
-                          "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                          "w-full text-left px-2.5 py-2 text-xs transition-colors flex items-center gap-2 font-[family-name:var(--font-ibm-plex-mono)]",
+                          "focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)] focus-visible:outline-none",
                           activeSection === "favorites"
-                            ? "bg-accent text-accent-foreground"
-                            : "hover:bg-muted"
+                            ? "bg-[var(--nerv-orange)]/15 text-[var(--nerv-orange)]"
+                            : "text-[var(--steel-dim)] hover:bg-[var(--nerv-orange)]/10 hover:text-[var(--nerv-orange)]"
                         )}
                       >
                         <Heart className="size-3.5 shrink-0" aria-hidden="true" />
                         <span className="truncate">Favorites</span>
                         {favoriteCount > 0 && (
-                          <span className="text-muted-foreground ml-auto text-[10px] tabular-nums">
+                          <span className="text-[var(--data-green)] ml-auto text-[10px] tabular-nums">
                             {favoriteCount}
                           </span>
                         )}
@@ -380,11 +380,11 @@ export function PromptVaultIsland({
                         onClick={() => setActiveSection("recent")}
                         aria-current={activeSection === "recent" ? "true" : undefined}
                         className={cn(
-                          "w-full text-left px-2.5 py-2 rounded-lg text-xs transition-colors flex items-center gap-2",
-                          "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                          "w-full text-left px-2.5 py-2 text-xs transition-colors flex items-center gap-2 font-[family-name:var(--font-ibm-plex-mono)]",
+                          "focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)] focus-visible:outline-none",
                           activeSection === "recent"
-                            ? "bg-accent text-accent-foreground"
-                            : "hover:bg-muted"
+                            ? "bg-[var(--nerv-orange)]/15 text-[var(--nerv-orange)]"
+                            : "text-[var(--steel-dim)] hover:bg-[var(--nerv-orange)]/10 hover:text-[var(--nerv-orange)]"
                         )}
                       >
                         <Clock className="size-3.5 shrink-0" aria-hidden="true" />
@@ -396,17 +396,17 @@ export function PromptVaultIsland({
                         onClick={() => setActiveSection("avas")}
                         aria-current={activeSection === "avas" ? "true" : undefined}
                         className={cn(
-                          "w-full text-left px-2.5 py-2 rounded-lg text-xs transition-colors flex items-center gap-2",
-                          "focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                          "w-full text-left px-2.5 py-2 text-xs transition-colors flex items-center gap-2 font-[family-name:var(--font-ibm-plex-mono)]",
+                          "focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)] focus-visible:outline-none",
                           activeSection === "avas"
-                            ? "bg-accent text-accent-foreground"
-                            : "hover:bg-muted"
+                            ? "bg-[var(--nerv-orange)]/15 text-[var(--nerv-orange)]"
+                            : "text-[var(--steel-dim)] hover:bg-[var(--nerv-orange)]/10 hover:text-[var(--nerv-orange)]"
                         )}
                       >
                         <Bot className="size-3.5 shrink-0" aria-hidden="true" />
                         <span className="truncate">Avas</span>
                         {avas.length > 0 && (
-                          <span className="text-muted-foreground ml-auto text-[10px] tabular-nums">
+                          <span className="text-[var(--data-green)] ml-auto text-[10px] tabular-nums">
                             {avas.length}
                           </span>
                         )}
@@ -414,8 +414,8 @@ export function PromptVaultIsland({
 
                       {/* Folders */}
                       {folders.length > 0 && (
-                        <div className="pt-2 mt-2 border-t border-border">
-                          <span className="px-2.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
+                        <div className="pt-2 mt-2 border-t border-[var(--steel-faint)]">
+                          <span className="px-2.5 text-[10px] font-medium text-[var(--nerv-orange-dim)] uppercase tracking-[0.12em] font-[family-name:var(--font-ibm-plex-mono)]">
                             Folders
                           </span>
                           <div className="mt-1.5 space-y-0.5">
@@ -427,10 +427,10 @@ export function PromptVaultIsland({
                                   key={folder.id}
                                   onClick={() => setActiveSection(folder.id)}
                                   className={cn(
-                                    "w-full text-left px-2.5 py-2 rounded-lg text-xs transition-colors flex items-center gap-2",
+                                    "w-full text-left px-2.5 py-2 text-xs transition-colors flex items-center gap-2 font-[family-name:var(--font-ibm-plex-mono)]",
                                     activeSection === folder.id
-                                      ? "bg-accent text-accent-foreground"
-                                      : "hover:bg-muted"
+                                      ? "bg-[var(--nerv-orange)]/15 text-[var(--nerv-orange)]"
+                                      : "text-[var(--steel-dim)] hover:bg-[var(--nerv-orange)]/10 hover:text-[var(--nerv-orange)]"
                                   )}
                                   style={{
                                     borderLeft: activeSection === folder.id && fColor
@@ -451,7 +451,7 @@ export function PromptVaultIsland({
                                   />
                                   <span className="truncate">{folder.name}</span>
                                   {count > 0 && (
-                                    <span className="text-muted-foreground ml-auto text-[10px] tabular-nums">
+                                    <span className="text-[var(--data-green)] ml-auto text-[10px] tabular-nums">
                                       {count}
                                     </span>
                                   )}
@@ -476,7 +476,7 @@ export function PromptVaultIsland({
                             variant="outline"
                             size="sm"
                             onClick={onCreateAva}
-                            className="w-full h-8 text-xs"
+                            className="w-full h-8 text-xs rounded-none border-[var(--nerv-orange-dim)]/40 text-[var(--nerv-orange)] hover:bg-[var(--nerv-orange)]/10 bg-transparent font-[family-name:var(--font-ibm-plex-mono)] uppercase tracking-[0.05em]"
                           >
                             <Plus className="size-3 mr-1.5" />
                             Create Ava
@@ -486,16 +486,16 @@ export function PromptVaultIsland({
                       {filteredAvas.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-center p-6">
                           <Bot
-                            className="size-8 text-muted-foreground/30 mb-2"
+                            className="size-8 text-[var(--steel-dim)]/30 mb-2"
                             aria-hidden="true"
                           />
-                          <p className="text-xs text-muted-foreground font-mono">
+                          <p className="text-xs text-[var(--steel-dim)] font-[family-name:var(--font-ibm-plex-mono)]">
                             {searchQuery
                               ? "No matching Avas"
                               : "No Avas yet"}
                           </p>
                           {!searchQuery && (
-                            <p className="text-[10px] text-muted-foreground mt-1">
+                            <p className="text-[10px] text-[var(--steel-dim)] mt-1 font-[family-name:var(--font-ibm-plex-mono)]">
                               Create an Ava to generate prompts with AI
                             </p>
                           )}
@@ -522,10 +522,10 @@ export function PromptVaultIsland({
                       {filteredPrompts.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-full text-center p-6">
                           <BookMarked
-                            className="size-8 text-muted-foreground/30 mb-2"
+                            className="size-8 text-[var(--steel-dim)]/30 mb-2"
                             aria-hidden="true"
                           />
-                          <p className="text-xs text-muted-foreground font-mono">
+                          <p className="text-xs text-[var(--steel-dim)] font-[family-name:var(--font-ibm-plex-mono)]">
                             {searchQuery
                               ? "No matching prompts"
                               : activeSection === "favorites"
@@ -535,7 +535,7 @@ export function PromptVaultIsland({
                                   : "No saved prompts"}
                           </p>
                           {!searchQuery && activeSection === "all" && (
-                            <p className="text-[10px] text-muted-foreground mt-1">
+                            <p className="text-[10px] text-[var(--steel-dim)] mt-1 font-[family-name:var(--font-ibm-plex-mono)]">
                               Save prompts using the bookmark button
                             </p>
                           )}
@@ -586,24 +586,24 @@ export function PromptVaultIsland({
                     size="icon"
                     onClick={onToggle}
                     aria-label="Open prompt vault"
-                    className="size-10 rounded-xl bg-background/95 backdrop-blur-xl border border-border shadow-sm hover:shadow-md transition-shadow"
+                    className="size-10 rounded-none bg-[#010101]/90 backdrop-blur-xl border border-[var(--nerv-orange-dim)]/40 text-[var(--nerv-orange)] hover:bg-[var(--nerv-orange)]/10 transition-colors"
                   >
                     <BookMarked className="size-4" aria-hidden="true" />
                     {prompts.length > 0 && (
-                      <span className="absolute -top-1 -right-1 size-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center">
+                      <span className="absolute -top-1 -right-1 size-4 bg-[var(--nerv-orange)] text-[var(--void)] text-[10px] font-bold flex items-center justify-center">
                         {prompts.length > 99 ? "99+" : prompts.length}
                       </span>
                     )}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent side="right">
+                <TooltipContent side="right" className="rounded-none bg-[#010101] border-[var(--nerv-orange-dim)]/40 text-[var(--steel)]">
                   <p>Prompt Vault</p>
                   {prompts.length > 0 && (
-                    <p className="text-muted-foreground">
+                    <p className="text-[var(--steel-dim)]">
                       {prompts.length} saved prompt{prompts.length !== 1 ? "s" : ""}
                     </p>
                   )}
-                  <p className="text-muted-foreground text-[10px] mt-0.5">Ctrl+Shift+P</p>
+                  <p className="text-[var(--steel-dim)] text-[10px] mt-0.5">Ctrl+Shift+P</p>
                 </TooltipContent>
               </Tooltip>
             </motion.div>

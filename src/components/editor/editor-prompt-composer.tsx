@@ -297,7 +297,7 @@ export function EditorPromptComposer() {
 
           {/* Reference images modal */}
           <Dialog open={refModalOpen} onOpenChange={setRefModalOpen}>
-            <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto rounded-none bg-[var(--void)] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)]">
+            <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto rounded-none bg-[#010101] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)]">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2 text-sm text-[var(--nerv-orange)] uppercase tracking-[0.1em]">
                   <ImagePlus className="size-4" />

@@ -81,7 +81,7 @@ export function InpaintModal() {
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-3xl max-h-[85vh] rounded-none bg-[var(--void)] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)]">
+      <DialogContent className="max-w-3xl max-h-[85vh] rounded-none bg-[#010101] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-[var(--nerv-orange)] uppercase tracking-[0.1em] text-sm font-[family-name:var(--font-ibm-plex-mono)]">
             <Paintbrush className="size-4 text-[var(--alert-red)]" style={{ filter: "drop-shadow(0 0 4px rgba(255, 72, 64, 0.4))" }} />
@@ -116,13 +116,13 @@ export function InpaintModal() {
                   <DropdownMenuTrigger asChild>
                     <button
                       type="button"
-                      className="mt-1 w-full flex items-center justify-between gap-2 border border-[var(--nerv-orange-dim)]/40 bg-[var(--void)] px-2.5 py-1.5 text-xs text-[var(--data-green)] hover:bg-[var(--nerv-orange)]/10 transition-colors font-[family-name:var(--font-ibm-plex-mono)]"
+                      className="mt-1 w-full flex items-center justify-between gap-2 border border-[var(--nerv-orange-dim)]/40 bg-[#010101] px-2.5 py-1.5 text-xs text-[var(--data-green)] hover:bg-[var(--nerv-orange)]/10 transition-colors font-[family-name:var(--font-ibm-plex-mono)]"
                     >
                       <span className="truncate">{selectedApi?.name || "SELECT MODEL"}</span>
                       <ChevronDown className="size-3 text-[var(--nerv-orange-dim)] shrink-0" />
                     </button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-52 rounded-none bg-[var(--void)] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)]">
+                  <DropdownMenuContent align="start" className="w-52 rounded-none bg-[#010101] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)]">
                     {availableApis.map((api) => (
                       <DropdownMenuItem
                         key={api.id}
@@ -147,7 +147,7 @@ export function InpaintModal() {
                   onChange={(e) => setInpaintPrompt(e.target.value)}
                   placeholder={"Describe replacement content..."}
                   rows={4}
-                  className="mt-1 w-full resize-none border border-[var(--nerv-orange-dim)]/40 bg-[var(--void)] px-3 py-2 text-sm text-[var(--data-green)] font-[family-name:var(--font-ibm-plex-mono)] placeholder:text-[var(--steel-dim)] focus:outline-none focus:ring-1 focus:ring-[var(--nerv-orange)]/50"
+                  className="mt-1 w-full resize-none border border-[var(--nerv-orange-dim)]/40 bg-[#010101] px-3 py-2 text-sm text-[var(--data-green)] font-[family-name:var(--font-ibm-plex-mono)] placeholder:text-[var(--steel-dim)] focus:outline-none focus:ring-1 focus:ring-[var(--nerv-orange)]/50"
                 />
               </div>
 
@@ -160,7 +160,7 @@ export function InpaintModal() {
                     "w-full h-9 flex items-center justify-center gap-2 text-xs font-medium uppercase tracking-[0.08em] transition-all duration-100 border font-[family-name:var(--font-ibm-plex-mono)]",
                     maskDataUrl && inpaintPrompt.trim()
                       ? "bg-[var(--alert-red)] text-[var(--void)] border-[var(--alert-red)] hover:bg-[var(--alert-red-hot)]"
-                      : "bg-[var(--void)] text-[var(--alert-red-dim)] border-[var(--alert-red-dim)]/40 opacity-40 cursor-not-allowed"
+                      : "bg-[#010101] text-[var(--alert-red-dim)] border-[var(--alert-red-dim)]/40 opacity-40 cursor-not-allowed"
                   )}
                 >
                   <Paintbrush className="size-4" />

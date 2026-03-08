@@ -168,8 +168,8 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
     };
 
     const isCreatePage = pathname === "/create";
-    // Invert: light mode = dark dock, dark mode = light dock
-    const isDockDark = theme === 'light';
+    // Always NERV dark
+    const isDockDark = true;
     const isAdmin = profile?.role === 'admin';
 
     // Navigation handler that respects drag state
@@ -197,11 +197,9 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
                     type="button"
                     onClick={() => setDockCollapsed(false)}
                     className={cn(
-                        "flex items-center justify-center w-10 h-10 rounded-xl border shadow-lg transition-[transform,box-shadow,opacity] duration-200",
+                        "flex items-center justify-center w-10 h-10 rounded-none border shadow-lg transition-[transform,box-shadow,opacity] duration-200",
                         "hover:scale-105 hover:shadow-xl active:scale-95",
-                        isDockDark
-                            ? "bg-zinc-900/80 backdrop-blur-xl border-zinc-700/50 text-zinc-400 hover:text-zinc-200"
-                            : "bg-white/80 backdrop-blur-xl border-zinc-200/50 text-zinc-500 hover:text-zinc-900"
+                        "bg-[#010101]/80 backdrop-blur-xl border-[var(--nerv-orange-dim)]/40 text-[var(--steel-dim)] hover:text-[var(--nerv-orange)]"
                     )}
                     aria-label="Expand dock"
                 >
@@ -214,15 +212,13 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
     const onDragStart = () => setIsDragging(true);
     const onDragEnd = () => setTimeout(() => setIsDragging(false), 100);
 
-    const containerClass = isDockDark
-        ? "bg-zinc-900/80 backdrop-blur-xl border-zinc-700/50"
-        : "bg-white/80 backdrop-blur-xl border-zinc-200/50";
+    const containerClass = "bg-[#010101]/90 backdrop-blur-xl border-[var(--nerv-orange-dim)]/40";
 
     const displayName = profile?.name || profile?.username || 'User';
     const avatarUrl = profile?.avatar_url;
 
     // Base icon styles
-    const iconBase = "relative flex items-center justify-center w-11 h-11 rounded-xl transition-[transform,box-shadow,opacity] duration-200 shadow-md";
+    const iconBase = "relative flex items-center justify-center w-11 h-11 rounded-none transition-[transform,box-shadow,opacity] duration-200 shadow-md";
     const iconHover = "hover:scale-105 hover:shadow-lg active:scale-95";
 
     // Helper to determine style based on item properties
@@ -234,7 +230,7 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
             iconBase,
             item.bg_color || "bg-gradient-to-br from-zinc-500 to-zinc-700",
             item.text_color || "text-white",
-            isActive ? "ring-2 ring-primary/50 scale-105" : iconHover
+            isActive ? "ring-2 ring-[var(--nerv-orange)]/50 scale-105" : iconHover
         );
     };
 
@@ -244,7 +240,7 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
             animate={{ opacity: 1, x: 0, y: 0 }}
             transition={{ duration: 0.5, ease: "easeOut" }}
             className={cn(
-                "flex justify-center pointer-events-auto",
+                "nerv flex justify-center pointer-events-auto",
                 vertical ? "flex-col items-center" : "items-center"
             )}
         >
@@ -253,9 +249,9 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
                 <Link
                     href="/"
                     className={cn(
-                        "relative flex items-center justify-center w-14 h-14 rounded-2xl border shadow-lg overflow-hidden transition-[transform,box-shadow,opacity] duration-200",
+                        "relative flex items-center justify-center w-14 h-14 rounded-none border shadow-lg overflow-hidden transition-[transform,box-shadow,opacity] duration-200",
                         containerClass,
-                        pathname === "/" ? "ring-2 ring-primary/50 scale-105" : "hover:scale-105 hover:shadow-xl active:scale-95"
+                        pathname === "/" ? "ring-2 ring-[var(--nerv-orange)]/50 scale-105" : "hover:scale-105 hover:shadow-xl active:scale-95"
                     )}
                     aria-label="Home"
                 >
@@ -267,11 +263,11 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
 
                 {/* Main Nav - Draggable */}
                 <div className={cn(
-                    "relative flex p-1.5 rounded-2xl border shadow-lg",
+                    "relative flex p-1.5 rounded-none border shadow-lg",
                     vertical ? "flex-col w-14" : "items-center h-14",
                     containerClass
                 )}>
-                    <PortugalTopo dark={isDockDark} className="opacity-50 rounded-2xl pointer-events-none" />
+                    <PortugalTopo dark={isDockDark} className="opacity-50 rounded-none pointer-events-none" />
                     <TooltipProvider delayDuration={300}>
                     <Reorder.Group
                         axis={vertical ? "y" : "x"}
@@ -349,18 +345,16 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
                                                 side={vertical ? "right" : "top"}
                                                 align="center"
                                                 className={cn(
-                                                    "min-w-[160px] p-1 backdrop-blur-xl rounded-xl shadow-2xl",
+                                                    "min-w-[160px] p-1 backdrop-blur-xl rounded-none shadow-2xl",
                                                     vertical ? "ml-2" : "mb-2",
-                                                    isDockDark
-                                                        ? "bg-zinc-900/95 border-zinc-700/50 text-zinc-100"
-                                                        : "bg-white/95 border-zinc-200/50 text-zinc-900"
+                                                    "bg-[#010101]/95 border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)] text-[var(--steel)]"
                                                 )}
                                             >
                                                 {item.dropdown_items.map((dropdownItem, idx) => (
-                                                    <DropdownMenuItem key={idx} asChild className={cn("rounded-lg cursor-pointer group", isDockDark ? "focus:bg-white focus:text-zinc-900" : "focus:bg-zinc-900 focus:text-white")}>
+                                                    <DropdownMenuItem key={idx} asChild className="rounded-none cursor-pointer group focus:bg-[var(--nerv-orange)]/15 focus:text-[var(--nerv-orange)]">
                                                         <Link href={dropdownItem.href} className="flex items-center gap-2.5 py-2 px-2.5">
                                                             {dropdownItem.icon ? (
-                                                                <div className={cn("w-5 h-5 rounded-md flex items-center justify-center transition-colors", isDockDark ? "bg-zinc-800 text-amber-400 group-focus:bg-zinc-100 group-focus:text-amber-600" : "bg-zinc-100 text-amber-500 group-focus:bg-zinc-800")}>
+                                                                <div className="w-5 h-5 rounded-none flex items-center justify-center transition-colors bg-[var(--void-panel)] text-[var(--nerv-orange)] group-focus:bg-[var(--nerv-orange)]/20">
                                                                     <IconComponent name={dropdownItem.icon} className="w-3.5 h-3.5" />
                                                                 </div>
                                                             ) : null}
@@ -404,7 +398,7 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
 
                 {/* User Section */}
                 <div className={cn(
-                    "relative flex gap-1.5 p-1.5 rounded-2xl border shadow-lg overflow-hidden",
+                    "relative flex gap-1.5 p-1.5 rounded-none border shadow-lg overflow-hidden",
                     vertical ? "flex-col w-14" : "items-center h-14",
                     containerClass
                 )}>
@@ -416,8 +410,8 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
                             <DropdownMenuTrigger asChild>
                                 <button
                                     className={cn(
-                                        "relative z-10 flex items-center justify-center w-11 h-11 rounded-xl transition-[transform,box-shadow,opacity] duration-200 overflow-hidden",
-                                        "ring-2 ring-transparent hover:ring-primary/30",
+                                        "relative z-10 flex items-center justify-center w-11 h-11 rounded-none transition-[transform,box-shadow,opacity] duration-200 overflow-hidden",
+                                        "ring-2 ring-transparent hover:ring-[var(--nerv-orange)]/30",
                                         iconHover
                                     )}
                                     aria-label="User menu"
@@ -433,67 +427,65 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
                                         <DefaultAvatar size={44} />
                                     )}
                                     {/* Online indicator */}
-                                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-zinc-900 z-10" />
+                                    <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-[var(--data-green)] border-2 border-[#010101] z-10 nerv-led-pulse" style={{ boxShadow: '0 0 6px rgba(80, 255, 80, 0.5)' }} />
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent
                                 side={vertical ? "right" : "top"}
                                 align={vertical ? "center" : "end"}
                                 className={cn(
-                                    "w-60 p-1.5 backdrop-blur-xl rounded-xl shadow-2xl",
+                                    "w-60 p-1.5 backdrop-blur-xl rounded-none shadow-2xl",
                                     vertical ? "ml-2" : "mb-2",
-                                    isDockDark
-                                        ? "bg-zinc-900/95 border-zinc-700/50 text-zinc-100"
-                                        : "bg-white/95 border-zinc-200/50 text-zinc-900"
+                                    "bg-[#010101]/95 border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)] text-[var(--steel)]"
                                 )}
                             >
                                 {/* User Header */}
                                 <div className="flex items-center gap-3 px-2 py-2.5 mb-1">
-                                    <div className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
+                                    <div className="relative w-10 h-10 rounded-none overflow-hidden flex-shrink-0">
                                         {avatarUrl ? (
                                             <Image src={avatarUrl} alt={displayName} fill className="object-cover" />
                                         ) : (
-                                            <DefaultAvatar size={40} className="rounded-lg" />
+                                            <DefaultAvatar size={40} className="rounded-none" />
                                         )}
                                     </div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-semibold truncate">{displayName}</p>
+                                        <p className="text-sm font-semibold truncate text-[var(--steel)]">{displayName}</p>
                                         {profile?.username && (
-                                            <p className={cn("text-xs truncate", isDockDark ? "text-zinc-400" : "text-zinc-500")}>@{profile.username}</p>
+                                            <p className="text-xs truncate text-[var(--steel-dim)]">@{profile.username}</p>
                                         )}
                                     </div>
                                 </div>
 
-                                <DropdownMenuSeparator className={cn("my-1", isDockDark ? "bg-zinc-700/50" : "bg-zinc-200/50")} />
+                                <DropdownMenuSeparator className="my-1 bg-[var(--steel-faint)]" />
 
                                 {/* Dashboard - Admin Only */}
                                 {isAdmin && (
-                                    <DropdownMenuItem asChild className={cn("rounded-lg cursor-pointer group", isDockDark ? "focus:bg-white focus:text-zinc-900" : "focus:bg-zinc-900 focus:text-white")}>
+                                    <DropdownMenuItem asChild className="rounded-none cursor-pointer group focus:bg-[var(--nerv-orange)]/15 focus:text-[var(--nerv-orange)]">
                                         <Link href="/dashboard" className="flex items-center gap-2.5 py-2 px-2.5">
-                                            <LucideIcons.LayoutDashboard className={cn("w-4 h-4 transition-colors", isDockDark ? "text-amber-400 group-focus:text-zinc-900" : "text-amber-500 group-focus:text-white")} strokeWidth={1.5} />
+                                            <LucideIcons.LayoutDashboard className="w-4 h-4 transition-colors text-[var(--nerv-orange)] group-focus:text-[var(--nerv-orange)]" strokeWidth={1.5} />
                                             <span className="text-sm font-medium">Admin Dashboard</span>
                                         </Link>
                                     </DropdownMenuItem>
                                 )}
 
                                 {/* Profile */}
-                                <DropdownMenuItem asChild className={cn("rounded-lg cursor-pointer group", isDockDark ? "focus:bg-white focus:text-zinc-900" : "focus:bg-zinc-900 focus:text-white")}>
+                                <DropdownMenuItem asChild className="rounded-none cursor-pointer group focus:bg-[var(--nerv-orange)]/15 focus:text-[var(--nerv-orange)]">
                                     <Link
                                         href={profile?.username ? `/u/${profile.username}` : "/onboarding"}
                                         className="flex items-center gap-2.5 py-2 px-2.5"
                                     >
-                                        <LucideIcons.User className={cn("w-4 h-4 transition-colors", isDockDark ? "text-zinc-400 group-focus:text-zinc-900" : "text-zinc-500 group-focus:text-white")} strokeWidth={1.5} />
+                                        <LucideIcons.User className="w-4 h-4 transition-colors text-[var(--steel-dim)] group-focus:text-[var(--nerv-orange)]" strokeWidth={1.5} />
                                         <span className="text-sm font-medium">Profile</span>
                                     </Link>
                                 </DropdownMenuItem>
 
                                 {/* Settings */}
-                                <DropdownMenuItem asChild className={cn("rounded-lg cursor-pointer group", isDockDark ? "focus:bg-white focus:text-zinc-900" : "focus:bg-zinc-900 focus:text-white")}>
+                                <DropdownMenuItem asChild className="rounded-none cursor-pointer group focus:bg-[var(--nerv-orange)]/15 focus:text-[var(--nerv-orange)]">
                                     <Link
                                         href={profile?.username ? `/u/${profile.username}/settings` : "/onboarding"}
                                         className="flex items-center gap-2.5 py-2 px-2.5"
                                     >
-                                        <LucideIcons.Settings className={cn("w-4 h-4 transition-colors", isDockDark ? "text-zinc-400 group-focus:text-zinc-900" : "text-zinc-500 group-focus:text-white")} strokeWidth={1.5} />
+                                        <LucideIcons.Settings className="w-4 h-4 transition-colors text-[var(--steel-dim)] group-focus:text-[var(--nerv-orange)]" strokeWidth={1.5} />
                                         <span className="text-sm font-medium">Settings</span>
                                     </Link>
                                 </DropdownMenuItem>
@@ -501,16 +493,13 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
                                 {/* Theme Toggle */}
                                 <DropdownMenuItem
                                     onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                                    className={cn(
-                                        "rounded-lg cursor-pointer group p-0",
-                                        isDockDark ? "focus:bg-white focus:text-zinc-900" : "focus:bg-zinc-900 focus:text-white"
-                                    )}
+                                    className="rounded-none cursor-pointer group p-0 focus:bg-[var(--nerv-orange)]/15 focus:text-[var(--nerv-orange)]"
                                 >
                                     <div className="flex items-center gap-2.5 py-2 px-2.5 w-full">
                                         {theme === 'dark' ? (
-                                            <LucideIcons.Sun className="w-4 h-4 text-amber-500" strokeWidth={1.5} />
+                                            <LucideIcons.Sun className="w-4 h-4 text-[var(--nerv-orange)]" strokeWidth={1.5} />
                                         ) : (
-                                            <LucideIcons.Moon className={cn("w-4 h-4 transition-colors", isDockDark ? "text-zinc-400 group-focus:text-zinc-900" : "text-zinc-500 group-focus:text-white")} strokeWidth={1.5} />
+                                            <LucideIcons.Moon className="w-4 h-4 transition-colors text-[var(--steel-dim)] group-focus:text-[var(--nerv-orange)]" strokeWidth={1.5} />
                                         )}
                                         <span className="text-sm font-medium">
                                             {theme === 'dark' ? 'Light mode' : 'Dark mode'}
@@ -518,15 +507,15 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
                                     </div>
                                 </DropdownMenuItem>
 
-                                <DropdownMenuSeparator className={cn("my-1", isDockDark ? "bg-zinc-700/50" : "bg-zinc-200/50")} />
+                                <DropdownMenuSeparator className="my-1 bg-[var(--steel-faint)]" />
 
                                 {/* Logout */}
                                 <DropdownMenuItem
                                     onClick={handleLogout}
-                                    className="rounded-lg cursor-pointer text-red-500 focus:text-white focus:bg-red-500 transition-colors group"
+                                    className="rounded-none cursor-pointer text-[var(--alert-red)] focus:text-[var(--alert-red)] focus:bg-[var(--alert-red)]/15 transition-colors group"
                                 >
                                     <div className="flex items-center gap-2.5 py-2 px-2.5">
-                                        <LucideIcons.LogOut className="w-4 h-4 transition-colors group-focus:text-white" strokeWidth={1.5} />
+                                        <LucideIcons.LogOut className="w-4 h-4 transition-colors" strokeWidth={1.5} />
                                         <span className="text-sm font-medium">Log out</span>
                                     </div>
                                 </DropdownMenuItem>
@@ -541,11 +530,9 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
                         type="button"
                         onClick={() => setDockCollapsed(true)}
                         className={cn(
-                            "flex items-center justify-center w-10 h-7 rounded-xl border shadow-md transition-[transform,box-shadow,opacity] duration-200",
+                            "flex items-center justify-center w-10 h-7 rounded-none border shadow-md transition-[transform,box-shadow,opacity] duration-200",
                             "hover:scale-105 active:scale-95",
-                            isDockDark
-                                ? "bg-zinc-900/80 backdrop-blur-xl border-zinc-700/50 text-zinc-400 hover:text-zinc-200"
-                                : "bg-white/80 backdrop-blur-xl border-zinc-200/50 text-zinc-500 hover:text-zinc-900"
+                            "bg-[#010101]/80 backdrop-blur-xl border-[var(--nerv-orange-dim)]/40 text-[var(--steel-dim)] hover:text-[var(--nerv-orange)]"
                         )}
                         aria-label="Collapse dock"
                     >

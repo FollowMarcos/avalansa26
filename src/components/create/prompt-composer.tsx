@@ -133,7 +133,6 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
     setSelectedApiId,
     isLoadingApis,
     activeGenerations,
-    viewMode,
     history,
     // Admin settings
     allowedImageSizes,
@@ -290,20 +289,16 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
         animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
         className="absolute bottom-0 left-0 right-0 z-30 p-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
       >
-        <div className={cn("mx-auto", viewMode === "workflow" ? "max-w-7xl" : "max-w-5xl")}>
+        <div className="mx-auto max-w-5xl">
           <FileUpload
             onFilesAdded={addReferenceImages}
             multiple
             accept="image/*"
             disabled={!hasAvailableSlots}
           >
-            {/* Main Composer Island */}
+            {/* Main Composer Panel */}
             <div className="relative">
-              {/* Shadow layers for floating effect */}
-              <div className="absolute inset-0 translate-y-4 bg-black/20 dark:bg-black/40 rounded-3xl blur-2xl" aria-hidden="true" />
-              <div className="absolute inset-0 translate-y-2 bg-black/10 dark:bg-black/20 rounded-3xl blur-xl" aria-hidden="true" />
-
-              <div className="relative bg-background/95 dark:bg-zinc-900/95 backdrop-blur-xl border border-border dark:border-white/10 rounded-3xl overflow-hidden shadow-lg dark:shadow-none">
+              <div className="relative bg-[#010101] border border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)] rounded-none overflow-hidden font-[family-name:var(--font-ibm-plex-mono)]">
                 {/* Main Input Area */}
                 <div className="p-4 pb-2">
                   <div className="flex items-start gap-3">
@@ -314,16 +309,16 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                           <DropdownMenuTrigger asChild>
                             <button
                               className={cn(
-                                "size-11 rounded-2xl flex items-center justify-center transition-colors shrink-0 relative focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                                "size-11 rounded-none flex items-center justify-center transition-colors shrink-0 relative focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)]",
                                 hasReferences
-                                  ? "bg-primary text-primary-foreground"
-                                  : "bg-muted dark:bg-zinc-800 text-muted-foreground hover:text-foreground dark:text-zinc-400 dark:hover:text-zinc-200"
+                                  ? "bg-[var(--nerv-orange)]/20 text-[var(--nerv-orange)] border border-[var(--nerv-orange)]/40"
+                                  : "bg-[var(--void-panel)] text-[var(--steel-dim)] hover:text-[var(--nerv-orange)] hover:bg-[var(--nerv-orange)]/10 border border-[var(--steel-faint)]"
                               )}
                               aria-label="Add reference images"
                             >
                               <ImagePlus className="size-5" strokeWidth={1.5} aria-hidden="true" />
                               {hasReferences && (
-                                <span className="absolute -top-1 -right-1 size-5 rounded-full bg-background dark:bg-zinc-900 border-2 border-primary text-[10px] font-mono font-medium text-primary flex items-center justify-center">
+                                <span className="absolute -top-1 -right-1 size-5 rounded-full bg-[var(--void)] border-2 border-[var(--nerv-orange)] text-[10px] font-mono font-medium text-[var(--nerv-orange)] flex items-center justify-center">
                                   {referenceImages.length}
                                 </span>
                               )}
@@ -334,7 +329,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                           {hasReferences ? `${referenceImages.length} references` : "Add references"}
                         </TooltipContent>
                       </Tooltip>
-                      <DropdownMenuContent align="start" side="top" className="w-80 p-0">
+                      <DropdownMenuContent align="start" side="top" className="w-80 p-0 rounded-none bg-[#010101] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)]">
                         <div className="p-3 space-y-3">
                           {/* Active References for this generation */}
                           {hasReferences && (
@@ -451,14 +446,14 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                             aria-label="Image generation prompt"
                             rows={isPromptExpanded ? 5 : 1}
                             className={cn(
-                              "w-full bg-transparent text-base text-foreground dark:text-zinc-200 placeholder:text-muted-foreground dark:placeholder:text-zinc-500 resize-none focus:outline-none",
+                              "w-full bg-transparent text-base text-[var(--data-green)] placeholder:text-[var(--steel-dim)] resize-none focus:outline-none font-[family-name:var(--font-ibm-plex-mono)]",
                               isPromptExpanded ? "min-h-[120px] py-2.5" : "h-[44px] py-2.5"
                             )}
                           />
                         </div>
                         <div className="absolute bottom-0.5 right-0 flex items-center gap-1">
-                          <span className="text-[10px] text-muted-foreground dark:text-zinc-600 font-mono tabular-nums">{prompt.length}</span>
-                          <button onClick={() => setIsPromptExpanded(!isPromptExpanded)} className="size-6 rounded-lg flex items-center justify-center text-muted-foreground dark:text-zinc-500 hover:text-foreground dark:hover:text-zinc-300 transition-colors focus-visible:ring-2 focus-visible:ring-ring" aria-label={isPromptExpanded ? "Collapse" : "Expand"}>
+                          <span className="text-[10px] text-[var(--steel-dim)] font-mono tabular-nums">{prompt.length}</span>
+                          <button onClick={() => setIsPromptExpanded(!isPromptExpanded)} className="size-6 rounded-none flex items-center justify-center text-[var(--steel-dim)] hover:text-[var(--nerv-orange)] transition-colors focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)]" aria-label={isPromptExpanded ? "Collapse" : "Expand"}>
                             {isPromptExpanded ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
                           </button>
                         </div>
@@ -473,8 +468,8 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                           disabled={!prompt.trim()}
                           variant="ghost"
                           className={cn(
-                            "size-9 rounded-xl flex items-center justify-center transition-colors shrink-0 p-0",
-                            "hover:bg-muted dark:hover:bg-zinc-800",
+                            "size-9 rounded-none flex items-center justify-center transition-colors shrink-0 p-0",
+                            "text-[var(--steel-dim)] hover:text-[var(--nerv-orange)] hover:bg-[var(--nerv-orange)]/10",
                             "disabled:opacity-50 disabled:cursor-not-allowed"
                           )}
                           aria-label="Save prompt to vault"
@@ -492,9 +487,9 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                           onClick={handleSubmit}
                           disabled={!hasAvailableSlots || (!prompt.trim() && referenceImages.length === 0)}
                           className={cn(
-                            "size-11 rounded-2xl flex items-center justify-center transition-colors shrink-0 p-0",
-                            "bg-foreground dark:bg-white text-background dark:text-zinc-900 hover:bg-foreground/90 dark:hover:bg-zinc-100",
-                            "disabled:opacity-50 disabled:cursor-not-allowed"
+                            "size-11 rounded-none flex items-center justify-center transition-colors shrink-0 p-0 border",
+                            "bg-[var(--alert-red)] border-[var(--alert-red)] text-[var(--void)] hover:bg-[var(--alert-red-hot)]",
+                            "disabled:opacity-40 disabled:cursor-not-allowed"
                           )}
                           aria-label="Generate image"
                         >
@@ -512,7 +507,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
 
                 {/* Variations Panel */}
                 {variationsMode && (
-                  <div className="border-t border-border/30 dark:border-zinc-700/30">
+                  <div className="border-t border-[var(--steel-faint)]">
                     <VariationsPanel />
                   </div>
                 )}
@@ -529,7 +524,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                     disabled={!hasAvailableSlots || isLoadingApis}
                   />
 
-                  <div className="w-px h-5 bg-border dark:bg-zinc-700/50 shrink-0 mx-1" />
+                  <div className="w-px h-5 bg-[var(--steel-faint)] shrink-0 mx-1" />
 
                   {/* Variations Mode Toggle */}
                   <Tooltip>
@@ -539,10 +534,10 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                         disabled={isGenerating && !hasAvailableSlots}
                         aria-pressed={variationsMode}
                         className={cn(
-                          "flex items-center gap-1.5 h-8 px-2.5 rounded-lg transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-ring",
+                          "flex items-center gap-1.5 h-8 px-2.5 rounded-none transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)]",
                           variationsMode
-                            ? "bg-primary/10 dark:bg-primary/20 text-primary ring-1 ring-primary/30"
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-zinc-800",
+                            ? "bg-[var(--nerv-orange)]/15 text-[var(--nerv-orange)] ring-1 ring-[var(--nerv-orange)]/30"
+                            : "text-[var(--steel-dim)] hover:text-[var(--nerv-orange)] hover:bg-[var(--nerv-orange)]/10",
                           "disabled:opacity-50 disabled:cursor-not-allowed"
                         )}
                       >
@@ -553,7 +548,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                     <TooltipContent side="top">Generate multiple scene variations</TooltipContent>
                   </Tooltip>
 
-                  <div className="w-px h-5 bg-border dark:bg-zinc-700/50 shrink-0 mx-1" />
+                  <div className="w-px h-5 bg-[var(--steel-faint)] shrink-0 mx-1" />
 
                   {/* Aspect Ratio - Visual Popover */}
                   <Popover>
@@ -561,14 +556,14 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                       <button
                         aria-label={`Aspect ratio: ${settings.aspectRatio}`}
                         aria-haspopup="listbox"
-                        className="flex items-center gap-2 h-8 px-2.5 rounded-lg bg-muted/50 dark:bg-zinc-800/50 hover:bg-muted dark:hover:bg-zinc-800 border border-transparent hover:border-border dark:hover:border-zinc-700 transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-ring"
+                        className="flex items-center gap-2 h-8 px-2.5 rounded-none bg-[var(--void-panel)] hover:bg-[var(--nerv-orange)]/10 border border-[var(--steel-faint)] hover:border-[var(--nerv-orange-dim)]/40 transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)]"
                       >
-                        <AspectRatioShape ratio={settings.aspectRatio} size="sm" className="text-muted-foreground" />
-                        <span className="text-xs font-medium text-foreground dark:text-zinc-300">{settings.aspectRatio}</span>
-                        <ChevronDown className="size-3 text-muted-foreground" aria-hidden="true" />
+                        <AspectRatioShape ratio={settings.aspectRatio} size="sm" className="text-[var(--nerv-orange)]" />
+                        <span className="text-xs font-medium text-[var(--steel)]">{settings.aspectRatio}</span>
+                        <ChevronDown className="size-3 text-[var(--steel-dim)]" aria-hidden="true" />
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent align="start" side="top" className="w-auto p-2">
+                    <PopoverContent align="start" side="top" className="w-auto p-2 rounded-none bg-[#010101] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)]">
                       <div role="listbox" aria-label="Aspect ratio options" className="grid grid-cols-3 gap-1">
                         {filteredAspectRatios.map((ratio) => (
                           <button
@@ -577,20 +572,20 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                             aria-selected={settings.aspectRatio === ratio.value}
                             onClick={() => updateSettings({ aspectRatio: ratio.value })}
                             className={cn(
-                              "flex flex-col items-center gap-1.5 p-2.5 rounded-lg transition-colors",
+                              "flex flex-col items-center gap-1.5 p-2.5 rounded-none transition-colors",
                               settings.aspectRatio === ratio.value
-                                ? "bg-primary/10 dark:bg-primary/20 ring-1 ring-primary"
-                                : "hover:bg-muted dark:hover:bg-zinc-800"
+                                ? "bg-[var(--nerv-orange)]/15 ring-1 ring-[var(--nerv-orange)]"
+                                : "hover:bg-[var(--nerv-orange)]/10"
                             )}
                           >
                             <AspectRatioShape
                               ratio={ratio.value}
                               size="md"
-                              className={settings.aspectRatio === ratio.value ? "text-primary" : "text-muted-foreground"}
+                              className={settings.aspectRatio === ratio.value ? "text-[var(--nerv-orange)]" : "text-[var(--steel-dim)]"}
                             />
                             <span className={cn(
                               "text-[10px] font-mono",
-                              settings.aspectRatio === ratio.value ? "text-primary font-medium" : "text-muted-foreground"
+                              settings.aspectRatio === ratio.value ? "text-[var(--nerv-orange)] font-medium" : "text-[var(--steel-dim)]"
                             )}>
                               {ratio.value}
                             </span>
@@ -604,7 +599,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                   <div
                     role="radiogroup"
                     aria-label="Image quality"
-                    className="flex items-center h-8 p-0.5 rounded-lg bg-muted/50 dark:bg-zinc-800/50 shrink-0"
+                    className="flex items-center h-8 p-0.5 rounded-none bg-[var(--void-panel)] border border-[var(--steel-faint)] shrink-0"
                   >
                     {filteredImageSizes.map((size) => (
                       <Tooltip key={size.value}>
@@ -614,10 +609,10 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                             aria-checked={settings.imageSize === size.value}
                             onClick={() => updateSettings({ imageSize: size.value })}
                             className={cn(
-                              "h-7 px-3 rounded-md text-xs font-medium transition-colors",
+                              "h-7 px-3 rounded-none text-xs font-medium transition-colors font-[family-name:var(--font-ibm-plex-mono)]",
                               settings.imageSize === size.value
-                                ? "bg-background dark:bg-zinc-700 text-foreground dark:text-zinc-100 shadow-sm"
-                                : "text-muted-foreground hover:text-foreground dark:hover:text-zinc-300"
+                                ? "bg-[var(--nerv-orange)]/20 text-[var(--nerv-orange)]"
+                                : "text-[var(--steel-dim)] hover:text-[var(--nerv-orange)]"
                             )}
                           >
                             {size.label}
@@ -646,24 +641,24 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                           updateSettings({ outputCount: Math.max(1, settings.outputCount - 1) });
                         }
                       }}
-                      className="flex items-center h-11 rounded-lg bg-muted/50 dark:bg-zinc-800/50 shrink-0 focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded-lg"
+                      className="flex items-center h-11 rounded-none bg-[var(--void-panel)] border border-[var(--steel-faint)] shrink-0 focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)]"
                     >
                       <button
                         onClick={() => updateSettings({ outputCount: Math.max(1, settings.outputCount - 1) })}
                         disabled={settings.outputCount <= 1}
-                        className="size-11 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors touch-manipulation"
+                        className="size-11 flex items-center justify-center text-[var(--steel-dim)] hover:text-[var(--nerv-orange)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors touch-manipulation"
                         aria-label="Decrease count"
                         tabIndex={-1}
                       >
                         <Minus className="size-4" aria-hidden="true" />
                       </button>
-                      <span className="w-6 text-center text-sm font-medium text-foreground dark:text-zinc-200 tabular-nums">
+                      <span className="w-6 text-center text-sm font-medium text-[var(--data-green)] tabular-nums glow-green">
                         {Math.min(settings.outputCount, maxOutputCount)}
                       </span>
                       <button
                         onClick={() => updateSettings({ outputCount: Math.min(maxOutputCount, settings.outputCount + 1) })}
                         disabled={settings.outputCount >= maxOutputCount}
-                        className="size-11 flex items-center justify-center text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-colors touch-manipulation"
+                        className="size-11 flex items-center justify-center text-[var(--steel-dim)] hover:text-[var(--nerv-orange)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors touch-manipulation"
                         aria-label="Increase count"
                         tabIndex={-1}
                       >
@@ -678,18 +673,18 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                       <button
                         aria-label="Search saved prompts"
                         className={cn(
-                          "flex items-center gap-1.5 h-8 px-2.5 rounded-lg transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-ring",
+                          "flex items-center gap-1.5 h-8 px-2.5 rounded-none transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)]",
                           promptSearchOpen
-                            ? "bg-primary/10 text-primary"
-                            : "text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-zinc-800"
+                            ? "bg-[var(--nerv-orange)]/15 text-[var(--nerv-orange)]"
+                            : "text-[var(--steel-dim)] hover:text-[var(--nerv-orange)] hover:bg-[var(--nerv-orange)]/10"
                         )}
                       >
                         <Search className="size-3.5" aria-hidden="true" />
                         <span className="text-xs font-medium">Prompts</span>
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent align="end" side="top" className="w-80 p-0">
-                      <div className="p-2 border-b border-border">
+                    <PopoverContent align="end" side="top" className="w-80 p-0 rounded-none bg-[#010101] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)]">
+                      <div className="p-2 border-b border-[var(--steel-faint)]">
                         <div className="flex items-center gap-2 px-2">
                           <Search className="size-3.5 text-muted-foreground shrink-0" aria-hidden="true" />
                           <input
@@ -745,21 +740,21 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
 
                   {/* Negative Prompt - Inline Input */}
                   <div className="flex-1 min-w-0 ml-1">
-                    <div className="flex items-center h-8 px-2.5 rounded-lg bg-muted/30 dark:bg-zinc-800/30 border border-transparent focus-within:border-border dark:focus-within:border-zinc-700 transition-colors">
-                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-2 shrink-0">Avoid</span>
+                    <div className="flex items-center h-8 px-2.5 rounded-none bg-[var(--void)] border border-[var(--steel-faint)] focus-within:border-[var(--nerv-orange-dim)]/40 transition-colors">
+                      <span className="text-[10px] text-[var(--nerv-orange-dim)] uppercase tracking-[0.1em] mr-2 shrink-0 font-[family-name:var(--font-ibm-plex-mono)]">AVOID</span>
                       <input
                         type="text"
                         value={settings.negativePrompt}
                         onChange={(e) => updateSettings({ negativePrompt: e.target.value })}
-                        placeholder="blurry, watermark…"
+                        placeholder={"blurry, watermark\u2026"}
                         aria-label="Negative prompt - things to avoid in generation"
                         autoComplete="off"
-                        className="flex-1 min-w-0 bg-transparent text-xs text-foreground dark:text-zinc-300 placeholder:text-muted-foreground/50 dark:placeholder:text-zinc-600 focus:outline-none"
+                        className="flex-1 min-w-0 bg-transparent text-xs text-[var(--steel)] placeholder:text-[var(--steel-dim)] focus:outline-none font-[family-name:var(--font-ibm-plex-mono)]"
                       />
                     </div>
                   </div>
 
-                  <div className="w-px h-5 bg-border dark:bg-zinc-700/50 shrink-0 mx-1" />
+                  <div className="w-px h-5 bg-[var(--steel-faint)] shrink-0 mx-1" />
 
                   {/* Style Reference */}
                   <Popover>
@@ -769,10 +764,10 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                           <button
                             aria-label="Art style reference"
                             className={cn(
-                              "relative flex items-center gap-1.5 h-8 px-2.5 rounded-lg transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-ring",
+                              "relative flex items-center gap-1.5 h-8 px-2.5 rounded-none transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)]",
                               hasStyleRef
-                                ? "bg-violet-500/15 text-violet-500 ring-1 ring-violet-500/30"
-                                : "text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-zinc-800"
+                                ? "bg-[var(--thermal-purple)]/15 text-[var(--thermal-purple)] ring-1 ring-[var(--thermal-purple)]/30"
+                                : "text-[var(--steel-dim)] hover:text-[var(--nerv-orange)] hover:bg-[var(--nerv-orange)]/10"
                             )}
                           >
                             <Palette className="size-3.5" aria-hidden="true" />
@@ -787,9 +782,9 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                       </TooltipTrigger>
                       <TooltipContent side="top">Art style reference</TooltipContent>
                     </Tooltip>
-                    <PopoverContent align="end" side="top" className="w-72 p-3 space-y-2">
+                    <PopoverContent align="end" side="top" className="w-72 p-3 space-y-2 rounded-none bg-[#010101] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)]">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium">Art Style Reference</span>
+                        <span className="text-xs font-medium text-[var(--nerv-orange)] uppercase tracking-[0.08em]">Art Style Reference</span>
                         {hasStyleRef && (
                           <button type="button" onClick={() => updateSettings({ styleRef: undefined })} className="text-[10px] text-destructive hover:underline" aria-label="Remove style reference">Remove</button>
                         )}
@@ -859,10 +854,10 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                           <button
                             aria-label="Pose reference"
                             className={cn(
-                              "relative flex items-center gap-1.5 h-8 px-2.5 rounded-lg transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-ring",
+                              "relative flex items-center gap-1.5 h-8 px-2.5 rounded-none transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)]",
                               hasPoseRef
-                                ? "bg-blue-500/15 text-blue-500 ring-1 ring-blue-500/30"
-                                : "text-muted-foreground hover:text-foreground hover:bg-muted dark:hover:bg-zinc-800"
+                                ? "bg-[var(--wire-cyan)]/15 text-[var(--wire-cyan)] ring-1 ring-[var(--wire-cyan)]/30"
+                                : "text-[var(--steel-dim)] hover:text-[var(--nerv-orange)] hover:bg-[var(--nerv-orange)]/10"
                             )}
                           >
                             <PersonStanding className="size-3.5" aria-hidden="true" />
@@ -877,9 +872,9 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                       </TooltipTrigger>
                       <TooltipContent side="top">Pose reference</TooltipContent>
                     </Tooltip>
-                    <PopoverContent align="end" side="top" className="w-72 p-3 space-y-2">
+                    <PopoverContent align="end" side="top" className="w-72 p-3 space-y-2 rounded-none bg-[#010101] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)]">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium">Pose Reference</span>
+                        <span className="text-xs font-medium text-[var(--nerv-orange)] uppercase tracking-[0.08em]">Pose Reference</span>
                         {hasPoseRef && (
                           <button type="button" onClick={() => updateSettings({ poseRef: undefined })} className="text-[10px] text-destructive hover:underline" aria-label="Remove pose reference">Remove</button>
                         )}
