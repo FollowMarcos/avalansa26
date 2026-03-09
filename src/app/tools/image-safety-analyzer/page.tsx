@@ -251,7 +251,7 @@ export default function ImageSafetyAnalyzerPage() {
         setFileName(null);
         setResults(null);
         setError(null);
-        setState(modelRef.current ? 'ready' : 'idle');
+        setState('idle');
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -264,6 +264,21 @@ export default function ImageSafetyAnalyzerPage() {
             if (url) URL.revokeObjectURL(url);
         };
     }, [imageUrl]);
+
+    // -- Auto-analyze when image element loads --------------------------------
+
+    const onImageLoad = useCallback(() => {
+        if (state === 'ready' && modelRef.current && imageRef.current) {
+            analyzeImage();
+        }
+    }, [state, analyzeImage]);
+
+    // Also trigger when state transitions to 'ready' and image is already loaded
+    useEffect(() => {
+        if (state === 'ready' && imageUrl && imageRef.current?.complete && imageRef.current.naturalWidth > 0) {
+            analyzeImage();
+        }
+    }, [state, imageUrl, analyzeImage]);
 
     // -- Drag-and-drop helpers -----------------------------------------------
 
@@ -309,7 +324,7 @@ export default function ImageSafetyAnalyzerPage() {
                         </p>
                     </div>
                     <div className="flex items-center gap-3 flex-shrink-0">
-                        {(state === 'ready' || state === 'results') && imageUrl && (
+                        {state !== 'idle' && state !== 'model-loading' && imageUrl && (
                             <Button
                                 variant="outline"
                                 className="rounded-full font-vt323 text-lg h-11 border-primary/20 bg-primary/5 hover:bg-primary/10"
@@ -346,6 +361,7 @@ export default function ImageSafetyAnalyzerPage() {
                 {state === 'idle' && !imageUrl && (
                     <div
                         role="button"
+                        aria-label="Upload image for safety analysis"
                         tabIndex={0}
                         onClick={() => fileInputRef.current?.click()}
                         onKeyDown={(e) => {
@@ -381,7 +397,7 @@ export default function ImageSafetyAnalyzerPage() {
 
                 {/* ── MODEL LOADING ─────────────────────────────────────── */}
                 {state === 'model-loading' && (
-                    <div className="flex flex-col items-center gap-4 py-24">
+                    <div className="flex flex-col items-center gap-4 py-24" role="status" aria-live="polite">
                         <CircularLoader size="lg" />
                         <TextShimmerLoader text="Loading AI model..." size="md" />
                         <p className="text-xs text-muted-foreground/60 max-w-xs text-center">
@@ -405,6 +421,7 @@ export default function ImageSafetyAnalyzerPage() {
                                         alt="Image to analyze"
                                         className="max-h-[400px] w-auto max-w-full object-contain rounded-lg"
                                         crossOrigin="anonymous"
+                                        onLoad={onImageLoad}
                                         onError={() => {
                                             setError(
                                                 'Failed to load the image. The file may be corrupted.',
@@ -427,25 +444,9 @@ export default function ImageSafetyAnalyzerPage() {
                                 )}
                             </Card>
 
-                            {/* Analyze button */}
-                            {state === 'ready' && (
-                                <div className="flex justify-center">
-                                    <Button
-                                        className="rounded-full font-vt323 text-xl h-12 px-10"
-                                        onClick={analyzeImage}
-                                    >
-                                        <ShieldCheck
-                                            className="w-5 h-5 mr-2"
-                                            aria-hidden="true"
-                                        />
-                                        Analyze Image
-                                    </Button>
-                                </div>
-                            )}
-
                             {/* Analyzing spinner */}
-                            {state === 'analyzing' && (
-                                <div className="flex flex-col items-center gap-4 py-8">
+                            {(state === 'ready' || state === 'analyzing') && (
+                                <div className="flex flex-col items-center gap-4 py-8" role="status" aria-live="polite">
                                     <CircularLoader size="lg" />
                                     <TextShimmerLoader text="Analyzing image..." size="md" />
                                 </div>
@@ -598,7 +599,7 @@ export default function ImageSafetyAnalyzerPage() {
                             How It Works &amp; Disclaimer
                         </h3>
                     </div>
-                    <p className="text-xs text-muted-foreground/80 leading-relaxed">
+                    <p className="text-xs text-muted-foreground leading-relaxed">
                         This tool uses <strong>nsfwjs</strong> powered by TensorFlow.js to classify
                         images entirely within your browser. No image data is ever sent to any
                         server. The ~4 MB AI model is downloaded once from a CDN and cached by your
