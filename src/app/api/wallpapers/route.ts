@@ -69,7 +69,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       .select('id')
       .eq('user_id', user.id)
       .eq('slug', slug)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       slug = `${slug}-${Date.now().toString(36)}`;

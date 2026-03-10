@@ -14,6 +14,7 @@ import {
   X,
   Pencil,
   Trash2,
+  Upload,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -137,6 +138,16 @@ export function WallpaperDetail({
               aria-label="Share"
             >
               <Share2 className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-xl"
+              asChild
+            >
+              <Link href="/wallpapers/upload" aria-label="Upload wallpaper">
+                <Upload className="w-4 h-4" />
+              </Link>
             </Button>
             {isOwner && (
               <>
