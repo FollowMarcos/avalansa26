@@ -43,6 +43,12 @@ const nextConfig: NextConfig = {
         hostname: '**.r2.dev',
         port: '',
       },
+      // Cloudflare R2 custom domain
+      {
+        protocol: 'https',
+        hostname: 'avalansa.com',
+        port: '',
+      },
     ],
   },
   async headers() {
