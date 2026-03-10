@@ -48,7 +48,8 @@
       "Bash(git fetch:*)",
       "Bash(npx next build)",
       "WebFetch(domain:affinityspotlight.com)",
-      "WebFetch(domain:medium.com)"
+      "WebFetch(domain:medium.com)",
+      "WebFetch(domain:opensource.contentauthenticity.org)"
     ]
   }
 }
