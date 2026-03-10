@@ -142,31 +142,33 @@ export function WallpaperBrowsePage({
   };
 
   return (
-    <div className="space-y-8">
-      {/* Hero */}
-      <div className="text-center space-y-4">
-        <h1 className="font-vt323 text-5xl lg:text-6xl text-foreground uppercase tracking-tight">
-          Wallpapers
-        </h1>
-        <p className="font-lato text-lg text-muted-foreground max-w-2xl mx-auto">
-          Browse and download high-resolution wallpapers from the community.
-        </p>
-        <Link href="/wallpapers/upload">
-          <Button className="rounded-xl gap-2 font-vt323 text-lg uppercase mt-2">
+    <div className="space-y-5">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="font-vt323 text-3xl lg:text-4xl text-foreground uppercase tracking-tight">
+            Wallpapers
+          </h1>
+          <p className="font-lato text-sm text-muted-foreground mt-0.5">
+            Browse and download high-resolution wallpapers from the community.
+          </p>
+        </div>
+        <Link href="/wallpapers/upload" className="shrink-0">
+          <Button className="rounded-xl gap-2 font-vt323 text-base uppercase">
             <Upload className="w-4 h-4" />
-            Upload Wallpaper
+            Upload
           </Button>
         </Link>
       </div>
 
       {/* Trending Tags */}
       {trendingTags.length > 0 && (
-        <div className="flex flex-wrap justify-center gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {trendingTags.slice(0, 12).map((tag) => (
             <button
               key={tag.id}
               onClick={() => handleTagClick(tag.slug)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-vt323 uppercase tracking-wider transition-all ${
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-vt323 uppercase tracking-wider transition-all ${
                 activeTag === tag.slug
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-primary/5 text-primary/80 hover:bg-primary/10 border border-primary/10'

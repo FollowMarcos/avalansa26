@@ -183,7 +183,7 @@ export function WallpaperDetail({
         {wallpaper.user && (
           <div className="pt-4 border-t border-border/50">
             <Link
-              href={`/u/${wallpaper.user.username}`}
+              href={`/u/${wallpaper.user.username}/wallpapers`}
               className="flex items-center gap-3 group/user"
             >
               <Avatar className="w-10 h-10">

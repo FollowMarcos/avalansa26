@@ -133,6 +133,8 @@ export interface Profile {
   visibility?: ProfileVisibility;
   /** Array of user IDs allowed to view the profile when visibility is 'restricted' */
   allowed_viewers?: string[];
+  /** Whether the wallpapers page is publicly accessible regardless of profile visibility */
+  wallpapers_public?: boolean;
 }
 
 /**
@@ -154,6 +156,7 @@ export interface ProfileInsert {
   avatar_history?: string[];
   visibility?: ProfileVisibility;
   allowed_viewers?: string[];
+  wallpapers_public?: boolean;
 }
 
 /**
@@ -172,6 +175,7 @@ export interface ProfileUpdate {
   avatar_history?: string[];
   visibility?: ProfileVisibility;
   allowed_viewers?: string[];
+  wallpapers_public?: boolean;
 }
 
 // ============================================

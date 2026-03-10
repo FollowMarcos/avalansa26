@@ -23,7 +23,8 @@ import {
     Monitor,
     Users,
     Ghost,
-    Fingerprint
+    Fingerprint,
+    ImageIcon
 } from "lucide-react";
 import { useTheme } from "next-themes";
 import { ModeToggle } from "@/components/mode-toggle";
@@ -33,6 +34,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { AllowedViewers } from "@/components/settings/allowed-viewers";
+import { Switch } from "@/components/ui/switch";
 import type { ProfileVisibility } from "@/types/visibility";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -63,6 +65,7 @@ export default function SettingsPage() {
     const [websiteError, setWebsiteError] = useState<string | null>(null);
     const [visibility, setVisibility] = useState<ProfileVisibility>('public');
     const [allowedViewers, setAllowedViewers] = useState<string[]>([]);
+    const [wallpapersPublic, setWallpapersPublic] = useState(true);
 
     useEffect(() => {
         async function loadProfile() {
@@ -81,6 +84,7 @@ export default function SettingsPage() {
                 // Manage profile visibility and discoverability
                 setVisibility(data.visibility || 'public');
                 setAllowedViewers(data.allowed_viewers || []);
+                setWallpapersPublic(data.wallpapers_public !== false);
             } else {
                 router.push('/');
             }
@@ -123,6 +127,7 @@ export default function SettingsPage() {
                 website: website || null,
                 visibility: visibility,
                 allowed_viewers: allowedViewers,
+                wallpapers_public: wallpapersPublic,
             });
 
             if (success) {
@@ -370,6 +375,25 @@ export default function SettingsPage() {
                                                 <AllowedViewers
                                                     currentAllowedIds={allowedViewers}
                                                     onChange={setAllowedViewers}
+                                                />
+                                            </div>
+                                        )}
+
+                                        {/* Wallpapers Public Override */}
+                                        {visibility !== 'public' && (
+                                            <div className="mt-6 flex items-center justify-between p-4 rounded-xl border border-primary/10 bg-primary/[0.02]">
+                                                <div className="flex items-center gap-3">
+                                                    <ImageIcon className="w-4 h-4 text-cyan-500" />
+                                                    <div>
+                                                        <Label className="font-lato font-semibold text-sm">Public Wallpapers</Label>
+                                                        <p className="text-[11px] text-muted-foreground font-lato mt-0.5">
+                                                            Keep your wallpapers page visible to everyone, even when your profile is hidden.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <Switch
+                                                    checked={wallpapersPublic}
+                                                    onCheckedChange={setWallpapersPublic}
                                                 />
                                             </div>
                                         )}

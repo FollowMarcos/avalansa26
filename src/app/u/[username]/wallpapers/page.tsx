@@ -2,8 +2,9 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { PageShell } from '@/components/layout/page-shell';
 import { UserWallpaperGallery } from '@/components/wallpapers/user-wallpaper-gallery';
-import { getProfileByUsername } from '@/utils/supabase/profiles';
-import { getCurrentProfile } from '@/utils/supabase/profiles';
+import { ProfileAccessDenied } from '@/components/profile-access-denied';
+import { getProfileByUsername, getCurrentProfile } from '@/utils/supabase/profiles';
+import { checkProfileAccess } from '@/utils/supabase/profile-access';
 import {
   getUserWallpapers,
   getUserWallpaperCollections,
@@ -40,6 +41,12 @@ export default async function UserWallpapersPage({ params }: PageProps) {
 
   if (!profile) {
     notFound();
+  }
+
+  const access = await checkProfileAccess(profile, { wallpapersOnly: true });
+
+  if (!access.allowed) {
+    return <ProfileAccessDenied reason={access.reason} />;
   }
 
   const currentProfile = await getCurrentProfile();

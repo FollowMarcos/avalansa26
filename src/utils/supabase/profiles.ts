@@ -98,7 +98,7 @@ export async function updateCurrentProfile(
   }
 
   // ONLY allow specific fields to be updated by the user themselves
-  const { name, bio, avatar_url, interests, username, avatar_history, website, visibility, allowed_viewers } = updates;
+  const { name, bio, avatar_url, interests, username, avatar_history, website, visibility, allowed_viewers, wallpapers_public } = updates;
   const filteredUpdates: ProfileUpdate = {};
 
   if (name !== undefined) filteredUpdates.name = name;
@@ -110,6 +110,7 @@ export async function updateCurrentProfile(
   if (website !== undefined) filteredUpdates.website = website;
   if (visibility !== undefined) filteredUpdates.visibility = visibility;
   if (allowed_viewers !== undefined) filteredUpdates.allowed_viewers = allowed_viewers;
+  if (wallpapers_public !== undefined) filteredUpdates.wallpapers_public = wallpapers_public;
 
   const { data, error } = await supabase
     .from('profiles')
