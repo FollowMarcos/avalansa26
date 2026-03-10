@@ -8,8 +8,11 @@ import { Loader } from '@/components/ui/loader';
 interface WallpaperGridProps {
   wallpapers: WallpaperWithDetails[];
   likedIds?: Set<string>;
+  isOwner?: boolean;
   onLike?: (id: string) => void;
   onDownload?: (id: string) => void;
+  onEdit?: (wallpaper: WallpaperWithDetails) => void;
+  onDelete?: (wallpaper: WallpaperWithDetails) => void;
   onClick?: (wallpaper: WallpaperWithDetails) => void;
   onLoadMore?: () => void;
   hasMore?: boolean;
@@ -19,8 +22,11 @@ interface WallpaperGridProps {
 export function WallpaperGrid({
   wallpapers,
   likedIds,
+  isOwner = false,
   onLike,
   onDownload,
+  onEdit,
+  onDelete,
   onClick,
   onLoadMore,
   hasMore = false,
@@ -73,8 +79,11 @@ export function WallpaperGrid({
             key={wallpaper.id}
             wallpaper={wallpaper}
             isLiked={likedIds?.has(wallpaper.id)}
+            isOwner={isOwner}
             onLike={onLike}
             onDownload={onDownload}
+            onEdit={onEdit}
+            onDelete={onDelete}
             onClick={onClick}
           />
         ))}

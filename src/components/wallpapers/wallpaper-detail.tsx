@@ -12,6 +12,8 @@ import {
   Monitor,
   HardDrive,
   X,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -28,7 +30,10 @@ import { toast } from 'sonner';
 interface WallpaperDetailProps {
   wallpaper: WallpaperWithDetails;
   isLiked?: boolean;
+  isOwner?: boolean;
   onLike?: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
   onClose?: () => void;
   isModal?: boolean;
 }
@@ -36,7 +41,10 @@ interface WallpaperDetailProps {
 export function WallpaperDetail({
   wallpaper,
   isLiked = false,
+  isOwner = false,
   onLike,
+  onEdit,
+  onDelete,
   onClose,
   isModal = false,
 }: WallpaperDetailProps) {
@@ -130,6 +138,28 @@ export function WallpaperDetail({
             >
               <Share2 className="w-4 h-4" />
             </Button>
+            {isOwner && (
+              <>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="rounded-xl"
+                  onClick={onEdit}
+                  aria-label="Edit wallpaper"
+                >
+                  <Pencil className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="rounded-xl text-destructive border-destructive/30 hover:text-destructive hover:bg-destructive/10"
+                  onClick={onDelete}
+                  aria-label="Delete wallpaper"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </>
+            )}
           </div>
         </div>
 

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { PageShell } from '@/components/layout/page-shell';
 import { WallpaperDetailPage } from '@/components/wallpapers/wallpaper-detail-page';
 import { getWallpaperById } from '@/utils/supabase/wallpapers';
+import { createClient } from '@/utils/supabase/server';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -36,16 +37,22 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function WallpaperPage({ params }: PageProps) {
   const { id } = await params;
-  const wallpaper = await getWallpaperById(id);
+  const [wallpaper, supabase] = await Promise.all([
+    getWallpaperById(id),
+    createClient(),
+  ]);
 
   if (!wallpaper) {
     notFound();
   }
 
+  const { data: { user } } = await supabase.auth.getUser();
+  const currentUserId = user?.id ?? null;
+
   return (
     <PageShell contentClassName="bg-transparent">
       <main className="container max-w-5xl mx-auto px-6 pt-24 pb-20">
-        <WallpaperDetailPage wallpaper={wallpaper} />
+        <WallpaperDetailPage wallpaper={wallpaper} currentUserId={currentUserId} />
       </main>
     </PageShell>
   );

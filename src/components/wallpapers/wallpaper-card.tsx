@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import { motion } from 'motion/react';
-import { Download, Heart, Eye } from 'lucide-react';
+import { Download, Heart, Eye, Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { getResolutionCategory, formatFileSize } from '@/utils/wallpaper-validation';
@@ -11,16 +11,22 @@ import type { WallpaperWithDetails } from '@/types/wallpaper';
 interface WallpaperCardProps {
   wallpaper: WallpaperWithDetails;
   isLiked?: boolean;
+  isOwner?: boolean;
   onLike?: (id: string) => void;
   onDownload?: (id: string) => void;
+  onEdit?: (wallpaper: WallpaperWithDetails) => void;
+  onDelete?: (wallpaper: WallpaperWithDetails) => void;
   onClick?: (wallpaper: WallpaperWithDetails) => void;
 }
 
 export function WallpaperCard({
   wallpaper,
   isLiked = false,
+  isOwner = false,
   onLike,
   onDownload,
+  onEdit,
+  onDelete,
   onClick,
 }: WallpaperCardProps) {
   const resolution = getResolutionCategory(wallpaper.width, wallpaper.height);
@@ -78,6 +84,30 @@ export function WallpaperCard({
             >
               <Heart className={cn('w-4 h-4', isLiked && 'fill-current')} />
             </button>
+            {isOwner && (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit?.(wallpaper);
+                  }}
+                  className="p-2 rounded-xl bg-black/60 text-white hover:bg-primary/80 transition-colors"
+                  aria-label="Edit wallpaper"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete?.(wallpaper);
+                  }}
+                  className="p-2 rounded-xl bg-black/60 text-red-400 hover:bg-red-500/30 transition-colors"
+                  aria-label="Delete wallpaper"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </>
+            )}
           </div>
 
           {/* Bottom Info */}

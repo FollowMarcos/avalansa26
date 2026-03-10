@@ -7,6 +7,8 @@ import { Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { WallpaperGrid } from './wallpaper-grid';
 import { WallpaperFilters } from './wallpaper-filters';
+import { WallpaperEditDialog } from './wallpaper-edit-dialog';
+import { WallpaperDeleteDialog } from './wallpaper-delete-dialog';
 import type {
   WallpaperWithDetails,
   WallpaperSortOption,
@@ -39,6 +41,10 @@ export function UserWallpaperGallery({
   const [page, setPage] = useState(initialData.page);
   const [isLoading, setIsLoading] = useState(false);
   const [likedIds, setLikedIds] = useState(initialLikedIds);
+
+  // Edit/delete state
+  const [editingWallpaper, setEditingWallpaper] = useState<WallpaperWithDetails | null>(null);
+  const [deletingWallpaper, setDeletingWallpaper] = useState<WallpaperWithDetails | null>(null);
 
   // Filter state
   const [sort, setSort] = useState<WallpaperSortOption>('newest');
@@ -147,52 +153,92 @@ export function UserWallpaperGallery({
     router.push(`/wallpapers/w/${wallpaper.id}`);
   };
 
+  const handleSaved = (updated: Partial<WallpaperWithDetails>) => {
+    setWallpapers((prev) =>
+      prev.map((w) => (w.id === updated.id ? { ...w, ...updated } : w))
+    );
+    setEditingWallpaper(null);
+  };
+
+  const handleDeleted = () => {
+    if (deletingWallpaper) {
+      setWallpapers((prev) => prev.filter((w) => w.id !== deletingWallpaper.id));
+    }
+    setDeletingWallpaper(null);
+  };
+
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="font-vt323 text-3xl text-foreground uppercase tracking-tight">
-            {displayName}&apos;s Wallpapers
-          </h1>
-          <p className="font-mono text-sm text-muted-foreground mt-1">
-            {initialData.total} wallpaper{initialData.total !== 1 ? 's' : ''}
-          </p>
+    <>
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="font-vt323 text-3xl text-foreground uppercase tracking-tight">
+              {displayName}&apos;s Wallpapers
+            </h1>
+            <p className="font-mono text-sm text-muted-foreground mt-1">
+              {initialData.total} wallpaper{initialData.total !== 1 ? 's' : ''}
+            </p>
+          </div>
+          {isOwner && (
+            <Link href="/wallpapers/upload">
+              <Button className="rounded-xl gap-2 font-vt323 text-lg uppercase">
+                <Upload className="w-4 h-4" />
+                Upload
+              </Button>
+            </Link>
+          )}
         </div>
-        {isOwner && (
-          <Link href="/wallpapers/upload">
-            <Button className="rounded-xl gap-2 font-vt323 text-lg uppercase">
-              <Upload className="w-4 h-4" />
-              Upload
-            </Button>
-          </Link>
-        )}
+
+        {/* Filters */}
+        <WallpaperFilters
+          collections={collections}
+          currentSort={sort}
+          currentResolution={resolution}
+          currentCollection={collection}
+          currentSearch={search}
+          onSortChange={handleSortChange}
+          onResolutionChange={handleResolutionChange}
+          onCollectionChange={handleCollectionChange}
+          onSearchChange={handleSearchChange}
+        />
+
+        {/* Grid */}
+        <WallpaperGrid
+          wallpapers={wallpapers}
+          likedIds={likedIds}
+          isOwner={isOwner}
+          onLike={handleLike}
+          onDownload={handleDownload}
+          onEdit={setEditingWallpaper}
+          onDelete={setDeletingWallpaper}
+          onClick={handleClick}
+          onLoadMore={handleLoadMore}
+          hasMore={hasMore}
+          isLoading={isLoading}
+        />
       </div>
 
-      {/* Filters */}
-      <WallpaperFilters
-        collections={collections}
-        currentSort={sort}
-        currentResolution={resolution}
-        currentCollection={collection}
-        currentSearch={search}
-        onSortChange={handleSortChange}
-        onResolutionChange={handleResolutionChange}
-        onCollectionChange={handleCollectionChange}
-        onSearchChange={handleSearchChange}
-      />
+      {/* Edit Dialog */}
+      {editingWallpaper && (
+        <WallpaperEditDialog
+          wallpaper={editingWallpaper}
+          open={!!editingWallpaper}
+          onOpenChange={(open) => !open && setEditingWallpaper(null)}
+          onSaved={handleSaved}
+        />
+      )}
 
-      {/* Grid */}
-      <WallpaperGrid
-        wallpapers={wallpapers}
-        likedIds={likedIds}
-        onLike={handleLike}
-        onDownload={handleDownload}
-        onClick={handleClick}
-        onLoadMore={handleLoadMore}
-        hasMore={hasMore}
-        isLoading={isLoading}
-      />
-    </div>
+      {/* Delete Dialog */}
+      {deletingWallpaper && (
+        <WallpaperDeleteDialog
+          wallpaperId={deletingWallpaper.id}
+          wallpaperTitle={deletingWallpaper.title}
+          open={!!deletingWallpaper}
+          onOpenChange={(open) => !open && setDeletingWallpaper(null)}
+          onDeleted={handleDeleted}
+        />
+      )}
+    </>
   );
 }
