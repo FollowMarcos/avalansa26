@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { WallpaperDetail } from './wallpaper-detail';
 import type { WallpaperWithDetails } from '@/types/wallpaper';
 import { toast } from 'sonner';
@@ -12,6 +12,11 @@ interface WallpaperDetailPageProps {
 export function WallpaperDetailPage({ wallpaper: initial }: WallpaperDetailPageProps) {
   const [wallpaper, setWallpaper] = useState(initial);
   const [isLiked, setIsLiked] = useState(initial.is_liked ?? false);
+
+  // Track view on mount via the API route (which handles IP-based debouncing)
+  useEffect(() => {
+    fetch(`/api/wallpapers/${initial.id}`).catch(() => {});
+  }, [initial.id]);
 
   const handleLike = async () => {
     // Optimistic update
