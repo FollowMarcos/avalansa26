@@ -97,6 +97,7 @@ export function TagSelector({
           >
             #{tag}
             <button
+              type="button"
               onClick={() => removeTag(tag)}
               className="hover:text-destructive transition-colors"
               aria-label={`Remove tag ${tag}`}
@@ -126,6 +127,7 @@ export function TagSelector({
         <div className="absolute top-full left-0 right-0 mt-1 py-1 rounded-xl bg-popover border border-border shadow-lg z-50 max-h-48 overflow-y-auto">
           {suggestions.map((tag) => (
             <button
+              type="button"
               key={tag.id}
               onClick={() => addTag(tag.name)}
               className="w-full flex items-center justify-between px-3 py-2 text-sm font-lato hover:bg-accent transition-colors"
@@ -138,6 +140,7 @@ export function TagSelector({
           ))}
           {query.trim() && !suggestions.some((s) => s.name === query.toLowerCase().trim()) && (
             <button
+              type="button"
               onClick={() => addTag(query)}
               className="w-full flex items-center gap-2 px-3 py-2 text-sm font-lato text-primary hover:bg-accent transition-colors"
             >

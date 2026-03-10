@@ -83,6 +83,7 @@ export function CollectionManager({
       {/* Collection List */}
       <div className="flex flex-wrap gap-2">
         <button
+          type="button"
           onClick={() => onChange(undefined)}
           className={cn(
             'flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-vt323 uppercase tracking-wider transition-all',
@@ -95,6 +96,7 @@ export function CollectionManager({
         </button>
         {collections.map((col) => (
           <button
+            type="button"
             key={col.id}
             onClick={() =>
               onChange(selectedCollectionId === col.id ? undefined : col.id)
@@ -118,12 +120,18 @@ export function CollectionManager({
           <Input
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleCreate();
+              }
+            }}
             placeholder="Collection name..."
             className="rounded-xl text-sm font-lato"
             autoFocus
           />
           <Button
+            type="button"
             onClick={handleCreate}
             size="sm"
             className="rounded-xl font-vt323 uppercase"
@@ -132,6 +140,7 @@ export function CollectionManager({
             Create
           </Button>
           <Button
+            type="button"
             onClick={() => {
               setIsCreating(false);
               setNewName('');
@@ -145,6 +154,7 @@ export function CollectionManager({
         </div>
       ) : (
         <button
+          type="button"
           onClick={() => setIsCreating(true)}
           className="flex items-center gap-1.5 text-xs font-vt323 uppercase tracking-wider text-primary hover:text-primary/80 transition-colors"
         >

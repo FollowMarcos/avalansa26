@@ -37,11 +37,10 @@ export async function getPublicWallpapers(
   let query = supabase
     .from('wallpapers')
     .select(
-      '*, profiles!inner(username, name, avatar_url, visibility, wallpapers_public), wallpaper_tag_assignments(wallpaper_tags(*))',
+      '*, profiles!inner(username, name, avatar_url), wallpaper_tag_assignments(wallpaper_tags(*))',
       { count: 'exact' }
     )
-    .eq('is_public', true)
-    .or('visibility.eq.public,wallpapers_public.eq.true', { referencedTable: 'profiles' });
+    .eq('is_public', true);
 
   // Search
   if (filters.search) {
@@ -285,7 +284,7 @@ export async function getWallpaperById(
       .select('id')
       .eq('user_id', user.id)
       .eq('wallpaper_id', id)
-      .single();
+      .maybeSingle();
     isLiked = !!likeData;
   }
 
