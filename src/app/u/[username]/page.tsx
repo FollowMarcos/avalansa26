@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getProfileByUsername } from '@/utils/supabase/profiles';
+import { getUserWallpapers } from '@/utils/supabase/wallpapers';
 import { PublicProfile } from '@/components/public-profile';
 
 interface PageProps {
@@ -15,7 +16,18 @@ export default async function ProfilePage({ params }: PageProps) {
     notFound();
   }
 
-  return <PublicProfile profile={profile} />;
+  const wallpaperData = await getUserWallpapers(username.toLowerCase(), {
+    page: 1,
+    limit: 6,
+    sort: 'newest',
+  });
+
+  return (
+    <PublicProfile
+      profile={profile}
+      recentWallpapers={wallpaperData.wallpapers}
+    />
+  );
 }
 
 export async function generateMetadata({ params }: PageProps) {

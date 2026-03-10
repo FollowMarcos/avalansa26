@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLIC_ROUTES = ['/', '/auth/callback', '/auth/error', '/u', '/share', '/tools', '/privacypolicy'];
+const PUBLIC_ROUTES = ['/', '/auth/callback', '/auth/error', '/u', '/share', '/tools', '/privacypolicy', '/wallpapers'];
 
 const ONBOARDING_ROUTES = [
   '/onboarding',
@@ -73,6 +73,7 @@ class EdgeRateLimiter {
 const apiLimiter = new EdgeRateLimiter(60, 60000); // 60 req/min for general API
 const generateLimiter = new EdgeRateLimiter(10, 60000); // 10 req/min for generation
 const authLimiter = new EdgeRateLimiter(5, 300000); // 5 req/5min for auth
+const wallpaperActionLimiter = new EdgeRateLimiter(30, 60000); // 30 req/min for wallpaper downloads/likes
 // Get client identifier with proper IP handling
 function getClientIdentifier(request: NextRequest): string {
   // Next.js 16+ provides IP through headers (no request.ip)
@@ -103,6 +104,9 @@ export async function proxy(request: NextRequest) {
     } else if (pathname.includes('/auth/')) {
       result = authLimiter.check(identifier);
       limitType = 'authentication';
+    } else if (pathname.match(/^\/api\/wallpapers\/[^/]+\/(download|like)$/)) {
+      result = wallpaperActionLimiter.check(identifier);
+      limitType = 'wallpaper action';
     } else {
       result = apiLimiter.check(identifier);
       limitType = 'api';
@@ -173,7 +177,9 @@ export async function proxy(request: NextRequest) {
   const isPublicRoute = PUBLIC_ROUTES.some((route) => {
     if (route === '/u') {
       const segments = pathname.split('/').filter(Boolean);
-      return segments.length === 2 && segments[0] === 'u';
+      if (segments[0] !== 'u' || segments.length < 2) return false;
+      // Allow /u/username and /u/username/wallpapers as public
+      return segments.length === 2 || segments[2] === 'wallpapers';
     }
     return pathname === route || pathname.startsWith(route + '/');
   });

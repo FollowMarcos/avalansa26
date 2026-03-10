@@ -18,6 +18,7 @@ export const R2_PREFIX = {
   GENERATIONS: 'generations',
   REFERENCE_IMAGES: 'reference-images',
   AVATARS: 'avatars',
+  WALLPAPERS: 'wallpapers',
 } as const;
 
 /** Singleton S3 client configured for Cloudflare R2 */

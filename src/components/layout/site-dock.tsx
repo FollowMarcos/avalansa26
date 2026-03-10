@@ -37,6 +37,7 @@ const DEFAULT_ITEMS: DockItem[] = [
     { id: 'labs', label: 'Labs', icon: 'FlaskConical', href: '/labs', order: 3, is_visible: true, created_at: '', updated_at: '', bg_color: 'bg-gradient-to-br from-orange-400 to-orange-600', text_color: 'text-white' },
     { id: 'tools', label: 'Tools', icon: 'Hammer', href: '/tools', dropdown_items: [{ label: 'X Multi-Image', href: '/tools/x-multi-image-preview-and-split', icon: 'Sparkles' }, { label: 'Image Safety', href: '/tools/image-safety-analyzer', icon: 'ShieldCheck' }, { label: 'Provenance', href: '/tools/content-provenance-checker', icon: 'Fingerprint' }], order: 4, is_visible: true, created_at: '', updated_at: '', bg_color: 'bg-zinc-100 dark:bg-zinc-800', text_color: 'text-zinc-900 dark:text-zinc-100' },
     { id: 'assets', label: 'Assets', icon: 'Images', href: '/assets', order: 5, is_visible: true, created_at: '', updated_at: '', bg_color: 'bg-gradient-to-br from-emerald-400 to-emerald-600', text_color: 'text-white' },
+    { id: 'wallpapers', label: 'Wallpapers', icon: 'Monitor', href: '/wallpapers', order: 6, is_visible: true, created_at: '', updated_at: '', bg_color: 'bg-gradient-to-br from-cyan-400 to-teal-600', text_color: 'text-white' },
 ];
 
 interface UserProfile {

@@ -1,8 +1,10 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { motion } from 'motion/react';
 import type { Profile } from '@/types/database';
+import type { WallpaperWithDetails } from '@/types/wallpaper';
 import { PageShell } from "@/components/layout/page-shell";
 import { DefaultAvatar } from "@/components/ui/default-avatar";
 import { cn } from "@/lib/utils";
@@ -12,9 +14,10 @@ import { toast } from 'sonner';
 
 interface PublicProfileProps {
   profile: Profile;
+  recentWallpapers?: WallpaperWithDetails[];
 }
 
-export function PublicProfile({ profile }: PublicProfileProps) {
+export function PublicProfile({ profile, recentWallpapers = [] }: PublicProfileProps) {
   const displayName = profile.name || profile.username || 'User';
   const avatarUrl = profile.avatar_url;
 
@@ -172,7 +175,7 @@ export function PublicProfile({ profile }: PublicProfileProps) {
               </motion.section>
             )}
 
-            {/* Gallery Placeholder / Collections */}
+            {/* Latest Wallpapers */}
             <motion.section
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -181,19 +184,46 @@ export function PublicProfile({ profile }: PublicProfileProps) {
             >
               <div className="flex items-center justify-between">
                 <h2 className="font-vt323 text-xl text-muted-foreground uppercase tracking-[0.2em]">~/ Latest Work</h2>
-                <Button variant="ghost" size="sm" className="font-vt323 text-lg hover:text-primary uppercase tracking-wider">View All &rarr;</Button>
+                <Link href={`/u/${profile.username}/wallpapers`}>
+                  <Button variant="ghost" size="sm" className="font-vt323 text-lg hover:text-primary uppercase tracking-wider">View All &rarr;</Button>
+                </Link>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="aspect-square rounded-2xl bg-primary/[0.03] border border-dashed border-primary/20 flex items-center justify-center group hover:border-primary/50 transition-all">
-                    <div className="text-center space-y-2 opacity-40 group-hover:opacity-100 transition-opacity">
-                      <Plus className="w-8 h-8 mx-auto text-primary" />
-                      <span className="font-vt323 text-sm uppercase tracking-tighter">Encrypted // Cell</span>
+              {recentWallpapers.length > 0 ? (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {recentWallpapers.slice(0, 6).map((wallpaper) => (
+                    <Link
+                      key={wallpaper.id}
+                      href={`/wallpapers/w/${wallpaper.id}`}
+                      className="relative aspect-video rounded-2xl overflow-hidden group border border-border/50 hover:border-primary/30 transition-all"
+                    >
+                      <Image
+                        src={wallpaper.image_url}
+                        alt={wallpaper.title}
+                        fill
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                        sizes="(max-width: 640px) 50vw, 33vw"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="absolute bottom-2 left-3 right-3">
+                          <p className="font-lato text-xs text-white truncate">{wallpaper.title}</p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="aspect-video rounded-2xl bg-primary/[0.03] border border-dashed border-primary/20 flex items-center justify-center group hover:border-primary/50 transition-all">
+                      <div className="text-center space-y-2 opacity-40 group-hover:opacity-100 transition-opacity">
+                        <Plus className="w-8 h-8 mx-auto text-primary" />
+                        <span className="font-vt323 text-sm uppercase tracking-tighter">Encrypted // Cell</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </motion.section>
 
           </div>

@@ -5,6 +5,7 @@ import { getPresignedUploadUrl, getR2PublicUrl, R2_PREFIX } from '@/utils/r2/cli
 const ALLOWED_BUCKETS: Set<string> = new Set([
   R2_PREFIX.REFERENCE_IMAGES,
   R2_PREFIX.AVATARS,
+  R2_PREFIX.WALLPAPERS,
 ]);
 
 const ALLOWED_CONTENT_TYPES = new Set([
@@ -17,6 +18,7 @@ const ALLOWED_CONTENT_TYPES = new Set([
 const MAX_SIZES: Record<string, number> = {
   [R2_PREFIX.REFERENCE_IMAGES]: 10 * 1024 * 1024, // 10MB
   [R2_PREFIX.AVATARS]: 5 * 1024 * 1024, // 5MB
+  [R2_PREFIX.WALLPAPERS]: 50 * 1024 * 1024, // 50MB
 };
 
 interface PresignRequest {
