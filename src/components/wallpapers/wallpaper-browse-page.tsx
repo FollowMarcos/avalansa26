@@ -2,6 +2,9 @@
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Upload } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { WallpaperGrid } from './wallpaper-grid';
 import { WallpaperFilters } from './wallpaper-filters';
 import type {
@@ -148,6 +151,12 @@ export function WallpaperBrowsePage({
         <p className="font-lato text-lg text-muted-foreground max-w-2xl mx-auto">
           Browse and download high-resolution wallpapers from the community.
         </p>
+        <Link href="/wallpapers/upload">
+          <Button className="rounded-xl gap-2 font-vt323 text-lg uppercase mt-2">
+            <Upload className="w-4 h-4" />
+            Upload Wallpaper
+          </Button>
+        </Link>
       </div>
 
       {/* Trending Tags */}

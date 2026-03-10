@@ -492,6 +492,17 @@ export function SiteDock({ vertical = false }: SiteDockProps) {
                                     </Link>
                                 </DropdownMenuItem>
 
+                                {/* Upload Wallpaper */}
+                                <DropdownMenuItem asChild className="rounded-none cursor-pointer group focus:bg-[var(--nerv-orange)]/15 focus:text-[var(--nerv-orange)]">
+                                    <Link
+                                        href="/wallpapers/upload"
+                                        className="flex items-center gap-2.5 py-2 px-2.5"
+                                    >
+                                        <LucideIcons.Upload className="w-4 h-4 transition-colors text-[var(--steel-dim)] group-focus:text-[var(--nerv-orange)]" strokeWidth={1.5} />
+                                        <span className="text-sm font-medium">Upload Wallpaper</span>
+                                    </Link>
+                                </DropdownMenuItem>
+
                                 {/* Theme Toggle */}
                                 <DropdownMenuItem
                                     onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
