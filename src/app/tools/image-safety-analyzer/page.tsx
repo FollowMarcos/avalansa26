@@ -48,6 +48,9 @@ interface AnalysisResults {
 const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp'];
 
+const MODEL_NAMES = ['MobileNetV2', 'MobileNetV2Mid', 'InceptionV3'] as const;
+type ModelName = (typeof MODEL_NAMES)[number];
+
 const CLASS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
     Neutral: { label: 'Neutral', color: 'text-emerald-500', bgColor: 'bg-emerald-500' },
     Drawing: { label: 'Drawing', color: 'text-blue-500', bgColor: 'bg-blue-500' },
@@ -148,27 +151,36 @@ export default function ImageSafetyAnalyzerPage() {
     const [fileName, setFileName] = useState<string | null>(null);
     const [results, setResults] = useState<AnalysisResults | null>(null);
     const [dragOver, setDragOver] = useState(false);
+    const [loadingProgress, setLoadingProgress] = useState('');
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const modelRef = useRef<any>(null);
+    const modelsRef = useRef<Map<ModelName, any>>(new Map());
     const imageRef = useRef<HTMLImageElement>(null);
 
     // -- Model loading (dynamic import to avoid SSR) -------------------------
 
-    const loadModel = useCallback(async () => {
-        if (modelRef.current) return;
+    const loadModels = useCallback(async () => {
+        if (modelsRef.current.size === MODEL_NAMES.length) return;
         setState('model-loading');
         setError(null);
         try {
             await import('@tensorflow/tfjs');
             const nsfwjs = await import('nsfwjs');
-            const model = await nsfwjs.load();
-            modelRef.current = model;
+
+            for (let i = 0; i < MODEL_NAMES.length; i++) {
+                const name = MODEL_NAMES[i];
+                if (modelsRef.current.has(name)) continue;
+                setLoadingProgress(`Loading model ${i + 1} of ${MODEL_NAMES.length}...`);
+                const model = await nsfwjs.load(name);
+                modelsRef.current.set(name, model);
+            }
+
+            setLoadingProgress('');
             setState('ready');
         } catch (err) {
-            console.error('Failed to load NSFW model:', err);
-            setError('Failed to load the AI model. Please check your connection and try again.');
+            console.error('Failed to load NSFW models:', err);
+            setError('Failed to load the AI models. Please check your connection and try again.');
             setState('idle');
             toast.error('Model loading failed');
         }
@@ -197,34 +209,52 @@ export default function ImageSafetyAnalyzerPage() {
             setResults(null);
             setError(null);
 
-            if (!modelRef.current) {
-                await loadModel();
+            if (modelsRef.current.size < MODEL_NAMES.length) {
+                await loadModels();
             } else {
                 setState('ready');
             }
         },
-        [imageUrl, loadModel],
+        [imageUrl, loadModels],
     );
 
     // -- Analyze -------------------------------------------------------------
 
     const analyzeImage = useCallback(async () => {
-        if (!modelRef.current || !imageRef.current) return;
+        if (modelsRef.current.size === 0 || !imageRef.current) return;
 
         setState('analyzing');
         setError(null);
 
         try {
-            const predictions: { className: string; probability: number }[] =
-                await modelRef.current.classify(imageRef.current);
+            // Run all loaded models and collect predictions
+            const allPredictions: { className: string; probability: number }[][] = [];
+            for (const [, model] of modelsRef.current) {
+                const preds: { className: string; probability: number }[] =
+                    await model.classify(imageRef.current);
+                allPredictions.push(preds);
+            }
 
-            const mapped: ClassificationResult[] = predictions.map((p) => ({
-                className: p.className,
-                probability: p.probability,
+            // Average probabilities across all models
+            const avgMap: Record<string, number> = {};
+            const classNames = allPredictions[0].map((p) => p.className);
+
+            for (const cls of classNames) {
+                let sum = 0;
+                for (const preds of allPredictions) {
+                    const match = preds.find((p) => p.className === cls);
+                    sum += match?.probability ?? 0;
+                }
+                avgMap[cls] = sum / allPredictions.length;
+            }
+
+            const averaged: ClassificationResult[] = classNames.map((cls) => ({
+                className: cls,
+                probability: avgMap[cls],
             }));
 
-            const sorted = [...mapped].sort((a, b) => b.probability - a.probability);
-            const verdict = determineVerdict(mapped);
+            const sorted = [...averaged].sort((a, b) => b.probability - a.probability);
+            const verdict = determineVerdict(averaged);
 
             setResults({
                 predictions: sorted,
@@ -268,7 +298,7 @@ export default function ImageSafetyAnalyzerPage() {
     // -- Auto-analyze when image element loads --------------------------------
 
     const onImageLoad = useCallback(() => {
-        if (state === 'ready' && modelRef.current && imageRef.current) {
+        if (state === 'ready' && modelsRef.current.size > 0 && imageRef.current) {
             analyzeImage();
         }
     }, [state, analyzeImage]);
@@ -399,10 +429,10 @@ export default function ImageSafetyAnalyzerPage() {
                 {state === 'model-loading' && (
                     <div className="flex flex-col items-center gap-4 py-24" role="status" aria-live="polite">
                         <CircularLoader size="lg" />
-                        <TextShimmerLoader text="Loading AI model..." size="md" />
+                        <TextShimmerLoader text={loadingProgress || 'Loading AI models...'} size="md" />
                         <p className="text-xs text-muted-foreground/60 max-w-xs text-center">
-                            Downloading the classification model (~4 MB). This is cached by your
-                            browser for future visits.
+                            Downloading 3 classification models. These are cached by your browser
+                            for future visits.
                         </p>
                     </div>
                 )}
@@ -499,6 +529,12 @@ export default function ImageSafetyAnalyzerPage() {
                                                                 ).toFixed(1)}
                                                                 %{' '}
                                                                 {results.topClass}
+                                                            </Badge>
+                                                            <Badge
+                                                                variant="outline"
+                                                                className="font-mono text-xs text-muted-foreground border-border/50"
+                                                            >
+                                                                Multi-Model
                                                             </Badge>
                                                         </div>
                                                         <p className="text-sm text-muted-foreground mt-1">
@@ -600,12 +636,13 @@ export default function ImageSafetyAnalyzerPage() {
                         </h3>
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                        This tool uses <strong>nsfwjs</strong> powered by TensorFlow.js to classify
-                        images entirely within your browser. No image data is ever sent to any
-                        server. The ~4 MB AI model is downloaded once from a CDN and cached by your
-                        browser. Results are probabilistic estimates and may not be 100% accurate.
-                        This tool is intended for content moderation guidance only and should not be
-                        used as the sole basis for content decisions.
+                        This tool uses AI to classify images entirely within your browser. No image
+                        data is ever sent to any server. Multiple classification models are
+                        downloaded once and cached by your browser for future visits. Results are
+                        averaged across all models for higher accuracy. Predictions are
+                        probabilistic estimates and may not be 100% accurate. This tool is intended
+                        for content moderation guidance only and should not be used as the sole
+                        basis for content decisions.
                     </p>
                 </div>
 
