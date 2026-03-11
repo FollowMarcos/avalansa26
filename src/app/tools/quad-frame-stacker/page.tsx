@@ -17,6 +17,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { PageShell } from '@/components/layout/page-shell';
+import { ToolAuthGate } from '@/components/tools/tool-auth-gate';
 import { toast } from 'sonner';
 
 // ---------------------------------------------------------------------------
@@ -651,6 +652,7 @@ export default function QuadFrameStackerPage() {
     // Render
     // -----------------------------------------------------------------------
     return (
+        <ToolAuthGate toolName="Quad Frame Stacker">
         <PageShell contentClassName="bg-transparent">
             <div className="min-h-dvh pt-16 pb-12 px-6 max-w-7xl mx-auto">
                 {/* Header */}
@@ -909,5 +911,6 @@ export default function QuadFrameStackerPage() {
                 <div className="absolute bottom-[5%] left-[5%] w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[140px]" />
             </div>
         </PageShell>
+        </ToolAuthGate>
     );
 }

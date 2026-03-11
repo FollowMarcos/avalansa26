@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { WaveLoader, TextShimmerLoader } from '@/components/ui/loader';
+import { ToolAuthGate } from '@/components/tools/tool-auth-gate';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -178,6 +179,7 @@ export default function ShadowbanCheckerPage() {
     Object.values(results).some((v) => v === 'banned');
 
   return (
+    <ToolAuthGate toolName="X Shadowban Checker">
     <main className="min-h-dvh bg-background text-foreground">
       <div className="max-w-3xl mx-auto px-6 py-16 space-y-12">
         {/* ---------------------------------------------------------------- */}
@@ -356,5 +358,6 @@ export default function ShadowbanCheckerPage() {
         <div className="absolute bottom-[10%] left-[5%] w-[400px] h-[400px] bg-blue-500/5 rounded-full blur-[120px]" />
       </div>
     </main>
+    </ToolAuthGate>
   );
 }

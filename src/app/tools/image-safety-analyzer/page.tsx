@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { cn } from '@/lib/utils';
 import { PageShell } from '@/components/layout/page-shell';
+import { ToolAuthGate } from '@/components/tools/tool-auth-gate';
 import { toast } from 'sonner';
 import { CircularLoader, TextShimmerLoader } from '@/components/ui/loader';
 
@@ -335,6 +336,7 @@ export default function ImageSafetyAnalyzerPage() {
     // -- Render --------------------------------------------------------------
 
     return (
+        <ToolAuthGate toolName="Image Safety Analyzer">
         <PageShell contentClassName="bg-transparent">
             <div className="min-h-dvh pt-16 pb-12 px-6 max-w-4xl mx-auto">
                 {/* Header */}
@@ -669,5 +671,6 @@ export default function ImageSafetyAnalyzerPage() {
                 <div className="absolute bottom-[5%] left-[5%] w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[140px]" />
             </div>
         </PageShell>
+        </ToolAuthGate>
     );
 }

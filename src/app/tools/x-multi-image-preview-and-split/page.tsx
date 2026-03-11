@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { PageShell } from '@/components/layout/page-shell';
+import { ToolAuthGate } from '@/components/tools/tool-auth-gate';
 import { toast } from 'sonner';
 
 interface SlicedImage {
@@ -361,6 +362,7 @@ export default function XPreviewTool() {
 
 
     return (
+        <ToolAuthGate toolName="X Multi-Image Laboratory">
         <PageShell contentClassName="bg-transparent">
             <div className="min-h-dvh pt-16 pb-12 px-6 max-w-7xl mx-auto">
 
@@ -589,5 +591,6 @@ export default function XPreviewTool() {
                 <div className="absolute bottom-[5%] left-[5%] w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[140px]" />
             </div>
         </PageShell>
+        </ToolAuthGate>
     );
 }
