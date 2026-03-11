@@ -150,7 +150,7 @@ export function ImageCompareModal({
 
         {/* NERV institutional header */}
         <div className="flex items-center gap-2 px-4 py-2.5 border-b border-[var(--nerv-orange-dim)]/20 shrink-0 select-none">
-          <span className="text-base tracking-[0.15em] text-[var(--nerv-orange)] font-[family-name:var(--font-bebas-neue)] glow-orange">
+          <span className="text-base tracking-[0.15em] text-[var(--nerv-orange)] font-[family-name:var(--font-bebas-neue)] glow-orange nerv-compressed">
             IMAGE COMPARISON
           </span>
           <span className="text-[8px] tracking-[0.1em] text-[var(--steel-dim)] font-[family-name:var(--font-noto-sans-jp)]">

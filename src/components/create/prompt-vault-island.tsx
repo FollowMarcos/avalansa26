@@ -251,7 +251,7 @@ export function PromptVaultIsland({
                   : { opacity: 0, scale: 0.95, x: -20 }
               }
               transition={{ duration: prefersReducedMotion ? 0 : 0.2 }}
-              className="w-[640px] bg-[#010101]/95 backdrop-blur-xl border border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)] rounded-none overflow-hidden"
+              className="w-[640px] bg-[#010101]/95 backdrop-blur-xl border border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)] rounded-none overflow-hidden nerv-corner-bracket"
             >
               {/* Header */}
               <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--nerv-orange-dim)]/20">
@@ -260,9 +260,10 @@ export function PromptVaultIsland({
                     className="size-4 text-[var(--nerv-orange)]"
                     aria-hidden="true"
                   />
-                  <span className="text-sm font-[family-name:var(--font-ibm-plex-mono)] font-medium text-[var(--nerv-orange)] uppercase tracking-[0.1em] glow-orange">
+                  <span className="text-sm font-[family-name:var(--font-ibm-plex-mono)] font-medium text-[var(--nerv-orange)] uppercase tracking-[0.1em] glow-orange nerv-compressed">
                     Prompt Vault
                   </span>
+                  <span className="text-[8px] text-[var(--steel-dim)] font-[family-name:var(--font-noto-sans-jp)]">プロンプト保管庫</span>
                   {prompts.length > 0 && (
                     <span className="text-xs text-[var(--data-green)] font-[family-name:var(--font-ibm-plex-mono)] glow-green">
                       ({prompts.length})

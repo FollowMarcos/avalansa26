@@ -476,14 +476,14 @@ export function GenerationGallery() {
             {filteredHistory.length === 0 && pendingCount === 0 ? (
               /* Empty state */
               <div className="flex flex-col items-center justify-center h-full text-center p-8 max-w-sm mx-auto nerv-grid-overlay">
-                <div className="size-16 border border-[var(--nerv-orange-dim)]/40 bg-[var(--void-panel)] flex items-center justify-center mb-4">
+                <div className="size-16 border border-[var(--nerv-orange-dim)]/40 bg-[var(--void-panel)] flex items-center justify-center mb-4 nerv-corner-bracket">
                   <ImageIcon
                     className="size-8 text-[var(--nerv-orange-dim)]"
                     strokeWidth={1.5}
                     aria-hidden="true"
                   />
                 </div>
-                <p className="text-[var(--nerv-orange)] font-[family-name:var(--font-bebas-neue)] tracking-[0.15em] uppercase text-xl glow-orange text-balance">
+                <p className="text-[var(--nerv-orange)] font-[family-name:var(--font-bebas-neue)] tracking-[0.15em] uppercase text-xl glow-orange text-balance nerv-compressed">
                   {galleryFilterState.searchQuery ||
                   galleryFilterState.filters.aspectRatio.length > 0 ||
                   galleryFilterState.filters.imageSize.length > 0 ||
@@ -491,6 +491,15 @@ export function GenerationGallery() {
                   galleryFilterState.filters.dateRange.preset
                     ? "NO MATCH FOUND"
                     : "NO GENERATIONS"}
+                </p>
+                <p className="text-[8px] text-[var(--steel-dim)] mt-0.5 font-[family-name:var(--font-noto-sans-jp)]">
+                  {galleryFilterState.searchQuery ||
+                  galleryFilterState.filters.aspectRatio.length > 0 ||
+                  galleryFilterState.filters.imageSize.length > 0 ||
+                  galleryFilterState.filters.modelIds.length > 0 ||
+                  galleryFilterState.filters.dateRange.preset
+                    ? "一致なし"
+                    : "生成なし"}
                 </p>
                 <p className="text-sm text-[var(--steel-dim)] mt-1 uppercase tracking-[0.08em] font-[family-name:var(--font-ibm-plex-mono)] text-pretty">
                   {galleryFilterState.searchQuery ||
@@ -531,7 +540,7 @@ export function GenerationGallery() {
                   return (
                     <section key={dateLabel} aria-label={dateLabel}>
                       <h2 className="sticky top-0 z-10 text-xs font-[family-name:var(--font-ibm-plex-mono)] font-medium text-[var(--nerv-orange)] uppercase tracking-[0.12em] py-2 px-1 bg-[var(--void)]/95 backdrop-blur-sm border-b border-[var(--nerv-orange-dim)]/20 mb-3 glow-orange">
-                        {dateLabel}
+                        <span className="nerv-compressed">{dateLabel}</span>
                         <span className="ml-2 tabular-nums text-[var(--data-green)] glow-green">
                           ({images.length})
                         </span>
@@ -599,7 +608,7 @@ export function GenerationGallery() {
                           )}
                           aria-hidden="true"
                         />
-                        <span className="truncate max-w-[500px]">{displayPrompt}</span>
+                        <span className="truncate max-w-[500px] nerv-compressed">{displayPrompt}</span>
                         <span className="ml-2 tabular-nums text-[var(--data-green)] glow-green shrink-0">
                           ({images.length})
                         </span>

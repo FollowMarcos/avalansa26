@@ -96,7 +96,7 @@ export function StudioLayout() {
 
       {/* ── AVA Institutional Header + Toolbar (merged) ── */}
       <header className="flex items-center h-8 px-3 bg-[var(--void)] border-b border-[var(--nerv-orange-dim)]/20 shrink-0 gap-3 select-none">
-        <span className="text-sm tracking-[0.2em] uppercase text-[var(--nerv-orange)] font-[family-name:var(--font-bebas-neue)] glow-orange">AVA</span>
+        <span className="text-sm tracking-[0.2em] uppercase text-[var(--nerv-orange)] font-[family-name:var(--font-bebas-neue)] glow-orange nerv-compressed">AVA</span>
         <span className="text-[8px] tracking-[0.1em] text-[var(--steel-dim)] font-[family-name:var(--font-noto-sans-jp)]">画像生成システム</span>
         <div className="w-px h-4 bg-[var(--nerv-orange-dim)]/30" />
 
@@ -116,6 +116,15 @@ export function StudioLayout() {
           </span>
           <span className="text-[8px] text-[var(--nerv-orange-dim)] tabular-nums">
             Q:{activeGenerations}/4
+          </span>
+          <div className="w-px h-3 bg-[var(--steel-faint)]" />
+          <span className="text-[8px] tabular-nums">
+            <span className="text-[var(--nerv-orange-dim)]">RES:</span>
+            <span className="text-[var(--data-green-dim)]">{settings.aspectRatio}</span>
+          </span>
+          <span className="text-[8px] tabular-nums">
+            <span className="text-[var(--nerv-orange-dim)]">SPD:</span>
+            <span className="text-[var(--data-green-dim)]">{settings.generationSpeed?.toUpperCase() || "NORMAL"}</span>
           </span>
         </div>
 

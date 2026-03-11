@@ -346,6 +346,40 @@
   top: 0;
 }
 
+/* ── v2: Mechanical compression title ── */
+.nerv-compressed {
+  transform: scaleX(0.82);
+  transform-origin: left center;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  display: inline-block;
+}
+
+/* ── v2: Corner bracket decorations ── */
+.nerv-corner-bracket {
+  position: relative;
+}
+.nerv-corner-bracket::before,
+.nerv-corner-bracket::after {
+  content: '';
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+}
+.nerv-corner-bracket::before {
+  top: -1px;
+  left: -1px;
+  border-top: 2px solid var(--nerv-orange-dim);
+  border-left: 2px solid var(--nerv-orange-dim);
+}
+.nerv-corner-bracket::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 2px solid var(--nerv-orange-dim);
+  border-right: 2px solid var(--nerv-orange-dim);
+}
+
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
   .nerv-flicker { animation: none !important; }

@@ -415,20 +415,29 @@ export function UnifiedToolbar({
               </span>
             </div>
 
-            {/* Stats */}
-            <div className="flex items-center gap-2 text-[10px] text-[var(--steel-dim)] tabular-nums ml-1">
-              <span className="inline-flex items-center gap-1">
-                <ImageIcon className="size-3" aria-hidden="true" />
+            {/* Stats — NERV metrics */}
+            <div className="flex items-center gap-1.5 text-[10px] tabular-nums ml-1 font-[family-name:var(--font-ibm-plex-mono)]">
+              <span>
+                <span className="text-[var(--nerv-orange-dim)] tracking-[0.06em]">IMG:</span>
                 <span className="text-[var(--data-green)] glow-green">{totalCount}</span>
               </span>
               {favCount > 0 && (
-                <span className="inline-flex items-center gap-1">
-                  <Heart className="size-3" aria-hidden="true" />
-                  <span className="text-[var(--alert-red)]">{favCount}</span>
-                </span>
+                <>
+                  <span className="text-[var(--steel-faint)]" aria-hidden="true">|</span>
+                  <span>
+                    <span className="text-[var(--nerv-orange-dim)] tracking-[0.06em]">FAV:</span>
+                    <span className="text-[var(--alert-red)]">{favCount}</span>
+                  </span>
+                </>
               )}
               {filteredCount !== totalCount && (
-                <span>{filteredCount} shown</span>
+                <>
+                  <span className="text-[var(--steel-faint)]" aria-hidden="true">|</span>
+                  <span>
+                    <span className="text-[var(--nerv-orange-dim)] tracking-[0.06em]">SHOWN:</span>
+                    <span className="text-[var(--steel-dim)]">{filteredCount}</span>
+                  </span>
+                </>
               )}
             </div>
           </div>
