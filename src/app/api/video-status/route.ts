@@ -58,16 +58,36 @@ export async function GET(request: NextRequest) {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[xAI Video Status] API error:', errorText);
+      let errorMessage = 'Failed to check video status';
+      try {
+        const errorData = await response.json();
+        if (errorData.error) {
+          // Surface moderation / validation errors from xAI
+          errorMessage = errorData.error;
+        }
+      } catch {
+        const errorText = await response.text();
+        console.error('[xAI Video Status] API error:', errorText);
+      }
+
+      // Content moderation rejections should show as failed, not as server errors
+      const isModeration = errorMessage.toLowerCase().includes('moderation') || errorMessage.toLowerCase().includes('rejected');
+      if (isModeration) {
+        return NextResponse.json({
+          success: true,
+          status: 'failed',
+          error: 'Video was rejected by content moderation. Try a different prompt or source image.',
+        });
+      }
+
       return NextResponse.json(
-        { success: false, error: 'Failed to check video status' },
+        { success: false, error: errorMessage },
         { status: 500 }
       );
     }
 
     const data = await response.json();
-    // xAI returns: { status: "pending"|"done"|"expired"|"failed", video?: { url, duration, respect_moderation }, model }
+    // xAI returns: { status: "pending"|"done"|"expired"|"failed", video?: { url, duration, respect_moderation }, model, error? }
 
     if (data.status === 'done' && data.video?.url) {
       // Re-upload the ephemeral xAI URL to our R2 bucket
@@ -85,10 +105,14 @@ export async function GET(request: NextRequest) {
     }
 
     if (data.status === 'failed') {
+      const failError = data.error || 'Video generation failed. Try a different prompt.';
+      const isModeration = failError.toLowerCase().includes('moderation') || failError.toLowerCase().includes('rejected');
       return NextResponse.json({
         success: true,
         status: 'failed',
-        error: 'Video generation failed. Try a different prompt.',
+        error: isModeration
+          ? 'Video was rejected by content moderation. Try a different prompt or source image.'
+          : failError,
       });
     }
 

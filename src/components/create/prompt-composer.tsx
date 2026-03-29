@@ -501,6 +501,64 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                         </div>
                       </div>
 
+                      {/* Video source image (shown in video mode) */}
+                      {isVideoMode && (
+                        <div className="mb-2">
+                          {settings.videoSourceImage ? (
+                            <div className="flex items-center gap-2">
+                              <div className="relative group">
+                                <div className="w-10 h-10 rounded-none overflow-hidden border-2 border-[var(--alert-red)]/50">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={settings.videoSourceImage} alt="Video source" className="w-full h-full object-cover" />
+                                </div>
+                                <button
+                                  onClick={() => updateSettings({ videoSourceImage: undefined })}
+                                  aria-label="Remove video source image"
+                                  className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-[var(--void)] border border-[var(--steel-faint)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[var(--alert-red)] hover:text-[var(--void)] focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-[var(--nerv-orange)]"
+                                >
+                                  <X className="size-2.5" />
+                                </button>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <Video className="size-3 text-[var(--alert-red)]" aria-hidden="true" />
+                                <span className="text-[10px] text-[var(--steel-dim)] font-[family-name:var(--font-ibm-plex-mono)] uppercase tracking-wider">Source Image</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <button className="flex items-center gap-2 px-2.5 py-1.5 rounded-none border border-dashed border-[var(--alert-red)]/30 hover:border-[var(--alert-red)]/60 hover:bg-[var(--alert-red)]/5 transition-colors">
+                                  <Video className="size-3 text-[var(--alert-red)]" aria-hidden="true" />
+                                  <span className="text-[10px] text-[var(--steel-dim)] font-[family-name:var(--font-ibm-plex-mono)] uppercase tracking-wider">
+                                    Add Source Image (optional)
+                                  </span>
+                                </button>
+                              </PopoverTrigger>
+                              <PopoverContent align="start" side="top" className="w-72 p-2 rounded-none bg-[#010101] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--alert-red)]">
+                                <div className="text-[10px] text-[var(--steel-dim)] uppercase tracking-wider mb-2 px-1">Select from gallery</div>
+                                {completedGens.length === 0 ? (
+                                  <p className="text-xs text-[var(--steel-dim)] text-center py-4">No images in gallery yet</p>
+                                ) : (
+                                  <div className="grid grid-cols-5 gap-1 max-h-40 overflow-y-auto overscroll-contain">
+                                    {completedGens.filter(g => g.mediaType !== 'video').slice(0, 30).map((gen) => (
+                                      <button
+                                        key={gen.id}
+                                        onClick={() => updateSettings({ videoSourceImage: gen.url })}
+                                        className="aspect-square rounded-none overflow-hidden border border-[var(--steel-faint)] hover:border-[var(--alert-red)] transition-colors"
+                                        aria-label={`Use "${gen.prompt?.slice(0, 30) || 'image'}" as video source`}
+                                      >
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src={gen.url} alt="" className="w-full h-full object-cover" />
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </PopoverContent>
+                            </Popover>
+                          )}
+                        </div>
+                      )}
+
                       {/* Textarea */}
                       <div className="relative">
                         <div className={cn("overflow-hidden rounded-none", isPromptExpanded ? "max-h-[200px]" : "max-h-[44px]")}>

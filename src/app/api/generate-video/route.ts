@@ -107,8 +107,19 @@ export async function POST(request: NextRequest) {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[xAI Video] API error:', errorText);
+      let errorMessage = 'Video generation request failed. Please try again.';
+      try {
+        const errorData = await response.json();
+        if (errorData.error) {
+          errorMessage = errorData.error;
+          // Make moderation errors user-friendly
+          if (errorMessage.toLowerCase().includes('moderation') || errorMessage.toLowerCase().includes('rejected')) {
+            errorMessage = 'Video was rejected by content moderation. Try a different prompt or source image.';
+          }
+        }
+      } catch {
+        console.error('[xAI Video] API error:', await response.text().catch(() => response.status));
+      }
       if (response.status === 429) {
         return NextResponse.json(
           { success: false, error: 'Rate limit reached. Please wait a moment.' },
@@ -116,7 +127,7 @@ export async function POST(request: NextRequest) {
         );
       }
       return NextResponse.json(
-        { success: false, error: 'Video generation request failed. Please try again.' },
+        { success: false, error: errorMessage },
         { status: 500 }
       );
     }

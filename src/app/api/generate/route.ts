@@ -1274,12 +1274,22 @@ async function generateWithXai(params: ProviderParams): Promise<GeneratedImage[]
     });
 
     if (!editResponse.ok) {
-      const errorText = await editResponse.text();
-      console.error('[xAI] Image edit API error:', errorText);
+      let editErrorMessage = 'Image editing failed. Please try again.';
+      try {
+        const errorData = JSON.parse(await editResponse.text());
+        if (errorData.error) {
+          const msg = typeof errorData.error === 'string' ? errorData.error : errorData.error.message || '';
+          if (msg.toLowerCase().includes('moderation') || msg.toLowerCase().includes('rejected') || msg.toLowerCase().includes('safety')) {
+            editErrorMessage = 'Image was rejected by content moderation. Try a different prompt or reference image.';
+          }
+        }
+      } catch {
+        console.error('[xAI] Image edit API error: status', editResponse.status);
+      }
       if (editResponse.status === 429) {
         throw new Error('Rate limit reached. Please wait a moment before generating again.');
       }
-      throw new Error('Image editing failed. Please try again.');
+      throw new Error(editErrorMessage);
     }
 
     const editData = await editResponse.json();
@@ -1314,12 +1324,22 @@ async function generateWithXai(params: ProviderParams): Promise<GeneratedImage[]
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error('[xAI] API error:', errorText);
+    let errorMessage = 'Image generation failed. Please try again.';
+    try {
+      const errorData = JSON.parse(await response.text());
+      if (errorData.error) {
+        const msg = typeof errorData.error === 'string' ? errorData.error : errorData.error.message || '';
+        if (msg.toLowerCase().includes('moderation') || msg.toLowerCase().includes('rejected') || msg.toLowerCase().includes('safety')) {
+          errorMessage = 'Image was rejected by content moderation. Try a different prompt.';
+        }
+      }
+    } catch {
+      console.error('[xAI] API error: status', response.status);
+    }
     if (response.status === 429) {
       throw new Error('Rate limit reached. Please wait a moment before generating again.');
     }
-    throw new Error('Image generation failed. Please try again.');
+    throw new Error(errorMessage);
   }
 
   const data = await response.json();
