@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
       requestBody.resolution = resolution;
     }
     if (sourceImage) {
-      requestBody.image = sourceImage;
+      requestBody.image = { url: sourceImage };
     }
 
     const endpoint = apiConfig.endpoint || 'https://api.x.ai/v1';
