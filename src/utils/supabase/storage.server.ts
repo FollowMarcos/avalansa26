@@ -244,7 +244,12 @@ export async function uploadImageFromUrl(
       return { url: externalUrl, error: `Failed to fetch image: ${response.status}` };
     }
 
-    const contentType = response.headers.get('content-type') || 'image/png';
+    // Detect content type from header, with URL-based fallback for video
+    let contentType = response.headers.get('content-type') || 'image/png';
+    const urlPath = parsed.pathname.toLowerCase();
+    if ((urlPath.endsWith('.mp4') || urlPath.includes('.mp4')) && !contentType.includes('video')) {
+      contentType = 'video/mp4';
+    }
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 

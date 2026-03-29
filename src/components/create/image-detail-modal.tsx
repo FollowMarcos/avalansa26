@@ -47,7 +47,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { useCreate, type GeneratedImage } from "./create-context";
+import { useCreate, type GeneratedImage, isVideoMedia } from "./create-context";
 import { cn } from "@/lib/utils";
 import { ZoomableImage } from "./zoomable-image";
 import { TagInput } from "./tag-input";
@@ -333,17 +333,18 @@ export function ImageDetailModal({
         )}
 
         {/* Zoomable image/video — click to zoom in/out, drag to pan */}
-        {image.mediaType === 'video' ? (
+        {isVideoMedia(image) ? (
           <div className="w-full h-full flex items-center justify-center p-8">
             <video
-              src={image.url}
               controls
               autoPlay
               loop
               playsInline
               className="max-w-full max-h-full object-contain"
               aria-label={image.prompt || "Generated video"}
-            />
+            >
+              <source src={image.url} type="video/mp4" />
+            </video>
           </div>
         ) : (
           <ZoomableImage
@@ -365,7 +366,7 @@ export function ImageDetailModal({
           {/* Image Section */}
           <div className="relative flex-1 min-h-[300px] md:min-h-0 bg-muted flex items-center justify-center group">
             {/* Zoomable image/video — click to zoom in/out, drag to pan */}
-            {image.mediaType === 'video' ? (
+            {isVideoMedia(image) ? (
               <div className="absolute inset-0 flex items-center justify-center p-4">
                 <video
                   src={image.url}

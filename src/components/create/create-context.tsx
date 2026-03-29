@@ -88,6 +88,20 @@ export interface GeneratedImage {
   videoDuration?: number;
 }
 
+/** Detect whether a GeneratedImage is a video (from mediaType or URL extension) */
+export function isVideoMedia(image: GeneratedImage): boolean {
+  if (image.mediaType === 'video') return true;
+  if (image.url) {
+    try {
+      const pathname = new URL(image.url).pathname;
+      return pathname.endsWith('.mp4') || pathname.endsWith('.webm') || pathname.endsWith('.mov');
+    } catch {
+      return image.url.includes('.mp4') || image.url.includes('.webm');
+    }
+  }
+  return false;
+}
+
 export interface ThinkingStep {
   id: string;
   text: string;

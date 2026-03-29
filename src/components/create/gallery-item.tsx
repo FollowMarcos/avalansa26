@@ -32,7 +32,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import type { GeneratedImage } from "./create-context";
+import { type GeneratedImage, isVideoMedia } from "./create-context";
 
 // ---------------------------------------------------------------------------
 // Props
@@ -133,7 +133,7 @@ export const GalleryItem = React.memo(function GalleryItem({
             >
               {/* Image or Video */}
               <div className="relative w-full">
-                {image.mediaType === 'video' ? (
+                {isVideoMedia(image) ? (
                   <video
                     src={image.url}
                     className="w-full h-auto object-cover"
@@ -349,7 +349,7 @@ export const GalleryItem = React.memo(function GalleryItem({
               {/* Info badge */}
               <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between pointer-events-none">
                 <div className="flex items-center gap-1 flex-wrap">
-                  {image.mediaType === 'video' && (
+                  {isVideoMedia(image) && (
                     <span className="px-1.5 py-0.5 bg-[var(--alert-red)]/80 text-[10px] font-[family-name:var(--font-ibm-plex-mono)] tabular-nums text-white font-medium">
                       {image.videoDuration ? `${image.videoDuration}s` : 'VID'}
                     </span>
