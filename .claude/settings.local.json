@@ -49,7 +49,11 @@
       "Bash(npx next build)",
       "WebFetch(domain:affinityspotlight.com)",
       "WebFetch(domain:medium.com)",
-      "WebFetch(domain:opensource.contentauthenticity.org)"
+      "WebFetch(domain:opensource.contentauthenticity.org)",
+      "Bash(cp \"C:/Users/world/.claude/skills/ui-skills/SKILL.md\" \"C:/Users/world/.claude/skills/ui-skills/autoresearch-ui-skills/SKILL.md.baseline\")",
+      "Bash(cp \"C:/Users/world/.claude/skills/ui-skills/SKILL.md\" \"C:/Users/world/.claude/skills/ui-skills/autoresearch-ui-skills/ui-skills-v2.md\")",
+      "Bash(cp \"C:/Users/world/.claude/skills/idea-brainstorm/SKILL.md\" \"C:/Users/world/.claude/skills/idea-brainstorm/autoresearch-idea-brainstorm/SKILL.md.baseline\")",
+      "Bash(cp \"C:/Users/world/.claude/skills/idea-brainstorm/SKILL.md\" \"C:/Users/world/.claude/skills/idea-brainstorm/autoresearch-idea-brainstorm/idea-brainstorm-v2.md\")"
     ]
   }
 }

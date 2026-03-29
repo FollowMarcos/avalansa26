@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Idea Report — DIY Makeover App (Nano Banana 2)</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --blue: #3b82f6;
+      --green: #22c55e;
+      --red: #ef4444;
+      --amber: #f59e0b;
+      --purple: #8b5cf6;
+      --gray: #6b7280;
+      --dark: #111827;
+      --light-bg: #f9fafb;
+      --border: #e5e7eb;
+      --accent: #3b82f6;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--dark);
+      background: #fff;
+      line-height: 1.7;
+      font-size: 16px;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem 4rem;
+    }
+    h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.25rem; letter-spacing: -0.02em; }
+    h2 { font-size: 1.35rem; font-weight: 700; margin: 2.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--dark); }
+    h3 { font-size: 1.1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
+    p { margin-bottom: 1rem; }
+    .subtitle { color: var(--gray); font-size: 0.95rem; margin-bottom: 0.25rem; }
+    .date { color: var(--gray); font-size: 0.85rem; margin-bottom: 2rem; }
+    .summary-line { font-size: 1.05rem; color: #374151; font-weight: 500; margin-bottom: 2rem; border-left: 3px solid var(--accent); padding-left: 1rem; }
+    ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
+    li { margin-bottom: 0.4rem; }
+    strong { font-weight: 600; }
+    .badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.1rem 0.45rem;
+      border-radius: 3px;
+      vertical-align: middle;
+      letter-spacing: 0.03em;
+    }
+    .badge-high { background: #dcfce7; color: #166534; }
+    .badge-medium { background: #fef3c7; color: #92400e; }
+    .badge-low { background: #fee2e2; color: #991b1b; }
+    .badge-unknown { background: #f3f4f6; color: #4b5563; }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0 1.5rem; font-size: 0.9rem; }
+    th, td { padding: 0.65rem 0.75rem; text-align: left; border: 1px solid var(--border); }
+    th { background: var(--dark); color: #fff; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    tr:nth-child(even) { background: var(--light-bg); }
+    td { font-variant-numeric: tabular-nums; }
+
+    /* SWOT */
+    .swot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); border: 1px solid var(--border); margin: 1rem 0 1.5rem; }
+    .swot-cell { padding: 1rem; background: #fff; }
+    .swot-cell h4 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem; }
+    .swot-cell ul { padding-left: 1.25rem; margin: 0; font-size: 0.9rem; }
+    .swot-cell li { margin-bottom: 0.3rem; }
+    .swot-s h4 { color: #166534; }
+    .swot-w h4 { color: #991b1b; }
+    .swot-o h4 { color: var(--blue); }
+    .swot-t h4 { color: #92400e; }
+
+    /* Scorecard */
+    .scorecard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; margin: 1rem 0 1.5rem; }
+    .score-item { background: var(--light-bg); border-radius: 6px; padding: 1rem; text-align: center; }
+    .score-item .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--gray); margin-bottom: 0.35rem; }
+    .score-item .value { font-size: 1.1rem; font-weight: 700; }
+    .score-high { color: #166534; }
+    .score-medium { color: #92400e; }
+    .score-low { color: #991b1b; }
+
+    /* Verdict */
+    .verdict { background: var(--light-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1.25rem 1.5rem; margin: 1rem 0; font-size: 1rem; line-height: 1.8; }
+
+    /* Charts */
+    figure { margin: 1.5rem 0; }
+    figcaption { font-size: 0.8rem; color: var(--gray); margin-top: 0.5rem; text-align: center; }
+    canvas { max-width: 100%; }
+
+    /* TOC */
+    .toc { background: var(--light-bg); border: 1px solid var(--border); border-radius: 6px; padding: 1.25rem 1.5rem; margin: 1.5rem 0; }
+    .toc h3 { margin: 0 0 0.75rem; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray); }
+    .toc ol { margin: 0; padding-left: 1.25rem; }
+    .toc li { margin-bottom: 0.3rem; font-size: 0.9rem; }
+    .toc a { color: var(--accent); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+
+    /* Sources */
+    .sources { font-size: 0.85rem; }
+    .sources a { color: var(--accent); word-break: break-all; }
+
+    /* Steps */
+    .steps { counter-reset: step; list-style: none; padding-left: 0; }
+    .steps li { counter-increment: step; padding-left: 2rem; position: relative; margin-bottom: 0.75rem; }
+    .steps li::before {
+      content: counter(step);
+      position: absolute; left: 0; top: 0;
+      background: var(--accent);
+      color: #fff;
+      width: 1.4rem; height: 1.4rem;
+      border-radius: 50%;
+      font-size: 0.75rem; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    @media print {
+      .toc { display: none; }
+      body { font-size: 11pt; }
+      h2 { break-after: avoid; }
+    }
+    @media (max-width: 600px) {
+      .container { padding: 1rem; }
+      h1 { font-size: 1.5rem; }
+      .scorecard { grid-template-columns: 1fr 1fr; }
+      .swot-grid { grid-template-columns: 1fr; }
+      table { font-size: 0.8rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <h1>DIY Makeover App</h1>
+  <p class="subtitle">AI-Powered Home Visualization with Materials Sourcing</p>
+  <p class="date">Generated March 19, 2026</p>
+  <p class="summary-line">A mobile app using Google's Nano Banana 2 to generate style-specific home makeover visualizations from user photos, paired with a budget-aware materials shopping list and sourcing engine.</p>
+
+  <!-- TOC -->
+  <nav class="toc">
+    <h3>Contents</h3>
+    <ol>
+      <li><a href="#exec">Executive Summary</a></li>
+      <li><a href="#concept">Concept Overview</a></li>
+      <li><a href="#market">Market Analysis</a></li>
+      <li><a href="#competitive">Competitive Landscape</a></li>
+      <li><a href="#technical">Technical Feasibility</a></li>
+      <li><a href="#financial">Financial Analysis</a></li>
+      <li><a href="#risk">Risk Assessment</a></li>
+      <li><a href="#swot">SWOT Analysis</a></li>
+      <li><a href="#scorecard">Feasibility Scorecard</a></li>
+      <li><a href="#verdict">Verdict</a></li>
+      <li><a href="#steps">Recommended Next Steps</a></li>
+      <li><a href="#sources">Sources</a></li>
+    </ol>
+  </nav>
+
+  <!-- Executive Summary -->
+  <h2 id="exec">Executive Summary</h2>
+  <ul>
+    <li><strong>The market is large and growing:</strong> The global DIY home improvement market sits at ~$800B (2025), growing at ~8% CAGR. The interior design software segment alone is projected to reach $9.66B by 2030. <span class="badge badge-high">HIGH</span></li>
+    <li><strong>The competitive field is crowded but shallow:</strong> 15+ AI home visualization apps already exist (Renovate AI, HomeDesigns AI, ReimagineHome, Interior AI, Canva, etc.). However, none credibly combine style-based visualization + budget-constrained materials list + multi-retailer sourcing in a single, polished mobile experience. Most stop at "pretty picture" and never close the loop to "here's what to buy and where." <span class="badge badge-medium">MEDIUM</span></li>
+    <li><strong>The budget-to-shopping-list bridge is the real differentiator</strong> — and also the hardest technical and business problem. Matching AI-generated design elements to real, purchasable products at accurate prices across multiple retailers requires product recognition APIs, live pricing feeds, and retailer partnerships that don't yet exist as a turnkey solution. <span class="badge badge-high">HIGH</span></li>
+    <li><strong>Nano Banana 2 is a strong technical choice.</strong> At $0.045–$0.151 per image and Flash-level speed, it's cost-effective and fast. But it's a commodity — competitors can use the same model. The moat must come from the product-matching and sourcing layer, not the image generation. <span class="badge badge-high">HIGH</span></li>
+    <li><strong>AI app retention is a known problem.</strong> AI apps see 30% faster subscription churn than non-AI apps (21.1% annual retention vs 30.7%). The materials list feature could be the retention hook — if executed well, it gives users a reason to return for each new project rather than generating one image and leaving. <span class="badge badge-medium">MEDIUM</span></li>
+  </ul>
+
+  <!-- Concept Overview -->
+  <h2 id="concept">Concept Overview</h2>
+  <h3>Core Loop</h3>
+  <ol>
+    <li>User photographs a space (room, wall, furniture piece, exterior, garden, backyard)</li>
+    <li>User selects a design style (Japandi, Mid-Century Modern, Scandinavian, Boho, Industrial, etc.)</li>
+    <li>User sets a budget and optionally specifies preferred retailers (Home Depot, IKEA, Lowe's, local stores)</li>
+    <li>App generates 2 photorealistic makeover images via Nano Banana 2</li>
+    <li>App provides a full materials/items list with per-item pricing and purchase links</li>
+  </ol>
+
+  <h3>Target Users</h3>
+  <ul>
+    <li><strong>Primary:</strong> Homeowners and renters (25–45) who want to refresh spaces on a budget without hiring a designer</li>
+    <li><strong>Secondary:</strong> DIY enthusiasts, real estate agents staging homes, landlords between tenants</li>
+    <li><strong>Tertiary:</strong> Interior design students, small renovation contractors pitching clients</li>
+  </ul>
+
+  <h3>Key Assumptions</h3>
+  <ul>
+    <li>Users will trust AI-generated makeover images enough to buy real materials based on them</li>
+    <li>Nano Banana 2's image quality is sufficient to render believable, style-accurate room transformations</li>
+    <li>Product-matching AI can reliably map generated design elements to real, purchasable products</li>
+    <li>Retailer pricing data can be kept accurate and current at scale</li>
+    <li>Users are willing to pay a subscription for this (not just use free alternatives)</li>
+  </ul>
+
+  <!-- Market Analysis -->
+  <h2 id="market">Market Analysis</h2>
+
+  <p>This app sits at the intersection of three large markets:</p>
+
+  <table>
+    <tr><th>Market</th><th>2025 Size</th><th>Projected</th><th>CAGR</th></tr>
+    <tr><td>DIY Home Improvement (Global)</td><td>~$800B</td><td>$1.4T by 2032</td><td>~8%</td></tr>
+    <tr><td>Interior Design Software</td><td>$5.9B</td><td>$9.66B by 2030</td><td>10.3%</td></tr>
+    <tr><td>Virtual Interior Design Services</td><td>$20.2B</td><td>$34.4B by 2030</td><td>11.2%</td></tr>
+    <tr><td>DIY Home Renovation Apps</td><td>~$364B (2023)</td><td>$643B by 2032</td><td>6.5%</td></tr>
+  </table>
+
+  <p><strong>Key drivers:</strong> Rising urbanization, growing millennial/Gen Z homeowner base, adoption of AR/AI tools, cost-consciousness driving DIY over professional services, and the "Instagram effect" pushing demand for styled spaces. <span class="badge badge-high">HIGH</span></p>
+
+  <p><strong>Style demand is real:</strong> Japandi remains a top interior design trend through 2026, with "Dark Japandi" emerging as a sub-trend. Searches for style-based room inspiration consistently rank high across Pinterest, Instagram, and design platforms. <span class="badge badge-high">HIGH</span></p>
+
+  <figure>
+    <canvas id="marketChart" width="700" height="350"></canvas>
+    <figcaption>Sources: Fortune Business Insights, Grand View Research, Zion Market Research, VerifiedMarketResearch (2025–2026 reports)</figcaption>
+  </figure>
+
+  <h3>TAM / SAM / SOM Estimate</h3>
+  <table>
+    <tr><th>Metric</th><th>Value</th><th>Rationale</th></tr>
+    <tr><td>TAM</td><td>$9.66B</td><td>Interior design software market (2030)</td></tr>
+    <tr><td>SAM</td><td>~$1.5B</td><td>Mobile AI design tools targeting DIY consumers (subset of TAM)</td></tr>
+    <tr><td>SOM (Year 3)</td><td>$5–15M ARR</td><td>Capturing 0.3–1% of SAM with strong execution</td></tr>
+  </table>
+
+  <!-- Competitive Landscape -->
+  <h2 id="competitive">Competitive Landscape</h2>
+
+  <p>The market has numerous players, but most are clustered in "AI room restyling" without closing the purchase loop. The table below maps the competitive field against the five core features of this app concept.</p>
+
+  <table>
+    <tr>
+      <th>Competitor</th>
+      <th>Photo Upload</th>
+      <th>Style Selection</th>
+      <th>Budget Setting</th>
+      <th>Materials List</th>
+      <th>Sourcing Links</th>
+    </tr>
+    <tr>
+      <td><strong>Renovate AI</strong></td>
+      <td>Yes</td>
+      <td>Yes (40+ styles)</td>
+      <td>No</td>
+      <td>No</td>
+      <td>No</td>
+    </tr>
+    <tr>
+      <td><strong>HomeDesigns AI</strong></td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>Partial (Furniture Finder)</td>
+      <td>Yes (limited)</td>
+    </tr>
+    <tr>
+      <td><strong>ReimagineHome</strong></td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>Yes (basic)</td>
+      <td>Partial</td>
+      <td>Yes (limited)</td>
+    </tr>
+    <tr>
+      <td><strong>Interior AI</strong></td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>No</td>
+      <td>No</td>
+    </tr>
+    <tr>
+      <td><strong>Houzz</strong></td>
+      <td>Yes</td>
+      <td>Limited</td>
+      <td>No</td>
+      <td>No (but Visual Match)</td>
+      <td>Yes (marketplace)</td>
+    </tr>
+    <tr>
+      <td><strong>Havenly/Modsy</strong></td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>Yes (with human designer)</td>
+      <td>Yes</td>
+    </tr>
+    <tr>
+      <td><strong>Home Planner</strong></td>
+      <td>Partial (3D)</td>
+      <td>Limited</td>
+      <td>No</td>
+      <td>Yes (200K+ catalog)</td>
+      <td>Yes (US stores)</td>
+    </tr>
+    <tr>
+      <td><strong>Canva AI Interior</strong></td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>No</td>
+      <td>No</td>
+      <td>No</td>
+    </tr>
+    <tr>
+      <td><strong>This App Concept</strong></td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>Yes</td>
+      <td>Yes (with pricing)</td>
+      <td>Yes (multi-retailer)</td>
+    </tr>
+  </table>
+
+  <p><strong>Gap analysis:</strong> No single competitor delivers the full chain of photo → style → budget → visualization → priced materials list → sourcing links. Havenly comes closest but relies on human designers ($99+ per room), making it expensive and slow. HomeDesigns AI has furniture matching but no budget constraints. ReimagineHome has basic budget features but limited sourcing. The gap is real — but closing it is technically hard.</p>
+
+  <h3>Pricing Benchmarks</h3>
+  <table>
+    <tr><th>Competitor</th><th>Free Tier</th><th>Paid Plans</th></tr>
+    <tr><td>Renovate AI</td><td>20 credits/mo</td><td>$15–$120/mo</td></tr>
+    <tr><td>HomeDesigns AI</td><td>Limited</td><td>$27/mo</td></tr>
+    <tr><td>Havenly</td><td>No</td><td>$99+ per room (service)</td></tr>
+    <tr><td>Interior AI</td><td>Limited</td><td>$39/mo</td></tr>
+    <tr><td>Home Planner</td><td>Yes</td><td>$9.99–$19.99/mo</td></tr>
+  </table>
+
+  <!-- Technical Feasibility -->
+  <h2 id="technical">Technical Feasibility</h2>
+
+  <h3>Architecture Overview</h3>
+  <table>
+    <tr><th>Layer</th><th>Technology</th><th>Complexity</th></tr>
+    <tr><td>Mobile App</td><td>React Native or Flutter (cross-platform)</td><td>Medium</td></tr>
+    <tr><td>Image Generation</td><td>Nano Banana 2 API (Google)</td><td>Low — well-documented API</td></tr>
+    <tr><td>Style Prompting</td><td>Curated prompt templates per style + user photo</td><td>Medium</td></tr>
+    <tr><td>Object Recognition</td><td>Ximilar, api4.ai, or custom model to identify items in generated images</td><td>High</td></tr>
+    <tr><td>Product Matching</td><td>Visual similarity search against product catalogs</td><td>High</td></tr>
+    <tr><td>Pricing Engine</td><td>BigBox API, 1build, Backyard API, retailer scraping</td><td>High</td></tr>
+    <tr><td>Budget Optimization</td><td>Constraint solver to fit materials within user budget</td><td>Medium</td></tr>
+    <tr><td>Backend</td><td>Node.js/Python + PostgreSQL + Redis</td><td>Medium</td></tr>
+  </table>
+
+  <h3>The Hard Problems</h3>
+  <ol>
+    <li><strong>Semantic product matching (Hardest):</strong> When Nano Banana 2 generates an image of a Japandi living room with a walnut coffee table, the app must identify that object and find a real, purchasable walnut coffee table that looks similar, fits the budget, and is in stock at a nearby store. This requires a multi-stage pipeline: object segmentation → style classification → visual similarity search → price filtering → availability check. No off-the-shelf solution does all of this today. <span class="badge badge-low">LOW</span> (off-the-shelf readiness)</li>
+    <li><strong>Price accuracy at scale:</strong> Retailer prices change daily. Maintaining accurate pricing for thousands of products across multiple retailers (Home Depot, Lowe's, IKEA, Wayfair, Amazon) requires either API partnerships or frequent scraping, both of which have legal and technical risks. The 1build API covers construction materials but not furniture/decor. <span class="badge badge-medium">MEDIUM</span></li>
+    <li><strong>Budget coherence:</strong> The AI must generate designs that are achievable within the stated budget. This likely requires a two-pass approach: generate image first, match products, check total cost, then either adjust the design or offer alternatives. This feedback loop adds latency and complexity. <span class="badge badge-medium">MEDIUM</span></li>
+    <li><strong>Interior vs. exterior scope:</strong> Supporting rooms, walls, furniture, house exteriors, gardens, and backyards requires different object catalogs, different retailers, and different domain knowledge. Paint is not landscape gravel is not a sofa. <span class="badge badge-medium">MEDIUM</span></li>
+  </ol>
+
+  <h3>Nano Banana 2 — Technical Fit</h3>
+  <ul>
+    <li><strong>Speed:</strong> Flash-level generation — suitable for mobile UX where users expect results in seconds</li>
+    <li><strong>Quality:</strong> Native 4K output, strong object fidelity (tracks up to 14 objects), legible text rendering</li>
+    <li><strong>Cost:</strong> $0.045 (512px) to $0.151 (4K) per image; batch mode halves this</li>
+    <li><strong>Limitation:</strong> It generates images, not structured data. The app cannot ask Nano Banana 2 "what furniture is in this image" — that requires a separate recognition pipeline</li>
+    <li><strong>Moat risk:</strong> Any competitor can use Nano Banana 2. The model is not a differentiator</li>
+  </ul>
+
+  <h3>Estimated Development Timeline</h3>
+  <table>
+    <tr><th>Phase</th><th>Scope</th><th>Duration</th></tr>
+    <tr><td>MVP</td><td>Photo upload → style select → 2 AI images (no materials list)</td><td>2–3 months</td></tr>
+    <tr><td>V1</td><td>+ Basic materials list (curated per style, not per image)</td><td>+2 months</td></tr>
+    <tr><td>V2</td><td>+ Image-aware product matching + budget filtering</td><td>+4–6 months</td></tr>
+    <tr><td>V3</td><td>+ Multi-retailer sourcing + live pricing + exterior/garden</td><td>+3–4 months</td></tr>
+  </table>
+  <p>Total: 11–15 months to full vision. MVP can ship in 2–3 months.</p>
+
+  <!-- Financial Analysis -->
+  <h2 id="financial">Financial Analysis</h2>
+
+  <h3>Revenue Model Options</h3>
+  <table>
+    <tr><th>Model</th><th>Description</th><th>Viability</th></tr>
+    <tr><td>Freemium Subscription</td><td>Free: 3 makeovers/mo. Pro: $9.99–$19.99/mo unlimited + materials lists</td><td>Primary — proven in this space</td></tr>
+    <tr><td>Affiliate Revenue</td><td>Earn 1–8% commission on purchases made through sourcing links (Home Depot: up to 8%, Lowe's: 2–20%, IKEA: up to 5%)</td><td>Strong secondary — aligns incentives</td></tr>
+    <tr><td>Per-Project Credits</td><td>Buy credits for individual makeovers ($1.99–$4.99 per project)</td><td>Good for casual users</td></tr>
+    <tr><td>Retailer Partnerships</td><td>Preferred placement fees from retailers wanting to be default sourcing options</td><td>Later-stage — requires scale</td></tr>
+  </table>
+
+  <h3>Unit Economics Estimate (Per User/Month at $14.99 Plan)</h3>
+  <table>
+    <tr><th>Item</th><th>Cost</th><th>Notes</th></tr>
+    <tr><td>Revenue per subscriber</td><td>$14.99</td><td>Mid-tier plan</td></tr>
+    <tr><td>Image generation (avg 10 images/mo)</td><td>−$0.67</td><td>1024px @ $0.067 × 10</td></tr>
+    <tr><td>Product matching API calls</td><td>−$0.50</td><td>Estimate: recognition + search per project</td></tr>
+    <tr><td>Pricing API / data feeds</td><td>−$0.30</td><td>BigBox API or similar</td></tr>
+    <tr><td>Infrastructure (hosting, CDN, DB)</td><td>−$1.00</td><td>Allocated per user</td></tr>
+    <tr><td>Payment processing (Stripe/Apple/Google)</td><td>−$1.95</td><td>~13% (Apple/Google 15% small biz rate + Stripe)</td></tr>
+    <tr><td><strong>Gross margin per subscriber</strong></td><td><strong>$10.57</strong></td><td><strong>~70.5%</strong></td></tr>
+  </table>
+
+  <p><strong>Affiliate revenue upside:</strong> If the average user purchases $200/mo in materials through the app, and the average affiliate commission is 4%, that's $8/user/month in additional revenue — potentially exceeding the subscription itself. <span class="badge badge-medium">MEDIUM</span> (depends on conversion rates)</p>
+
+  <figure>
+    <canvas id="revenueChart" width="700" height="350"></canvas>
+    <figcaption>Projection assumes 15% MoM user growth, 5% free→paid conversion, $14.99 avg subscription, 78% annual retention. Not a forecast — illustrative scenario only.</figcaption>
+  </figure>
+
+  <h3>Capital Requirements</h3>
+  <table>
+    <tr><th>Phase</th><th>Estimated Cost</th><th>Notes</th></tr>
+    <tr><td>MVP Development</td><td>$40K–$80K</td><td>2–3 devs, 2–3 months</td></tr>
+    <tr><td>V1 + V2</td><td>$120K–$250K</td><td>+ML engineer for product matching</td></tr>
+    <tr><td>Marketing (Year 1)</td><td>$50K–$150K</td><td>App store optimization, content, paid acquisition</td></tr>
+    <tr><td>Operational (Year 1)</td><td>$30K–$60K</td><td>APIs, hosting, support</td></tr>
+    <tr><td><strong>Total to V2 + 1 Year Ops</strong></td><td><strong>$240K–$540K</strong></td><td></td></tr>
+  </table>
+
+  <!-- Risk Assessment -->
+  <h2 id="risk">Risk Assessment</h2>
+
+  <table>
+    <tr><th>Risk</th><th>Likelihood</th><th>Impact</th><th>Mitigation</th></tr>
+    <tr>
+      <td><strong>Product matching fails to be accurate enough</strong> — users get materials lists that don't match the generated image</td>
+      <td>High</td>
+      <td>Critical</td>
+      <td>Start with curated style bundles (not per-image matching). Use human curation for V1, automate in V2</td>
+    </tr>
+    <tr>
+      <td><strong>Retailer data access blocked or unreliable</strong> — scraping terms violated, APIs deprecated</td>
+      <td>Medium</td>
+      <td>High</td>
+      <td>Prioritize official affiliate programs (Home Depot, Lowe's). Build relationships early. Use 1build for construction materials</td>
+    </tr>
+    <tr>
+      <td><strong>User retention collapses after first use</strong> — "wow once, leave forever" pattern</td>
+      <td>High</td>
+      <td>High</td>
+      <td>Materials list creates project continuity. Add progress tracking, seasonal refresh suggestions, project sharing</td>
+    </tr>
+    <tr>
+      <td><strong>Competitors add materials lists</strong> — HomeDesigns AI, Renovate AI, or Canva build the same feature</td>
+      <td>Medium</td>
+      <td>High</td>
+      <td>Move fast. Build retailer partnerships as moat. Nail the budget-constraint UX that competitors skip</td>
+    </tr>
+    <tr>
+      <td><strong>Nano Banana 2 generates unrealistic designs</strong> — physically impossible, wrong proportions, style drift</td>
+      <td>Medium</td>
+      <td>Medium</td>
+      <td>Invest in prompt engineering. Offer regeneration. Let users flag bad outputs to improve prompts</td></tr>
+    <tr>
+      <td><strong>App store fees erode margins</strong> — Apple/Google take 15–30% of subscription revenue</td>
+      <td>High</td>
+      <td>Medium</td>
+      <td>Qualify for small business rate (15%). Push affiliate revenue (not subject to app store cut). Consider web app</td>
+    </tr>
+    <tr>
+      <td><strong>Legal liability for inaccurate pricing</strong> — user buys based on app prices, actual cost is higher</td>
+      <td>Medium</td>
+      <td>Medium</td>
+      <td>Clear disclaimers. Show "estimated" pricing. Link to retailer for final price. Timestamp price data</td>
+    </tr>
+  </table>
+
+  <figure>
+    <canvas id="riskChart" width="700" height="400"></canvas>
+    <figcaption>Risk matrix: position indicates likelihood (x-axis) and impact (y-axis). Larger bubbles = harder to mitigate.</figcaption>
+  </figure>
+
+  <!-- SWOT -->
+  <h2 id="swot">SWOT Analysis</h2>
+  <div class="swot-grid">
+    <div class="swot-cell swot-s">
+      <h4>Strengths</h4>
+      <ul>
+        <li>Full-loop value prop: visualization → materials → purchase (unique combination)</li>
+        <li>Nano Banana 2 offers fast, high-quality image generation at low cost</li>
+        <li>Budget constraint feature addresses real user pain point</li>
+        <li>Affiliate revenue model aligns app incentives with user goals</li>
+        <li>Multi-space support (interior, exterior, garden) broadens use cases</li>
+      </ul>
+    </div>
+    <div class="swot-cell swot-w">
+      <h4>Weaknesses</h4>
+      <ul>
+        <li>Product matching pipeline doesn't exist off-the-shelf — must be built</li>
+        <li>No proprietary AI model — competitors can use same Nano Banana 2</li>
+        <li>Price accuracy depends on third-party data that may be unreliable</li>
+        <li>Scope (rooms + furniture + exterior + garden) is very broad for an MVP</li>
+        <li>AI app retention rates are structurally poor (21% annual)</li>
+      </ul>
+    </div>
+    <div class="swot-cell swot-o">
+      <h4>Opportunities</h4>
+      <ul>
+        <li>$800B+ DIY market with increasing digital adoption</li>
+        <li>Home Depot and Lowe's actively building creator/affiliate programs</li>
+        <li>No dominant player has closed the visualization-to-purchase gap</li>
+        <li>Style trends (Japandi, etc.) create natural content cycles and re-engagement</li>
+        <li>Potential B2B pivot: tool for contractors, stagers, real estate agents</li>
+      </ul>
+    </div>
+    <div class="swot-cell swot-t">
+      <h4>Threats</h4>
+      <ul>
+        <li>Houzz (marketplace + visual search) could add AI generation and dominate</li>
+        <li>Apple/Google could build this natively into Photos or Lens</li>
+        <li>Retailer API access could be restricted or priced prohibitively</li>
+        <li>AI image quality could plateau, making all apps look the same</li>
+        <li>Economic downturn reduces discretionary home improvement spending</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Scorecard -->
+  <h2 id="scorecard">Feasibility Scorecard</h2>
+  <div class="scorecard">
+    <div class="score-item">
+      <div class="label">Technical</div>
+      <div class="value score-medium">MEDIUM</div>
+      <p style="font-size:0.75rem;color:var(--gray);margin-top:0.35rem">Image gen is easy; product matching pipeline is hard</p>
+    </div>
+    <div class="score-item">
+      <div class="label">Market</div>
+      <div class="value score-high">HIGH</div>
+      <p style="font-size:0.75rem;color:var(--gray);margin-top:0.35rem">Large, growing market with clear demand signal</p>
+    </div>
+    <div class="score-item">
+      <div class="label">Financial</div>
+      <div class="value score-medium">MEDIUM</div>
+      <p style="font-size:0.75rem;color:var(--gray);margin-top:0.35rem">Good unit economics if retention problem is solved</p>
+    </div>
+    <div class="score-item">
+      <div class="label">Execution</div>
+      <div class="value score-medium">MEDIUM</div>
+      <p style="font-size:0.75rem;color:var(--gray);margin-top:0.35rem">MVP is fast; full vision requires 12+ months</p>
+    </div>
+  </div>
+
+  <!-- Verdict -->
+  <h2 id="verdict">Verdict</h2>
+  <div class="verdict">
+    <p>This is a viable idea targeting a genuine gap in a large market, but the difficulty is back-loaded. The image generation part — the "wow" demo — is the easy half. Any developer with Nano Banana 2 access can build a room restyler in a weekend; 15+ competitors prove this. The actual value proposition lives in the materials-to-purchase pipeline: matching AI-generated design elements to real products, at real prices, within a user's budget, from stores they can actually visit. That pipeline is a multi-year engineering effort with dependencies on retailer APIs, product databases, and visual recognition technology that isn't production-ready as a turnkey solution today.</p>
+    <p style="margin-top:0.75rem">The smart play is to ship the visualization MVP fast (2–3 months), validate demand and retention with curated style bundles and manually-assembled materials lists, then invest in the automated product-matching pipeline only after proving users actually convert from "pretty image" to "purchased materials." If that conversion doesn't happen, you have another room-restyling app in an already crowded field. If it does happen, the affiliate revenue alone could make the subscription fees look like a rounding error. The idea is worth pursuing — but the execution risk is in the part users don't see.</p>
+  </div>
+
+  <!-- Next Steps -->
+  <h2 id="steps">Recommended Next Steps</h2>
+  <ol class="steps">
+    <li><strong>Build a 2-week prototype.</strong> Use Nano Banana 2 API + a simple React Native shell. Let 50 people upload photos and generate makeovers. Measure: do they share results? Do they ask "where can I buy this?" If not, the core premise is weak.</li>
+    <li><strong>Validate the purchase intent.</strong> Manually create materials lists for the top 5 design styles (Japandi, Mid-Century, Boho, Industrial, Scandinavian) with real products from Home Depot and IKEA. Show these alongside AI images. Track click-through and purchase rates.</li>
+    <li><strong>Sign up for retailer affiliate programs.</strong> Home Depot (up to 8% commission, 30-day cookie), Lowe's Creator Program (up to 20%), IKEA (up to 5%). This costs nothing and gives you real revenue data early.</li>
+    <li><strong>Scope the product-matching pipeline.</strong> Evaluate Ximilar, api4.ai, and Houzz's Visual Match approach. Run benchmarks: given an AI-generated room image, can existing tools reliably identify and match 5+ items to purchasable products? If accuracy is below 60%, plan for human curation in V1.</li>
+    <li><strong>Talk to 20 DIY homeowners.</strong> Show them the prototype. Ask: "Would you pay $9.99/month for this? What would make you open the app a second time?" The retention answer matters more than the acquisition answer.</li>
+  </ol>
+
+  <!-- Sources -->
+  <h2 id="sources">Sources</h2>
+  <div class="sources">
+    <ol>
+      <li>Fortune Business Insights — Home Renovation Market Size, Share & Trends [2034]. <a href="https://www.fortunebusinessinsights.com/home-renovation-market-112345">fortunebusinessinsights.com</a></li>
+      <li>Grand View Research — Interior Design Software Market Size Report, 2030. <a href="https://www.grandviewresearch.com/industry-analysis/interior-design-software-market-report">grandviewresearch.com</a></li>
+      <li>Zion Market Research — DIY Home Renovation Apps Market Size, Trends, Growth 2032. <a href="https://www.zionmarketresearch.com/report/diy-home-renovation-apps-market">zionmarketresearch.com</a></li>
+      <li>GlobeNewsWire — Home Remodeling Market Analysis Report 2026: $1.29 Trillion. <a href="https://www.globenewswire.com/news-release/2026/01/27/3226133/0/en/Home-Remodeling-Market-Analysis-Report-2026-1-29-Trillion-Opportunities-Trends-Competitive-Landscape-Strategies-and-Forecasts-2020-2025-2025-2030F-2035F.html">globenewswire.com</a></li>
+      <li>Persistence Market Research — DIY Home Improvement Market Growth Analysis, 2032. <a href="https://www.persistencemarketresearch.com/market-research/diy-home-improvement-market.asp">persistencemarketresearch.com</a></li>
+      <li>Google Blog — Nano Banana 2: Google's latest AI image generation model. <a href="https://blog.google/innovation-and-ai/technology/ai/nano-banana-2/">blog.google</a></li>
+      <li>Google Blog — Build with Nano Banana 2, our best image generation and editing model. <a href="https://blog.google/innovation-and-ai/technology/developers-tools/build-with-nano-banana-2/">blog.google</a></li>
+      <li>AI Free API — Nano Banana 2 Pricing Fully Decoded (2026). <a href="https://www.aifreeapi.com/en/posts/nano-banana-2-pricing">aifreeapi.com</a></li>
+      <li>Renovate AI — Home Design App. <a href="https://renovateai.app/">renovateai.app</a></li>
+      <li>HomeDesigns.AI — AI Home Design. <a href="https://homedesigns.ai/">homedesigns.ai</a></li>
+      <li>ReimagineHome — AI Interior Design & Virtual Staging. <a href="https://www.reimaginehome.ai/">reimaginehome.ai</a></li>
+      <li>Houzz — Visual Match Tool. <a href="https://developer.nvidia.com/blog/find-furniture-you-love-with-houzzs-new-visual-recognition-tool/">NVIDIA Developer Blog</a></li>
+      <li>Ximilar — Home Decor AI Recognition & Search. <a href="https://www.ximilar.com/services/home-decor-ai/">ximilar.com</a></li>
+      <li>1build — API for live construction cost data. <a href="https://www.1build.com/">1build.com</a></li>
+      <li>Trajectdata — BigBox API (Home Depot Product Data). <a href="https://trajectdata.com/ecommerce/big-box-api/">trajectdata.com</a></li>
+      <li>TechCrunch — AI-powered apps struggle with long-term retention (March 2026). <a href="https://techcrunch.com/2026/03/10/ai-powered-apps-struggle-with-long-term-retention-new-report-shows/">techcrunch.com</a></li>
+      <li>LiveX AI — AI Tools: Churn Rate Benchmark & Retention Across Industries. <a href="https://www.livex.ai/blog/ai-tools-churn-rate-benchmark-understanding-retention-across-industries">livex.ai</a></li>
+      <li>NichePursuits — Home Depot Affiliate Program Review (2026). <a href="https://www.nichepursuits.com/home-depot-affiliate-program/">nichepursuits.com</a></li>
+      <li>Geniuslink — Lowe's Affiliate Program + Commission Rates. <a href="https://geniuslink.com/blog/lowes-affiliate-program/">geniuslink.com</a></li>
+      <li>The Farnsworth Group — 10 DIY Statistics Shaping Home Improvement (2026–2028). <a href="https://www.thefarnsworthgroup.com/blog/10-diy-statistics-shaping-home-improvement">thefarnsworthgroup.com</a></li>
+      <li>Ideal Home — Will Japandi rule your living room in 2026? <a href="https://www.idealhome.co.uk/all-rooms/living-room/are-japandi-living-rooms-going-to-be-on-trend-in-2026">idealhome.co.uk</a></li>
+      <li>Mobulous — Mobile App Development Cost in 2026 (700+ Projects). <a href="https://www.mobulous.com/blog/mobile-app-development-cost-in-2026/">mobulous.com</a></li>
+    </ol>
+  </div>
+
+</div>
+
+<script>
+// Market Size Chart
+new Chart(document.getElementById('marketChart'), {
+  type: 'bar',
+  data: {
+    labels: ['DIY Home\nImprovement', 'Interior Design\nSoftware', 'Virtual Interior\nDesign Services', 'DIY Renovation\nApps'],
+    datasets: [
+      {
+        label: '2025 ($B)',
+        data: [800, 5.9, 20.2, 400],
+        backgroundColor: '#3b82f6'
+      },
+      {
+        label: 'Projected ($B)',
+        data: [1400, 9.66, 34.4, 643],
+        backgroundColor: '#8b5cf6'
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      title: { display: true, text: 'Addressable Markets — Current vs. Projected Size ($B)', font: { size: 14, weight: 'bold' } },
+      legend: { position: 'bottom' }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        title: { display: true, text: 'Market Size ($ Billions)' },
+        ticks: { callback: v => '$' + v + 'B' }
+      }
+    }
+  }
+});
+
+// Revenue Projection Chart
+const months = ['M1','M2','M3','M4','M5','M6','M7','M8','M9','M10','M11','M12'];
+const users = [500, 575, 661, 760, 874, 1005, 1156, 1330, 1529, 1759, 2022, 2326];
+const paidUsers = users.map(u => Math.round(u * 0.05));
+const subRevenue = paidUsers.map(p => Math.round(p * 14.99));
+const affRevenue = paidUsers.map(p => Math.round(p * 8));
+const totalRevenue = subRevenue.map((s, i) => s + affRevenue[i]);
+
+new Chart(document.getElementById('revenueChart'), {
+  type: 'line',
+  data: {
+    labels: months,
+    datasets: [
+      {
+        label: 'Subscription Revenue ($)',
+        data: subRevenue,
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59,130,246,0.1)',
+        fill: true,
+        tension: 0.3
+      },
+      {
+        label: 'Affiliate Revenue ($)',
+        data: affRevenue,
+        borderColor: '#22c55e',
+        backgroundColor: 'rgba(34,197,94,0.1)',
+        fill: true,
+        tension: 0.3
+      },
+      {
+        label: 'Total Revenue ($)',
+        data: totalRevenue,
+        borderColor: '#8b5cf6',
+        borderDash: [5, 5],
+        fill: false,
+        tension: 0.3
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      title: { display: true, text: 'Illustrative Year 1 Monthly Revenue Projection', font: { size: 14, weight: 'bold' } },
+      legend: { position: 'bottom' }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        title: { display: true, text: 'Monthly Revenue ($)' },
+        ticks: { callback: v => '$' + v.toLocaleString() }
+      }
+    }
+  }
+});
+
+// Risk Matrix Chart
+new Chart(document.getElementById('riskChart'), {
+  type: 'bubble',
+  data: {
+    datasets: [
+      {
+        label: 'Product matching accuracy',
+        data: [{ x: 80, y: 95, r: 18 }],
+        backgroundColor: 'rgba(239,68,68,0.7)'
+      },
+      {
+        label: 'User retention collapse',
+        data: [{ x: 75, y: 80, r: 15 }],
+        backgroundColor: 'rgba(239,68,68,0.6)'
+      },
+      {
+        label: 'Retailer data access blocked',
+        data: [{ x: 50, y: 75, r: 14 }],
+        backgroundColor: 'rgba(245,158,11,0.7)'
+      },
+      {
+        label: 'Competitors add materials lists',
+        data: [{ x: 55, y: 70, r: 12 }],
+        backgroundColor: 'rgba(245,158,11,0.6)'
+      },
+      {
+        label: 'App store fee erosion',
+        data: [{ x: 85, y: 45, r: 10 }],
+        backgroundColor: 'rgba(107,114,128,0.6)'
+      },
+      {
+        label: 'AI generates unrealistic designs',
+        data: [{ x: 45, y: 50, r: 10 }],
+        backgroundColor: 'rgba(107,114,128,0.5)'
+      },
+      {
+        label: 'Pricing liability',
+        data: [{ x: 40, y: 40, r: 8 }],
+        backgroundColor: 'rgba(107,114,128,0.4)'
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      title: { display: true, text: 'Risk Matrix — Likelihood vs. Impact', font: { size: 14, weight: 'bold' } },
+      legend: { position: 'bottom', labels: { font: { size: 11 } } }
+    },
+    scales: {
+      x: {
+        min: 0, max: 100,
+        title: { display: true, text: 'Likelihood (%)' },
+        grid: { color: 'rgba(0,0,0,0.05)' }
+      },
+      y: {
+        min: 0, max: 100,
+        title: { display: true, text: 'Impact (%)' },
+        grid: { color: 'rgba(0,0,0,0.05)' }
+      }
+    }
+  }
+});
+</script>
+
+</body>
+</html>

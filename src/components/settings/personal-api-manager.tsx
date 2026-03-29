@@ -15,6 +15,7 @@ import {
   Image,
   Zap,
   Box,
+  Flame,
   Settings,
   KeyRound,
   ExternalLink,
@@ -62,6 +63,7 @@ const providerIcons: Record<string, LucideIcon> = {
   stability: Image,
   fal: Zap,
   replicate: Box,
+  xai: Flame,
   custom: Settings,
 };
 
@@ -72,6 +74,7 @@ const PROVIDER_PRESETS: Record<string, { endpoint: string; modelPlaceholder: str
   stability: { endpoint: 'https://api.stability.ai/v2beta', modelPlaceholder: 'stable-diffusion-xl-1024-v1-0' },
   replicate: { endpoint: 'https://api.replicate.com/v1', modelPlaceholder: 'stability-ai/sdxl' },
   anthropic: { endpoint: 'https://api.anthropic.com/v1', modelPlaceholder: '' },
+  xai: { endpoint: 'https://api.x.ai/v1', modelPlaceholder: 'grok-imagine-image' },
   custom: { endpoint: '', modelPlaceholder: '' },
 };
 

@@ -119,6 +119,7 @@ export const API_PROVIDERS = [
   { id: 'stability', name: 'Stability AI', icon: 'Image' },
   { id: 'fal', name: 'Fal.ai', icon: 'Zap' },
   { id: 'replicate', name: 'Replicate', icon: 'Box' },
+  { id: 'xai', name: 'xAI (Grok)', icon: 'Flame' },
   { id: 'custom', name: 'Custom', icon: 'Settings' },
 ] as const;
 

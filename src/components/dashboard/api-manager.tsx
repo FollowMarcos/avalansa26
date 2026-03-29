@@ -18,6 +18,7 @@ import {
   Image,
   Zap,
   Box,
+  Flame,
   Settings,
   Check,
   Server,
@@ -67,6 +68,7 @@ const providerIcons: Record<string, LucideIcon> = {
   stability: Image,
   fal: Zap,
   replicate: Box,
+  xai: Flame,
   custom: Settings,
 };
 

@@ -422,6 +422,20 @@ export async function POST(request: NextRequest): Promise<NextResponse<GenerateR
         });
         break;
 
+      case 'xai':
+        images = await generateWithXai({
+          apiKey,
+          endpoint: apiConfig.endpoint,
+          modelId: apiConfig.model_id,
+          prompt,
+          negativePrompt,
+          aspectRatio,
+          imageSize,
+          outputCount,
+          referenceImages,
+        });
+        break;
+
       default:
         // Generic/custom provider - just call the endpoint directly
         images = await generateWithCustomProvider({
@@ -1216,6 +1230,105 @@ async function generateWithStability(params: ProviderParams): Promise<GeneratedI
     for (const artifact of data.artifacts) {
       const dataUrl = `data:image/png;base64,${artifact.base64}`;
       images.push({ url: dataUrl, base64: artifact.base64 });
+    }
+  }
+
+  return images;
+}
+
+/**
+ * Generate images using xAI Grok Imagine API
+ * Supports models: grok-imagine-image, grok-imagine-image-pro
+ * API is OpenAI-compatible: POST /v1/images/generations
+ */
+async function generateWithXai(params: ProviderParams): Promise<GeneratedImage[]> {
+  const { apiKey, endpoint, modelId, prompt, aspectRatio, outputCount, referenceImages } = params;
+
+  // xAI supports these aspect ratios natively
+  const supportedRatios = [
+    '1:1', '16:9', '9:16', '4:3', '3:4', '3:2', '2:3',
+    '2:1', '1:2', '19.5:9', '9:19.5', '20:9', '9:20', 'auto',
+  ];
+  const xaiAspectRatio = aspectRatio && supportedRatios.includes(aspectRatio) ? aspectRatio : undefined;
+
+  // If reference images are provided, use the image editing endpoint
+  if (referenceImages && referenceImages.length > 0) {
+    const editBody: Record<string, unknown> = {
+      model: modelId || 'grok-imagine-image',
+      prompt,
+      n: Math.min(outputCount, 10),
+      response_format: 'url',
+      image: referenceImages.slice(0, 5),
+    };
+    if (xaiAspectRatio) editBody.aspect_ratio = xaiAspectRatio;
+
+    const editEndpoint = `${endpoint || 'https://api.x.ai/v1'}/images/edits`;
+
+    const editResponse = await fetchWithTimeout(editEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify(editBody),
+    });
+
+    if (!editResponse.ok) {
+      const errorText = await editResponse.text();
+      console.error('[xAI] Image edit API error:', errorText);
+      if (editResponse.status === 429) {
+        throw new Error('Rate limit reached. Please wait a moment before generating again.');
+      }
+      throw new Error('Image editing failed. Please try again.');
+    }
+
+    const editData = await editResponse.json();
+    const images: GeneratedImage[] = [];
+    if (editData.data) {
+      for (const img of editData.data) {
+        if (img.url) images.push({ url: img.url });
+        else if (img.b64_json) images.push({ url: `data:image/png;base64,${img.b64_json}`, base64: img.b64_json });
+      }
+    }
+    return images;
+  }
+
+  // Standard text-to-image generation
+  const requestBody: Record<string, unknown> = {
+    model: modelId || 'grok-imagine-image',
+    prompt,
+    n: Math.min(outputCount, 10),
+    response_format: 'url',
+  };
+  if (xaiAspectRatio) requestBody.aspect_ratio = xaiAspectRatio;
+
+  const apiEndpoint = `${endpoint || 'https://api.x.ai/v1'}/images/generations`;
+
+  const response = await fetchWithTimeout(apiEndpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('[xAI] API error:', errorText);
+    if (response.status === 429) {
+      throw new Error('Rate limit reached. Please wait a moment before generating again.');
+    }
+    throw new Error('Image generation failed. Please try again.');
+  }
+
+  const data = await response.json();
+
+  const images: GeneratedImage[] = [];
+  if (data.data) {
+    for (const img of data.data) {
+      if (img.url) images.push({ url: img.url });
+      else if (img.b64_json) images.push({ url: `data:image/png;base64,${img.b64_json}`, base64: img.b64_json });
     }
   }
 

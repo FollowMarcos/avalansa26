@@ -8,6 +8,7 @@ import {
   Image,
   Zap,
   Box,
+  Flame,
   Settings,
   ChevronDown,
   Check,
@@ -33,6 +34,7 @@ const providerIcons: Record<string, LucideIcon> = {
   stability: Image,
   fal: Zap,
   replicate: Box,
+  xai: Flame,
   custom: Settings,
 };
 
@@ -75,6 +77,7 @@ export function ApiSelector({
     stability: 'Stability AI',
     fal: 'Fal.ai',
     replicate: 'Replicate',
+    xai: 'xAI (Grok)',
     custom: 'Custom',
   };
 
