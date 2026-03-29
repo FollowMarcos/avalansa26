@@ -178,8 +178,10 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
     // xAI pricing (per image/video)
     if (provider === 'xai') {
       if (isVideoMode) {
-        // grok-imagine-video: $0.10/video
-        return { perUnit: 0.10, total: 0.10, unit: 'video' };
+        // grok-imagine-video: $0.05/sec
+        const duration = settings.videoDuration || 5;
+        const perSec = 0.05;
+        return { perUnit: perSec, total: perSec * duration, unit: 'second', count: duration };
       }
       const perImage = modelId.includes('pro') ? 0.07 : 0.02;
       const count = Math.min(settings.outputCount, 10);
@@ -200,7 +202,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
     }
 
     return null;
-  }, [selectedApi, settings.outputCount, isVideoMode]);
+  }, [selectedApi, settings.outputCount, settings.videoDuration, isVideoMode]);
 
   // Filter options based on admin settings + model-specific extras
   const filteredAspectRatios = React.useMemo(() => {
@@ -559,8 +561,9 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                           </div>
                         </TooltipTrigger>
                         <TooltipContent side="top" className="text-xs">
-                          ${estimatedCost.perUnit.toFixed(2)} per {estimatedCost.unit}
+                          ${estimatedCost.perUnit.toFixed(2)}/{estimatedCost.unit}
                           {estimatedCost.unit === 'image' && settings.outputCount > 1 && ` \u00d7 ${settings.outputCount}`}
+                          {estimatedCost.unit === 'second' && ` \u00d7 ${settings.videoDuration || 5}s`}
                         </TooltipContent>
                       </Tooltip>
                     )}

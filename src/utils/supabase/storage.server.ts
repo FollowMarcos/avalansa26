@@ -217,6 +217,7 @@ const ALLOWED_IMAGE_HOSTS = new Set([
   'images.openai.com',
   'stability-images.s3.amazonaws.com',
   'imgen.x.ai',
+  'vidgen.x.ai',
 ]);
 
 /**

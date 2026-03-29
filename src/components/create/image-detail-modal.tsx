@@ -332,14 +332,28 @@ export function ImageDetailModal({
           </Button>
         )}
 
-        {/* Zoomable image — click to zoom in/out, drag to pan */}
-        <ZoomableImage
-          src={image.url}
-          alt={image.prompt || "Generated image"}
-          className="w-full h-full p-8"
-          imageClassName="p-8"
-          onScrollNavigate={handleScrollNavigate}
-        />
+        {/* Zoomable image/video — click to zoom in/out, drag to pan */}
+        {image.mediaType === 'video' ? (
+          <div className="w-full h-full flex items-center justify-center p-8">
+            <video
+              src={image.url}
+              controls
+              autoPlay
+              loop
+              playsInline
+              className="max-w-full max-h-full object-contain"
+              aria-label={image.prompt || "Generated video"}
+            />
+          </div>
+        ) : (
+          <ZoomableImage
+            src={image.url}
+            alt={image.prompt || "Generated image"}
+            className="w-full h-full p-8"
+            imageClassName="p-8"
+            onScrollNavigate={handleScrollNavigate}
+          />
+        )}
       </div>
     );
   }
@@ -350,14 +364,28 @@ export function ImageDetailModal({
         <div className="flex flex-col md:flex-row h-full max-h-[90dvh]">
           {/* Image Section */}
           <div className="relative flex-1 min-h-[300px] md:min-h-0 bg-muted flex items-center justify-center group">
-            {/* Zoomable image — click to zoom in/out, drag to pan */}
-            <ZoomableImage
-              src={image.url}
-              alt={image.prompt || "Generated image"}
-              className="absolute inset-0"
-              imageClassName="p-4"
-              onScrollNavigate={handleScrollNavigate}
-            />
+            {/* Zoomable image/video — click to zoom in/out, drag to pan */}
+            {image.mediaType === 'video' ? (
+              <div className="absolute inset-0 flex items-center justify-center p-4">
+                <video
+                  src={image.url}
+                  controls
+                  autoPlay
+                  loop
+                  playsInline
+                  className="max-w-full max-h-full object-contain"
+                  aria-label={image.prompt || "Generated video"}
+                />
+              </div>
+            ) : (
+              <ZoomableImage
+                src={image.url}
+                alt={image.prompt || "Generated image"}
+                className="absolute inset-0"
+                imageClassName="p-4"
+                onScrollNavigate={handleScrollNavigate}
+              />
+            )}
 
             {/* Navigation arrows */}
             {hasPrev && onNavigate && (

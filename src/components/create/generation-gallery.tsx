@@ -110,6 +110,10 @@ export function GenerationGallery() {
     reuseImageSetup,
     retryFailedImage,
     setPrompt,
+    updateSettings,
+    availableApis,
+    selectedApiId,
+    setSelectedApiId,
     galleryFilterState,
     toggleImageSelection,
     getFilteredHistory,
@@ -273,6 +277,31 @@ export function GenerationGallery() {
   const handleReuseSetup = async (image: GeneratedImage) => {
     await reuseImageSetup(image);
     toast.success("Setup restored");
+  };
+
+  const handleAnimateToVideo = (image: GeneratedImage) => {
+    // Find an xAI API to use for video generation
+    const xaiApi = availableApis.find((a) => a.provider === 'xai');
+    if (!xaiApi) {
+      toast.error("No xAI API configured. Add an xAI API key in Settings to generate videos.");
+      return;
+    }
+
+    // Switch to xAI provider and video mode with source image URL
+    if (selectedApiId !== xaiApi.id) {
+      setSelectedApiId(xaiApi.id);
+    }
+    updateSettings({
+      outputFormat: 'video',
+      videoSourceImage: image.url,
+    });
+
+    // Pre-fill the prompt from the original generation
+    if (image.prompt) {
+      setPrompt(image.prompt);
+    }
+
+    toast.success("Video mode activated with source image. Adjust your prompt and hit Generate.");
   };
 
   const handlePasteToComposer = (prompt: string) => {
@@ -570,6 +599,7 @@ export function GenerationGallery() {
                               onCopyUrl={handleCopyUrl}
                               onUseAsReference={handleUseAsReference}
                               onReuseSetup={handleReuseSetup}
+                              onAnimateToVideo={handleAnimateToVideo}
                               onSplitDownload={handleSplitDownload}
                               onToggleSelection={toggleImageSelection}
                               onToggleFavorite={handleToggleFavorite}
@@ -635,6 +665,7 @@ export function GenerationGallery() {
                                 onCopyUrl={handleCopyUrl}
                                 onUseAsReference={handleUseAsReference}
                                 onReuseSetup={handleReuseSetup}
+                              onAnimateToVideo={handleAnimateToVideo}
                                 onSplitDownload={handleSplitDownload}
                                 onToggleSelection={toggleImageSelection}
                                 onToggleFavorite={handleToggleFavorite}
@@ -676,6 +707,7 @@ export function GenerationGallery() {
                       onCopyUrl={handleCopyUrl}
                       onUseAsReference={handleUseAsReference}
                       onReuseSetup={handleReuseSetup}
+                              onAnimateToVideo={handleAnimateToVideo}
                       onSplitDownload={handleSplitDownload}
                       onToggleSelection={toggleImageSelection}
                       onToggleFavorite={handleToggleFavorite}

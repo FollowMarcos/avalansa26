@@ -133,6 +133,8 @@ export interface CreateSettings {
   videoDuration?: number;
   /** Video resolution (default: '480p') */
   videoResolution?: "480p" | "720p";
+  /** Public URL of source image for image-to-video (xAI) */
+  videoSourceImage?: string;
 }
 
 export interface VariationSlot {
@@ -1455,6 +1457,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
               aspectRatio: capturedSettings.aspectRatio,
               duration: capturedSettings.videoDuration || 5,
               resolution: capturedSettings.videoResolution || '480p',
+              sourceImage: capturedSettings.videoSourceImage || undefined,
             }),
           });
 

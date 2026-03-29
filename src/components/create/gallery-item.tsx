@@ -17,6 +17,7 @@ import {
   Trash2,
   Eye,
   GitCompareArrows,
+  Video,
 } from "lucide-react";
 import {
   ContextMenu,
@@ -55,6 +56,7 @@ interface GalleryItemProps {
   onDelete: (id: string) => void;
   onPasteToComposer: (prompt: string) => void;
   onCompare: (image: GeneratedImage) => void;
+  onAnimateToVideo: (image: GeneratedImage) => void;
   onViewDetails: (image: GeneratedImage) => void;
   formatTime: (timestamp: number) => string;
   itemRef?: React.Ref<HTMLElement>;
@@ -82,6 +84,7 @@ export const GalleryItem = React.memo(function GalleryItem({
   onDelete,
   onPasteToComposer,
   onCompare,
+  onAnimateToVideo,
   onViewDetails,
   formatTime,
   itemRef,
@@ -327,6 +330,19 @@ export const GalleryItem = React.memo(function GalleryItem({
                   >
                     <RotateCw className="size-3.5 text-[var(--steel-dim)]" aria-hidden="true" />
                   </button>
+                  {image.mediaType !== 'video' && (
+                    <button
+                      type="button"
+                      className="size-8 flex items-center justify-center hover:bg-[var(--alert-red)]/10 transition-colors focus-visible:ring-1 focus-visible:ring-[var(--nerv-orange)]"
+                      aria-label="Animate to video"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onAnimateToVideo(image);
+                      }}
+                    >
+                      <Video className="size-3.5 text-[var(--alert-red)]" aria-hidden="true" />
+                    </button>
+                  )}
                 </div>
               )}
 
@@ -405,6 +421,12 @@ export const GalleryItem = React.memo(function GalleryItem({
           <ImagePlus className="size-4" aria-hidden="true" />
           Use as Reference
         </ContextMenuItem>
+        {image.mediaType !== 'video' && (
+          <ContextMenuItem onClick={() => onAnimateToVideo(image)} className="rounded-none text-[var(--alert-red)] focus:text-[var(--alert-red)] focus:bg-[var(--alert-red)]/15">
+            <Video className="size-4" aria-hidden="true" />
+            Animate to Video
+          </ContextMenuItem>
+        )}
         <ContextMenuItem onClick={() => onReuseSetup(image)} className="rounded-none text-[var(--steel)] focus:bg-[var(--nerv-orange)]/15 focus:text-[var(--nerv-orange)]">
           <RotateCw className="size-4" aria-hidden="true" />
           Reuse Setup
