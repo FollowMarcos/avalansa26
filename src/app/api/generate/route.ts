@@ -1257,7 +1257,7 @@ async function generateWithXai(params: ProviderParams): Promise<GeneratedImage[]
       model: modelId || 'grok-imagine-image',
       prompt,
       n: Math.min(outputCount, 10),
-      response_format: 'url',
+      response_format: 'b64_json',
       image: referenceImages.slice(0, 5),
     };
     if (xaiAspectRatio) editBody.aspect_ratio = xaiAspectRatio;
@@ -1286,8 +1286,8 @@ async function generateWithXai(params: ProviderParams): Promise<GeneratedImage[]
     const images: GeneratedImage[] = [];
     if (editData.data) {
       for (const img of editData.data) {
-        if (img.url) images.push({ url: img.url });
-        else if (img.b64_json) images.push({ url: `data:image/png;base64,${img.b64_json}`, base64: img.b64_json });
+        if (img.b64_json) images.push({ url: `data:image/png;base64,${img.b64_json}`, base64: img.b64_json });
+        else if (img.url) images.push({ url: img.url });
       }
     }
     return images;
@@ -1298,7 +1298,7 @@ async function generateWithXai(params: ProviderParams): Promise<GeneratedImage[]
     model: modelId || 'grok-imagine-image',
     prompt,
     n: Math.min(outputCount, 10),
-    response_format: 'url',
+    response_format: 'b64_json',
   };
   if (xaiAspectRatio) requestBody.aspect_ratio = xaiAspectRatio;
 
@@ -1327,8 +1327,8 @@ async function generateWithXai(params: ProviderParams): Promise<GeneratedImage[]
   const images: GeneratedImage[] = [];
   if (data.data) {
     for (const img of data.data) {
-      if (img.url) images.push({ url: img.url });
-      else if (img.b64_json) images.push({ url: `data:image/png;base64,${img.b64_json}`, base64: img.b64_json });
+      if (img.b64_json) images.push({ url: `data:image/png;base64,${img.b64_json}`, base64: img.b64_json });
+      else if (img.url) images.push({ url: img.url });
     }
   }
 

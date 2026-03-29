@@ -216,6 +216,7 @@ const ALLOWED_IMAGE_HOSTS = new Set([
   'cdn.openai.com',
   'images.openai.com',
   'stability-images.s3.amazonaws.com',
+  'imgen.x.ai',
 ]);
 
 /**
