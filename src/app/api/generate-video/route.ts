@@ -11,8 +11,10 @@ export interface GenerateVideoRequest {
   aspectRatio?: string;
   duration?: number; // 1–15 seconds
   resolution?: '480p' | '720p';
-  /** Base64 data URI or public URL for image-to-video */
+  /** Public URL for image-to-video — becomes the opening frame (mutually exclusive with referenceImages) */
   sourceImage?: string;
+  /** Public URLs for style/content reference — influence the video without locking the first frame */
+  referenceImages?: string[];
 }
 
 export interface GenerateVideoResponse {
@@ -41,7 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body: GenerateVideoRequest = await request.json();
-    const { apiId, prompt, aspectRatio, duration, resolution, sourceImage } = body;
+    const { apiId, prompt, aspectRatio, duration, resolution, sourceImage, referenceImages } = body;
 
     if (!apiId || !prompt?.trim()) {
       return NextResponse.json(
@@ -90,8 +92,11 @@ export async function POST(request: NextRequest) {
     if (resolution === '720p' || resolution === '480p') {
       requestBody.resolution = resolution;
     }
+    // image and reference_images are mutually exclusive per xAI API
     if (sourceImage) {
       requestBody.image = { url: sourceImage };
+    } else if (referenceImages && referenceImages.length > 0) {
+      requestBody.reference_images = referenceImages.map((url) => ({ url }));
     }
 
     const endpoint = apiConfig.endpoint || 'https://api.x.ai/v1';

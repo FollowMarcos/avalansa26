@@ -147,8 +147,10 @@ export interface CreateSettings {
   videoDuration?: number;
   /** Video resolution (default: '480p') */
   videoResolution?: "480p" | "720p";
-  /** Public URL of source image for image-to-video (xAI) */
+  /** Public URL of source image for image-to-video — becomes the opening frame (xAI) */
   videoSourceImage?: string;
+  /** Public URLs of reference images that influence video style/content without locking the first frame (xAI) */
+  videoReferenceImages?: string[];
 }
 
 export interface VariationSlot {
@@ -1482,6 +1484,9 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
               duration: capturedSettings.videoDuration || 5,
               resolution: capturedSettings.videoResolution || '480p',
               sourceImage: capturedSettings.videoSourceImage || undefined,
+              referenceImages: !capturedSettings.videoSourceImage && capturedSettings.videoReferenceImages?.length
+                ? capturedSettings.videoReferenceImages
+                : undefined,
             }),
           });
 

@@ -3,7 +3,7 @@
 import * as React from "react";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
-import { useCreate, AspectRatio, ImageSize } from "./create-context";
+import { useCreate, AspectRatio, ImageSize, isVideoMedia } from "./create-context";
 import { FileUpload, FileUploadTrigger } from "@/components/ui/file-upload";
 import { Button } from "@/components/ui/button";
 import { Loader } from "@/components/ui/loader";
@@ -501,11 +501,12 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                         </div>
                       </div>
 
-                      {/* Video source image (shown in video mode) */}
+                      {/* Video image inputs (shown in video mode) */}
                       {isVideoMode && (
-                        <div className="mb-2">
+                        <div className="mb-2 flex items-center gap-3 flex-wrap">
+                          {/* Source image — becomes the opening frame */}
                           {settings.videoSourceImage ? (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
                               <div className="relative group">
                                 <div className="w-10 h-10 rounded-none overflow-hidden border-2 border-[var(--alert-red)]/50">
                                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -513,39 +514,37 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                                 </div>
                                 <button
                                   onClick={() => updateSettings({ videoSourceImage: undefined })}
-                                  aria-label="Remove video source image"
+                                  aria-label="Remove source image"
                                   className="absolute -top-1.5 -right-1.5 size-5 rounded-full bg-[var(--void)] border border-[var(--steel-faint)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[var(--alert-red)] hover:text-[var(--void)] focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-[var(--nerv-orange)]"
                                 >
                                   <X className="size-2.5" />
                                 </button>
                               </div>
-                              <div className="flex items-center gap-1.5">
-                                <Video className="size-3 text-[var(--alert-red)]" aria-hidden="true" />
-                                <span className="text-[10px] text-[var(--steel-dim)] font-[family-name:var(--font-ibm-plex-mono)] uppercase tracking-wider">Source Image</span>
-                              </div>
+                              <span className="text-[10px] text-[var(--alert-red)] font-[family-name:var(--font-ibm-plex-mono)] uppercase tracking-wider">1st Frame</span>
                             </div>
-                          ) : (
+                          ) : !settings.videoReferenceImages?.length ? (
                             <Popover>
                               <PopoverTrigger asChild>
-                                <button className="flex items-center gap-2 px-2.5 py-1.5 rounded-none border border-dashed border-[var(--alert-red)]/30 hover:border-[var(--alert-red)]/60 hover:bg-[var(--alert-red)]/5 transition-colors">
-                                  <Video className="size-3 text-[var(--alert-red)]" aria-hidden="true" />
+                                <button className="flex items-center gap-1.5 h-8 px-2.5 rounded-none border border-dashed border-[var(--alert-red)]/30 hover:border-[var(--alert-red)]/60 hover:bg-[var(--alert-red)]/5 transition-colors">
+                                  <ImagePlus className="size-3 text-[var(--alert-red)]" aria-hidden="true" />
                                   <span className="text-[10px] text-[var(--steel-dim)] font-[family-name:var(--font-ibm-plex-mono)] uppercase tracking-wider">
-                                    Add Source Image (optional)
+                                    1st Frame
                                   </span>
                                 </button>
                               </PopoverTrigger>
                               <PopoverContent align="start" side="top" className="w-72 p-2 rounded-none bg-[#010101] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--alert-red)]">
-                                <div className="text-[10px] text-[var(--steel-dim)] uppercase tracking-wider mb-2 px-1">Select from gallery</div>
-                                {completedGens.length === 0 ? (
+                                <div className="text-[10px] text-[var(--steel-dim)] uppercase tracking-wider mb-1 px-1">Source image becomes the opening frame</div>
+                                <div className="text-[10px] text-[var(--steel-dim)]/60 mb-2 px-1">Cannot combine with reference images</div>
+                                {completedGens.filter(g => !isVideoMedia(g)).length === 0 ? (
                                   <p className="text-xs text-[var(--steel-dim)] text-center py-4">No images in gallery yet</p>
                                 ) : (
                                   <div className="grid grid-cols-5 gap-1 max-h-40 overflow-y-auto overscroll-contain">
-                                    {completedGens.filter(g => g.mediaType !== 'video').slice(0, 30).map((gen) => (
+                                    {completedGens.filter(g => !isVideoMedia(g)).slice(0, 30).map((gen) => (
                                       <button
                                         key={gen.id}
-                                        onClick={() => updateSettings({ videoSourceImage: gen.url })}
+                                        onClick={() => updateSettings({ videoSourceImage: gen.url, videoReferenceImages: undefined })}
                                         className="aspect-square rounded-none overflow-hidden border border-[var(--steel-faint)] hover:border-[var(--alert-red)] transition-colors"
-                                        aria-label={`Use "${gen.prompt?.slice(0, 30) || 'image'}" as video source`}
+                                        aria-label={`Use as opening frame`}
                                       >
                                         {/* eslint-disable-next-line @next/next/no-img-element */}
                                         <img src={gen.url} alt="" className="w-full h-full object-cover" />
@@ -555,6 +554,77 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                                 )}
                               </PopoverContent>
                             </Popover>
+                          ) : null}
+
+                          {/* Reference images — influence style/content without locking first frame */}
+                          {!settings.videoSourceImage && (
+                            <>
+                              {(settings.videoReferenceImages || []).map((refUrl, idx) => (
+                                <div key={refUrl} className="relative group flex items-center gap-1.5">
+                                  <div className="relative">
+                                    <div className="w-8 h-8 rounded-none overflow-hidden border border-[var(--nerv-orange)]/50">
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img src={refUrl} alt={`Reference ${idx + 1}`} className="w-full h-full object-cover" />
+                                    </div>
+                                    <button
+                                      onClick={() => updateSettings({
+                                        videoReferenceImages: (settings.videoReferenceImages || []).filter((_, i) => i !== idx),
+                                      })}
+                                      aria-label={`Remove reference ${idx + 1}`}
+                                      className="absolute -top-1.5 -right-1.5 size-4 rounded-full bg-[var(--void)] border border-[var(--steel-faint)] flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[var(--alert-red)] hover:text-[var(--void)] focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-[var(--nerv-orange)]"
+                                    >
+                                      <X className="size-2" />
+                                    </button>
+                                  </div>
+                                  {idx === 0 && (
+                                    <span className="text-[10px] text-[var(--nerv-orange)] font-[family-name:var(--font-ibm-plex-mono)] uppercase tracking-wider">Ref</span>
+                                  )}
+                                </div>
+                              ))}
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button className="flex items-center gap-1.5 h-8 px-2.5 rounded-none border border-dashed border-[var(--nerv-orange)]/30 hover:border-[var(--nerv-orange)]/60 hover:bg-[var(--nerv-orange)]/5 transition-colors">
+                                    <ImagePlus className="size-3 text-[var(--nerv-orange)]" aria-hidden="true" />
+                                    <span className="text-[10px] text-[var(--steel-dim)] font-[family-name:var(--font-ibm-plex-mono)] uppercase tracking-wider">
+                                      {(settings.videoReferenceImages || []).length > 0 ? '+Ref' : 'References'}
+                                    </span>
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent align="start" side="top" className="w-72 p-2 rounded-none bg-[#010101] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)]">
+                                  <div className="text-[10px] text-[var(--steel-dim)] uppercase tracking-wider mb-1 px-1">Style &amp; content references</div>
+                                  <div className="text-[10px] text-[var(--steel-dim)]/60 mb-2 px-1">Influence the video without locking the first frame</div>
+                                  {completedGens.filter(g => !isVideoMedia(g)).length === 0 ? (
+                                    <p className="text-xs text-[var(--steel-dim)] text-center py-4">No images in gallery yet</p>
+                                  ) : (
+                                    <div className="grid grid-cols-5 gap-1 max-h-40 overflow-y-auto overscroll-contain">
+                                      {completedGens.filter(g => !isVideoMedia(g)).slice(0, 30).map((gen) => {
+                                        const isAdded = (settings.videoReferenceImages || []).includes(gen.url);
+                                        return (
+                                          <button
+                                            key={gen.id}
+                                            disabled={isAdded}
+                                            onClick={() => updateSettings({
+                                              videoReferenceImages: [...(settings.videoReferenceImages || []), gen.url],
+                                              videoSourceImage: undefined,
+                                            })}
+                                            className={cn(
+                                              "aspect-square rounded-none overflow-hidden border transition-colors",
+                                              isAdded
+                                                ? "border-[var(--nerv-orange)] opacity-50 cursor-not-allowed"
+                                                : "border-[var(--steel-faint)] hover:border-[var(--nerv-orange)]"
+                                            )}
+                                            aria-label={`Add as reference`}
+                                          >
+                                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                                            <img src={gen.url} alt="" className="w-full h-full object-cover" />
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </PopoverContent>
+                              </Popover>
+                            </>
                           )}
                         </div>
                       )}
