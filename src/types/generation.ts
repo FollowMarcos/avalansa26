@@ -18,6 +18,12 @@ export interface GenerationSettings {
   referenceImages?: ReferenceImageInfo[];
   /** Source identifier for workflow-generated images (e.g. 'characterTurnaround') */
   source?: string;
+  /** Output format — 'image' or 'video' */
+  outputFormat?: string;
+  /** Video duration in seconds */
+  videoDuration?: number;
+  /** Video resolution (e.g. '480p', '720p') */
+  videoResolution?: string;
 }
 
 export interface Generation {

@@ -630,7 +630,16 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
   ) => {
     const pollInterval = setInterval(async () => {
       try {
-        const response = await fetch(`/api/video-status?requestId=${requestId}&apiId=${apiId}`);
+        const params = new URLSearchParams({
+          requestId,
+          apiId,
+          prompt: originalPrompt,
+          model: originalSettings.model || '',
+          aspectRatio: originalSettings.aspectRatio || '',
+          videoDuration: String(originalSettings.videoDuration || 5),
+          videoResolution: originalSettings.videoResolution || '480p',
+        });
+        const response = await fetch(`/api/video-status?${params}`);
         const data = await response.json();
 
         if (!data.success) {
@@ -652,6 +661,7 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
               img.id === placeholderId
                 ? {
                     ...img,
+                    id: data.generationId || img.id,
                     url: data.videoUrl,
                     status: 'completed' as const,
                     mediaType: 'video' as const,

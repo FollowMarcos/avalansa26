@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { getDecryptedApiKey, getApiConfig } from '@/utils/supabase/api-configs.server';
 import { uploadImageFromUrl } from '@/utils/supabase/storage.server';
+import { saveGeneration } from '@/utils/supabase/generations.server';
 
 /**
- * GET /api/video-status?requestId=xxx&apiId=yyy
+ * GET /api/video-status?requestId=xxx&apiId=yyy&prompt=...&model=...
  *
  * Poll xAI for video generation status.
- * Returns: { success, status, videoUrl?, duration? }
+ * When done, saves to generations table and re-uploads video to R2.
+ * Returns: { success, status, videoUrl?, duration?, generationId? }
  */
 export async function GET(request: NextRequest) {
   try {
@@ -91,16 +93,42 @@ export async function GET(request: NextRequest) {
 
     if (data.status === 'done' && data.video?.url) {
       // Re-upload the ephemeral xAI URL to our R2 bucket
-      const { url: permanentUrl, error: uploadError } = await uploadImageFromUrl(data.video.url, user.id);
+      const { url: permanentUrl, path: videoPath, error: uploadError } = await uploadImageFromUrl(data.video.url, user.id);
       if (uploadError) {
         console.error('[xAI Video] Failed to re-upload video to R2:', uploadError);
       }
 
+      const finalUrl = permanentUrl || data.video.url;
+
+      // Save to generations table so the video persists across refreshes
+      const prompt = searchParams.get('prompt') || '';
+      const model = searchParams.get('model') || apiConfig.name || 'Grok Imagine Video';
+      const aspectRatio = searchParams.get('aspectRatio') || '16:9';
+      const videoDuration = searchParams.get('videoDuration') || '5';
+      const videoResolution = searchParams.get('videoResolution') || '480p';
+
+      const saved = await saveGeneration({
+        user_id: user.id,
+        api_config_id: apiId,
+        prompt,
+        image_url: finalUrl,
+        image_path: videoPath,
+        settings: {
+          aspectRatio,
+          model,
+          generationSpeed: 'fast',
+          outputFormat: 'video',
+          videoDuration: Number(videoDuration),
+          videoResolution,
+        },
+      });
+
       return NextResponse.json({
         success: true,
         status: 'done',
-        videoUrl: permanentUrl || data.video.url,
+        videoUrl: finalUrl,
         duration: data.video.duration,
+        generationId: saved?.id,
       });
     }
 
