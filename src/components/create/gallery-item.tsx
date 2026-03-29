@@ -128,18 +128,31 @@ export const GalleryItem = React.memo(function GalleryItem({
               role="button"
               aria-label={`${isBulkMode ? "Select" : "View"} image: ${image.prompt || "Generated image"}`}
             >
-              {/* Image */}
+              {/* Image or Video */}
               <div className="relative w-full">
-                <Image
-                  src={image.url}
-                  alt={image.prompt || "Generated"}
-                  width={512}
-                  height={512}
-                  className="w-full h-auto object-cover"
-                  loading="lazy"
-                  sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
-                  quality={75}
-                />
+                {image.mediaType === 'video' ? (
+                  <video
+                    src={image.url}
+                    className="w-full h-auto object-cover"
+                    loop
+                    muted
+                    playsInline
+                    onMouseEnter={(e) => e.currentTarget.play()}
+                    onMouseLeave={(e) => { e.currentTarget.pause(); e.currentTarget.currentTime = 0; }}
+                    aria-label={image.prompt || "Generated video"}
+                  />
+                ) : (
+                  <Image
+                    src={image.url}
+                    alt={image.prompt || "Generated"}
+                    width={512}
+                    height={512}
+                    className="w-full h-auto object-cover"
+                    loading="lazy"
+                    sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+                    quality={75}
+                  />
+                )}
               </div>
 
               {/* Crosshair corner marks */}
@@ -320,6 +333,11 @@ export const GalleryItem = React.memo(function GalleryItem({
               {/* Info badge */}
               <div className="absolute bottom-2 left-2 right-2 flex items-center justify-between pointer-events-none">
                 <div className="flex items-center gap-1 flex-wrap">
+                  {image.mediaType === 'video' && (
+                    <span className="px-1.5 py-0.5 bg-[var(--alert-red)]/80 text-[10px] font-[family-name:var(--font-ibm-plex-mono)] tabular-nums text-white font-medium">
+                      {image.videoDuration ? `${image.videoDuration}s` : 'VID'}
+                    </span>
+                  )}
                   <span className="px-1.5 py-0.5 bg-[var(--void)]/80 text-[10px] font-[family-name:var(--font-ibm-plex-mono)] tabular-nums text-[var(--data-green)]">
                     {image.settings.imageSize}
                   </span>

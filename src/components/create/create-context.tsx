@@ -82,6 +82,10 @@ export interface GeneratedImage {
   status?: "pending" | "completed" | "failed";
   error?: string;
   isFavorite?: boolean;
+  /** Whether this is a video or image (default: 'image') */
+  mediaType?: "image" | "video";
+  /** Video duration in seconds (only for video) */
+  videoDuration?: number;
 }
 
 export interface ThinkingStep {
@@ -123,6 +127,12 @@ export interface CreateSettings {
   clothingRef?: TaggedReference;
   /** Location/background reference — image and/or descriptive tags */
   locationRef?: TaggedReference;
+  /** Output format — image or video (default: 'image') */
+  outputFormat?: "image" | "video";
+  /** Video duration in seconds (1–15, default: 5) */
+  videoDuration?: number;
+  /** Video resolution (default: '480p') */
+  videoResolution?: "480p" | "720p";
 }
 
 export interface VariationSlot {
@@ -299,6 +309,9 @@ const defaultSettings: CreateSettings = {
   generationSpeed: "fast",
   styleStrength: 75,
   negativePrompt: "",
+  outputFormat: "image",
+  videoDuration: 5,
+  videoResolution: "480p",
 };
 
 const CreateContext = React.createContext<CreateContextType | undefined>(undefined);
@@ -589,6 +602,70 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
       clearInterval(pollInterval);
       setPendingBatchJobs(prev => prev.filter(id => id !== batchJobId));
     }, 4 * 60 * 60 * 1000);
+  }, []);
+
+  // Poll for xAI video job completion
+  const pollVideoJob = React.useCallback((
+    requestId: string,
+    apiId: string,
+    placeholderId: string,
+    originalPrompt: string,
+    originalSettings: CreateSettings
+  ) => {
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/video-status?requestId=${requestId}&apiId=${apiId}`);
+        const data = await response.json();
+
+        if (!data.success) {
+          clearInterval(pollInterval);
+          setHistory(prev =>
+            prev.map(img =>
+              img.id === placeholderId
+                ? { ...img, status: 'failed' as const, error: data.error || 'Video check failed' }
+                : img
+            )
+          );
+          return;
+        }
+
+        if (data.status === 'done' && data.videoUrl) {
+          clearInterval(pollInterval);
+          setHistory(prev =>
+            prev.map(img =>
+              img.id === placeholderId
+                ? {
+                    ...img,
+                    url: data.videoUrl,
+                    status: 'completed' as const,
+                    mediaType: 'video' as const,
+                    videoDuration: data.duration,
+                  }
+                : img
+            )
+          );
+          return;
+        }
+
+        if (data.status === 'failed') {
+          clearInterval(pollInterval);
+          setHistory(prev =>
+            prev.map(img =>
+              img.id === placeholderId
+                ? { ...img, status: 'failed' as const, error: data.error || 'Video generation failed' }
+                : img
+            )
+          );
+        }
+      } catch (error) {
+        console.error('Error polling video job:', error);
+      }
+    }, 5000); // Poll every 5 seconds
+
+    // Clean up after 10 minutes (video generation timeout)
+    setTimeout(() => {
+      clearInterval(pollInterval);
+    }, 10 * 60 * 1000);
   }, []);
 
   // Fetch available APIs, generation history, and sessions in parallel on mount
@@ -1366,6 +1443,48 @@ export function CreateProvider({ children }: { children: React.ReactNode }) {
           referenceImagePaths: capturedRefPaths,
           mode: capturedSettings.generationSpeed,
         };
+
+        // ---- VIDEO MODE: route to /api/generate-video ----
+        if (capturedSettings.outputFormat === 'video') {
+          const videoResponse = await fetch('/api/generate-video', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              apiId: capturedApiId,
+              prompt: capturedPrompt,
+              aspectRatio: capturedSettings.aspectRatio,
+              duration: capturedSettings.videoDuration || 5,
+              resolution: capturedSettings.videoResolution || '480p',
+            }),
+          });
+
+          if (!videoResponse.ok) {
+            let errorMessage = `Request failed with status ${videoResponse.status}`;
+            try {
+              const errorData = await videoResponse.json();
+              errorMessage = errorData.error || errorMessage;
+            } catch { /* ignore */ }
+            throw new Error(errorMessage);
+          }
+
+          const videoData = await videoResponse.json();
+          if (!videoData.success || !videoData.requestId) {
+            throw new Error(videoData.error || 'Video generation failed');
+          }
+
+          // Update placeholder to show video-pending state
+          setHistory(prev =>
+            prev.map(img =>
+              placeholderIds.includes(img.id)
+                ? { ...img, mediaType: 'video' as const }
+                : img
+            )
+          );
+
+          // Start polling for video completion
+          pollVideoJob(videoData.requestId, capturedApiId, placeholderIds[0], capturedPrompt, { ...capturedSettings, model: resolvedModelName });
+          return;
+        }
 
         // Add labeled style / pose references if set (prefer storagePath, fall back to URL)
         if (capturedSettings.styleRef) requestParams.styleRefPath = capturedSettings.styleRef.storagePath || capturedSettings.styleRef.url;

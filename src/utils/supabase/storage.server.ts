@@ -251,6 +251,8 @@ export async function uploadImageFromUrl(
     const randomId = Math.random().toString(36).substring(2, 11);
     const extension = contentType.includes('jpeg') || contentType.includes('jpg') ? 'jpg'
       : contentType.includes('webp') ? 'webp'
+      : contentType.includes('mp4') ? 'mp4'
+      : contentType.includes('video') ? 'mp4'
       : 'png';
     const key = `${R2_PREFIX.GENERATIONS}/${userId}/${timestamp}-${randomId}.${extension}`;
 

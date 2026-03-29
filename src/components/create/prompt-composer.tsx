@@ -25,6 +25,8 @@ import {
   Palette,
   PersonStanding,
   Layers,
+  Video,
+  DollarSign,
 } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
 import {
@@ -158,6 +160,47 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
     return availableApis.find((a) => a.id === selectedApiId)?.model_id ?? null;
   }, [selectedApiId, availableApis]);
   const isFlash31 = isFlash31Model(selectedModelId);
+
+  // Detect xAI provider for video mode support
+  const selectedApi = React.useMemo(() => {
+    if (!selectedApiId) return null;
+    return availableApis.find((a) => a.id === selectedApiId) ?? null;
+  }, [selectedApiId, availableApis]);
+  const isXaiProvider = selectedApi?.provider === 'xai';
+  const isVideoMode = settings.outputFormat === 'video';
+
+  // Cost estimation based on selected API and settings
+  const estimatedCost = React.useMemo(() => {
+    if (!selectedApi) return null;
+    const provider = selectedApi.provider;
+    const modelId = selectedApi.model_id || '';
+
+    // xAI pricing (per image/video)
+    if (provider === 'xai') {
+      if (isVideoMode) {
+        // grok-imagine-video: $0.10/video
+        return { perUnit: 0.10, total: 0.10, unit: 'video' };
+      }
+      const perImage = modelId.includes('pro') ? 0.07 : 0.02;
+      const count = Math.min(settings.outputCount, 10);
+      return { perUnit: perImage, total: perImage * count, unit: 'image' };
+    }
+
+    // OpenAI pricing
+    if (provider === 'openai') {
+      const perImage = modelId.includes('dall-e-3') ? 0.04 : 0.02;
+      return { perUnit: perImage, total: perImage * Math.min(settings.outputCount, 1), unit: 'image' };
+    }
+
+    // Use model_info.pricing if available
+    if (selectedApi.model_info?.pricing?.output) {
+      const perUnit = selectedApi.model_info.pricing.output;
+      const count = settings.outputCount;
+      return { perUnit, total: perUnit * count, unit: selectedApi.model_info.pricing.unit || 'image' };
+    }
+
+    return null;
+  }, [selectedApi, settings.outputCount, isVideoMode]);
 
   // Filter options based on admin settings + model-specific extras
   const filteredAspectRatios = React.useMemo(() => {
@@ -504,6 +547,24 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                       <TooltipContent side="top">Save to Vault</TooltipContent>
                     </Tooltip>
 
+                    {/* Cost Estimate */}
+                    {estimatedCost && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="flex items-center gap-1 px-2 h-9 shrink-0" aria-label={`Estimated cost: $${estimatedCost.total.toFixed(2)}`}>
+                            <DollarSign className="size-3 text-[var(--data-green)]" aria-hidden="true" />
+                            <span className="text-xs font-[family-name:var(--font-ibm-plex-mono)] tabular-nums text-[var(--data-green)]">
+                              {estimatedCost.total < 0.01 ? '<0.01' : estimatedCost.total.toFixed(2)}
+                            </span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="text-xs">
+                          ${estimatedCost.perUnit.toFixed(2)} per {estimatedCost.unit}
+                          {estimatedCost.unit === 'image' && settings.outputCount > 1 && ` \u00d7 ${settings.outputCount}`}
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+
                     {/* Generate Button */}
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -515,7 +576,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                             "bg-[var(--alert-red)] border-[var(--alert-red)] text-[var(--void)] hover:bg-[var(--alert-red-hot)]",
                             "disabled:opacity-40 disabled:cursor-not-allowed"
                           )}
-                          aria-label="Generate image"
+                          aria-label={isVideoMode ? "Generate video" : "Generate image"}
                         >
                           {isGenerating && !hasAvailableSlots ? (
                             <Loader variant="circular" size="sm" className="border-[var(--void)]" />
@@ -524,7 +585,7 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                           )}
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent side="top">Generate</TooltipContent>
+                      <TooltipContent side="top">{isVideoMode ? 'Generate Video' : 'Generate'}</TooltipContent>
                     </Tooltip>
                   </div>
                 </div>
@@ -571,6 +632,95 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                     </TooltipTrigger>
                     <TooltipContent side="top">Generate multiple scene variations</TooltipContent>
                   </Tooltip>
+
+                  {/* Video Mode Toggle (xAI only) */}
+                  {isXaiProvider && (
+                    <>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => updateSettings({ outputFormat: isVideoMode ? 'image' : 'video', outputCount: isVideoMode ? 1 : 1 })}
+                            disabled={isGenerating && !hasAvailableSlots}
+                            aria-pressed={isVideoMode}
+                            className={cn(
+                              "flex items-center gap-1.5 h-8 px-2.5 rounded-none transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)]",
+                              isVideoMode
+                                ? "bg-[var(--alert-red)]/15 text-[var(--alert-red)] ring-1 ring-[var(--alert-red)]/30"
+                                : "text-[var(--steel-dim)] hover:text-[var(--nerv-orange)] hover:bg-[var(--nerv-orange)]/10",
+                              "disabled:opacity-50 disabled:cursor-not-allowed"
+                            )}
+                          >
+                            <Video className="size-3.5" aria-hidden="true" />
+                            <span className="text-xs font-medium">Video</span>
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Generate video with Grok Imagine Video</TooltipContent>
+                      </Tooltip>
+
+                      {/* Video Duration (shown when video mode active) */}
+                      {isVideoMode && (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button
+                              aria-label={`Video duration: ${settings.videoDuration || 5}s`}
+                              className="flex items-center gap-1.5 h-8 px-2.5 rounded-none bg-[var(--void-panel)] hover:bg-[var(--nerv-orange)]/10 border border-[var(--steel-faint)] hover:border-[var(--nerv-orange-dim)]/40 transition-colors shrink-0 focus-visible:ring-2 focus-visible:ring-[var(--nerv-orange)]"
+                            >
+                              <span className="text-xs font-medium font-[family-name:var(--font-ibm-plex-mono)] text-[var(--steel)]">
+                                {settings.videoDuration || 5}s
+                              </span>
+                              <ChevronDown className="size-3 text-[var(--steel-dim)]" aria-hidden="true" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent align="start" side="top" className="w-auto p-2 rounded-none bg-[#010101] border-[var(--nerv-orange-dim)]/40 border-t-2 border-t-[var(--nerv-orange)]">
+                            <div role="listbox" aria-label="Video duration" className="flex flex-col gap-1">
+                              {[3, 5, 8, 10, 15].map((dur) => (
+                                <button
+                                  key={dur}
+                                  role="option"
+                                  aria-selected={settings.videoDuration === dur}
+                                  onClick={() => updateSettings({ videoDuration: dur })}
+                                  className={cn(
+                                    "px-4 py-1.5 rounded-none text-xs font-[family-name:var(--font-ibm-plex-mono)] transition-colors text-left",
+                                    settings.videoDuration === dur
+                                      ? "bg-[var(--nerv-orange)]/15 text-[var(--nerv-orange)]"
+                                      : "text-[var(--steel-dim)] hover:bg-[var(--nerv-orange)]/10"
+                                  )}
+                                >
+                                  {dur}s
+                                </button>
+                              ))}
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      )}
+
+                      {/* Video Resolution */}
+                      {isVideoMode && (
+                        <div
+                          role="radiogroup"
+                          aria-label="Video resolution"
+                          className="flex items-center h-8 p-0.5 rounded-none bg-[var(--void-panel)] border border-[var(--steel-faint)] shrink-0"
+                        >
+                          {([{ value: '480p', label: '480p' }, { value: '720p', label: '720p' }] as const).map((res) => (
+                            <button
+                              key={res.value}
+                              role="radio"
+                              aria-checked={settings.videoResolution === res.value}
+                              onClick={() => updateSettings({ videoResolution: res.value })}
+                              className={cn(
+                                "h-7 px-3 rounded-none text-xs font-medium transition-colors font-[family-name:var(--font-ibm-plex-mono)]",
+                                settings.videoResolution === res.value
+                                  ? "bg-[var(--nerv-orange)]/20 text-[var(--nerv-orange)]"
+                                  : "text-[var(--steel-dim)] hover:text-[var(--nerv-orange)]"
+                              )}
+                            >
+                              {res.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
 
                   <div className="w-px h-5 bg-[var(--steel-faint)] shrink-0 mx-1" />
 
@@ -619,8 +769,8 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                     </PopoverContent>
                   </Popover>
 
-                  {/* Quality - Segmented Control */}
-                  <div
+                  {/* Quality - Segmented Control (hidden in video mode) */}
+                  {!isVideoMode && <div
                     role="radiogroup"
                     aria-label="Image quality"
                     className="flex items-center h-8 p-0.5 rounded-none bg-[var(--void-panel)] border border-[var(--steel-faint)] shrink-0"
@@ -645,10 +795,10 @@ export function PromptComposer({ onSaveToVault }: PromptComposerProps = {}) {
                         <TooltipContent side="top" className="text-xs">{size.desc}</TooltipContent>
                       </Tooltip>
                     ))}
-                  </div>
+                  </div>}
 
-                  {/* Quantity - Stepper (hidden in variations mode) */}
-                  {!variationsMode && (
+                  {/* Quantity - Stepper (hidden in variations or video mode) */}
+                  {!variationsMode && !isVideoMode && (
                     <div
                       role="spinbutton"
                       aria-label="Number of images to generate"
